@@ -14,6 +14,7 @@ import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { getVersion } from '../utils.js';
+import { createBackup } from './setup-wizard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1528,7 +1529,8 @@ export async function runInit(options = {}) {
         message: 'How would you like to handle existing commands?',
         choices: [
           { name: 'Skip existing - only install new commands (recommended)', value: 'skip' },
-          { name: 'Overwrite all - replace existing with starter pack versions', value: 'overwrite' },
+          { name: 'Overwrite with backup - save existing to .claude/backups/ first', value: 'backup' },
+          { name: 'Overwrite all - replace existing (no backup)', value: 'overwrite' },
           { name: 'Cancel installation', value: 'cancel' },
         ],
       },
@@ -1539,7 +1541,8 @@ export async function runInit(options = {}) {
       return;
     }
 
-    overwrite = overwriteChoice === 'overwrite';
+    overwrite = overwriteChoice === 'overwrite' || overwriteChoice === 'backup';
+    const createBackups = overwriteChoice === 'backup';
 
     if (!overwrite) {
       // Filter out existing commands (keep only new ones + required)
@@ -1547,10 +1550,16 @@ export async function runInit(options = {}) {
       finalCommands.length = 0;
       finalCommands.push(...filtered);
       console.log(chalk.green(`\n  ✓ Will install ${finalCommands.length} new command(s), preserving ${commandsToOverwrite.length} existing`));
+    } else if (createBackups) {
+      console.log(chalk.cyan(`\n  ✓ Will backup and overwrite ${commandsToOverwrite.length} existing command(s)`));
     } else {
       console.log(chalk.yellow(`\n  ⚠ Will overwrite ${commandsToOverwrite.length} existing command(s)`));
     }
   }
+
+  // Track if we should create backups (set outside the if block for use later)
+  const createBackups = options.backup || (typeof overwrite !== 'undefined' && commandsToOverwrite.length > 0 && !options.force);
+  let backedUpFiles = [];
 
   // Step 7: Install commands
   console.log(chalk.bold('Step 6: Installing slash commands\n'));
@@ -1594,6 +1603,14 @@ export async function runInit(options = {}) {
         }
       }
 
+      // Create backup if overwriting existing file
+      if (existsSync(cmdPath) && createBackups) {
+        const backupPath = createBackup(cmdPath);
+        if (backupPath) {
+          backedUpFiles.push({ original: cmdPath, backup: backupPath });
+        }
+      }
+
       writeFileSync(cmdPath, content, 'utf8');
       installed.push(cmdName);
     } catch (error) {
@@ -1602,6 +1619,11 @@ export async function runInit(options = {}) {
   }
 
   spinner.stop();
+
+  // Show backup summary if any files were backed up
+  if (backedUpFiles.length > 0) {
+    console.log(chalk.cyan(`\n  📁 Backed up ${backedUpFiles.length} file(s) to .claude/backups/`));
+  }
 
   // Step 7: Generate INDEX.md
   const indexPath = join(commandsDir, 'INDEX.md');

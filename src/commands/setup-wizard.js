@@ -9,14 +9,280 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import boxen from 'boxen';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, renameSync, copyFileSync } from 'fs';
+import { join, basename } from 'path';
 import { runInit } from './init.js';
 import { detectTechStack } from './detect-tech-stack.js';
 import { runClaudeAudit, runEnhancement } from './claude-audit.js';
 import { runSetup as runGitHubSetup } from './setup.js';
 import { runList } from './list.js';
 import { showProjectSettingsMenu } from '../cli/menu.js';
+
+/**
+ * Create backup of a file before overwriting
+ * @param {string} filePath - Path to file to backup
+ * @returns {string|null} - Path to backup file, or null if no backup needed
+ */
+export function createBackup(filePath) {
+  if (!existsSync(filePath)) return null;
+
+  const backupDir = join(process.cwd(), '.claude', 'backups');
+  if (!existsSync(backupDir)) {
+    mkdirSync(backupDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const fileName = basename(filePath);
+  const backupPath = join(backupDir, `${fileName}.${timestamp}.bak`);
+
+  copyFileSync(filePath, backupPath);
+  return backupPath;
+}
+
+/**
+ * Remove CCASP from a project
+ */
+async function runRemove() {
+  const claudeDir = join(process.cwd(), '.claude');
+
+  if (!existsSync(claudeDir)) {
+    console.log(chalk.yellow('\n⚠️  No .claude folder found in this project.\n'));
+    return false;
+  }
+
+  // Show what will be removed
+  console.log(chalk.bold('\n📁 CCASP files found in this project:\n'));
+
+  const itemsToRemove = [];
+
+  // Check for commands
+  const commandsDir = join(claudeDir, 'commands');
+  if (existsSync(commandsDir)) {
+    const commands = readdirSync(commandsDir).filter(f => f.endsWith('.md'));
+    if (commands.length > 0) {
+      console.log(`  ${chalk.cyan('commands/')} - ${commands.length} command(s)`);
+      itemsToRemove.push({ type: 'dir', path: commandsDir, label: 'commands/' });
+    }
+  }
+
+  // Check for agents
+  const agentsDir = join(claudeDir, 'agents');
+  if (existsSync(agentsDir)) {
+    const agents = readdirSync(agentsDir).filter(f => f.endsWith('.md'));
+    if (agents.length > 0) {
+      console.log(`  ${chalk.cyan('agents/')} - ${agents.length} agent(s)`);
+      itemsToRemove.push({ type: 'dir', path: agentsDir, label: 'agents/' });
+    }
+  }
+
+  // Check for skills
+  const skillsDir = join(claudeDir, 'skills');
+  if (existsSync(skillsDir)) {
+    const skills = readdirSync(skillsDir).filter(f => !f.startsWith('.'));
+    if (skills.length > 0) {
+      console.log(`  ${chalk.cyan('skills/')} - ${skills.length} skill(s)`);
+      itemsToRemove.push({ type: 'dir', path: skillsDir, label: 'skills/' });
+    }
+  }
+
+  // Check for hooks
+  const hooksDir = join(claudeDir, 'hooks');
+  if (existsSync(hooksDir)) {
+    const hooks = readdirSync(hooksDir).filter(f => f.endsWith('.js'));
+    if (hooks.length > 0) {
+      console.log(`  ${chalk.cyan('hooks/')} - ${hooks.length} hook(s)`);
+      itemsToRemove.push({ type: 'dir', path: hooksDir, label: 'hooks/' });
+    }
+  }
+
+  // Check for docs
+  const docsDir = join(claudeDir, 'docs');
+  if (existsSync(docsDir)) {
+    console.log(`  ${chalk.cyan('docs/')} - documentation`);
+    itemsToRemove.push({ type: 'dir', path: docsDir, label: 'docs/' });
+  }
+
+  // Check for config files
+  const configFiles = ['settings.json', 'settings.local.json', 'tech-stack.json'];
+  for (const file of configFiles) {
+    const filePath = join(claudeDir, file);
+    if (existsSync(filePath)) {
+      console.log(`  ${chalk.cyan(file)}`);
+      itemsToRemove.push({ type: 'file', path: filePath, label: file });
+    }
+  }
+
+  if (itemsToRemove.length === 0) {
+    console.log(chalk.yellow('  No CCASP items found.\n'));
+    return false;
+  }
+
+  console.log('');
+
+  // Removal options
+  const { removeAction } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'removeAction',
+      message: 'What would you like to do?',
+      choices: [
+        {
+          name: `${chalk.red('1.')} Remove ALL ${chalk.dim('- Delete entire .claude folder')}`,
+          value: 'all',
+          short: 'Remove All',
+        },
+        {
+          name: `${chalk.yellow('2.')} Remove with backup ${chalk.dim('- Backup to .claude-backup/ first')}`,
+          value: 'backup',
+          short: 'Backup & Remove',
+        },
+        {
+          name: `${chalk.cyan('3.')} Selective removal ${chalk.dim('- Choose what to remove')}`,
+          value: 'selective',
+          short: 'Selective',
+        },
+        {
+          name: `${chalk.green('0.')} Cancel ${chalk.dim('- Keep everything')}`,
+          value: 'cancel',
+          short: 'Cancel',
+        },
+      ],
+    },
+  ]);
+
+  if (removeAction === 'cancel') {
+    console.log(chalk.dim('\nCancelled. No changes made.\n'));
+    return false;
+  }
+
+  if (removeAction === 'backup' || removeAction === 'all') {
+    // Confirm dangerous action
+    const { confirmRemove } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirmRemove',
+        message: chalk.red(`Are you sure you want to ${removeAction === 'all' ? 'DELETE' : 'backup and delete'} all CCASP files?`),
+        default: false,
+      },
+    ]);
+
+    if (!confirmRemove) {
+      console.log(chalk.dim('\nCancelled. No changes made.\n'));
+      return false;
+    }
+  }
+
+  const spinner = ora('Processing...').start();
+
+  try {
+    if (removeAction === 'backup') {
+      // Create backup first
+      const backupDir = join(process.cwd(), '.claude-backup', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
+      mkdirSync(backupDir, { recursive: true });
+
+      // Copy entire .claude folder to backup
+      copyDirRecursive(claudeDir, backupDir);
+      spinner.succeed(`Backed up to ${chalk.cyan(backupDir)}`);
+
+      // Then remove
+      spinner.start('Removing .claude folder...');
+      rmSync(claudeDir, { recursive: true, force: true });
+      spinner.succeed('.claude folder removed');
+
+      console.log(
+        boxen(
+          chalk.green('✅ CCASP removed with backup\n\n') +
+            `Backup location:\n${chalk.cyan(backupDir)}\n\n` +
+            chalk.dim('To restore: copy backup contents to .claude/'),
+          {
+            padding: 1,
+            borderStyle: 'round',
+            borderColor: 'green',
+          }
+        )
+      );
+    } else if (removeAction === 'all') {
+      // Remove without backup
+      rmSync(claudeDir, { recursive: true, force: true });
+      spinner.succeed('.claude folder removed');
+
+      console.log(
+        boxen(
+          chalk.green('✅ CCASP removed\n\n') +
+            chalk.dim('Run ') + chalk.cyan('ccasp wizard') + chalk.dim(' to set up again.'),
+          {
+            padding: 1,
+            borderStyle: 'round',
+            borderColor: 'green',
+          }
+        )
+      );
+    } else if (removeAction === 'selective') {
+      spinner.stop();
+
+      // Let user select what to remove
+      const { itemsToDelete } = await inquirer.prompt([
+        {
+          type: 'checkbox',
+          name: 'itemsToDelete',
+          message: 'Select items to remove:',
+          choices: itemsToRemove.map(item => ({
+            name: item.label,
+            value: item,
+            checked: false,
+          })),
+        },
+      ]);
+
+      if (itemsToDelete.length === 0) {
+        console.log(chalk.dim('\nNo items selected. No changes made.\n'));
+        return false;
+      }
+
+      // Create backups for selected items
+      const backupDir = join(process.cwd(), '.claude', 'backups', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
+      mkdirSync(backupDir, { recursive: true });
+
+      for (const item of itemsToDelete) {
+        if (item.type === 'dir') {
+          copyDirRecursive(item.path, join(backupDir, basename(item.path)));
+          rmSync(item.path, { recursive: true, force: true });
+        } else {
+          copyFileSync(item.path, join(backupDir, basename(item.path)));
+          rmSync(item.path, { force: true });
+        }
+        console.log(`  ${chalk.red('✗')} Removed ${item.label}`);
+      }
+
+      console.log(chalk.dim(`\nBackups saved to: ${backupDir}\n`));
+    }
+
+    return true;
+  } catch (error) {
+    spinner.fail('Removal failed');
+    console.error(chalk.red(error.message));
+    return false;
+  }
+}
+
+/**
+ * Recursively copy a directory
+ */
+function copyDirRecursive(src, dest) {
+  mkdirSync(dest, { recursive: true });
+  const entries = readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
 
 /**
  * Display setup header
@@ -78,6 +344,11 @@ const SETUP_OPTIONS = [
     name: `${chalk.yellow('8.')} Project Settings ${chalk.dim('- Configure deployment, tunnels, etc.')}`,
     value: 'settings',
     short: 'Settings',
+  },
+  {
+    name: `${chalk.yellow('9.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
+    value: 'remove',
+    short: 'Remove',
   },
   {
     name: `${chalk.yellow('0.')} Exit`,
@@ -432,6 +703,13 @@ export async function runSetupWizard(options = {}) {
           await showProjectSettingsMenu();
           // Settings modify tech-stack.json which may require restart
           showRestartReminder();
+        }
+        break;
+
+      case 'remove':
+        const removed = await runRemove();
+        if (removed) {
+          running = false; // Exit wizard after removal
         }
         break;
 
