@@ -23,6 +23,8 @@ import { runCreateCommand } from '../src/commands/create-command.js';
 import { runCreateSkill } from '../src/commands/create-skill.js';
 import { runClaudeSettings } from '../src/commands/claude-settings.js';
 import { runCreatePhaseDev } from '../src/commands/create-phase-dev.js';
+import { runGtaskInit } from '../src/commands/gtask-init.js';
+import { runDetection } from '../src/commands/detect-tech-stack.js';
 import { runExploreMcp } from '../src/commands/explore-mcp.js';
 import { runClaudeAudit } from '../src/commands/claude-audit.js';
 import { runRoadmap } from '../src/commands/roadmap.js';
@@ -195,9 +197,28 @@ program
 // Claude settings
 program
   .command('claude-settings')
-  .description('Configure Claude CLI settings (permissions, agent-only mode)')
+  .description('Configure Claude CLI settings (permissions, agent-only mode, tech stack)')
   .action(async () => {
     await runClaudeSettings({});
+  });
+
+// Tech stack detection
+program
+  .command('detect-stack')
+  .description('Auto-detect project tech stack (frontend, backend, testing, etc.)')
+  .option('--silent', 'Minimal output')
+  .option('--json', 'Output as JSON')
+  .action(async (options) => {
+    await runDetection(options);
+  });
+
+// Full project initialization
+program
+  .command('project-init')
+  .description('Complete project setup wizard (detect stack, configure integrations, generate templates)')
+  .option('--force', 'Overwrite existing configuration')
+  .action(async (options) => {
+    await runGtaskInit(options);
   });
 
 // Phased development plan generator

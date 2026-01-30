@@ -1,0 +1,112 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "{{PROJECT_NAME}}",
+    "description": "{{PROJECT_DESCRIPTION}}",
+    "rootPath": "."
+  },
+  "frontend": {
+    "framework": "{{FRONTEND_FRAMEWORK}}",
+    "buildTool": "{{FRONTEND_BUILD_TOOL}}",
+    "stateManager": "{{FRONTEND_STATE_MANAGER}}",
+    "styling": "{{FRONTEND_STYLING}}",
+    "port": "{{FRONTEND_PORT}}",
+    "devCommand": "{{FRONTEND_DEV_COMMAND}}",
+    "buildCommand": "{{FRONTEND_BUILD_COMMAND}}",
+    "distDir": "{{FRONTEND_DIST_DIR}}"
+  },
+  "backend": {
+    "language": "{{BACKEND_LANGUAGE}}",
+    "framework": "{{BACKEND_FRAMEWORK}}",
+    "apiStyle": "{{BACKEND_API_STYLE}}",
+    "port": "{{BACKEND_PORT}}",
+    "devCommand": "{{BACKEND_DEV_COMMAND}}",
+    "healthEndpoint": "{{BACKEND_HEALTH_ENDPOINT}}"
+  },
+  "database": {
+    "primary": "{{DATABASE_TYPE}}",
+    "orm": "{{DATABASE_ORM}}",
+    "host": "{{DATABASE_HOST}}",
+    "port": "{{DATABASE_PORT}}"
+  },
+  "deployment": {
+    "frontend": {
+      "platform": "{{DEPLOY_FRONTEND_PLATFORM}}",
+      "projectName": "{{DEPLOY_FRONTEND_PROJECT}}",
+      "productionUrl": "{{DEPLOY_FRONTEND_URL}}",
+      "deployCommand": "{{DEPLOY_FRONTEND_COMMAND}}"
+    },
+    "backend": {
+      "platform": "{{DEPLOY_BACKEND_PLATFORM}}",
+      "projectId": "{{DEPLOY_BACKEND_PROJECT_ID}}",
+      "serviceId": "{{DEPLOY_BACKEND_SERVICE_ID}}",
+      "environmentId": "{{DEPLOY_BACKEND_ENV_ID}}",
+      "productionUrl": "{{DEPLOY_BACKEND_URL}}"
+    },
+    "cicd": "{{CICD_PLATFORM}}"
+  },
+  "devEnvironment": {
+    "tunnel": {
+      "service": "{{TUNNEL_SERVICE}}",
+      "url": "{{TUNNEL_URL}}",
+      "subdomain": "{{TUNNEL_SUBDOMAIN}}",
+      "startCommand": "{{TUNNEL_START_COMMAND}}",
+      "adminPort": "{{TUNNEL_ADMIN_PORT}}"
+    },
+    "container": "{{CONTAINER_RUNTIME}}",
+    "packageManager": "{{PACKAGE_MANAGER}}"
+  },
+  "testing": {
+    "e2e": {
+      "framework": "{{E2E_FRAMEWORK}}",
+      "configFile": "{{E2E_CONFIG_FILE}}",
+      "testCommand": "{{E2E_TEST_COMMAND}}",
+      "browsers": ["{{E2E_BROWSERS}}"],
+      "headless": true,
+      "timeout": 30000
+    },
+    "unit": {
+      "framework": "{{UNIT_TEST_FRAMEWORK}}",
+      "testCommand": "{{UNIT_TEST_COMMAND}}",
+      "coverageTarget": 80
+    },
+    "selectors": {
+      "strategy": "{{SELECTOR_STRATEGY}}",
+      "username": "{{SELECTOR_USERNAME}}",
+      "password": "{{SELECTOR_PASSWORD}}",
+      "loginButton": "{{SELECTOR_LOGIN_BUTTON}}",
+      "loginSuccess": "{{SELECTOR_LOGIN_SUCCESS}}"
+    },
+    "credentials": {
+      "usernameEnvVar": "{{TEST_USERNAME_ENV_VAR}}",
+      "passwordEnvVar": "{{TEST_PASSWORD_ENV_VAR}}"
+    }
+  },
+  "versionControl": {
+    "provider": "{{VCS_PROVIDER}}",
+    "owner": "{{VCS_OWNER}}",
+    "repo": "{{VCS_REPO}}",
+    "defaultBranch": "{{VCS_DEFAULT_BRANCH}}",
+    "projectBoard": {
+      "type": "{{PROJECT_BOARD_TYPE}}",
+      "number": "{{PROJECT_BOARD_NUMBER}}",
+      "id": "{{PROJECT_BOARD_ID}}",
+      "url": "{{PROJECT_BOARD_URL}}"
+    }
+  },
+  "urls": {
+    "local": {
+      "frontend": "http://localhost:{{FRONTEND_PORT}}",
+      "backend": "http://localhost:{{BACKEND_PORT}}",
+      "api": "http://localhost:{{BACKEND_PORT}}/api"
+    },
+    "tunnel": {
+      "frontend": "{{TUNNEL_URL}}",
+      "backend": "{{TUNNEL_URL}}"
+    },
+    "production": {
+      "frontend": "{{DEPLOY_FRONTEND_URL}}",
+      "backend": "{{DEPLOY_BACKEND_URL}}"
+    }
+  }
+}

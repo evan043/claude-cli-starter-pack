@@ -1,7 +1,11 @@
 /**
- * GitHub Task Kit - Main Export
+ * Claude CLI Advanced Starter Pack - Main Export
  *
- * Comprehensive GitHub Issue Creator with Codebase Analysis
+ * Platform-agnostic Claude Code enhancement toolkit with:
+ * - Tech stack auto-detection
+ * - Templated .claude file generation
+ * - GitHub Project Board integration
+ * - Advanced testing configuration
  */
 
 // CLI
@@ -13,6 +17,20 @@ export { runCreate } from './commands/create.js';
 export { runList } from './commands/list.js';
 export { runInstall } from './commands/install.js';
 export { showHelp } from './commands/help.js';
+export { runClaudeSettings } from './commands/claude-settings.js';
+export { runGtaskInit } from './commands/gtask-init.js';
+export { detectTechStack, runDetection } from './commands/detect-tech-stack.js';
+
+// Template Engine
+export {
+  replacePlaceholders,
+  processFile,
+  processDirectory,
+  generateTechStack,
+  flattenObject,
+  extractPlaceholders,
+  validateTechStack,
+} from './utils/template-engine.js';
 
 // GitHub client
 export {

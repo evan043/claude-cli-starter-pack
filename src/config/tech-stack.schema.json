@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/evan043/claude-cli-advanced-starter-pack/tech-stack.schema.json",
+  "title": "Tech Stack Configuration",
+  "description": "Platform-agnostic configuration for any development environment",
+  "type": "object",
+  "required": ["version", "project"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "default": "1.0.0"
+    },
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "Project name" },
+        "description": { "type": "string" },
+        "rootPath": { "type": "string", "description": "Relative path to project root" }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "properties": {
+        "framework": {
+          "type": "string",
+          "enum": ["react", "vue", "angular", "svelte", "nextjs", "nuxt", "astro", "solid", "qwik", "remix", "gatsby", "vanilla", "none", "other"],
+          "description": "Frontend framework"
+        },
+        "buildTool": {
+          "type": "string",
+          "enum": ["vite", "webpack", "esbuild", "parcel", "rollup", "turbopack", "rspack", "snowpack", "none", "other"]
+        },
+        "stateManager": {
+          "type": "string",
+          "enum": ["zustand", "redux", "mobx", "jotai", "recoil", "pinia", "vuex", "ngrx", "xstate", "none", "other"]
+        },
+        "styling": {
+          "type": "string",
+          "enum": ["tailwind", "css-modules", "styled-components", "emotion", "sass", "less", "vanilla-css", "other"]
+        },
+        "port": { "type": "integer", "default": 5173 },
+        "devCommand": { "type": "string", "default": "npm run dev" },
+        "buildCommand": { "type": "string", "default": "npm run build" },
+        "distDir": { "type": "string", "default": "dist" }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "enum": ["python", "node", "typescript", "go", "rust", "java", "kotlin", "csharp", "ruby", "php", "elixir", "none", "other"]
+        },
+        "framework": {
+          "type": "string",
+          "enum": ["fastapi", "express", "nestjs", "django", "flask", "gin", "actix", "axum", "spring", "rails", "laravel", "phoenix", "hono", "koa", "none", "other"]
+        },
+        "apiStyle": {
+          "type": "string",
+          "enum": ["rest", "graphql", "grpc", "trpc", "other"]
+        },
+        "port": { "type": "integer", "default": 8000 },
+        "devCommand": { "type": "string" },
+        "healthEndpoint": { "type": "string", "default": "/api/health" }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string",
+          "enum": ["postgresql", "mysql", "mongodb", "sqlite", "mariadb", "mssql", "oracle", "dynamodb", "firestore", "supabase", "planetscale", "neon", "cockroachdb", "redis", "none", "other"]
+        },
+        "orm": {
+          "type": "string",
+          "enum": ["prisma", "drizzle", "typeorm", "sequelize", "sqlalchemy", "diesel", "gorm", "ent", "activerecord", "eloquent", "ecto", "none", "other"]
+        },
+        "host": { "type": "string" },
+        "port": { "type": "integer" }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "properties": {
+        "frontend": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": ["cloudflare", "vercel", "netlify", "aws-amplify", "firebase", "github-pages", "railway", "render", "fly", "digitalocean", "self-hosted", "none", "other"]
+            },
+            "projectName": { "type": "string" },
+            "productionUrl": { "type": "string" },
+            "deployCommand": { "type": "string" }
+          }
+        },
+        "backend": {
+          "type": "object",
+          "properties": {
+            "platform": {
+              "type": "string",
+              "enum": ["railway", "heroku", "aws", "gcp", "azure", "digitalocean", "render", "fly", "vercel", "self-hosted", "none", "other"]
+            },
+            "projectId": { "type": "string" },
+            "serviceId": { "type": "string" },
+            "environmentId": { "type": "string" },
+            "productionUrl": { "type": "string" }
+          }
+        },
+        "cicd": {
+          "type": "string",
+          "enum": ["github-actions", "gitlab-ci", "circleci", "jenkins", "azure-devops", "bitbucket-pipelines", "travis", "none", "other"]
+        }
+      }
+    },
+    "devEnvironment": {
+      "type": "object",
+      "properties": {
+        "tunnel": {
+          "type": "object",
+          "properties": {
+            "service": {
+              "type": "string",
+              "enum": ["ngrok", "localtunnel", "cloudflare-tunnel", "serveo", "expose", "none", "other"]
+            },
+            "url": { "type": "string", "description": "Full tunnel URL when active" },
+            "subdomain": { "type": "string" },
+            "startCommand": { "type": "string" },
+            "adminPort": { "type": "integer", "description": "Tunnel admin API port (e.g., 4040 for ngrok)" }
+          }
+        },
+        "container": {
+          "type": "string",
+          "enum": ["docker", "podman", "colima", "orbstack", "none", "other"]
+        },
+        "packageManager": {
+          "type": "string",
+          "enum": ["npm", "yarn", "pnpm", "bun", "pip", "poetry", "pipenv", "cargo", "go-mod", "maven", "gradle", "composer", "bundler", "mix", "other"]
+        }
+      }
+    },
+    "testing": {
+      "type": "object",
+      "properties": {
+        "e2e": {
+          "type": "object",
+          "properties": {
+            "framework": {
+              "type": "string",
+              "enum": ["playwright", "cypress", "puppeteer", "selenium", "testcafe", "webdriverio", "none", "other"]
+            },
+            "configFile": { "type": "string" },
+            "testCommand": { "type": "string" },
+            "browsers": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["chromium", "firefox", "webkit", "chrome", "edge"] }
+            },
+            "headless": { "type": "boolean", "default": true },
+            "timeout": { "type": "integer", "default": 30000 }
+          }
+        },
+        "unit": {
+          "type": "object",
+          "properties": {
+            "framework": {
+              "type": "string",
+              "enum": ["vitest", "jest", "mocha", "ava", "pytest", "unittest", "rspec", "phpunit", "go-test", "cargo-test", "none", "other"]
+            },
+            "testCommand": { "type": "string" },
+            "coverageTarget": { "type": "integer", "default": 80 }
+          }
+        },
+        "selectors": {
+          "type": "object",
+          "description": "CSS selectors for login form automation",
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": ["data-testid", "name", "id", "class", "xpath", "other"],
+              "default": "data-testid"
+            },
+            "username": { "type": "string", "default": "[data-testid=\"username-input\"]" },
+            "password": { "type": "string", "default": "[data-testid=\"password-input\"]" },
+            "loginButton": { "type": "string", "default": "[data-testid=\"login-submit\"]" },
+            "loginSuccess": { "type": "string", "default": "[data-testid=\"dashboard\"]" }
+          }
+        },
+        "credentials": {
+          "type": "object",
+          "properties": {
+            "usernameEnvVar": { "type": "string", "default": "TEST_USER_USERNAME" },
+            "passwordEnvVar": { "type": "string", "default": "TEST_USER_PASSWORD" }
+          }
+        }
+      }
+    },
+    "versionControl": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["github", "gitlab", "bitbucket", "azure-devops", "gitea", "self-hosted", "other"]
+        },
+        "owner": { "type": "string" },
+        "repo": { "type": "string" },
+        "defaultBranch": { "type": "string", "default": "main" },
+        "projectBoard": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["github-projects", "jira", "linear", "trello", "asana", "notion", "clickup", "monday", "shortcut", "youtrack", "none", "other"]
+            },
+            "number": { "type": "integer" },
+            "id": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        }
+      }
+    },
+    "urls": {
+      "type": "object",
+      "description": "Environment-specific URLs",
+      "properties": {
+        "local": {
+          "type": "object",
+          "properties": {
+            "frontend": { "type": "string" },
+            "backend": { "type": "string" },
+            "api": { "type": "string" }
+          }
+        },
+        "tunnel": {
+          "type": "object",
+          "properties": {
+            "frontend": { "type": "string" },
+            "backend": { "type": "string" }
+          }
+        },
+        "staging": {
+          "type": "object",
+          "properties": {
+            "frontend": { "type": "string" },
+            "backend": { "type": "string" }
+          }
+        },
+        "production": {
+          "type": "object",
+          "properties": {
+            "frontend": { "type": "string" },
+            "backend": { "type": "string" }
+          }
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "description": "MCP server configurations",
+      "properties": {
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "enabled": { "type": "boolean", "default": true },
+              "config": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Project-specific custom fields",
+      "additionalProperties": true
+    }
+  }
+}
