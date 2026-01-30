@@ -9,17 +9,28 @@ A platform-agnostic toolkit for supercharging your Claude Code CLI experience wi
 - GitHub Project Board integration with codebase analysis
 - Phased development planning with 95%+ success rate
 
+## Important: Two Types of Commands
+
+This package provides **two types of commands**:
+
+| Type | Where to Run | Example | AI Required? |
+|------|--------------|---------|--------------|
+| **Terminal Commands** | Your shell (bash, PowerShell, etc.) | `ccasp wizard` | No - file-based detection |
+| **Slash Commands** | Inside Claude Code CLI | `/menu`, `/github-update` | Yes - AI-powered |
+
+**The "auto-detection" in terminal commands does NOT use AI.** It reads your project files (`package.json`, config files, directory structure) to detect frameworks and settings - pure pattern matching.
+
 ## Quick Start
 
 ```bash
-# Install globally
+# STEP 1: Install globally (terminal command)
 npm install -g claude-cli-advanced-starter-pack
 
-# Run the vibe-code friendly setup wizard (recommended)
+# STEP 2: Run setup wizard (terminal command - no AI needed)
 ccasp wizard
 
-# Or quick init with auto-detection
-ccasp init
+# STEP 3: Restart Claude Code CLI, then use slash commands (AI-powered)
+# Inside Claude: /menu, /github-update, /deploy-full, etc.
 ```
 
 After installation, a welcome message shows your options:
@@ -70,13 +81,18 @@ Mobile-ready setup with single-character inputs:
 | C | Full | All features including deployment |
 | D | Custom | Pick individual features |
 
-### Tech Stack Auto-Detection
+### Tech Stack Auto-Detection (No AI Required)
 
-Automatically detects your project's tech stack from:
-- `package.json` - Frontend/backend frameworks, testing tools
-- Configuration files - Vite, Next.js, Playwright, Jest
-- Git remotes - Repository info
-- Directory structure - src/, apps/, backend/, etc.
+**This is file-based pattern matching, not AI inference.** The detection reads your project files:
+
+| File/Pattern | What It Detects |
+|--------------|-----------------|
+| `package.json` | React, Vue, Next.js, Express, testing tools |
+| `vite.config.js` | Vite bundler |
+| `next.config.js` | Next.js framework |
+| `tsconfig.json` | TypeScript usage |
+| `.git/config` | Repository URL |
+| `src/`, `apps/`, `backend/` | Project structure |
 
 Generates `tech-stack.json` with all detected values for template placeholders.
 
@@ -229,14 +245,16 @@ To apply changes:
 
 ## Commands Reference
 
-### Terminal Commands
+### Terminal Commands (Run in your shell - no AI needed)
+
+These commands run directly in your terminal (bash, PowerShell, etc.) and do **not** require Claude or any AI connection. They use file-based detection and template generation.
 
 | Command | Description |
 |---------|-------------|
 | `ccasp wizard` | **Vibe-code friendly setup wizard** |
 | `ccasp init` | Deploy slash commands to project |
 | `ccasp` | Interactive menu |
-| `ccasp detect-stack` | Auto-detect tech stack |
+| `ccasp detect-stack` | Auto-detect tech stack (reads files) |
 | `ccasp claude-audit` | Audit CLAUDE.md & .claude/ |
 | `ccasp create-agent` | Agent creation menu |
 | `ccasp create-hook` | Create enforcement hook |
@@ -245,7 +263,9 @@ To apply changes:
 | `ccasp create-phase-dev` | Create phased development plan |
 | `ccasp roadmap` | Roadmap integration |
 
-### Slash Commands (After Init)
+### Slash Commands (Run inside Claude Code CLI - AI-powered)
+
+These commands only work **inside an active Claude Code CLI session**. They are AI-powered and can understand context, execute complex tasks, and interact with your codebase intelligently.
 
 | Command | Description |
 |---------|-------------|
@@ -261,6 +281,8 @@ To apply changes:
 | `/create-hook` | Build enforcement hooks |
 | `/explore-mcp` | Discover MCP servers |
 | `/claude-audit` | Audit CLAUDE.md |
+
+> **Note:** Slash commands are created in `.claude/commands/` by the terminal commands. You must restart Claude Code CLI after running `ccasp init` for slash commands to become available.
 
 ## Configuration
 
@@ -373,21 +395,27 @@ const { content, warnings } = replacePlaceholders(template, techStack);
 ┌─────────────────────────────────────────────────────────────┐
 │                CLAUDE CLI ADVANCED STARTER PACK              │
 │                                                              │
+│  PHASE 1: TERMINAL (No AI) ─────────────────────────────    │
+│                                                              │
 │  npm install → postinstall message → ccasp wizard            │
 │                                                              │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
 │  │ Tech Stack  │  │  Template   │  │   Feature   │          │
 │  │  Detection  │→ │   Engine    │→ │  Selection  │          │
+│  │ (file-based)│  │(no AI)      │  │(interactive)│          │
 │  └─────────────┘  └─────────────┘  └─────────────┘          │
 │                          ↓                                   │
 │  ┌─────────────────────────────────────────────────┐        │
 │  │              YOUR PROJECT (.claude/)             │        │
 │  │  commands/ │ agents/ │ skills/ │ hooks/ │ docs/ │        │
 │  └─────────────────────────────────────────────────┘        │
-│                          ↓                                   │
+│                                                              │
+│  PHASE 2: CLAUDE CODE CLI (AI-Powered) ─────────────────    │
+│                                                              │
 │  ┌─────────────────────────────────────────────────┐        │
 │  │           CLAUDE CODE CLI (restart required)     │        │
 │  │  /menu │ /ccasp-setup │ /github-update │ ...    │        │
+│  │         ↑ These are AI-powered slash commands    │        │
 │  └─────────────────────────────────────────────────┘        │
 └─────────────────────────────────────────────────────────────┘
 ```
