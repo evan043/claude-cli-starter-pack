@@ -500,7 +500,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   const pythonPackages = readPythonRequirements(projectRoot);
 
   // --- FRONTEND DETECTION ---
-  spinner?.text = 'Detecting frontend framework...';
+  if (spinner) spinner.text = 'Detecting frontend framework...';
 
   for (const [framework, patterns] of Object.entries(DETECTION_PATTERNS.frontend)) {
     if (
@@ -549,7 +549,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   }
 
   // --- BACKEND DETECTION ---
-  spinner?.text = 'Detecting backend framework...';
+  if (spinner) spinner.text = 'Detecting backend framework...';
 
   for (const [framework, patterns] of Object.entries(DETECTION_PATTERNS.backend)) {
     const hasPkg = hasPackages(pkgJson, patterns.packages);
@@ -580,7 +580,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   result.backend.healthEndpoint = '/api/health';
 
   // --- DATABASE DETECTION ---
-  spinner?.text = 'Detecting database...';
+  if (spinner) spinner.text = 'Detecting database...';
 
   for (const [db, patterns] of Object.entries(DETECTION_PATTERNS.database)) {
     if (hasPackages(pkgJson, patterns.packages)) {
@@ -603,7 +603,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   }
 
   // --- TESTING DETECTION ---
-  spinner?.text = 'Detecting testing frameworks...';
+  if (spinner) spinner.text = 'Detecting testing frameworks...';
 
   for (const [framework, patterns] of Object.entries(DETECTION_PATTERNS.e2eFramework)) {
     if (
@@ -641,7 +641,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   result.testing.selectors = detectSelectors(projectRoot);
 
   // --- DEPLOYMENT DETECTION ---
-  spinner?.text = 'Detecting deployment platforms...';
+  if (spinner) spinner.text = 'Detecting deployment platforms...';
 
   for (const [platform, patterns] of Object.entries(DETECTION_PATTERNS.deployment)) {
     if (fileExists(projectRoot, patterns.configFiles)) {
@@ -657,7 +657,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   }
 
   // --- DEV ENVIRONMENT ---
-  spinner?.text = 'Detecting dev environment...';
+  if (spinner) spinner.text = 'Detecting dev environment...';
 
   // Detect package manager
   if (existsSync(join(projectRoot, 'pnpm-lock.yaml'))) {
@@ -683,7 +683,7 @@ export async function detectTechStack(projectRoot, options = {}) {
   }
 
   // --- VERSION CONTROL ---
-  spinner?.text = 'Detecting version control...';
+  if (spinner) spinner.text = 'Detecting version control...';
 
   const gitInfo = detectGitInfo(projectRoot);
   if (gitInfo) {
@@ -702,7 +702,7 @@ export async function detectTechStack(projectRoot, options = {}) {
     api: `http://localhost:${result.backend.port || 8000}/api`,
   };
 
-  spinner?.succeed('Tech stack detection complete');
+  if (spinner) spinner.succeed('Tech stack detection complete');
 
   return result;
 }
