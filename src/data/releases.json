@@ -3,14 +3,23 @@
     {
       "version": "1.0.12",
       "date": "2026-01-30",
-      "summary": "Release notes pending",
-      "highlights": [],
+      "summary": "Feature: /project-impl recommendation banner in /menu",
+      "highlights": [
+        "Shows setup tip when /project-impl hasn't been run yet",
+        "Tracks projectImplCompleted state in ccasp-state.json",
+        "Banner disappears after running any /project-impl option"
+      ],
       "newFeatures": {
         "commands": [],
         "agents": [],
         "skills": [],
         "hooks": [],
-        "other": []
+        "other": [
+          {
+            "name": "project-impl-banner",
+            "description": "Recommends running /project-impl for new installations"
+          }
+        ]
       },
       "breaking": [],
       "deprecated": []
@@ -18,8 +27,11 @@
     {
       "version": "1.0.11",
       "date": "2026-01-30",
-      "summary": "Release notes pending",
-      "highlights": [],
+      "summary": "Security: Removed project-specific example text from prompts",
+      "highlights": [
+        "Changed ngrok example from 'my.app.benefits360' to 'my-app-name'",
+        "Security audit confirmed no personal data in npm package"
+      ],
       "newFeatures": {
         "commands": [],
         "agents": [],
