@@ -1,5 +1,38 @@
 # Claude CLI Advanced Starter Pack
 
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔╦╗╦  ╦╔═╗╔╗╔╔═╗╔═╗╔╦╗  ╔═╗╔╦╗╔═╗╦═╗╔╦╗╔═╗╦═╗       ║
+║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
+║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
+║                                                                               ║
+║                         Your Project Name Here                                ║
+║                                                                               ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║   Quick Actions:                                                              ║
+║   ─────────────                                                               ║
+║   [T] Run Tests          [G] GitHub Task        [P] Phase Dev Plan            ║
+║   [A] Create Agent       [H] Create Hook        [S] Create Skill              ║
+║   [M] Explore MCP        [C] Claude Audit       [E] Explore Codebase          ║
+║                                                                               ║
+║   Project Resources:                                                          ║
+║   ──────────────────                                                          ║
+║   [1] View Agents        [2] View Skills        [3] View Hooks                ║
+║   [4] View Commands      [5] Settings           [6] Documentation             ║
+║                                                                               ║
+║   Project Implementation:                                                     ║
+║   ───────────────────────                                                     ║
+║   [I] /project-impl      Agent-powered setup & configuration                  ║
+║                                                                               ║
+║   Navigation:                                                                 ║
+║   ───────────                                                                 ║
+║   [U] Check for Updates  [R] Refresh Menu       [?] Help       [Q] Exit      ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
 **Advanced Claude Code CLI Toolkit - Agents, Hooks, Skills, MCP Servers, Phased Development, and GitHub Integration**
 
 A platform-agnostic toolkit for supercharging your Claude Code CLI experience with:
@@ -65,12 +98,14 @@ Mobile-ready setup with single-character inputs:
   1. Quick Start      - Detect stack + init .claude
   2. Full Setup       - All features + customization
   3. GitHub Setup     - Connect project board
-  4. Audit CLAUDE.md  - Check existing config
-  5. Enhance CLAUDE.md - Generate/improve docs
-  6. Detect Tech Stack - Auto-detect project
-  7. View Templates   - Browse available items
-  8. Project Settings - Configure deployment, tunnels, etc.
+  4. View Templates   - Browse available items
+  5. Prior Releases   - Review & add features from past versions
+  6. Remove CCASP     - Uninstall from this project
   0. Exit
+
+Agent-powered features (audit, enhance, detect, configure) available via:
+  /project-impl     - In Claude Code CLI
+  /update-check     - Check for updates and add new features
 ```
 
 **Feature Presets** (just type A, B, C, or D):

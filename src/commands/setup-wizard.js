@@ -10,13 +10,27 @@ import chalk from 'chalk';
 import ora from 'ora';
 import boxen from 'boxen';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, renameSync, copyFileSync } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { runInit } from './init.js';
 import { detectTechStack } from './detect-tech-stack.js';
-import { runClaudeAudit, runEnhancement } from './claude-audit.js';
+import { runEnhancement } from './claude-audit.js';
 import { runSetup as runGitHubSetup } from './setup.js';
 import { runList } from './list.js';
-import { showProjectSettingsMenu } from '../cli/menu.js';
+import {
+  performVersionCheck,
+  formatUpdateBanner,
+  loadReleaseNotes,
+  getReleasesSince,
+  getAvailableFeatures,
+  markFeatureInstalled,
+  markFeatureSkipped,
+  dismissUpdateNotification,
+  getCurrentVersion,
+} from '../utils/version-check.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Create backup of a file before overwriting
@@ -321,32 +335,17 @@ const SETUP_OPTIONS = [
     short: 'GitHub',
   },
   {
-    name: `${chalk.yellow('4.')} Audit CLAUDE.md ${chalk.dim('- Check existing config')}`,
-    value: 'audit',
-    short: 'Audit',
-  },
-  {
-    name: `${chalk.yellow('5.')} Enhance CLAUDE.md ${chalk.dim('- Generate/improve docs')}`,
-    value: 'enhance',
-    short: 'Enhance',
-  },
-  {
-    name: `${chalk.yellow('6.')} Detect Tech Stack ${chalk.dim('- Auto-detect project')}`,
-    value: 'detect',
-    short: 'Detect',
-  },
-  {
-    name: `${chalk.yellow('7.')} View Templates ${chalk.dim('- Browse available items')}`,
+    name: `${chalk.yellow('4.')} View Templates ${chalk.dim('- Browse available items')}`,
     value: 'templates',
     short: 'Templates',
   },
   {
-    name: `${chalk.yellow('8.')} Project Settings ${chalk.dim('- Configure deployment, tunnels, etc.')}`,
-    value: 'settings',
-    short: 'Settings',
+    name: `${chalk.yellow('5.')} Prior Releases ${chalk.dim('- Review & add features from past versions')}`,
+    value: 'releases',
+    short: 'Releases',
   },
   {
-    name: `${chalk.yellow('9.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
+    name: `${chalk.yellow('6.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
     value: 'remove',
     short: 'Remove',
   },
@@ -619,10 +618,405 @@ async function showTemplates() {
 }
 
 /**
+ * Show prior releases and allow adding features
+ */
+async function showPriorReleases() {
+  console.log(chalk.bold('\n📜 Prior Releases\n'));
+
+  const { releases } = loadReleaseNotes();
+  const currentVersion = getCurrentVersion();
+
+  if (!releases || releases.length === 0) {
+    console.log(chalk.yellow('  No release history available.\n'));
+    return;
+  }
+
+  // Show release list
+  console.log(chalk.dim('  Select a release to view details and available features:\n'));
+
+  releases.forEach((release, i) => {
+    const isCurrent = release.version === currentVersion;
+    const marker = isCurrent ? chalk.green('●') : chalk.dim('○');
+    const currentLabel = isCurrent ? chalk.green(' (current)') : '';
+    console.log(`  ${chalk.yellow(i + 1 + '.')} ${marker} v${release.version}${currentLabel} ${chalk.dim(`(${release.date})`)}`);
+    console.log(`     ${chalk.dim(release.summary)}`);
+  });
+
+  console.log('');
+
+  const { releaseChoice } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'releaseChoice',
+      message: 'Select a release to view details:',
+      choices: [
+        ...releases.map((r, i) => ({
+          name: `${i + 1}. v${r.version} - ${r.summary}`,
+          value: i,
+          short: `v${r.version}`,
+        })),
+        {
+          name: `${chalk.cyan('A.')} Add available features to project`,
+          value: 'add',
+          short: 'Add Features',
+        },
+        {
+          name: `${chalk.dim('0.')} Back to menu`,
+          value: 'back',
+          short: 'Back',
+        },
+      ],
+      pageSize: 12,
+    },
+  ]);
+
+  if (releaseChoice === 'back') {
+    return;
+  }
+
+  if (releaseChoice === 'add') {
+    await showAddFeaturesMenu();
+    return;
+  }
+
+  // Show release details
+  const release = releases[releaseChoice];
+  await showReleaseDetails(release);
+}
+
+/**
+ * Show detailed release information
+ */
+async function showReleaseDetails(release) {
+  console.log(
+    boxen(
+      chalk.bold.cyan(`v${release.version}\n`) +
+        chalk.dim(`Released: ${release.date}\n\n`) +
+        chalk.white(release.summary),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'cyan',
+        title: '📦 Release Details',
+        titleAlignment: 'center',
+      }
+    )
+  );
+
+  // Show highlights
+  if (release.highlights && release.highlights.length > 0) {
+    console.log(chalk.bold('\n✨ Highlights:\n'));
+    release.highlights.forEach((h) => {
+      console.log(`  • ${h}`);
+    });
+  }
+
+  // Show new features
+  if (release.newFeatures) {
+    const { commands, agents, skills, hooks, other } = release.newFeatures;
+
+    if (commands && commands.length > 0) {
+      console.log(chalk.bold('\n📝 New Commands:\n'));
+      commands.forEach((cmd) => {
+        console.log(`  ${chalk.cyan(`/${cmd.name}`)} - ${cmd.description}`);
+      });
+    }
+
+    if (agents && agents.length > 0) {
+      console.log(chalk.bold('\n🤖 New Agents:\n'));
+      agents.forEach((agent) => {
+        console.log(`  ${chalk.cyan(agent.name)} - ${agent.description}`);
+      });
+    }
+
+    if (skills && skills.length > 0) {
+      console.log(chalk.bold('\n🎯 New Skills:\n'));
+      skills.forEach((skill) => {
+        console.log(`  ${chalk.cyan(skill.name)} - ${skill.description}`);
+      });
+    }
+
+    if (hooks && hooks.length > 0) {
+      console.log(chalk.bold('\n🪝 New Hooks:\n'));
+      hooks.forEach((hook) => {
+        console.log(`  ${chalk.cyan(hook.name)} - ${hook.description}`);
+      });
+    }
+
+    if (other && other.length > 0) {
+      console.log(chalk.bold('\n🔧 Other Improvements:\n'));
+      other.forEach((item) => {
+        console.log(`  ${chalk.cyan(item.name)} - ${item.description}`);
+      });
+    }
+  }
+
+  // Show breaking changes
+  if (release.breaking && release.breaking.length > 0) {
+    console.log(chalk.bold.red('\n⚠️  Breaking Changes:\n'));
+    release.breaking.forEach((b) => {
+      console.log(`  ${chalk.red('!')} ${b}`);
+    });
+  }
+
+  console.log('');
+
+  // Offer to add features from this release
+  const hasNewFeatures =
+    release.newFeatures &&
+    (release.newFeatures.commands?.length > 0 ||
+      release.newFeatures.agents?.length > 0 ||
+      release.newFeatures.skills?.length > 0 ||
+      release.newFeatures.hooks?.length > 0);
+
+  if (hasNewFeatures) {
+    const { addFeatures } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'addFeatures',
+        message: 'Would you like to add features from this release to your project?',
+        default: false,
+      },
+    ]);
+
+    if (addFeatures) {
+      await addFeaturesFromRelease(release);
+    }
+  }
+}
+
+/**
+ * Show menu to add available features
+ */
+async function showAddFeaturesMenu() {
+  const claudeDir = join(process.cwd(), '.claude');
+  const commandsDir = join(claudeDir, 'commands');
+
+  if (!existsSync(claudeDir)) {
+    console.log(chalk.yellow('\n⚠️  No .claude folder found. Run Quick Start (1) or Full Setup (2) first.\n'));
+    return;
+  }
+
+  // Get existing commands
+  const existingCommands = existsSync(commandsDir)
+    ? readdirSync(commandsDir).filter((f) => f.endsWith('.md') && f !== 'INDEX.md' && f !== 'README.md').map((f) => f.replace('.md', ''))
+    : [];
+
+  // Get all available features from releases
+  const { releases, featureRegistry } = loadReleaseNotes();
+
+  if (!featureRegistry || !featureRegistry.commands) {
+    console.log(chalk.yellow('\n  No feature registry available.\n'));
+    return;
+  }
+
+  // Find commands not yet installed
+  const availableCommands = Object.entries(featureRegistry.commands)
+    .filter(([name, info]) => !existingCommands.includes(name) && !info.required)
+    .map(([name, info]) => {
+      // Find description from releases
+      let description = 'No description available';
+      for (const release of releases) {
+        const cmd = release.newFeatures?.commands?.find((c) => c.name === name);
+        if (cmd) {
+          description = cmd.description;
+          break;
+        }
+      }
+      return { name, description, addedIn: info.addedIn };
+    });
+
+  if (availableCommands.length === 0) {
+    console.log(chalk.green('\n✓ All available commands are already installed!\n'));
+    return;
+  }
+
+  console.log(chalk.bold('\n📦 Available Commands to Add:\n'));
+  console.log(chalk.dim('  Select commands to add to your project:\n'));
+
+  const { selectedCommands } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'selectedCommands',
+      message: 'Select commands to install:',
+      choices: availableCommands.map((cmd) => ({
+        name: `/${cmd.name} - ${cmd.description} ${chalk.dim(`(v${cmd.addedIn})`)}`,
+        value: cmd.name,
+        checked: false,
+      })),
+      pageSize: 15,
+    },
+  ]);
+
+  if (selectedCommands.length === 0) {
+    console.log(chalk.dim('\n  No commands selected.\n'));
+    return;
+  }
+
+  // Install selected commands
+  const spinner = ora('Installing commands...').start();
+  const installed = [];
+  const failed = [];
+
+  for (const cmdName of selectedCommands) {
+    try {
+      // Look for template file
+      const templatePath = join(__dirname, '..', '..', 'templates', 'commands', `${cmdName}.template.md`);
+
+      if (existsSync(templatePath)) {
+        const content = readFileSync(templatePath, 'utf8');
+        const cmdPath = join(commandsDir, `${cmdName}.md`);
+        writeFileSync(cmdPath, content, 'utf8');
+        installed.push(cmdName);
+        markFeatureInstalled(cmdName);
+      } else {
+        failed.push({ name: cmdName, error: 'Template not found' });
+      }
+    } catch (error) {
+      failed.push({ name: cmdName, error: error.message });
+    }
+  }
+
+  spinner.stop();
+
+  if (installed.length > 0) {
+    console.log(chalk.green(`\n✓ Installed ${installed.length} command(s):`));
+    installed.forEach((cmd) => {
+      console.log(`  ${chalk.cyan(`/${cmd}`)}`);
+    });
+  }
+
+  if (failed.length > 0) {
+    console.log(chalk.red(`\n✗ Failed to install ${failed.length} command(s):`));
+    failed.forEach((f) => {
+      console.log(`  ${chalk.red(`/${f.name}`)}: ${f.error}`);
+    });
+  }
+
+  if (installed.length > 0) {
+    showRestartReminder();
+  }
+}
+
+/**
+ * Add features from a specific release
+ */
+async function addFeaturesFromRelease(release) {
+  const claudeDir = join(process.cwd(), '.claude');
+  const commandsDir = join(claudeDir, 'commands');
+
+  if (!existsSync(claudeDir)) {
+    console.log(chalk.yellow('\n⚠️  No .claude folder found. Run Quick Start (1) or Full Setup (2) first.\n'));
+    return;
+  }
+
+  if (!release.newFeatures?.commands || release.newFeatures.commands.length === 0) {
+    console.log(chalk.yellow('\n  No commands to add from this release.\n'));
+    return;
+  }
+
+  // Get existing commands
+  const existingCommands = existsSync(commandsDir)
+    ? readdirSync(commandsDir).filter((f) => f.endsWith('.md')).map((f) => f.replace('.md', ''))
+    : [];
+
+  // Filter to commands not yet installed
+  const availableCommands = release.newFeatures.commands.filter((cmd) => !existingCommands.includes(cmd.name));
+
+  if (availableCommands.length === 0) {
+    console.log(chalk.green('\n✓ All commands from this release are already installed!\n'));
+    return;
+  }
+
+  const { selectedCommands } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'selectedCommands',
+      message: 'Select commands to install:',
+      choices: availableCommands.map((cmd) => ({
+        name: `/${cmd.name} - ${cmd.description}`,
+        value: cmd.name,
+        checked: true,
+      })),
+      pageSize: 10,
+    },
+  ]);
+
+  if (selectedCommands.length === 0) {
+    console.log(chalk.dim('\n  No commands selected.\n'));
+    return;
+  }
+
+  // Install selected commands
+  const spinner = ora('Installing commands...').start();
+  const installed = [];
+  const failed = [];
+
+  for (const cmdName of selectedCommands) {
+    try {
+      const templatePath = join(__dirname, '..', '..', 'templates', 'commands', `${cmdName}.template.md`);
+
+      if (existsSync(templatePath)) {
+        const content = readFileSync(templatePath, 'utf8');
+        const cmdPath = join(commandsDir, `${cmdName}.md`);
+        writeFileSync(cmdPath, content, 'utf8');
+        installed.push(cmdName);
+        markFeatureInstalled(cmdName);
+      } else {
+        failed.push({ name: cmdName, error: 'Template not found' });
+      }
+    } catch (error) {
+      failed.push({ name: cmdName, error: error.message });
+    }
+  }
+
+  spinner.stop();
+
+  if (installed.length > 0) {
+    console.log(chalk.green(`\n✓ Installed ${installed.length} command(s):`));
+    installed.forEach((cmd) => {
+      console.log(`  ${chalk.cyan(`/${cmd}`)}`);
+    });
+    showRestartReminder();
+  }
+
+  if (failed.length > 0) {
+    console.log(chalk.red(`\n✗ Failed to install ${failed.length} command(s):`));
+    failed.forEach((f) => {
+      console.log(`  ${chalk.red(`/${f.name}`)}: ${f.error}`);
+    });
+  }
+}
+
+/**
+ * Check for updates and show banner if available
+ */
+async function checkAndShowUpdateBanner() {
+  try {
+    const checkResult = await performVersionCheck(process.cwd(), false);
+
+    if (checkResult.updateAvailable && checkResult.shouldNotify) {
+      const banner = formatUpdateBanner(checkResult);
+      if (banner) {
+        console.log(chalk.yellow(banner));
+      }
+    }
+
+    return checkResult;
+  } catch {
+    // Silently fail - network might be unavailable
+    return null;
+  }
+}
+
+/**
  * Main setup wizard - entry point
  */
 export async function runSetupWizard(options = {}) {
   showSetupHeader();
+
+  // Check for updates in background (non-blocking display)
+  await checkAndShowUpdateBanner();
 
   // Check if .claude already exists
   const claudeDir = join(process.cwd(), '.claude');
@@ -644,7 +1038,7 @@ export async function runSetupWizard(options = {}) {
         name: 'action',
         message: 'What would you like to do?',
         choices: SETUP_OPTIONS,
-        pageSize: 10,
+        pageSize: 12,
       },
     ]);
 
@@ -666,44 +1060,12 @@ export async function runSetupWizard(options = {}) {
         showRestartReminder();
         break;
 
-      case 'audit':
-        await runClaudeAudit();
-        // Audit doesn't modify files, no restart needed
-        break;
-
-      case 'enhance':
-        await runEnhancement();
-        // Enhancement modifies CLAUDE.md which requires restart
-        showRestartReminder();
-        break;
-
-      case 'detect':
-        const spinner = ora('Detecting tech stack...').start();
-        try {
-          const techStack = await detectTechStack(process.cwd());
-          spinner.succeed('Detection complete!');
-          console.log(chalk.bold('\nDetected Tech Stack:'));
-          console.log(JSON.stringify(techStack, null, 2));
-        } catch (error) {
-          spinner.fail('Detection failed');
-          console.error(chalk.red(error.message));
-        }
-        console.log('');
-        break;
-
       case 'templates':
         await showTemplates();
         break;
 
-      case 'settings':
-        // Check if .claude folder exists first
-        if (!existsSync(join(process.cwd(), '.claude'))) {
-          console.log(chalk.yellow('\n⚠️  No .claude folder found. Run Quick Start (1) or Full Setup (2) first.\n'));
-        } else {
-          await showProjectSettingsMenu();
-          // Settings modify tech-stack.json which may require restart
-          showRestartReminder();
-        }
+      case 'releases':
+        await showPriorReleases();
         break;
 
       case 'remove':
@@ -733,8 +1095,6 @@ Run the Claude CLI Advanced Starter Pack setup wizard.
 
 This command launches the interactive setup wizard for configuring:
 - .claude folder structure
-- CLAUDE.md generation
-- Tech stack detection
 - GitHub project integration
 - Agents, hooks, and skills
 
@@ -744,10 +1104,14 @@ Reply with a number to jump to that option:
 1. Quick Start - Auto-detect and initialize
 2. Full Setup - All features with customization
 3. GitHub Setup - Connect to project board
-4. Audit - Check existing CLAUDE.md
-5. Enhance - Generate/improve CLAUDE.md
-6. Detect - Show detected tech stack
-7. Templates - Browse available templates
+4. View Templates - Browse available templates
+5. Prior Releases - Review & add features from past versions
+6. Remove CCASP - Uninstall from this project
+
+## Related Commands
+
+- \`/project-impl\` - Agent-powered project implementation (audit, enhance, detect, configure)
+- \`/update-check\` - Check for updates and add new features
 
 ## From Terminal
 

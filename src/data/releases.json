@@ -1,0 +1,265 @@
+{
+  "releases": [
+    {
+      "version": "1.0.5",
+      "date": "2025-01-30",
+      "summary": "Added agent-powered project implementation and version tracking",
+      "highlights": [
+        "New /project-impl command for agent-powered setup",
+        "Version tracking with update notifications",
+        "Prior releases menu for feature management"
+      ],
+      "newFeatures": {
+        "commands": [
+          {
+            "name": "project-impl",
+            "description": "Agent-powered project implementation (audit, enhance, detect, configure)",
+            "category": "Setup"
+          },
+          {
+            "name": "update-check",
+            "description": "Check for updates and add new features to your project",
+            "category": "Maintenance"
+          }
+        ],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "version-tracking",
+            "description": "Background version checking with update notifications"
+          },
+          {
+            "name": "prior-releases-menu",
+            "description": "Review and enable features from prior releases"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.4",
+      "date": "2025-01-29",
+      "summary": "Settings schema update and hooks format improvements",
+      "highlights": [
+        "Updated settings.json schema for Claude Code compatibility",
+        "Improved hooks configuration format"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.3",
+      "date": "2025-01-28",
+      "summary": "Backup on overwrite and uninstall wizard",
+      "highlights": [
+        "Automatic backup when overwriting existing files",
+        "New Remove CCASP option in wizard",
+        "Selective removal with backup support"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "backup-on-overwrite",
+            "description": "Automatically backup files before overwriting"
+          },
+          {
+            "name": "uninstall-wizard",
+            "description": "Remove CCASP from project with backup options"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.2",
+      "date": "2025-01-27",
+      "summary": "Template fallback and bug fixes",
+      "highlights": [
+        "Added fallback to template files for commands",
+        "Fixed optional chaining assignments"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.1",
+      "date": "2025-01-26",
+      "summary": "Documentation improvements",
+      "highlights": [
+        "Comprehensive GitHub Wiki documentation",
+        "Clearer terminal vs slash command documentation"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.0",
+      "date": "2025-01-25",
+      "summary": "Initial release of Claude CLI Advanced Starter Pack",
+      "highlights": [
+        "Vibe-code friendly setup wizard",
+        "Tech stack detection with 86+ components",
+        "GitHub Project Board integration",
+        "Phased development system",
+        "Interactive /menu command"
+      ],
+      "newFeatures": {
+        "commands": [
+          {
+            "name": "menu",
+            "description": "Interactive project menu with quick access to all commands",
+            "category": "Navigation"
+          },
+          {
+            "name": "e2e-test",
+            "description": "Run E2E tests with Playwright (ralph loop, headed, watch modes)",
+            "category": "Testing"
+          },
+          {
+            "name": "github-task",
+            "description": "Create GitHub issues with codebase analysis",
+            "category": "GitHub"
+          },
+          {
+            "name": "phase-dev-plan",
+            "description": "Create phased development plans (95%+ success rate)",
+            "category": "Planning"
+          },
+          {
+            "name": "create-agent",
+            "description": "Create L1/L2/L3 agents for Claude Code",
+            "category": "Claude Code"
+          },
+          {
+            "name": "create-hook",
+            "description": "Create enforcement hooks (PreToolUse, PostToolUse, UserPromptSubmit)",
+            "category": "Claude Code"
+          },
+          {
+            "name": "create-skill",
+            "description": "Create RAG-enhanced skill packages",
+            "category": "Claude Code"
+          },
+          {
+            "name": "explore-mcp",
+            "description": "Discover and install MCP servers based on tech stack",
+            "category": "MCP"
+          },
+          {
+            "name": "claude-audit",
+            "description": "Audit CLAUDE.md and .claude/ against best practices",
+            "category": "Claude Code"
+          },
+          {
+            "name": "codebase-explorer",
+            "description": "Analyze codebase structure and find relevant files",
+            "category": "Analysis"
+          },
+          {
+            "name": "create-task-list",
+            "description": "Create intelligent task list with codebase exploration and GitHub integration",
+            "category": "Planning"
+          },
+          {
+            "name": "ccasp-setup",
+            "description": "CCASP Setup Wizard - vibe-code friendly project configuration",
+            "category": "Claude Code"
+          }
+        ],
+        "agents": [
+          {
+            "name": "example-agent",
+            "description": "Starter template for custom agents"
+          }
+        ],
+        "skills": [
+          {
+            "name": "example-skill",
+            "description": "Starter template for custom skills"
+          }
+        ],
+        "hooks": [
+          {
+            "name": "example-hook",
+            "description": "Starter template for custom hooks"
+          }
+        ],
+        "other": [
+          {
+            "name": "tech-stack-detection",
+            "description": "Automatic detection of 86+ frameworks and tools"
+          },
+          {
+            "name": "template-engine",
+            "description": "Handlebars-style template processing"
+          },
+          {
+            "name": "github-integration",
+            "description": "GitHub Project Board integration"
+          },
+          {
+            "name": "phased-development",
+            "description": "Phased development system with progress tracking"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    }
+  ],
+  "featureRegistry": {
+    "commands": {
+      "menu": { "addedIn": "1.0.0", "required": true },
+      "e2e-test": { "addedIn": "1.0.0", "required": false },
+      "github-task": { "addedIn": "1.0.0", "required": false },
+      "phase-dev-plan": { "addedIn": "1.0.0", "required": false },
+      "create-agent": { "addedIn": "1.0.0", "required": false },
+      "create-hook": { "addedIn": "1.0.0", "required": false },
+      "create-skill": { "addedIn": "1.0.0", "required": false },
+      "explore-mcp": { "addedIn": "1.0.0", "required": false },
+      "claude-audit": { "addedIn": "1.0.0", "required": false },
+      "codebase-explorer": { "addedIn": "1.0.0", "required": false },
+      "create-task-list": { "addedIn": "1.0.0", "required": false },
+      "ccasp-setup": { "addedIn": "1.0.0", "required": true },
+      "project-impl": { "addedIn": "1.0.5", "required": false },
+      "update-check": { "addedIn": "1.0.5", "required": false }
+    },
+    "optionalFeatures": {
+      "githubIntegration": { "addedIn": "1.0.0" },
+      "phasedDevelopment": { "addedIn": "1.0.0" },
+      "tokenManagement": { "addedIn": "1.0.0" },
+      "happyMode": { "addedIn": "1.0.0" },
+      "deploymentAutomation": { "addedIn": "1.0.0" },
+      "tunnelServices": { "addedIn": "1.0.0" }
+    }
+  }
+}

@@ -233,6 +233,18 @@ const AVAILABLE_COMMANDS = [
     selected: false,
     feature: 'deploymentAutomation',
   },
+  {
+    name: 'project-impl',
+    description: 'Agent-powered project implementation (audit, enhance, detect, configure)',
+    category: 'Setup',
+    selected: true,
+  },
+  {
+    name: 'update-check',
+    description: 'Check for CCASP updates and add new features to your project',
+    category: 'Maintenance',
+    selected: true,
+  },
 ];
 
 /**
@@ -324,9 +336,13 @@ description: Interactive project menu - Quick access to all commands, agents, sk
 ║   [1] View Agents        [2] View Skills        [3] View Hooks                ║
 ║   [4] View Commands      [5] Settings           [6] Documentation             ║
 ║                                                                               ║
+║   Project Implementation:                                                     ║
+║   ───────────────────────                                                     ║
+║   [I] /project-impl      Agent-powered setup & configuration                  ║
+║                                                                               ║
 ║   Navigation:                                                                 ║
 ║   ───────────                                                                 ║
-║   [R] Refresh Menu       [?] Help               [Q] Exit Menu                 ║
+║   [U] Check for Updates  [R] Refresh Menu       [?] Help       [Q] Exit      ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 \`\`\`
@@ -354,6 +370,8 @@ When the user invokes \`/menu\`, display the ASCII menu above and wait for their
 | **4** | List all commands | Read \`.claude/commands/INDEX.md\` |
 | **5** | View/edit settings | Read \`.claude/settings.json\` |
 | **6** | Open documentation | Read \`.claude/docs/\` |
+| **I** | Project Implementation | \`/project-impl\` |
+| **U** | Check for Updates | \`/update-check\` |
 | **R** | Refresh and redisplay menu | Re-invoke \`/menu\` |
 | **?** | Show help | Display command descriptions |
 | **Q** | Exit menu | End menu interaction |
@@ -368,12 +386,26 @@ ${hooksSection}
 
 When this command is invoked:
 
-1. **Display the ASCII menu** exactly as shown above
-2. **Ask the user** what they would like to do (show the key bindings)
-3. **Wait for user input** - a single character or command name
-4. **Execute the corresponding action**:
+1. **Check for updates** (background check):
+   - Read \`.claude/config/ccasp-state.json\` if it exists
+   - Check if there's a cached update notification that should be shown
+   - If an update is available and not dismissed, show a banner above the menu:
+
+   \`\`\`
+   ┌──────────────────────────────────────────────────────────────┐
+   │ 🆕 UPDATE AVAILABLE: v1.0.X → v1.0.Y                        │
+   │ New features available! Press [U] to see what's new.        │
+   └──────────────────────────────────────────────────────────────┘
+   \`\`\`
+
+2. **Display the ASCII menu** exactly as shown above
+3. **Ask the user** what they would like to do (show the key bindings)
+4. **Wait for user input** - a single character or command name
+5. **Execute the corresponding action**:
    - For slash commands: Invoke the command directly
    - For resource views: Read and display the contents
+   - For U: Invoke \`/update-check\` to show updates and add features
+   - For I: Invoke \`/project-impl\` for project implementation
    - For R: Redisplay the menu
    - For Q: End the menu session
 
@@ -381,12 +413,21 @@ When this command is invoked:
 
 \`\`\`
 User: /menu
+Claude: [Shows update banner if available]
 Claude: [Displays ASCII menu]
-Claude: What would you like to do? Enter a key (T/G/P/A/H/S/M/C/E/1-6/R/?/Q):
+Claude: What would you like to do? Enter a key (T/G/P/A/H/S/M/C/E/1-6/I/U/R/?/Q):
 
-User: T
-Claude: Running E2E tests... [Invokes /e2e-test]
+User: U
+Claude: [Invokes /update-check to show available updates]
 \`\`\`
+
+### Update Check Behavior
+
+When checking for updates:
+- Read \`.claude/config/ccasp-state.json\` for cached update info
+- If \`lastCheckResult.latestVersion\` is newer than installed version, show banner
+- Update notifications auto-dismiss after 1 day
+- User can press [U] anytime to check manually and add new features
 
 ### Dynamic Content
 
@@ -1023,10 +1064,8 @@ options:
     description: "Auto-detect + init"
   - label: "Full Setup"
     description: "All features"
-  - label: "Audit"
-    description: "Check CLAUDE.md"
-  - label: "Enhance"
-    description: "Generate CLAUDE.md"
+  - label: "Prior Releases"
+    description: "Add features from updates"
 ---
 
 # CCASP Setup Wizard
@@ -1035,17 +1074,17 @@ Interactive setup wizard for Claude Code CLI enhancement.
 
 ## Quick Options
 
-Reply with a **number** or **letter** to select:
+Reply with a **number** to select:
 
 | # | Action | Description |
 |---|--------|-------------|
 | **1** | Quick Start | Auto-detect stack + init .claude |
 | **2** | Full Setup | All features with customization |
 | **3** | GitHub | Connect project board |
-| **4** | Audit | Check existing CLAUDE.md |
-| **5** | Enhance | Generate/improve CLAUDE.md |
-| **6** | Detect | Show detected tech stack |
-| **7** | Templates | Browse available items |
+| **4** | Templates | Browse available items |
+| **5** | Prior Releases | Review & add features from past versions |
+| **6** | Remove CCASP | Uninstall from this project |
+| **0** | Exit | Close wizard |
 
 ## Feature Presets
 
@@ -1056,6 +1095,11 @@ Reply with a **number** or **letter** to select:
 | **C** | Full | Everything including agents |
 | **D** | Custom | Pick individual features |
 
+## Related Commands
+
+- \`/project-impl\` - Agent-powered project implementation (audit, enhance, detect, configure)
+- \`/update-check\` - Check for updates and add new features to your project
+
 ## Instructions for Claude
 
 When this command is invoked:
@@ -1065,22 +1109,23 @@ When this command is invoked:
    - Does \`CLAUDE.md\` exist? (check with Bash: ls -la CLAUDE.md 2>/dev/null)
    - Is tech stack detected? (check for package.json, pyproject.toml, etc.)
 
-2. **Present the quick options menu** and wait for user selection
+2. **Check for updates** (display banner if new version available)
 
-3. **Handle user selection**:
-   - If user types a number (1-7), execute that action
+3. **Present the quick options menu** and wait for user selection
+
+4. **Handle user selection**:
+   - If user types a number (1-6), execute that action
    - If user types a letter (A-D), apply that preset
    - For "1" (Quick Start): run tech detection, show results, apply Standard preset
-   - For "4" (Audit): check CLAUDE.md against best practices
-   - For "5" (Enhance): offer to generate missing sections
+   - For "5" (Prior Releases): show release history and feature management
 
-4. **For Quick Start**:
+5. **For Quick Start**:
    - Detect tech stack from package.json, config files
    - Show summary of detected stack
    - Create .claude/ folder with commands, settings
    - Generate CLAUDE.md with detected stack info
 
-5. **CRITICAL - Session Restart Reminder**:
+6. **CRITICAL - Session Restart Reminder**:
    After ANY action that modifies \`.claude/\` or \`CLAUDE.md\`, display:
 
    ⚠️  RESTART REQUIRED
@@ -1092,8 +1137,8 @@ When this command is invoked:
    2. Restart: claude or claude .
    3. New commands will be available
 
-   Actions requiring restart: 1, 2, 3, 5
-   Actions NOT requiring restart: 4 (audit), 6 (detect), 7 (templates)
+   Actions requiring restart: 1, 2, 3, 5 (if features added)
+   Actions NOT requiring restart: 4 (templates)
 
 ## Vibe-Code Design
 
