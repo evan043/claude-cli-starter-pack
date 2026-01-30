@@ -953,8 +953,52 @@ export async function runInit(options = {}) {
   console.log(chalk.cyan(`  Location: ${cwd}`));
   console.log('');
 
+  // Check for existing .claude folder
+  const hasExistingClaudeDir = existsSync(claudeDir);
+
+  if (hasExistingClaudeDir) {
+    // Count existing content
+    const existingCommands = existsSync(commandsDir) ? readdirSync(commandsDir).filter(f => f.endsWith('.md')).length : 0;
+    const existingAgents = existsSync(agentsDir) ? readdirSync(agentsDir).filter(f => f.endsWith('.md')).length : 0;
+    const existingSkills = existsSync(skillsDir) ? readdirSync(skillsDir).filter(f => !f.startsWith('.')).length : 0;
+    const existingHooks = existsSync(hooksDir) ? readdirSync(hooksDir).filter(f => f.endsWith('.js')).length : 0;
+    const hasSettings = existsSync(join(claudeDir, 'settings.json'));
+
+    console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    console.log(chalk.green.bold('  ✓ Existing .claude/ folder detected'));
+    console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+    console.log('');
+    console.log(chalk.dim('  Current contents:'));
+    if (existingCommands > 0) console.log(chalk.dim(`    • ${existingCommands} command(s) in commands/`));
+    if (existingAgents > 0) console.log(chalk.dim(`    • ${existingAgents} agent(s) in agents/`));
+    if (existingSkills > 0) console.log(chalk.dim(`    • ${existingSkills} skill(s) in skills/`));
+    if (existingHooks > 0) console.log(chalk.dim(`    • ${existingHooks} hook(s) in hooks/`));
+    if (hasSettings) console.log(chalk.dim(`    • settings.json configured`));
+    console.log('');
+    console.log(chalk.yellow.bold('  ⚠ Your existing files will NOT be overwritten'));
+    console.log(chalk.dim('    New commands will be added alongside your existing setup.'));
+    console.log(chalk.dim('    Use --force flag to overwrite specific commands if needed.'));
+    console.log('');
+
+    const { confirmProceed } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirmProceed',
+        message: 'Continue with installation? (existing files are safe)',
+        default: true,
+      },
+    ]);
+
+    if (!confirmProceed) {
+      console.log(chalk.dim('\nCancelled. No changes made.'));
+      return;
+    }
+    console.log('');
+  }
+
   // Step 1: Check and create folder structure
   console.log(chalk.bold('Step 1: Setting up .claude/ folder structure\n'));
+  console.log(chalk.dim('  (Only creates missing folders - existing content preserved)\n'));
 
   const foldersToCreate = [
     { path: claudeDir, name: '.claude' },
@@ -978,6 +1022,7 @@ export async function runInit(options = {}) {
 
   // Step 2: Create settings files if they don't exist
   console.log(chalk.bold('Step 2: Configuring settings\n'));
+  console.log(chalk.dim('  (Skips existing files - your settings are preserved)\n'));
 
   const settingsPath = join(claudeDir, 'settings.json');
   const settingsLocalPath = join(claudeDir, 'settings.local.json');
@@ -986,52 +1031,73 @@ export async function runInit(options = {}) {
     writeFileSync(settingsPath, generateSettingsJson(projectName), 'utf8');
     console.log(chalk.green('  ✓ Created settings.json'));
   } else {
-    console.log(chalk.dim('  ○ settings.json exists'));
+    console.log(chalk.blue('  ○ settings.json exists (preserved)'));
   }
 
   if (!existsSync(settingsLocalPath)) {
     writeFileSync(settingsLocalPath, generateSettingsLocalJson(), 'utf8');
     console.log(chalk.green('  ✓ Created settings.local.json'));
   } else {
-    console.log(chalk.dim('  ○ settings.local.json exists'));
+    console.log(chalk.blue('  ○ settings.local.json exists (preserved)'));
   }
 
   console.log('');
 
-  // Step 3: Create starter files for each folder
+  // Step 3: Create starter files for each folder (only if folder is empty)
   console.log(chalk.bold('Step 3: Creating starter files\n'));
+  console.log(chalk.dim('  (Only creates examples in empty folders)\n'));
 
-  // Starter agent
-  const starterAgentPath = join(agentsDir, 'example-agent.md');
-  if (!existsSync(starterAgentPath)) {
+  // Check if agents folder has any files before adding example
+  const agentFiles = existsSync(agentsDir) ? readdirSync(agentsDir).filter(f => f.endsWith('.md')) : [];
+  if (agentFiles.length === 0) {
+    const starterAgentPath = join(agentsDir, 'example-agent.md');
     writeFileSync(starterAgentPath, generateStarterAgent('example-agent'), 'utf8');
-    console.log(chalk.green('  ✓ Created agents/example-agent.md'));
+    console.log(chalk.green('  ✓ Created agents/example-agent.md (starter template)'));
+  } else {
+    console.log(chalk.blue(`  ○ agents/ has ${agentFiles.length} existing agent(s) (preserved)`));
   }
 
-  // Starter skill
-  const starterSkillDir = join(skillsDir, 'example-skill');
-  const starterSkillPath = join(starterSkillDir, 'skill.md');
-  if (!existsSync(starterSkillPath)) {
+  // Check if skills folder has any skills before adding example
+  const skillDirs = existsSync(skillsDir) ? readdirSync(skillsDir).filter(f => !f.startsWith('.')) : [];
+  if (skillDirs.length === 0) {
+    const starterSkillDir = join(skillsDir, 'example-skill');
     mkdirSync(starterSkillDir, { recursive: true });
     mkdirSync(join(starterSkillDir, 'context'), { recursive: true });
     mkdirSync(join(starterSkillDir, 'workflows'), { recursive: true });
-    writeFileSync(starterSkillPath, generateStarterSkill('example-skill'), 'utf8');
+    writeFileSync(join(starterSkillDir, 'skill.md'), generateStarterSkill('example-skill'), 'utf8');
     writeFileSync(join(starterSkillDir, 'context', 'README.md'), '# Context\n\nAdd supporting documentation here.\n', 'utf8');
     writeFileSync(join(starterSkillDir, 'workflows', 'README.md'), '# Workflows\n\nAdd step-by-step procedures here.\n', 'utf8');
-    console.log(chalk.green('  ✓ Created skills/example-skill/'));
+    console.log(chalk.green('  ✓ Created skills/example-skill/ (starter template)'));
+  } else {
+    console.log(chalk.blue(`  ○ skills/ has ${skillDirs.length} existing skill(s) (preserved)`));
   }
 
-  // Starter hook
-  const starterHookPath = join(hooksDir, 'example-hook.js');
-  if (!existsSync(starterHookPath)) {
+  // Check if hooks folder has any files before adding example
+  const hookFiles = existsSync(hooksDir) ? readdirSync(hooksDir).filter(f => f.endsWith('.js')) : [];
+  if (hookFiles.length === 0) {
+    const starterHookPath = join(hooksDir, 'example-hook.js');
     writeFileSync(starterHookPath, generateStarterHook('example-hook', 'PreToolUse'), 'utf8');
-    console.log(chalk.green('  ✓ Created hooks/example-hook.js'));
+    console.log(chalk.green('  ✓ Created hooks/example-hook.js (starter template)'));
+  } else {
+    console.log(chalk.blue(`  ○ hooks/ has ${hookFiles.length} existing hook(s) (preserved)`));
   }
 
   console.log('');
 
-  // Step 4: Select commands to install
+  // Step 4: Select slash commands to install
   console.log(chalk.bold('Step 4: Select slash commands to install\n'));
+
+  // Check for existing commands first
+  const existingCmdFiles = existsSync(commandsDir)
+    ? readdirSync(commandsDir).filter(f => f.endsWith('.md') && f !== 'INDEX.md' && f !== 'README.md')
+    : [];
+  const existingCmdNames = existingCmdFiles.map(f => f.replace('.md', ''));
+
+  if (existingCmdNames.length > 0) {
+    console.log(chalk.blue(`  ℹ Found ${existingCmdNames.length} existing command(s) in your project:`));
+    console.log(chalk.dim(`    ${existingCmdNames.map(c => '/' + c).join(', ')}`));
+    console.log(chalk.dim('    These will be preserved unless you choose to overwrite.\n'));
+  }
 
   const categories = [...new Set(AVAILABLE_COMMANDS.map((c) => c.category))];
 
@@ -1039,9 +1105,11 @@ export async function runInit(options = {}) {
     console.log(chalk.cyan(`  ${category}:`));
     const cmds = AVAILABLE_COMMANDS.filter((c) => c.category === category);
     for (const cmd of cmds) {
+      const isExisting = existingCmdNames.includes(cmd.name);
       const marker = cmd.selected ? chalk.green('●') : chalk.dim('○');
       const required = cmd.required ? chalk.yellow(' (required)') : '';
-      console.log(`    ${marker} /${cmd.name}${required} - ${chalk.dim(cmd.description)}`);
+      const existing = isExisting ? chalk.blue(' [exists]') : '';
+      console.log(`    ${marker} /${cmd.name}${required}${existing} - ${chalk.dim(cmd.description)}`);
     }
     console.log('');
   }
@@ -1051,13 +1119,16 @@ export async function runInit(options = {}) {
     {
       type: 'checkbox',
       name: 'selectedCommands',
-      message: 'Select commands to install:',
-      choices: AVAILABLE_COMMANDS.map((cmd) => ({
-        name: `/${cmd.name} - ${cmd.description}`,
-        value: cmd.name,
-        checked: cmd.selected,
-        disabled: cmd.required ? 'Required' : false,
-      })),
+      message: 'Select commands to install (existing commands marked with [exists]):',
+      choices: AVAILABLE_COMMANDS.map((cmd) => {
+        const isExisting = existingCmdNames.includes(cmd.name);
+        return {
+          name: `/${cmd.name}${isExisting ? ' [exists]' : ''} - ${cmd.description}`,
+          value: cmd.name,
+          checked: cmd.selected,
+          disabled: cmd.required ? 'Required' : false,
+        };
+      }),
       pageSize: 15,
     },
   ]);
@@ -1073,33 +1144,45 @@ export async function runInit(options = {}) {
 
   console.log('');
 
-  // Step 5: Check for existing commands
-  const existingCommands = [];
-  for (const cmdName of finalCommands) {
-    const cmdPath = join(commandsDir, `${cmdName}.md`);
-    if (existsSync(cmdPath)) {
-      existingCommands.push(cmdName);
-    }
-  }
+  // Step 5: Check for existing commands that would be overwritten
+  const commandsToOverwrite = finalCommands.filter(cmd => existingCmdNames.includes(cmd));
 
   let overwrite = options.force || false;
-  if (existingCommands.length > 0 && !overwrite) {
-    showWarning(`Found ${existingCommands.length} existing command(s): ${existingCommands.join(', ')}`);
-    const { confirmOverwrite } = await inquirer.prompt([
+  if (commandsToOverwrite.length > 0 && !overwrite) {
+    console.log(chalk.yellow.bold('  ⚠ The following commands already exist:'));
+    for (const cmd of commandsToOverwrite) {
+      console.log(chalk.yellow(`    • /${cmd}`));
+    }
+    console.log('');
+
+    const { overwriteChoice } = await inquirer.prompt([
       {
-        type: 'confirm',
-        name: 'confirmOverwrite',
-        message: 'Overwrite existing commands?',
-        default: false,
+        type: 'list',
+        name: 'overwriteChoice',
+        message: 'How would you like to handle existing commands?',
+        choices: [
+          { name: 'Skip existing - only install new commands (recommended)', value: 'skip' },
+          { name: 'Overwrite all - replace existing with starter pack versions', value: 'overwrite' },
+          { name: 'Cancel installation', value: 'cancel' },
+        ],
       },
     ]);
-    overwrite = confirmOverwrite;
+
+    if (overwriteChoice === 'cancel') {
+      console.log(chalk.dim('\nCancelled. No changes made.'));
+      return;
+    }
+
+    overwrite = overwriteChoice === 'overwrite';
 
     if (!overwrite) {
-      // Filter out existing commands (except required ones)
-      const filtered = finalCommands.filter((c) => !existingCommands.includes(c) || requiredCommands.includes(c));
+      // Filter out existing commands (keep only new ones + required)
+      const filtered = finalCommands.filter((c) => !existingCmdNames.includes(c) || requiredCommands.includes(c));
       finalCommands.length = 0;
       finalCommands.push(...filtered);
+      console.log(chalk.green(`\n  ✓ Will install ${finalCommands.length} new command(s), preserving ${commandsToOverwrite.length} existing`));
+    } else {
+      console.log(chalk.yellow(`\n  ⚠ Will overwrite ${commandsToOverwrite.length} existing command(s)`));
     }
   }
 
@@ -1160,25 +1243,51 @@ export async function runInit(options = {}) {
 
   // Summary
   console.log('');
+
+  // Count what was preserved
+  const preservedCommands = existingCmdNames.filter(c => !installed.includes(c) || !overwrite);
+  const newCommands = installed.filter(c => !existingCmdNames.includes(c));
+  const updatedCommands = installed.filter(c => existingCmdNames.includes(c) && overwrite);
+
   if (installed.length > 0) {
-    showSuccess('Claude CLI Starter Pack Deployed!', [
+    const summaryLines = [
       '',
       `Project: ${projectName}`,
       '',
-      'Folder Structure:',
-      '  .claude/',
-      '  ├── commands/     (slash commands)',
-      '  ├── agents/       (custom agents)',
-      '  ├── skills/       (skill packages)',
-      '  ├── hooks/        (enforcement hooks)',
-      '  ├── docs/         (documentation)',
-      '  ├── settings.json',
-      '  └── settings.local.json',
-      '',
-      `Commands Installed: ${installed.length}`,
-      ...installed.slice(0, 8).map((c) => `  /${c}`),
-      installed.length > 8 ? `  ... and ${installed.length - 8} more` : '',
-    ]);
+    ];
+
+    // Show what happened
+    if (hasExistingClaudeDir) {
+      summaryLines.push('Integration Summary:');
+      if (newCommands.length > 0) {
+        summaryLines.push(`  ✓ ${newCommands.length} new command(s) added`);
+      }
+      if (updatedCommands.length > 0) {
+        summaryLines.push(`  ↻ ${updatedCommands.length} command(s) updated`);
+      }
+      if (preservedCommands.length > 0) {
+        summaryLines.push(`  ○ ${preservedCommands.length} existing command(s) preserved`);
+      }
+      summaryLines.push('');
+    }
+
+    summaryLines.push('Folder Structure:');
+    summaryLines.push('  .claude/');
+    summaryLines.push('  ├── commands/     (slash commands)');
+    summaryLines.push('  ├── agents/       (custom agents)');
+    summaryLines.push('  ├── skills/       (skill packages)');
+    summaryLines.push('  ├── hooks/        (enforcement hooks)');
+    summaryLines.push('  ├── docs/         (documentation)');
+    summaryLines.push('  ├── settings.json');
+    summaryLines.push('  └── settings.local.json');
+    summaryLines.push('');
+    summaryLines.push(`Commands Available: ${installed.length + preservedCommands.length}`);
+    summaryLines.push(...installed.slice(0, 6).map((c) => `  /${c}${newCommands.includes(c) ? ' (new)' : ''}`));
+    if (installed.length > 6) {
+      summaryLines.push(`  ... and ${installed.length - 6} more`);
+    }
+
+    showSuccess('Claude CLI Starter Pack Deployed!', summaryLines);
   }
 
   if (failed.length > 0) {
