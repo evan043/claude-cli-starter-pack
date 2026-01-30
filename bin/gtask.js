@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * GitHub Task Kit - CLI Entry Point
+ * Claude CLI Starter Pack - CLI Entry Point
  *
- * Comprehensive GitHub Issue Creator with Codebase Analysis
- * Creates well-documented issues with automatic code references
+ * Complete Claude Code CLI toolkit - agents, hooks, skills, MCP servers,
+ * phased development, and GitHub integration
  */
 
 import { program } from 'commander';
@@ -30,8 +30,8 @@ import { showHelp } from '../src/commands/help.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
-  .name('gtask')
-  .description('Comprehensive GitHub Issue Creator with Codebase Analysis')
+  .name('ccsp')
+  .description('Claude CLI Starter Pack - Complete toolkit for Claude Code CLI')
   .version(getVersion());
 
 // Interactive menu (default when no command)

@@ -1,11 +1,12 @@
 {
-  "name": "github-task-kit",
+  "name": "claude-cli-starter-pack",
   "version": "1.0.0",
-  "description": "Comprehensive GitHub Issue Creator with Codebase Analysis - Create well-documented issues with automatic code references",
+  "description": "Complete Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
-    "gtask": "./bin/gtask.js",
-    "github-task-kit": "./bin/gtask.js"
+    "ccsp": "./bin/gtask.js",
+    "claude-starter": "./bin/gtask.js",
+    "claude-cli-starter-pack": "./bin/gtask.js"
   },
   "type": "module",
   "scripts": {
@@ -15,28 +16,30 @@
     "prepublishOnly": "npm run test"
   },
   "keywords": [
-    "github",
-    "issues",
-    "project-management",
-    "cli",
-    "developer-tools",
-    "task-management",
-    "codebase-analysis",
+    "claude",
     "claude-code",
-    "mcp",
     "anthropic",
-    "ai-tools"
+    "cli",
+    "ai-tools",
+    "mcp",
+    "agents",
+    "hooks",
+    "skills",
+    "github",
+    "developer-tools",
+    "automation",
+    "codebase-analysis"
   ],
   "author": "evan043",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/evan043/github-task-kit.git"
+    "url": "git+https://github.com/evan043/claude-cli-starter-pack.git"
   },
   "bugs": {
-    "url": "https://github.com/evan043/github-task-kit/issues"
+    "url": "https://github.com/evan043/claude-cli-starter-pack/issues"
   },
-  "homepage": "https://github.com/evan043/github-task-kit#readme",
+  "homepage": "https://github.com/evan043/claude-cli-starter-pack#readme",
   "engines": {
     "node": ">=18.0.0"
   },
