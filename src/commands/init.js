@@ -15,6 +15,19 @@ import { fileURLToPath } from 'url';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { getVersion } from '../utils.js';
 import { createBackup } from './setup-wizard.js';
+import {
+  loadUsageTracking,
+  getCustomizedUsedAssets,
+  isAssetCustomized,
+} from '../utils/version-check.js';
+import {
+  getAssetsNeedingMerge,
+  compareAssetVersions,
+  getLocalAsset,
+  getTemplateAsset,
+  generateMergeExplanation,
+  formatMergeOptions,
+} from '../utils/smart-merge.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -242,6 +255,12 @@ const AVAILABLE_COMMANDS = [
   {
     name: 'update-check',
     description: 'Check for CCASP updates and add new features to your project',
+    category: 'Maintenance',
+    selected: true,
+  },
+  {
+    name: 'update-smart',
+    description: 'Smart merge manager for customized assets during updates',
     category: 'Maintenance',
     selected: true,
   },
@@ -1482,7 +1501,7 @@ module.exports = async function ccaspUpdateCheck(context) {
 }
 
 /**
- * Generate settings.json with CCASP update check hook
+ * Generate settings.json with CCASP update check hook and usage tracking
  */
 function generateSettingsJson(projectName) {
   return JSON.stringify({
@@ -1499,6 +1518,17 @@ function generateSettingsJson(projectName) {
             {
               "type": "command",
               "command": "node .claude/hooks/ccasp-update-check.js"
+            }
+          ]
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "Skill|Read",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "node .claude/hooks/usage-tracking.js"
             }
           ]
         }
@@ -1738,6 +1768,19 @@ export async function runInit(options = {}) {
     console.log(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
   }
 
+  // Deploy the usage tracking hook (tracks command/skill/agent usage for smart merge)
+  const usageTrackingHookPath = join(hooksDir, 'usage-tracking.js');
+  if (!existsSync(usageTrackingHookPath)) {
+    const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'usage-tracking.template.js');
+    if (existsSync(templatePath)) {
+      const hookContent = readFileSync(templatePath, 'utf8');
+      writeFileSync(usageTrackingHookPath, hookContent, 'utf8');
+      console.log(chalk.green('  ✓ Created hooks/usage-tracking.js (smart merge tracking)'));
+    }
+  } else {
+    console.log(chalk.blue('  ○ hooks/usage-tracking.js exists (preserved)'));
+  }
+
   console.log('');
 
   // Step 4: Select optional features
@@ -1849,52 +1892,225 @@ export async function runInit(options = {}) {
   // Step 6: Check for existing commands that would be overwritten
   const commandsToOverwrite = finalCommands.filter(cmd => existingCmdNames.includes(cmd));
 
+  // Track commands that need smart merge handling
+  const smartMergeDecisions = {};
+
   let overwrite = options.force || false;
   if (commandsToOverwrite.length > 0 && !overwrite) {
-    console.log(chalk.yellow.bold('  ⚠ The following commands already exist:'));
-    for (const cmd of commandsToOverwrite) {
-      console.log(chalk.yellow(`    • /${cmd}`));
+    // Check for customized assets that have been used
+    const assetsNeedingMerge = getAssetsNeedingMerge(process.cwd());
+    const customizedCommands = commandsToOverwrite.filter(cmd =>
+      assetsNeedingMerge.commands?.some(a => a.name === cmd)
+    );
+
+    // Show smart merge prompt for customized commands
+    if (customizedCommands.length > 0) {
+      console.log(chalk.cyan.bold('\n  🔀 Smart Merge Available'));
+      console.log(chalk.dim('  The following commands have been customized and used:\n'));
+
+      for (const cmd of customizedCommands) {
+        const assetInfo = assetsNeedingMerge.commands.find(a => a.name === cmd);
+        console.log(chalk.cyan(`    • /${cmd}`));
+        console.log(chalk.dim(`      Used ${assetInfo.usageData.useCount} time(s), last: ${new Date(assetInfo.usageData.lastUsed).toLocaleDateString()}`));
+        console.log(chalk.dim(`      Change: ${assetInfo.comparison.significance.level} significance - ${assetInfo.comparison.summary}`));
+      }
+      console.log('');
+
+      const { smartMergeAction } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'smartMergeAction',
+          message: 'How would you like to handle your customized commands?',
+          choices: [
+            { name: '🔍 Explore each one - Let Claude explain the changes', value: 'explore' },
+            { name: '📋 Skip all customized - Keep your versions', value: 'skip-customized' },
+            { name: '🔄 Replace all - Use new versions (lose customizations)', value: 'replace-all' },
+            { name: '❌ Cancel installation', value: 'cancel' },
+          ],
+        },
+      ]);
+
+      if (smartMergeAction === 'cancel') {
+        console.log(chalk.dim('\nCancelled. No changes made.'));
+        return;
+      }
+
+      if (smartMergeAction === 'explore') {
+        // Individual exploration for each customized command
+        console.log(chalk.cyan('\n  Exploring customized commands...\n'));
+
+        for (const cmd of customizedCommands) {
+          const assetInfo = assetsNeedingMerge.commands.find(a => a.name === cmd);
+          const local = getLocalAsset('commands', cmd, process.cwd());
+          const template = getTemplateAsset('commands', cmd);
+
+          // Show merge explanation
+          console.log(chalk.bold(`\n  ┌${'─'.repeat(60)}┐`));
+          console.log(chalk.bold(`  │ /${cmd.padEnd(58)} │`));
+          console.log(chalk.bold(`  └${'─'.repeat(60)}┘`));
+
+          const explanation = generateMergeExplanation(
+            'commands',
+            cmd,
+            assetInfo.comparison,
+            local?.content,
+            template?.content
+          );
+
+          // Display condensed explanation
+          console.log(chalk.dim('\n  ' + explanation.split('\n').slice(0, 15).join('\n  ')));
+
+          const { decision } = await inquirer.prompt([
+            {
+              type: 'list',
+              name: 'decision',
+              message: `What would you like to do with /${cmd}?`,
+              choices: [
+                { name: 'Skip - Keep your customized version', value: 'skip' },
+                { name: 'Backup & Replace - Save yours, use new version', value: 'backup' },
+                { name: 'Replace - Use new version (no backup)', value: 'replace' },
+                { name: 'Show full diff', value: 'diff' },
+              ],
+            },
+          ]);
+
+          if (decision === 'diff') {
+            // Show full diff
+            console.log(chalk.dim('\n--- Your Version ---'));
+            console.log(local?.content?.slice(0, 500) + (local?.content?.length > 500 ? '\n...(truncated)' : ''));
+            console.log(chalk.dim('\n--- Update Version ---'));
+            console.log(template?.content?.slice(0, 500) + (template?.content?.length > 500 ? '\n...(truncated)' : ''));
+
+            // Re-prompt after showing diff
+            const { finalDecision } = await inquirer.prompt([
+              {
+                type: 'list',
+                name: 'finalDecision',
+                message: `Final decision for /${cmd}?`,
+                choices: [
+                  { name: 'Skip - Keep your version', value: 'skip' },
+                  { name: 'Backup & Replace', value: 'backup' },
+                  { name: 'Replace without backup', value: 'replace' },
+                ],
+              },
+            ]);
+            smartMergeDecisions[cmd] = finalDecision;
+          } else {
+            smartMergeDecisions[cmd] = decision;
+          }
+        }
+      } else if (smartMergeAction === 'skip-customized') {
+        // Mark all customized commands as skip
+        for (const cmd of customizedCommands) {
+          smartMergeDecisions[cmd] = 'skip';
+        }
+        console.log(chalk.green(`\n  ✓ Will preserve ${customizedCommands.length} customized command(s)`));
+      } else if (smartMergeAction === 'replace-all') {
+        // Mark all customized commands as replace with backup
+        for (const cmd of customizedCommands) {
+          smartMergeDecisions[cmd] = 'backup';
+        }
+        console.log(chalk.yellow(`\n  ⚠ Will backup and replace ${customizedCommands.length} customized command(s)`));
+      }
+
+      // Remove customized commands from the standard overwrite flow
+      // (they're handled by smart merge decisions)
+      const nonCustomizedToOverwrite = commandsToOverwrite.filter(c => !customizedCommands.includes(c));
+
+      if (nonCustomizedToOverwrite.length > 0) {
+        console.log(chalk.yellow.bold('\n  ⚠ The following non-customized commands also exist:'));
+        for (const cmd of nonCustomizedToOverwrite) {
+          console.log(chalk.yellow(`    • /${cmd}`));
+        }
+      }
     }
-    console.log('');
 
-    const { overwriteChoice } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'overwriteChoice',
-        message: 'How would you like to handle existing commands?',
-        choices: [
-          { name: 'Skip existing - only install new commands (recommended)', value: 'skip' },
-          { name: 'Overwrite with backup - save existing to .claude/backups/ first', value: 'backup' },
-          { name: 'Overwrite all - replace existing (no backup)', value: 'overwrite' },
-          { name: 'Cancel installation', value: 'cancel' },
-        ],
-      },
-    ]);
+    // Standard overwrite prompt for non-customized commands
+    const remainingToOverwrite = commandsToOverwrite.filter(c => !smartMergeDecisions[c]);
 
-    if (overwriteChoice === 'cancel') {
-      console.log(chalk.dim('\nCancelled. No changes made.'));
-      return;
-    }
+    if (remainingToOverwrite.length > 0) {
+      if (!customizedCommands || customizedCommands.length === 0) {
+        console.log(chalk.yellow.bold('  ⚠ The following commands already exist:'));
+        for (const cmd of remainingToOverwrite) {
+          console.log(chalk.yellow(`    • /${cmd}`));
+        }
+      }
+      console.log('');
 
-    overwrite = overwriteChoice === 'overwrite' || overwriteChoice === 'backup';
-    const createBackups = overwriteChoice === 'backup';
+      const { overwriteChoice } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'overwriteChoice',
+          message: 'How would you like to handle these existing commands?',
+          choices: [
+            { name: 'Skip existing - only install new commands (recommended)', value: 'skip' },
+            { name: 'Overwrite with backup - save existing to .claude/backups/ first', value: 'backup' },
+            { name: 'Overwrite all - replace existing (no backup)', value: 'overwrite' },
+            { name: 'Cancel installation', value: 'cancel' },
+          ],
+        },
+      ]);
 
-    if (!overwrite) {
-      // Filter out existing commands (keep only new ones + required)
-      const filtered = finalCommands.filter((c) => !existingCmdNames.includes(c) || requiredCommands.includes(c));
-      finalCommands.length = 0;
-      finalCommands.push(...filtered);
-      console.log(chalk.green(`\n  ✓ Will install ${finalCommands.length} new command(s), preserving ${commandsToOverwrite.length} existing`));
-    } else if (createBackups) {
-      console.log(chalk.cyan(`\n  ✓ Will backup and overwrite ${commandsToOverwrite.length} existing command(s)`));
-    } else {
-      console.log(chalk.yellow(`\n  ⚠ Will overwrite ${commandsToOverwrite.length} existing command(s)`));
+      if (overwriteChoice === 'cancel') {
+        console.log(chalk.dim('\nCancelled. No changes made.'));
+        return;
+      }
+
+      overwrite = overwriteChoice === 'overwrite' || overwriteChoice === 'backup';
+
+      // Apply decision to remaining commands
+      for (const cmd of remainingToOverwrite) {
+        smartMergeDecisions[cmd] = overwriteChoice === 'skip' ? 'skip' : (overwriteChoice === 'backup' ? 'backup' : 'replace');
+      }
+
+      if (!overwrite) {
+        // Filter out skipped commands
+        const skippedCommands = Object.entries(smartMergeDecisions)
+          .filter(([, decision]) => decision === 'skip')
+          .map(([cmd]) => cmd);
+        const filtered = finalCommands.filter((c) => !skippedCommands.includes(c) || requiredCommands.includes(c));
+        finalCommands.length = 0;
+        finalCommands.push(...filtered);
+        console.log(chalk.green(`\n  ✓ Will install ${finalCommands.length} new command(s), preserving ${skippedCommands.length} existing`));
+      } else if (overwriteChoice === 'backup') {
+        console.log(chalk.cyan(`\n  ✓ Will backup and overwrite ${remainingToOverwrite.length} existing command(s)`));
+      } else {
+        console.log(chalk.yellow(`\n  ⚠ Will overwrite ${remainingToOverwrite.length} existing command(s)`));
+      }
+    } else if (Object.keys(smartMergeDecisions).length > 0) {
+      // All commands handled by smart merge
+      const skippedCommands = Object.entries(smartMergeDecisions)
+        .filter(([, decision]) => decision === 'skip')
+        .map(([cmd]) => cmd);
+
+      if (skippedCommands.length > 0) {
+        const filtered = finalCommands.filter((c) => !skippedCommands.includes(c) || requiredCommands.includes(c));
+        finalCommands.length = 0;
+        finalCommands.push(...filtered);
+      }
     }
   }
 
   // Track if we should create backups (set outside the if block for use later)
+  // Now also considers smart merge decisions
   const createBackups = options.backup || (typeof overwrite !== 'undefined' && commandsToOverwrite.length > 0 && !options.force);
   let backedUpFiles = [];
+
+  // Helper to check if a command should be backed up based on smart merge decisions
+  const shouldBackupCommand = (cmdName) => {
+    if (smartMergeDecisions[cmdName]) {
+      return smartMergeDecisions[cmdName] === 'backup';
+    }
+    return createBackups;
+  };
+
+  // Helper to check if a command should be skipped based on smart merge decisions
+  const shouldSkipCommand = (cmdName) => {
+    if (smartMergeDecisions[cmdName]) {
+      return smartMergeDecisions[cmdName] === 'skip';
+    }
+    return false;
+  };
 
   // Step 7: Install commands
   console.log(chalk.bold('Step 6: Installing slash commands\n'));
@@ -1916,6 +2132,11 @@ export async function runInit(options = {}) {
 
   for (const cmdName of finalCommands) {
     try {
+      // Skip commands that were marked to skip in smart merge
+      if (shouldSkipCommand(cmdName)) {
+        continue;
+      }
+
       const cmdPath = join(commandsDir, `${cmdName}.md`);
 
       let content;
@@ -1938,8 +2159,8 @@ export async function runInit(options = {}) {
         }
       }
 
-      // Create backup if overwriting existing file
-      if (existsSync(cmdPath) && createBackups) {
+      // Create backup if overwriting existing file (respects smart merge decisions)
+      if (existsSync(cmdPath) && shouldBackupCommand(cmdName)) {
         const backupPath = createBackup(cmdPath);
         if (backupPath) {
           backedUpFiles.push({ original: cmdPath, backup: backupPath });

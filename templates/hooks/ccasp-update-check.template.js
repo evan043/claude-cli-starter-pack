@@ -3,6 +3,7 @@
  *
  * Automatically checks for npm updates when Claude Code starts.
  * Runs on first UserPromptSubmit per session, caches results for 1 hour.
+ * Also detects customized assets that may need smart merge during updates.
  *
  * Event: UserPromptSubmit
  */
@@ -14,6 +15,7 @@ const path = require('path');
 const PACKAGE_NAME = 'claude-cli-advanced-starter-pack';
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 const STATE_FILE = '.claude/config/ccasp-state.json';
+const USAGE_FILE = '.claude/config/usage-tracking.json';
 const SESSION_MARKER = '.claude/config/.ccasp-session-checked';
 
 /**
@@ -186,6 +188,65 @@ function markSessionChecked() {
 }
 
 /**
+ * Load usage tracking data
+ */
+function loadUsageTracking() {
+  const trackingPath = path.join(process.cwd(), USAGE_FILE);
+
+  if (fs.existsSync(trackingPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(trackingPath, 'utf8'));
+    } catch {
+      // Return default
+    }
+  }
+
+  return {
+    version: '1.0.0',
+    assets: { commands: {}, skills: {}, agents: {}, hooks: {} },
+    _lastModified: null,
+  };
+}
+
+/**
+ * Get customized assets that have been used
+ */
+function getCustomizedUsedAssets() {
+  const tracking = loadUsageTracking();
+  const result = { commands: [], skills: [], agents: [], hooks: [] };
+
+  for (const [type, assets] of Object.entries(tracking.assets || {})) {
+    if (!result[type]) continue;
+
+    for (const [name, data] of Object.entries(assets || {})) {
+      if (data.customized && data.useCount > 0) {
+        result[type].push({
+          name,
+          useCount: data.useCount,
+          lastUsed: data.lastUsed,
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Count total customized assets
+ */
+function countCustomizedAssets() {
+  const assets = getCustomizedUsedAssets();
+  let count = 0;
+
+  for (const list of Object.values(assets)) {
+    count += list.length;
+  }
+
+  return count;
+}
+
+/**
  * Main hook handler
  */
 module.exports = async function ccaspUpdateCheck(context) {
@@ -232,8 +293,21 @@ module.exports = async function ccaspUpdateCheck(context) {
       state.updateFirstDisplayed = false;
       state.lastSeenUpdateVersion = latestVersion;
     }
+
+    // Check for customized assets that may need smart merge
+    const customizedCount = countCustomizedAssets();
+    if (customizedCount > 0) {
+      state.customizedAssetsCount = customizedCount;
+      state.customizedAssets = getCustomizedUsedAssets();
+      state.smartMergeAvailable = true;
+    } else {
+      state.customizedAssetsCount = 0;
+      state.customizedAssets = null;
+      state.smartMergeAvailable = false;
+    }
   } else {
     state.updateHighlights = [];
+    state.smartMergeAvailable = false;
   }
 
   // Save state

@@ -1,6 +1,47 @@
 {
   "releases": [
     {
+      "version": "1.0.13",
+      "date": "2026-01-30",
+      "summary": "Feature: Smart Update Merge Tracking - Intelligent handling of customized assets during updates",
+      "highlights": [
+        "Tracks usage of commands, skills, agents, and hooks in usage-tracking.json",
+        "Smart merge detection: identifies customized assets that have updates available",
+        "Interactive merge exploration: Claude explains what changes, offers merge/replace/skip options",
+        "New /update-smart command for manual merge exploration",
+        "Usage tracking hook runs on PostToolUse for Skill and Read tools"
+      ],
+      "newFeatures": {
+        "commands": [
+          {
+            "name": "update-smart",
+            "description": "Smart merge manager for customized assets during updates",
+            "category": "Maintenance"
+          }
+        ],
+        "agents": [],
+        "skills": [],
+        "hooks": [
+          {
+            "name": "usage-tracking",
+            "description": "Tracks usage of commands, skills, agents for smart merge detection"
+          }
+        ],
+        "other": [
+          {
+            "name": "smart-merge-system",
+            "description": "Intelligent diff comparison and merge exploration for customized assets"
+          },
+          {
+            "name": "usage-tracking-json",
+            "description": "Persistent tracking of asset usage in .claude/config/usage-tracking.json"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.12",
       "date": "2026-01-30",
       "summary": "Feature: /project-impl recommendation banner in /menu",
@@ -424,6 +465,20 @@
       },
       "update-check": {
         "addedIn": "1.0.5",
+        "required": false
+      },
+      "update-smart": {
+        "addedIn": "1.0.13",
+        "required": false
+      }
+    },
+    "hooks": {
+      "ccasp-update-check": {
+        "addedIn": "1.0.7",
+        "required": true
+      },
+      "usage-tracking": {
+        "addedIn": "1.0.13",
         "required": false
       }
     },
