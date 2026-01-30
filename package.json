@@ -1,0 +1,62 @@
+{
+  "name": "github-task-kit",
+  "version": "1.0.0",
+  "description": "Comprehensive GitHub Issue Creator with Codebase Analysis - Create well-documented issues with automatic code references",
+  "main": "src/index.js",
+  "bin": {
+    "gtask": "./bin/gtask.js",
+    "github-task-kit": "./bin/gtask.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node bin/gtask.js",
+    "test": "node --check bin/gtask.js && echo 'Syntax OK'",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run test"
+  },
+  "keywords": [
+    "github",
+    "issues",
+    "project-management",
+    "cli",
+    "developer-tools",
+    "task-management",
+    "codebase-analysis",
+    "claude-code",
+    "mcp",
+    "anthropic",
+    "ai-tools"
+  ],
+  "author": "evan043",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evan043/github-task-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/evan043/github-task-kit/issues"
+  },
+  "homepage": "https://github.com/evan043/github-task-kit#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "inquirer": "^9.2.23",
+    "ora": "^8.0.1",
+    "boxen": "^7.1.1",
+    "yaml": "^2.4.1",
+    "glob": "^10.3.10",
+    "figures": "^6.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ]
+}
