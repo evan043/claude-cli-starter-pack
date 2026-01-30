@@ -1227,17 +1227,12 @@ export default async function ${hookName.replace(/-/g, '_')}(context) {
  */
 function generateSettingsJson(projectName) {
   return JSON.stringify({
-    "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude/settings.schema.json",
-    "project": {
-      "name": projectName,
-      "description": "Project configured with Claude CLI Advanced Starter Pack"
-    },
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
     "permissions": {
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Task"],
-      "deniedTools": []
+      "allow": [],
+      "deny": []
     },
-    "agents": [],
-    "hooks": []
+    "hooks": {}
   }, null, 2);
 }
 
@@ -1246,12 +1241,12 @@ function generateSettingsJson(projectName) {
  */
 function generateSettingsLocalJson() {
   return JSON.stringify({
-    "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude/settings.schema.json",
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
     "permissions": {
-      "allowedTools": [],
-      "deniedTools": []
+      "allow": [],
+      "deny": []
     },
-    "hooks": []
+    "hooks": {}
   }, null, 2);
 }
 
