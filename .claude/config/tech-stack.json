@@ -1,0 +1,102 @@
+{
+  "version": "2.0.0",
+  "project": {
+    "name": "claude-cli-advanced-starter-pack",
+    "description": "",
+    "rootPath": "."
+  },
+  "tokenManagement": {
+    "enabled": true,
+    "dailyBudget": 200000,
+    "thresholds": {
+      "compact": 0.75,
+      "archive": 0.85,
+      "respawn": 0.9
+    }
+  },
+  "happyMode": {
+    "enabled": true,
+    "dashboardUrl": null,
+    "checkpointInterval": 10,
+    "verbosity": "condensed"
+  },
+  "agents": {
+    "enabled": true,
+    "l1": {
+      "model": "sonnet",
+      "tools": [
+        "Task",
+        "Read",
+        "Grep",
+        "Glob",
+        "WebSearch"
+      ],
+      "maxTokens": 16000
+    },
+    "l2": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Edit",
+        "Write",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "maxTokens": 8000
+    },
+    "l3": {
+      "model": "haiku",
+      "tools": [
+        "Read",
+        "Grep"
+      ],
+      "maxTokens": 500
+    },
+    "maxConcurrent": 4
+  },
+  "phasedDevelopment": {
+    "enabled": true,
+    "defaultScale": "M",
+    "successTarget": 0.95
+  },
+  "hooks": {
+    "enabled": true,
+    "priorities": {
+      "lifecycle": 100,
+      "tools": 1000,
+      "automation": 2000
+    },
+    "errorBehavior": "approve"
+  },
+  "devEnvironment": {
+    "tunnel": {
+      "service": "none",
+      "url": null,
+      "subdomain": null
+    }
+  },
+  "deployment": {
+    "frontend": {
+      "platform": "none"
+    },
+    "backend": {
+      "platform": "none"
+    }
+  },
+  "versionControl": {
+    "provider": "github",
+    "repository": "evan043/claude-cli-advanced-starter-pack",
+    "projectBoard": {
+      "type": "github-projects-v2",
+      "number": 6,
+      "url": "https://github.com/users/evan043/projects/6",
+      "id": "PVT_kwHOBak5v84BN5qI"
+    }
+  },
+  "_pendingConfiguration": [
+    "happyMode",
+    "deploymentAutomation",
+    "tunnelServices"
+  ]
+}

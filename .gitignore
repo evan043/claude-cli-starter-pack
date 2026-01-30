@@ -34,9 +34,14 @@ coverage/
 dist/
 build/
 
-# Local Claude config (personal commands)
-.claude/
-CLAUDE.md
+# Local Claude config - excluded ONLY when deployed to other projects
+# In CCASP repo itself, .claude/ contains development hooks and CLAUDE.md has project docs
+# These are force-added with git add -f when needed
+
+# Runtime state files (always excluded)
+.claude/config/.ccasp-session-checked
+.claude/config/.ccasp-build-state.json
+.claude/config/ccasp-state.json
 
 # Temp files
 npm-output.txt
