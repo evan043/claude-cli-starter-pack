@@ -106,7 +106,18 @@
             "projectId": { "type": "string" },
             "serviceId": { "type": "string" },
             "environmentId": { "type": "string" },
-            "productionUrl": { "type": "string" }
+            "productionUrl": { "type": "string" },
+            "selfHostedConfig": {
+              "type": "object",
+              "description": "Configuration for self-hosted deployments",
+              "properties": {
+                "sshUser": { "type": "string" },
+                "sshHost": { "type": "string" },
+                "sshPort": { "type": "integer", "default": 22 },
+                "deployScript": { "type": "string", "description": "Remote script to run for deployment" },
+                "appPath": { "type": "string", "description": "Path to app on remote server" }
+              }
+            }
           }
         },
         "cicd": {
@@ -270,6 +281,215 @@
               "config": { "type": "object" }
             }
           }
+        }
+      }
+    },
+    "tokenManagement": {
+      "type": "object",
+      "description": "Token budget management for Claude API usage tracking",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "dailyBudget": {
+          "type": "integer",
+          "description": "Daily token budget limit",
+          "default": 200000
+        },
+        "thresholds": {
+          "type": "object",
+          "description": "Percentage thresholds for token usage actions",
+          "properties": {
+            "compact": {
+              "type": "number",
+              "description": "Threshold to suggest context compaction (0-1)",
+              "default": 0.75
+            },
+            "archive": {
+              "type": "number",
+              "description": "Threshold to suggest archiving session (0-1)",
+              "default": 0.85
+            },
+            "respawn": {
+              "type": "number",
+              "description": "Threshold to force respawn (0-1)",
+              "default": 0.90
+            }
+          }
+        },
+        "trackingFile": {
+          "type": "string",
+          "description": "Path to token tracking JSON file",
+          "default": ".claude/hooks/cache/token-usage.json"
+        }
+      }
+    },
+    "happyMode": {
+      "type": "object",
+      "description": "Happy Engineering mobile app integration for remote session control",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "dashboardUrl": {
+          "type": ["string", "null"],
+          "description": "URL to Happy Coder dashboard (if self-hosted)",
+          "default": null
+        },
+        "checkpointInterval": {
+          "type": "integer",
+          "description": "Minutes between automatic checkpoints",
+          "default": 10
+        },
+        "verbosity": {
+          "type": "string",
+          "enum": ["full", "condensed", "minimal"],
+          "description": "Response verbosity level for mobile optimization",
+          "default": "condensed"
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "onTaskComplete": { "type": "boolean", "default": true },
+            "onError": { "type": "boolean", "default": true },
+            "onCheckpoint": { "type": "boolean", "default": false }
+          }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "description": "Agent hierarchy configuration for Claude Code",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "l1": {
+          "type": "object",
+          "description": "L1 Orchestrator agent configuration",
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": ["opus", "sonnet", "haiku"],
+              "default": "sonnet"
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["Task", "Read", "Grep", "Glob", "WebSearch"]
+            },
+            "maxTokens": { "type": "integer", "default": 16000 }
+          }
+        },
+        "l2": {
+          "type": "object",
+          "description": "L2 Specialist agent configuration",
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": ["opus", "sonnet", "haiku"],
+              "default": "sonnet"
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"]
+            },
+            "maxTokens": { "type": "integer", "default": 8000 }
+          }
+        },
+        "l3": {
+          "type": "object",
+          "description": "L3 Worker agent configuration",
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": ["opus", "sonnet", "haiku"],
+              "default": "haiku"
+            },
+            "tools": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["Read", "Grep"]
+            },
+            "maxTokens": { "type": "integer", "default": 500 }
+          }
+        },
+        "maxConcurrent": {
+          "type": "integer",
+          "description": "Maximum concurrent agent tasks",
+          "default": 4
+        }
+      }
+    },
+    "phasedDevelopment": {
+      "type": "object",
+      "description": "Phased development planning configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "defaultScale": {
+          "type": "string",
+          "enum": ["S", "M", "L"],
+          "description": "Default project scale (S=1-2 phases, M=3-4 phases, L=5+ phases)",
+          "default": "M"
+        },
+        "successTarget": {
+          "type": "number",
+          "description": "Target success probability (0-1)",
+          "default": 0.95
+        },
+        "progressFile": {
+          "type": "string",
+          "description": "Path to progress tracking JSON",
+          "default": ".claude/docs/{project-slug}/PROGRESS.json"
+        },
+        "generateArtifacts": {
+          "type": "object",
+          "description": "Which artifacts to generate with phase plans",
+          "properties": {
+            "executiveSummary": { "type": "boolean", "default": true },
+            "deploymentRunbook": { "type": "boolean", "default": true },
+            "rollbackPlan": { "type": "boolean", "default": true },
+            "testPlan": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "description": "Hook system configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "priorities": {
+          "type": "object",
+          "description": "Default priority levels for hook categories",
+          "properties": {
+            "lifecycle": {
+              "type": "integer",
+              "description": "Priority for lifecycle hooks (lower = higher priority)",
+              "default": 100
+            },
+            "tools": {
+              "type": "integer",
+              "description": "Priority for tool-related hooks",
+              "default": 1000
+            },
+            "automation": {
+              "type": "integer",
+              "description": "Priority for automation hooks",
+              "default": 2000
+            }
+          }
+        },
+        "errorBehavior": {
+          "type": "string",
+          "enum": ["approve", "deny", "ask"],
+          "description": "Default behavior when a hook encounters an error",
+          "default": "approve"
+        },
+        "cacheDir": {
+          "type": "string",
+          "description": "Directory for hook cache files",
+          "default": ".claude/hooks/cache"
+        },
+        "configDir": {
+          "type": "string",
+          "description": "Directory for hook configuration files",
+          "default": ".claude/hooks/config"
         }
       }
     },

@@ -7,35 +7,42 @@ model: haiku
 
 Deploy both backend and frontend in parallel for fastest deployment.
 
-## Prerequisites
-
-- Backend deployed on {{deployment.backend.platform}}
-- Frontend deployed on {{deployment.frontend.platform}}
-- Production URLs configured
+{{#if deployment.backend.platform}}
+{{#if deployment.frontend.platform}}
 
 ## Deployment Targets
 
 | Component | Platform | URL |
 |-----------|----------|-----|
-| Backend | {{deployment.backend.platform}} | {{urls.production.backend}} |
-| Frontend | {{deployment.frontend.platform}} | {{urls.production.frontend}} |
+| Backend | {{deployment.backend.platform}} | {{deployment.backend.productionUrl}} |
+| Frontend | {{deployment.frontend.platform}} | {{deployment.frontend.productionUrl}} |
 
-## Workflow
-
-### Step 1: Pre-deployment Checks
+## Pre-deployment Checklist
 
 ```bash
-# Verify no uncommitted changes
+# 1. Verify clean working directory
 git status
 
-# Ensure on correct branch
+# 2. Ensure on correct branch
 git branch --show-current
+
+# 3. Run tests
+{{#if testing.e2e.testCommand}}
+{{testing.e2e.testCommand}}
+{{else}}
+npm test
+{{/if}}
 ```
 
-### Step 2: Deploy Backend
+---
+
+## Backend Deployment
 
 {{#if (eq deployment.backend.platform "railway")}}
-Using Railway MCP:
+### Railway
+
+Using Railway MCP server for deployment:
+
 ```javascript
 // Trigger deployment via Railway MCP
 mcp__railway-mcp-server__deployment_trigger({
@@ -44,80 +51,210 @@ mcp__railway-mcp-server__deployment_trigger({
   environmentId: "{{deployment.backend.environmentId}}"
 })
 ```
+
+Monitor deployment:
+```javascript
+mcp__railway-mcp-server__deployment_logs({
+  projectId: "{{deployment.backend.projectId}}",
+  serviceId: "{{deployment.backend.serviceId}}"
+})
+```
 {{/if}}
 
 {{#if (eq deployment.backend.platform "heroku")}}
+### Heroku
+
 ```bash
-git push heroku main
+# Push to Heroku
+git push heroku {{versionControl.defaultBranch}}
+
+# Check logs
+heroku logs --tail
+```
+{{/if}}
+
+{{#if (eq deployment.backend.platform "render")}}
+### Render
+
+```bash
+# Render auto-deploys from git push
+git push origin {{versionControl.defaultBranch}}
+
+# Or trigger manual deploy via API
+curl -X POST "https://api.render.com/v1/services/{{deployment.backend.serviceId}}/deploys" \
+  -H "Authorization: Bearer $RENDER_API_KEY"
+```
+{{/if}}
+
+{{#if (eq deployment.backend.platform "fly")}}
+### Fly.io
+
+```bash
+# Deploy to Fly
+fly deploy
+
+# Check status
+fly status
+```
+{{/if}}
+
+{{#if (eq deployment.backend.platform "vercel")}}
+### Vercel (Serverless)
+
+```bash
+vercel --prod
 ```
 {{/if}}
 
 {{#if (eq deployment.backend.platform "self-hosted")}}
+### Self-Hosted
+
 ```bash
-# SSH to server and pull latest
-ssh user@server 'cd /app && git pull && ./deploy.sh'
+# SSH deploy
+ssh {{deployment.backend.selfHostedConfig.sshUser}}@{{deployment.backend.selfHostedConfig.sshHost}} -p {{deployment.backend.selfHostedConfig.sshPort}} \
+  'cd {{deployment.backend.selfHostedConfig.appPath}} && git pull && {{deployment.backend.selfHostedConfig.deployScript}}'
 ```
 {{/if}}
 
-### Step 3: Deploy Frontend
+---
+
+## Frontend Deployment
+
+{{#if (eq deployment.frontend.platform "cloudflare")}}
+### Cloudflare Pages
 
 ```bash
-# Clean build
+# Clean and build
 rm -rf {{frontend.distDir}}
+{{frontend.buildCommand}}
 
+# Deploy
+npx wrangler pages deploy {{frontend.distDir}} --project-name={{deployment.frontend.projectName}}
+```
+{{/if}}
+
+{{#if (eq deployment.frontend.platform "vercel")}}
+### Vercel
+
+```bash
+vercel --prod
+```
+{{/if}}
+
+{{#if (eq deployment.frontend.platform "netlify")}}
+### Netlify
+
+```bash
 # Build
 {{frontend.buildCommand}}
 
 # Deploy
-{{deployment.frontend.deployCommand}}
+netlify deploy --prod --dir={{frontend.distDir}}
+```
+{{/if}}
+
+{{#if (eq deployment.frontend.platform "github-pages")}}
+### GitHub Pages
+
+```bash
+# Build and deploy (assumes gh-pages package)
+{{frontend.buildCommand}}
+npm run deploy
+```
+{{/if}}
+
+{{#if (eq deployment.frontend.platform "railway")}}
+### Railway (Static)
+
+```bash
+# Push triggers auto-deploy
+git push origin {{versionControl.defaultBranch}}
+```
+{{/if}}
+
+---
+
+## Verification
+
+### Backend Health Check
+
+```bash
+curl {{deployment.backend.productionUrl}}{{backend.healthEndpoint}}
 ```
 
-### Step 4: Verify Deployment
+### Frontend Verification
 
-1. **Backend Health Check**:
-   ```bash
-   curl {{urls.production.backend}}{{backend.healthEndpoint}}
-   ```
+1. Open {{deployment.frontend.productionUrl}}
+2. Verify page loads correctly
+3. Check browser console for errors
+4. Test critical user flows
 
-2. **Frontend Verification**:
-   - Open {{urls.production.frontend}}
-   - Verify page loads correctly
-   - Check browser console for errors
+### E2E Smoke Test (Optional)
 
-3. **E2E Smoke Test** (optional):
-   ```bash
-   {{testing.e2e.testCommand}} --grep "smoke"
-   ```
+```bash
+{{#if testing.e2e.testCommand}}
+{{testing.e2e.testCommand}} --grep "smoke"
+{{else}}
+npx playwright test --grep "smoke"
+{{/if}}
+```
 
-## Rollback
+---
 
-If deployment fails:
+## Rollback Procedures
 
 ### Backend Rollback
+
 {{#if (eq deployment.backend.platform "railway")}}
 ```javascript
-// Use Railway MCP to rollback to previous deployment
+// List recent deployments
 mcp__railway-mcp-server__deployment_list({
   projectId: "{{deployment.backend.projectId}}",
   serviceId: "{{deployment.backend.serviceId}}"
 })
-// Then redeploy previous good deployment
+
+// Redeploy previous version
+mcp__railway-mcp-server__deployment_rollback({
+  projectId: "{{deployment.backend.projectId}}",
+  serviceId: "{{deployment.backend.serviceId}}",
+  deploymentId: "<previous-deployment-id>"
+})
+```
+{{else}}
+```bash
+# Revert commit and redeploy
+git revert HEAD
+git push origin {{versionControl.defaultBranch}}
 ```
 {{/if}}
 
 ### Frontend Rollback
+
 ```bash
-# Revert to previous commit
+# Revert to previous build
 git revert HEAD
 {{frontend.buildCommand}}
 {{deployment.frontend.deployCommand}}
 ```
 
-## Environment Variables
+{{else}}
 
-Backend requires these environment variables on {{deployment.backend.platform}}:
-- `DATABASE_URL` - Database connection string
-- `NODE_ENV` or `ENVIRONMENT` - Set to `production`
+## Frontend Deployment Not Configured
+
+Frontend deployment platform is not configured.
+
+Run `/menu` → Project Settings → Deployment Platforms to configure.
+
+{{/if}}
+{{else}}
+
+## Backend Deployment Not Configured
+
+Backend deployment platform is not configured.
+
+Run `/menu` → Project Settings → Deployment Platforms to configure.
+
+{{/if}}
 
 ---
 

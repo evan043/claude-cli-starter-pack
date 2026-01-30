@@ -19,6 +19,67 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
+ * Optional features with detailed descriptions
+ * These can be selected during init and require post-install configuration via /menu
+ */
+const OPTIONAL_FEATURES = [
+  {
+    name: 'tokenManagement',
+    label: 'Token Budget Management',
+    description: 'Monitor and manage Claude API token usage with automatic compaction warnings, archive suggestions, and respawn thresholds. Includes hooks that track usage per session.',
+    commands: ['context-audit'],
+    hooks: ['token-budget-loader', 'context-guardian', 'tool-output-cacher'],
+    default: false,
+    requiresPostConfig: false,
+  },
+  {
+    name: 'happyMode',
+    label: 'Happy Engineering Integration',
+    description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses. Requires Happy Coder app installed separately.',
+    commands: ['happy-start'],
+    hooks: ['happy-checkpoint-manager', 'happy-title-generator', 'happy-mode-detector'],
+    default: false,
+    requiresPostConfig: true,
+  },
+  {
+    name: 'githubIntegration',
+    label: 'GitHub Project Board Integration',
+    description: 'Connect Claude to your GitHub Project Board for automated issue creation, progress tracking, and PR merge automation. Requires gh CLI authentication.',
+    commands: ['github-update', 'github-task-start'],
+    hooks: ['github-progress-hook', 'issue-completion-detector'],
+    default: true,
+    requiresPostConfig: true,
+  },
+  {
+    name: 'phasedDevelopment',
+    label: 'Phased Development System',
+    description: 'Generate production-ready development plans with 95%+ success criteria, automatic scaling (S/M/L), and progress tracking. Creates PROGRESS.json files for state persistence.',
+    commands: ['create-phase-dev', 'phase-track'],
+    hooks: ['phase-dev-enforcer'],
+    default: true,
+    requiresPostConfig: false,
+  },
+  {
+    name: 'deploymentAutomation',
+    label: 'Deployment Automation',
+    description: 'Automated full-stack deployment workflows. Supports Railway, Heroku, Vercel, Cloudflare Pages, and self-hosted targets. Platform configured after installation via /menu.',
+    commands: ['deploy-full'],
+    hooks: ['deployment-orchestrator'],
+    default: false,
+    requiresPostConfig: true,
+  },
+  {
+    name: 'tunnelServices',
+    label: 'Tunnel Service Integration',
+    description: 'Expose local development server for mobile testing or webhooks. Supports ngrok, localtunnel, cloudflare-tunnel, and serveo. No default service - configured after installation via /menu.',
+    commands: ['tunnel-start', 'tunnel-stop'],
+    hooks: [],
+    default: false,
+    requiresPostConfig: true,
+  },
+];
+
+/**
  * Available slash commands to deploy
  */
 const AVAILABLE_COMMANDS = [
@@ -106,6 +167,13 @@ const AVAILABLE_COMMANDS = [
     description: 'Create intelligent task list with codebase exploration and GitHub integration',
     category: 'Planning',
     selected: true,
+  },
+  {
+    name: 'ccasp-setup',
+    description: 'CCASP Setup Wizard - vibe-code friendly project configuration',
+    category: 'Claude Code',
+    selected: true,
+    required: true,
   },
 ];
 
@@ -887,6 +955,88 @@ When invoked:
 5. Create task list with TodoWrite
 6. Optionally create GitHub issue and install progress hook
 7. Begin Task 1
+`,
+
+  'ccasp-setup': () => `---
+description: CCASP Setup Wizard - vibe-code friendly project configuration
+model: haiku
+options:
+  - label: "Quick Start"
+    description: "Auto-detect + init"
+  - label: "Full Setup"
+    description: "All features"
+  - label: "Audit"
+    description: "Check CLAUDE.md"
+  - label: "Enhance"
+    description: "Generate CLAUDE.md"
+---
+
+# CCASP Setup Wizard
+
+Interactive setup wizard for Claude Code CLI enhancement.
+
+## Quick Options
+
+Reply with a **number** or **letter** to select:
+
+| # | Action | Description |
+|---|--------|-------------|
+| **1** | Quick Start | Auto-detect stack + init .claude |
+| **2** | Full Setup | All features with customization |
+| **3** | GitHub | Connect project board |
+| **4** | Audit | Check existing CLAUDE.md |
+| **5** | Enhance | Generate/improve CLAUDE.md |
+| **6** | Detect | Show detected tech stack |
+| **7** | Templates | Browse available items |
+
+## Feature Presets
+
+| Letter | Preset | Features |
+|--------|--------|----------|
+| **A** | Minimal | Menu + help only |
+| **B** | Standard | Essential + GitHub + testing |
+| **C** | Full | Everything including agents |
+| **D** | Custom | Pick individual features |
+
+## Instructions for Claude
+
+When this command is invoked:
+
+1. **Show welcome message** with current project status:
+   - Does \`.claude/\` exist? (check with Bash: ls -la .claude 2>/dev/null)
+   - Does \`CLAUDE.md\` exist? (check with Bash: ls -la CLAUDE.md 2>/dev/null)
+   - Is tech stack detected? (check for package.json, pyproject.toml, etc.)
+
+2. **Present the quick options menu** and wait for user selection
+
+3. **Handle user selection**:
+   - If user types a number (1-7), execute that action
+   - If user types a letter (A-D), apply that preset
+   - For "1" (Quick Start): run tech detection, show results, apply Standard preset
+   - For "4" (Audit): check CLAUDE.md against best practices
+   - For "5" (Enhance): offer to generate missing sections
+
+4. **For Quick Start**:
+   - Detect tech stack from package.json, config files
+   - Show summary of detected stack
+   - Create .claude/ folder with commands, settings
+   - Generate CLAUDE.md with detected stack info
+
+## Vibe-Code Design
+
+This wizard is designed for mobile/remote use:
+- Single character inputs only
+- No long text entry required
+- Progressive disclosure
+- Sensible defaults
+
+## Terminal Alternative
+
+\`\`\`bash
+npx ccasp wizard     # Interactive setup
+npx ccasp init       # Initialize .claude folder
+npx ccasp detect-stack  # Detect tech stack
+\`\`\`
 `,};
 
 /**
@@ -1182,8 +1332,54 @@ export async function runInit(options = {}) {
 
   console.log('');
 
-  // Step 4: Select slash commands to install
-  console.log(chalk.bold('Step 4: Select slash commands to install\n'));
+  // Step 4: Select optional features
+  console.log(chalk.bold('Step 4: Select optional features\n'));
+  console.log(chalk.dim('  Each feature adds commands and hooks to your project.'));
+  console.log(chalk.dim('  Features marked with (*) require additional configuration via /menu after installation.\n'));
+
+  // Display feature descriptions in a nice format
+  for (const feature of OPTIONAL_FEATURES) {
+    const marker = feature.default ? chalk.green('●') : chalk.dim('○');
+    const postConfig = feature.requiresPostConfig ? chalk.yellow(' (*)') : '';
+    console.log(`  ${marker} ${chalk.bold(feature.label)}${postConfig}`);
+    console.log(chalk.dim(`     ${feature.description}`));
+    if (feature.commands.length > 0) {
+      console.log(chalk.dim(`     Adds: ${feature.commands.map(c => '/' + c).join(', ')}`));
+    }
+    console.log('');
+  }
+
+  const { selectedFeatures } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'selectedFeatures',
+      message: 'Select features to enable:',
+      choices: OPTIONAL_FEATURES.map((feature) => ({
+        name: `${feature.label}${feature.requiresPostConfig ? ' (*)' : ''} - ${feature.commands.length} commands, ${feature.hooks.length} hooks`,
+        value: feature.name,
+        checked: feature.default,
+      })),
+      pageSize: 10,
+    },
+  ]);
+
+  // Store selected features for later use
+  const enabledFeatures = OPTIONAL_FEATURES.filter((f) => selectedFeatures.includes(f.name));
+  const featuresRequiringConfig = enabledFeatures.filter((f) => f.requiresPostConfig);
+
+  if (featuresRequiringConfig.length > 0) {
+    console.log('');
+    console.log(chalk.yellow('  ℹ The following features require configuration after installation:'));
+    for (const feature of featuresRequiringConfig) {
+      console.log(chalk.yellow(`    • ${feature.label}`));
+    }
+    console.log(chalk.dim('    Run /menu → Project Settings after installation to complete setup.'));
+  }
+
+  console.log('');
+
+  // Step 5: Select slash commands to install
+  console.log(chalk.bold('Step 5: Select slash commands to install\n'));
 
   // Check for existing commands first
   const existingCmdFiles = existsSync(commandsDir)
@@ -1242,7 +1438,7 @@ export async function runInit(options = {}) {
 
   console.log('');
 
-  // Step 5: Check for existing commands that would be overwritten
+  // Step 6: Check for existing commands that would be overwritten
   const commandsToOverwrite = finalCommands.filter(cmd => existingCmdNames.includes(cmd));
 
   let overwrite = options.force || false;
@@ -1284,8 +1480,8 @@ export async function runInit(options = {}) {
     }
   }
 
-  // Step 6: Install commands
-  console.log(chalk.bold('Step 5: Installing slash commands\n'));
+  // Step 7: Install commands
+  console.log(chalk.bold('Step 6: Installing slash commands\n'));
 
   const spinner = ora('Installing commands...').start();
   const installed = [];
@@ -1395,17 +1591,97 @@ export async function runInit(options = {}) {
     }
   }
 
+  // Generate tech-stack.json with enabled features
+  const techStackPath = join(claudeDir, 'config', 'tech-stack.json');
+  const configDir = join(claudeDir, 'config');
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
+
+  // Build tech-stack.json with enabled features
+  const techStack = {
+    version: '2.0.0',
+    project: {
+      name: projectName,
+      description: '',
+      rootPath: '.',
+    },
+    // Enable features based on user selection
+    tokenManagement: {
+      enabled: selectedFeatures.includes('tokenManagement'),
+      dailyBudget: 200000,
+      thresholds: { compact: 0.75, archive: 0.85, respawn: 0.90 },
+    },
+    happyMode: {
+      enabled: selectedFeatures.includes('happyMode'),
+      dashboardUrl: null,
+      checkpointInterval: 10,
+      verbosity: 'condensed',
+    },
+    agents: {
+      enabled: true,
+      l1: { model: 'sonnet', tools: ['Task', 'Read', 'Grep', 'Glob', 'WebSearch'], maxTokens: 16000 },
+      l2: { model: 'sonnet', tools: ['Read', 'Edit', 'Write', 'Bash', 'Grep', 'Glob'], maxTokens: 8000 },
+      l3: { model: 'haiku', tools: ['Read', 'Grep'], maxTokens: 500 },
+      maxConcurrent: 4,
+    },
+    phasedDevelopment: {
+      enabled: selectedFeatures.includes('phasedDevelopment'),
+      defaultScale: 'M',
+      successTarget: 0.95,
+    },
+    hooks: {
+      enabled: true,
+      priorities: { lifecycle: 100, tools: 1000, automation: 2000 },
+      errorBehavior: 'approve',
+    },
+    devEnvironment: {
+      tunnel: {
+        service: 'none', // No default - configured via /menu
+        url: null,
+        subdomain: null,
+      },
+    },
+    deployment: {
+      frontend: { platform: 'none' },
+      backend: { platform: 'none' },
+    },
+    versionControl: {
+      provider: 'github',
+      projectBoard: { type: 'none' },
+    },
+    // Track which features need post-install configuration
+    _pendingConfiguration: featuresRequiringConfig.map((f) => f.name),
+  };
+
+  if (!existsSync(techStackPath)) {
+    writeFileSync(techStackPath, JSON.stringify(techStack, null, 2), 'utf8');
+    console.log(chalk.green('  ✓ Created config/tech-stack.json'));
+  } else {
+    console.log(chalk.blue('  ○ config/tech-stack.json exists (preserved)'));
+  }
+
   // Show next steps
   console.log(chalk.bold('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
   console.log(chalk.bold('Next Steps:\n'));
   console.log(chalk.cyan('  1.') + ' Launch Claude Code CLI in this project');
   console.log(chalk.cyan('  2.') + ` Type ${chalk.bold('/menu')} to see the interactive project menu`);
-  console.log(chalk.cyan('  3.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+
+  // Show post-config reminder if features need it
+  if (featuresRequiringConfig.length > 0) {
+    console.log(chalk.cyan('  3.') + chalk.yellow(' Configure enabled features via /menu → Project Settings'));
+    console.log(chalk.dim(`       Features pending configuration: ${featuresRequiringConfig.map((f) => f.label).join(', ')}`));
+    console.log(chalk.cyan('  4.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+  } else {
+    console.log(chalk.cyan('  3.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+  }
+
   console.log('');
   console.log(chalk.dim('  Customize your setup:'));
   console.log(chalk.dim('    • Edit agents in .claude/agents/'));
   console.log(chalk.dim('    • Create skills in .claude/skills/'));
   console.log(chalk.dim('    • Add hooks in .claude/hooks/'));
+  console.log(chalk.dim('    • Configure tech stack in .claude/config/tech-stack.json'));
   console.log('');
   console.log(chalk.dim(`  To update: ${chalk.bold('npx claude-cli-advanced-starter-pack init --force')}`));
   console.log('');

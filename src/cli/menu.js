@@ -20,7 +20,7 @@ import { runClaudeAudit, showClaudeAuditMenu } from '../commands/claude-audit.js
 import { runRoadmap, showRoadmapMenu } from '../commands/roadmap.js';
 import { hasTestingConfig } from '../testing/config.js';
 import { showHelp } from '../commands/help.js';
-import { hasValidConfig, getVersion } from '../utils.js';
+import { hasValidConfig, getVersion, loadTechStack, saveTechStack } from '../utils.js';
 
 /**
  * ASCII Art Banner
@@ -35,6 +35,541 @@ const BANNER = `
 ║    Advanced Claude Code CLI Toolkit - Agents, MCP, GitHub & More           ║
 ║                                                                            ║
 ╚════════════════════════════════════════════════════════════════════════════╝`;
+
+/**
+ * Show Project Settings submenu
+ */
+async function showProjectSettingsMenu() {
+  console.log('');
+  console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════════════╗'));
+  console.log(chalk.cyan('║') + chalk.bold('                           PROJECT CONFIGURATION                               ') + chalk.cyan('║'));
+  console.log(chalk.cyan('╠═══════════════════════════════════════════════════════════════════════════════╣'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [1] GitHub Project Board                                                    ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Connect to GitHub Projects v2 for issue tracking                     ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [2] Deployment Platforms                                                    ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Configure Railway, Cloudflare, Vercel, or self-hosted               ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [3] Tunnel Services                                                         ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Set up ngrok, localtunnel, or cloudflare-tunnel                     ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [4] Token Management                                                        ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Customize daily budget and thresholds                               ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [5] Happy Mode                                                              ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Configure mobile app integration                                    ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [B] Back to main menu                                                       ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
+  console.log('');
+
+  const { settingsAction } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'settingsAction',
+      message: 'Select a configuration area:',
+      choices: [
+        { name: '1. GitHub Project Board', value: 'github' },
+        { name: '2. Deployment Platforms', value: 'deployment' },
+        { name: '3. Tunnel Services', value: 'tunnel' },
+        { name: '4. Token Management', value: 'token' },
+        { name: '5. Happy Mode', value: 'happy' },
+        new inquirer.Separator(),
+        { name: 'Back to main menu', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (settingsAction === 'back') {
+    return;
+  }
+
+  // Load current tech-stack.json
+  const techStack = loadTechStack();
+
+  switch (settingsAction) {
+    case 'github':
+      await configureGitHub(techStack);
+      break;
+    case 'deployment':
+      await configureDeployment(techStack);
+      break;
+    case 'tunnel':
+      await configureTunnel(techStack);
+      break;
+    case 'token':
+      await configureToken(techStack);
+      break;
+    case 'happy':
+      await configureHappy(techStack);
+      break;
+  }
+
+  // Show submenu again
+  await showProjectSettingsMenu();
+}
+
+/**
+ * Configure GitHub Project Board
+ */
+async function configureGitHub(techStack) {
+  console.log('');
+  showHeader('GitHub Project Board Configuration');
+
+  const current = techStack.versionControl || {};
+  const currentBoard = current.projectBoard || {};
+
+  console.log(chalk.dim('  Current settings:'));
+  console.log(chalk.dim(`    Provider: ${current.provider || 'not set'}`));
+  console.log(chalk.dim(`    Owner: ${current.owner || 'not set'}`));
+  console.log(chalk.dim(`    Repo: ${current.repo || 'not set'}`));
+  console.log(chalk.dim(`    Project #: ${currentBoard.number || 'not set'}`));
+  console.log('');
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'owner',
+      message: 'GitHub owner (username or org):',
+      default: current.owner || '',
+    },
+    {
+      type: 'input',
+      name: 'repo',
+      message: 'Repository name:',
+      default: current.repo || '',
+    },
+    {
+      type: 'number',
+      name: 'projectNumber',
+      message: 'GitHub Project number (from URL):',
+      default: currentBoard.number || null,
+    },
+    {
+      type: 'input',
+      name: 'defaultBranch',
+      message: 'Default branch:',
+      default: current.defaultBranch || 'main',
+    },
+  ]);
+
+  // Update tech-stack
+  techStack.versionControl = {
+    ...current,
+    provider: 'github',
+    owner: answers.owner,
+    repo: answers.repo,
+    defaultBranch: answers.defaultBranch,
+    projectBoard: {
+      type: 'github-projects',
+      number: answers.projectNumber,
+      url: answers.owner && answers.projectNumber
+        ? `https://github.com/users/${answers.owner}/projects/${answers.projectNumber}`
+        : null,
+    },
+  };
+
+  // Remove from pending configuration
+  if (techStack._pendingConfiguration) {
+    techStack._pendingConfiguration = techStack._pendingConfiguration.filter((f) => f !== 'githubIntegration');
+  }
+
+  saveTechStack(techStack);
+  showSuccess('GitHub configuration saved!');
+}
+
+/**
+ * Configure Deployment Platforms
+ */
+async function configureDeployment(techStack) {
+  console.log('');
+  showHeader('Deployment Platform Configuration');
+
+  const { target } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'target',
+      message: 'Which deployment target do you want to configure?',
+      choices: [
+        { name: 'Frontend (static sites, SPAs)', value: 'frontend' },
+        { name: 'Backend (APIs, servers)', value: 'backend' },
+        { name: 'Both', value: 'both' },
+        { name: 'Back', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (target === 'back') return;
+
+  if (target === 'frontend' || target === 'both') {
+    const frontendAnswers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'platform',
+        message: 'Frontend deployment platform:',
+        choices: [
+          { name: 'Cloudflare Pages', value: 'cloudflare' },
+          { name: 'Vercel', value: 'vercel' },
+          { name: 'Netlify', value: 'netlify' },
+          { name: 'GitHub Pages', value: 'github-pages' },
+          { name: 'Railway', value: 'railway' },
+          { name: 'Self-hosted', value: 'self-hosted' },
+          { name: 'None / Skip', value: 'none' },
+        ],
+      },
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'Project name (for deployment commands):',
+        when: (ans) => ans.platform !== 'none',
+      },
+      {
+        type: 'input',
+        name: 'productionUrl',
+        message: 'Production URL:',
+        when: (ans) => ans.platform !== 'none',
+      },
+    ]);
+
+    techStack.deployment = techStack.deployment || {};
+    techStack.deployment.frontend = {
+      platform: frontendAnswers.platform,
+      projectName: frontendAnswers.projectName || null,
+      productionUrl: frontendAnswers.productionUrl || null,
+      deployCommand: getDeployCommand('frontend', frontendAnswers),
+    };
+  }
+
+  if (target === 'backend' || target === 'both') {
+    const backendAnswers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'platform',
+        message: 'Backend deployment platform:',
+        choices: [
+          { name: 'Railway', value: 'railway' },
+          { name: 'Heroku', value: 'heroku' },
+          { name: 'Render', value: 'render' },
+          { name: 'Fly.io', value: 'fly' },
+          { name: 'Vercel', value: 'vercel' },
+          { name: 'DigitalOcean', value: 'digitalocean' },
+          { name: 'Self-hosted (SSH)', value: 'self-hosted' },
+          { name: 'None / Skip', value: 'none' },
+        ],
+      },
+      {
+        type: 'input',
+        name: 'projectId',
+        message: 'Project ID (from platform dashboard):',
+        when: (ans) => ['railway', 'render', 'fly'].includes(ans.platform),
+      },
+      {
+        type: 'input',
+        name: 'serviceId',
+        message: 'Service ID:',
+        when: (ans) => ans.platform === 'railway',
+      },
+      {
+        type: 'input',
+        name: 'environmentId',
+        message: 'Environment ID:',
+        when: (ans) => ans.platform === 'railway',
+      },
+      {
+        type: 'input',
+        name: 'productionUrl',
+        message: 'Production URL:',
+        when: (ans) => ans.platform !== 'none',
+      },
+    ]);
+
+    // Handle self-hosted config
+    let selfHostedConfig = null;
+    if (backendAnswers.platform === 'self-hosted') {
+      const sshAnswers = await inquirer.prompt([
+        { type: 'input', name: 'sshUser', message: 'SSH username:' },
+        { type: 'input', name: 'sshHost', message: 'SSH host:' },
+        { type: 'number', name: 'sshPort', message: 'SSH port:', default: 22 },
+        { type: 'input', name: 'appPath', message: 'App path on server:' },
+        { type: 'input', name: 'deployScript', message: 'Deploy script/command:', default: './deploy.sh' },
+      ]);
+      selfHostedConfig = sshAnswers;
+    }
+
+    techStack.deployment = techStack.deployment || {};
+    techStack.deployment.backend = {
+      platform: backendAnswers.platform,
+      projectId: backendAnswers.projectId || null,
+      serviceId: backendAnswers.serviceId || null,
+      environmentId: backendAnswers.environmentId || null,
+      productionUrl: backendAnswers.productionUrl || null,
+      selfHostedConfig,
+    };
+  }
+
+  // Remove from pending configuration
+  if (techStack._pendingConfiguration) {
+    techStack._pendingConfiguration = techStack._pendingConfiguration.filter((f) => f !== 'deploymentAutomation');
+  }
+
+  saveTechStack(techStack);
+  showSuccess('Deployment configuration saved!');
+}
+
+/**
+ * Get deploy command based on platform
+ */
+function getDeployCommand(type, answers) {
+  if (type === 'frontend') {
+    switch (answers.platform) {
+      case 'cloudflare':
+        return `npx wrangler pages deploy dist --project-name=${answers.projectName || '{{PROJECT_NAME}}'}`;
+      case 'vercel':
+        return 'vercel --prod';
+      case 'netlify':
+        return 'netlify deploy --prod';
+      case 'github-pages':
+        return 'npm run deploy'; // Typically uses gh-pages package
+      default:
+        return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Configure Tunnel Services
+ */
+async function configureTunnel(techStack) {
+  console.log('');
+  showHeader('Tunnel Service Configuration');
+
+  console.log(chalk.dim('  Tunnel services expose your local development server to the internet.'));
+  console.log(chalk.dim('  Useful for mobile testing, webhooks, or sharing work-in-progress.\n'));
+
+  const current = techStack.devEnvironment?.tunnel || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'service',
+      message: 'Which tunnel service would you like to use?',
+      choices: [
+        { name: 'None - I don\'t need tunnel access', value: 'none' },
+        { name: 'ngrok - Popular tunneling service (requires ngrok CLI)', value: 'ngrok' },
+        { name: 'localtunnel - Free, no signup required', value: 'localtunnel' },
+        { name: 'cloudflare-tunnel - Enterprise-grade (requires CF account)', value: 'cloudflare-tunnel' },
+        { name: 'serveo - Free SSH-based tunneling', value: 'serveo' },
+        { name: 'Other - I\'ll configure manually', value: 'other' },
+      ],
+      default: current.service || 'none',
+    },
+    {
+      type: 'input',
+      name: 'subdomain',
+      message: 'Reserved subdomain (optional):',
+      when: (ans) => ['ngrok', 'localtunnel'].includes(ans.service),
+      default: current.subdomain || '',
+    },
+    {
+      type: 'number',
+      name: 'adminPort',
+      message: 'Admin/API port (for ngrok):',
+      when: (ans) => ans.service === 'ngrok',
+      default: current.adminPort || 4040,
+    },
+  ]);
+
+  // Build start command based on service
+  let startCommand = null;
+  const frontendPort = techStack.frontend?.port || 5173;
+
+  switch (answers.service) {
+    case 'ngrok':
+      startCommand = answers.subdomain
+        ? `ngrok http ${frontendPort} --subdomain=${answers.subdomain}`
+        : `ngrok http ${frontendPort}`;
+      break;
+    case 'localtunnel':
+      startCommand = answers.subdomain
+        ? `lt --port ${frontendPort} --subdomain ${answers.subdomain}`
+        : `lt --port ${frontendPort}`;
+      break;
+    case 'cloudflare-tunnel':
+      startCommand = `cloudflared tunnel --url http://localhost:${frontendPort}`;
+      break;
+    case 'serveo':
+      startCommand = `ssh -R 80:localhost:${frontendPort} serveo.net`;
+      break;
+  }
+
+  techStack.devEnvironment = techStack.devEnvironment || {};
+  techStack.devEnvironment.tunnel = {
+    service: answers.service,
+    subdomain: answers.subdomain || null,
+    url: null, // Set when tunnel is running
+    startCommand,
+    adminPort: answers.adminPort || null,
+  };
+
+  // Remove from pending configuration
+  if (techStack._pendingConfiguration) {
+    techStack._pendingConfiguration = techStack._pendingConfiguration.filter((f) => f !== 'tunnelServices');
+  }
+
+  saveTechStack(techStack);
+  showSuccess('Tunnel configuration saved!', [
+    '',
+    answers.service !== 'none' ? `Start command: ${startCommand}` : 'Tunnel disabled',
+  ]);
+}
+
+/**
+ * Configure Token Management
+ */
+async function configureToken(techStack) {
+  console.log('');
+  showHeader('Token Budget Management Configuration');
+
+  const current = techStack.tokenManagement || {};
+  const thresholds = current.thresholds || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enabled',
+      message: 'Enable token budget tracking?',
+      default: current.enabled || false,
+    },
+    {
+      type: 'number',
+      name: 'dailyBudget',
+      message: 'Daily token budget:',
+      when: (ans) => ans.enabled,
+      default: current.dailyBudget || 200000,
+    },
+    {
+      type: 'number',
+      name: 'compactThreshold',
+      message: 'Compact suggestion threshold (0-1):',
+      when: (ans) => ans.enabled,
+      default: thresholds.compact || 0.75,
+    },
+    {
+      type: 'number',
+      name: 'archiveThreshold',
+      message: 'Archive suggestion threshold (0-1):',
+      when: (ans) => ans.enabled,
+      default: thresholds.archive || 0.85,
+    },
+    {
+      type: 'number',
+      name: 'respawnThreshold',
+      message: 'Force respawn threshold (0-1):',
+      when: (ans) => ans.enabled,
+      default: thresholds.respawn || 0.90,
+    },
+  ]);
+
+  techStack.tokenManagement = {
+    enabled: answers.enabled,
+    dailyBudget: answers.dailyBudget || 200000,
+    thresholds: answers.enabled ? {
+      compact: answers.compactThreshold,
+      archive: answers.archiveThreshold,
+      respawn: answers.respawnThreshold,
+    } : thresholds,
+    trackingFile: current.trackingFile || '.claude/hooks/cache/token-usage.json',
+  };
+
+  saveTechStack(techStack);
+  showSuccess('Token management configuration saved!');
+}
+
+/**
+ * Configure Happy Mode
+ */
+async function configureHappy(techStack) {
+  console.log('');
+  showHeader('Happy Mode Configuration');
+
+  console.log(chalk.dim('  Happy Mode enables integration with the Happy Coder mobile app'));
+  console.log(chalk.dim('  for remote session control, checkpoints, and mobile-optimized responses.\n'));
+
+  const current = techStack.happyMode || {};
+  const notifications = current.notifications || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enabled',
+      message: 'Enable Happy Mode integration?',
+      default: current.enabled || false,
+    },
+    {
+      type: 'input',
+      name: 'dashboardUrl',
+      message: 'Dashboard URL (if self-hosted, leave blank for cloud):',
+      when: (ans) => ans.enabled,
+      default: current.dashboardUrl || '',
+    },
+    {
+      type: 'number',
+      name: 'checkpointInterval',
+      message: 'Checkpoint interval (minutes):',
+      when: (ans) => ans.enabled,
+      default: current.checkpointInterval || 10,
+    },
+    {
+      type: 'list',
+      name: 'verbosity',
+      message: 'Response verbosity for mobile:',
+      when: (ans) => ans.enabled,
+      choices: [
+        { name: 'Full - Complete responses', value: 'full' },
+        { name: 'Condensed - Summarized responses (recommended)', value: 'condensed' },
+        { name: 'Minimal - Bare essentials only', value: 'minimal' },
+      ],
+      default: current.verbosity || 'condensed',
+    },
+    {
+      type: 'confirm',
+      name: 'notifyTaskComplete',
+      message: 'Notify on task completion?',
+      when: (ans) => ans.enabled,
+      default: notifications.onTaskComplete !== false,
+    },
+    {
+      type: 'confirm',
+      name: 'notifyError',
+      message: 'Notify on errors?',
+      when: (ans) => ans.enabled,
+      default: notifications.onError !== false,
+    },
+  ]);
+
+  techStack.happyMode = {
+    enabled: answers.enabled,
+    dashboardUrl: answers.dashboardUrl || null,
+    checkpointInterval: answers.checkpointInterval || 10,
+    verbosity: answers.verbosity || 'condensed',
+    notifications: answers.enabled ? {
+      onTaskComplete: answers.notifyTaskComplete,
+      onError: answers.notifyError,
+      onCheckpoint: false,
+    } : notifications,
+  };
+
+  // Remove from pending configuration
+  if (techStack._pendingConfiguration) {
+    techStack._pendingConfiguration = techStack._pendingConfiguration.filter((f) => f !== 'happyMode');
+  }
+
+  saveTechStack(techStack);
+  showSuccess('Happy Mode configuration saved!');
+}
 
 /**
  * Show main interactive menu
@@ -130,6 +665,11 @@ export async function showMainMenu() {
       short: 'Roadmap',
     },
     new inquirer.Separator(),
+    {
+      name: `${chalk.yellow('S)')} ${chalk.bold('Project Settings')}       Configure deployment, GitHub, tunnels`,
+      value: 'project-settings',
+      short: 'Settings',
+    },
     {
       name: `${chalk.dim('7)')} ${chalk.bold('Help & Examples')}         Documentation and examples`,
       value: 'help',
@@ -308,6 +848,11 @@ export async function showMainMenu() {
 
     case 'roadmap':
       await showRoadmapMenu();
+      await returnToMenu();
+      break;
+
+    case 'project-settings':
+      await showProjectSettingsMenu();
       await returnToMenu();
       break;
 

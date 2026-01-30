@@ -3,7 +3,7 @@
  */
 
 import { execSync, exec } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
@@ -300,4 +300,97 @@ export function truncate(str, maxLength) {
  */
 export function getCurrentProjectName() {
   return process.cwd().split(/[/\\]/).pop();
+}
+
+/**
+ * Get the path to tech-stack.json
+ */
+export function getTechStackPath() {
+  const paths = [
+    join(process.cwd(), '.claude', 'config', 'tech-stack.json'),
+    join(process.cwd(), '.claude', 'tech-stack.json'),
+  ];
+
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return p;
+    }
+  }
+
+  // Return default path (even if it doesn't exist yet)
+  return paths[0];
+}
+
+/**
+ * Load tech-stack.json configuration
+ * @returns {object} Tech stack configuration or default empty object
+ */
+export function loadTechStack() {
+  const techStackPath = getTechStackPath();
+
+  if (existsSync(techStackPath)) {
+    try {
+      const content = readFileSync(techStackPath, 'utf8');
+      return JSON.parse(content);
+    } catch (error) {
+      console.warn(chalk.yellow(`Warning: Could not parse tech-stack.json: ${error.message}`));
+      return getDefaultTechStack();
+    }
+  }
+
+  return getDefaultTechStack();
+}
+
+/**
+ * Save tech-stack.json configuration
+ * @param {object} techStack - Tech stack configuration to save
+ */
+export function saveTechStack(techStack) {
+  const techStackPath = getTechStackPath();
+  const configDir = dirname(techStackPath);
+
+  // Ensure directory exists
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
+
+  // Update version timestamp
+  techStack._lastModified = new Date().toISOString();
+
+  writeFileSync(techStackPath, JSON.stringify(techStack, null, 2), 'utf8');
+}
+
+/**
+ * Get default tech stack configuration
+ */
+export function getDefaultTechStack() {
+  return {
+    version: '2.0.0',
+    project: {
+      name: getCurrentProjectName(),
+      description: '',
+      rootPath: '.',
+    },
+    frontend: {},
+    backend: {},
+    database: {},
+    deployment: {
+      frontend: { platform: 'none' },
+      backend: { platform: 'none' },
+    },
+    devEnvironment: {
+      tunnel: { service: 'none' },
+    },
+    testing: {},
+    versionControl: {
+      provider: 'github',
+      projectBoard: { type: 'none' },
+    },
+    tokenManagement: { enabled: false },
+    happyMode: { enabled: false },
+    agents: { enabled: true },
+    phasedDevelopment: { enabled: true },
+    hooks: { enabled: true },
+    _pendingConfiguration: [],
+  };
 }

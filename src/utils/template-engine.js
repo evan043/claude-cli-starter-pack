@@ -2,11 +2,18 @@
  * Template Engine
  *
  * Handles placeholder replacement in .claude files using tech-stack.json values.
- * Supports nested property access: {{frontend.port}}, {{deployment.backend.platform}}
+ * Supports:
+ * - Nested property access: {{frontend.port}}, {{deployment.backend.platform}}
+ * - Conditional blocks: {{#if condition}}...{{/if}}
+ * - Equality checks: {{#if (eq path "value")}}...{{/if}}
+ * - Else blocks: {{#if condition}}...{{else}}...{{/if}}
+ * - Each loops: {{#each array}}{{this}}{{/each}}
+ * - Path variables: ${CWD}, ${HOME}
  */
 
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, extname } from 'path';
+import { homedir } from 'os';
 
 /**
  * Get nested property from object using dot notation
@@ -21,6 +28,140 @@ function getNestedValue(obj, path) {
 }
 
 /**
+ * Evaluate a condition expression
+ * @param {string} condition - The condition to evaluate
+ * @param {object} values - Tech stack values
+ * @returns {boolean} Whether the condition is truthy
+ */
+function evaluateCondition(condition, values) {
+  const trimmed = condition.trim();
+
+  // Handle (eq path "value") syntax
+  const eqMatch = trimmed.match(/^\(eq\s+([^\s]+)\s+["']([^"']+)["']\)$/);
+  if (eqMatch) {
+    const [, path, expected] = eqMatch;
+    const actual = getNestedValue(values, path);
+    return actual === expected;
+  }
+
+  // Handle (neq path "value") syntax
+  const neqMatch = trimmed.match(/^\(neq\s+([^\s]+)\s+["']([^"']+)["']\)$/);
+  if (neqMatch) {
+    const [, path, expected] = neqMatch;
+    const actual = getNestedValue(values, path);
+    return actual !== expected;
+  }
+
+  // Handle (not path) syntax
+  const notMatch = trimmed.match(/^\(not\s+([^\s]+)\)$/);
+  if (notMatch) {
+    const [, path] = notMatch;
+    const value = getNestedValue(values, path);
+    return !value;
+  }
+
+  // Handle (and condition1 condition2) syntax
+  const andMatch = trimmed.match(/^\(and\s+(.+)\s+(.+)\)$/);
+  if (andMatch) {
+    const [, cond1, cond2] = andMatch;
+    return evaluateCondition(cond1, values) && evaluateCondition(cond2, values);
+  }
+
+  // Handle (or condition1 condition2) syntax
+  const orMatch = trimmed.match(/^\(or\s+(.+)\s+(.+)\)$/);
+  if (orMatch) {
+    const [, cond1, cond2] = orMatch;
+    return evaluateCondition(cond1, values) || evaluateCondition(cond2, values);
+  }
+
+  // Simple path - check if value is truthy
+  const value = getNestedValue(values, trimmed);
+  return !!value && value !== 'none' && value !== '';
+}
+
+/**
+ * Process {{#each array}}...{{/each}} blocks
+ * @param {string} content - Content with each blocks
+ * @param {object} values - Tech stack values
+ * @returns {string} Processed content
+ */
+function processEachBlocks(content, values) {
+  // Match {{#each path}}content{{/each}}
+  const eachRegex = /\{\{#each\s+([^\}]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+
+  return content.replace(eachRegex, (match, path, innerContent) => {
+    const array = getNestedValue(values, path.trim());
+
+    if (!Array.isArray(array) || array.length === 0) {
+      return '';
+    }
+
+    return array
+      .map((item, index) => {
+        let result = innerContent;
+        // Replace {{this}} with current item
+        result = result.replace(/\{\{this\}\}/g, String(item));
+        // Replace {{@index}} with current index
+        result = result.replace(/\{\{@index\}\}/g, String(index));
+        // Replace {{@first}} with boolean
+        result = result.replace(/\{\{@first\}\}/g, String(index === 0));
+        // Replace {{@last}} with boolean
+        result = result.replace(/\{\{@last\}\}/g, String(index === array.length - 1));
+        return result;
+      })
+      .join('');
+  });
+}
+
+/**
+ * Process {{#if condition}}...{{else}}...{{/if}} blocks
+ * @param {string} content - Content with conditional blocks
+ * @param {object} values - Tech stack values
+ * @returns {string} Processed content
+ */
+function processConditionalBlocks(content, values) {
+  // Process from innermost to outermost to handle nested conditionals
+  let result = content;
+  let previousResult;
+
+  // Keep processing until no more changes (handles nested blocks)
+  do {
+    previousResult = result;
+
+    // Match {{#if condition}}...{{else}}...{{/if}} or {{#if condition}}...{{/if}}
+    // Non-greedy match for innermost blocks first
+    const ifElseRegex = /\{\{#if\s+([^\}]+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    const ifOnlyRegex = /\{\{#if\s+([^\}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+
+    // First handle if-else blocks
+    result = result.replace(ifElseRegex, (match, condition, ifContent, elseContent) => {
+      const isTruthy = evaluateCondition(condition, values);
+      return isTruthy ? ifContent : elseContent;
+    });
+
+    // Then handle if-only blocks (no else)
+    result = result.replace(ifOnlyRegex, (match, condition, ifContent) => {
+      const isTruthy = evaluateCondition(condition, values);
+      return isTruthy ? ifContent : '';
+    });
+  } while (result !== previousResult);
+
+  return result;
+}
+
+/**
+ * Process path variables like ${CWD} and ${HOME}
+ * @param {string} content - Content with path variables
+ * @returns {string} Content with paths resolved
+ */
+function processPathVariables(content) {
+  return content
+    .replace(/\$\{CWD\}/g, process.cwd())
+    .replace(/\$\{HOME\}/g, homedir())
+    .replace(/\$\{CLAUDE_DIR\}/g, join(process.cwd(), '.claude'));
+}
+
+/**
  * Replace all placeholders in a string
  * @param {string} content - Content with {{placeholder}} patterns
  * @param {object} values - Tech stack values object
@@ -28,16 +169,35 @@ function getNestedValue(obj, path) {
  * @returns {string} Content with placeholders replaced
  */
 export function replacePlaceholders(content, values, options = {}) {
-  const { preserveUnknown = false, warnOnMissing = true } = options;
+  const { preserveUnknown = false, warnOnMissing = true, processConditionals = true } = options;
   const warnings = [];
 
-  // Match {{path.to.value}} patterns
-  const result = content.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+  let result = content;
+
+  // Step 1: Process path variables (${CWD}, ${HOME}, etc.)
+  result = processPathVariables(result);
+
+  // Step 2: Process {{#each}} blocks
+  result = processEachBlocks(result, values);
+
+  // Step 3: Process {{#if}}...{{/if}} conditional blocks
+  if (processConditionals) {
+    result = processConditionalBlocks(result, values);
+  }
+
+  // Step 4: Replace simple {{path.to.value}} placeholders
+  result = result.replace(/\{\{([^#\/][^}]*)\}\}/g, (match, path) => {
     const trimmedPath = path.trim();
+
+    // Skip special syntax that wasn't processed
+    if (trimmedPath.startsWith('#') || trimmedPath.startsWith('/') || trimmedPath.startsWith('@')) {
+      return match;
+    }
+
     const value = getNestedValue(values, trimmedPath);
 
     if (value === undefined || value === null || value === '') {
-      if (warnOnMissing) {
+      if (warnOnMissing && !trimmedPath.includes('PLACEHOLDER')) {
         warnings.push(`Missing value for: ${trimmedPath}`);
       }
       return preserveUnknown ? match : `{{${trimmedPath}}}`; // Keep placeholder
@@ -46,6 +206,11 @@ export function replacePlaceholders(content, values, options = {}) {
     // Handle arrays
     if (Array.isArray(value)) {
       return value.join(', ');
+    }
+
+    // Handle objects - return JSON
+    if (typeof value === 'object') {
+      return JSON.stringify(value, null, 2);
     }
 
     return String(value);
@@ -211,6 +376,13 @@ export function validateTechStack(techStack, requiredPlaceholders) {
   };
 }
 
+export {
+  evaluateCondition,
+  processConditionalBlocks,
+  processEachBlocks,
+  processPathVariables,
+};
+
 export default {
   replacePlaceholders,
   processFile,
@@ -219,4 +391,8 @@ export default {
   flattenObject,
   extractPlaceholders,
   validateTechStack,
+  evaluateCondition,
+  processConditionalBlocks,
+  processEachBlocks,
+  processPathVariables,
 };

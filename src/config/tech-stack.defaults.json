@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "project": {
     "name": "{{PROJECT_NAME}}",
     "description": "{{PROJECT_DESCRIPTION}}",
@@ -41,7 +41,14 @@
       "projectId": "{{DEPLOY_BACKEND_PROJECT_ID}}",
       "serviceId": "{{DEPLOY_BACKEND_SERVICE_ID}}",
       "environmentId": "{{DEPLOY_BACKEND_ENV_ID}}",
-      "productionUrl": "{{DEPLOY_BACKEND_URL}}"
+      "productionUrl": "{{DEPLOY_BACKEND_URL}}",
+      "selfHostedConfig": {
+        "sshUser": "{{SELF_HOSTED_SSH_USER}}",
+        "sshHost": "{{SELF_HOSTED_SSH_HOST}}",
+        "sshPort": 22,
+        "deployScript": "{{SELF_HOSTED_DEPLOY_SCRIPT}}",
+        "appPath": "{{SELF_HOSTED_APP_PATH}}"
+      }
     },
     "cicd": "{{CICD_PLATFORM}}"
   },
@@ -108,5 +115,68 @@
       "frontend": "{{DEPLOY_FRONTEND_URL}}",
       "backend": "{{DEPLOY_BACKEND_URL}}"
     }
+  },
+  "tokenManagement": {
+    "enabled": false,
+    "dailyBudget": 200000,
+    "thresholds": {
+      "compact": 0.75,
+      "archive": 0.85,
+      "respawn": 0.90
+    },
+    "trackingFile": ".claude/hooks/cache/token-usage.json"
+  },
+  "happyMode": {
+    "enabled": false,
+    "dashboardUrl": null,
+    "checkpointInterval": 10,
+    "verbosity": "condensed",
+    "notifications": {
+      "onTaskComplete": true,
+      "onError": true,
+      "onCheckpoint": false
+    }
+  },
+  "agents": {
+    "enabled": true,
+    "l1": {
+      "model": "sonnet",
+      "tools": ["Task", "Read", "Grep", "Glob", "WebSearch"],
+      "maxTokens": 16000
+    },
+    "l2": {
+      "model": "sonnet",
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+      "maxTokens": 8000
+    },
+    "l3": {
+      "model": "haiku",
+      "tools": ["Read", "Grep"],
+      "maxTokens": 500
+    },
+    "maxConcurrent": 4
+  },
+  "phasedDevelopment": {
+    "enabled": true,
+    "defaultScale": "M",
+    "successTarget": 0.95,
+    "progressFile": ".claude/docs/{project-slug}/PROGRESS.json",
+    "generateArtifacts": {
+      "executiveSummary": true,
+      "deploymentRunbook": true,
+      "rollbackPlan": true,
+      "testPlan": true
+    }
+  },
+  "hooks": {
+    "enabled": true,
+    "priorities": {
+      "lifecycle": 100,
+      "tools": 1000,
+      "automation": 2000
+    },
+    "errorBehavior": "approve",
+    "cacheDir": ".claude/hooks/cache",
+    "configDir": ".claude/hooks/config"
   }
 }
