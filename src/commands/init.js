@@ -308,11 +308,31 @@ function generateMenuCommand(projectName, installedCommands, installedAgents, in
     }
   }
 
+  const ccaspVersion = getVersion();
+
   return `---
 description: Interactive project menu - Quick access to all commands, agents, skills, and tools
 ---
 
 # ${projectName} - Project Menu
+
+## IMPORTANT: Check Update State First
+
+Before displaying the menu, read \`.claude/config/ccasp-state.json\` to check for updates:
+
+\`\`\`javascript
+{
+  "currentVersion": "1.0.5",
+  "latestVersion": "1.0.6",
+  "updateAvailable": true,
+  "updateHighlights": [...],
+  "updateFirstDisplayed": false
+}
+\`\`\`
+
+## Dynamic Menu Header
+
+Build the header based on update state. Replace \`{{VERSION}}\` and \`{{UPDATE_STATUS}}\` dynamically:
 
 \`\`\`
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -321,9 +341,50 @@ description: Interactive project menu - Quick access to all commands, agents, sk
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                    ${projectName.padEnd(40)}                    ║
+║   ${projectName.padEnd(35)}  v{{VERSION}} {{UPDATE_STATUS}}     ║
 ║                                                                               ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
+\`\`\`
+
+**If update is available**, replace:
+- \`{{VERSION}}\` with current version (e.g., "1.0.5")
+- \`{{UPDATE_STATUS}}\` with \`[NEW UPDATE]\` in bold/highlighted
+
+**If up to date**, replace:
+- \`{{VERSION}}\` with current version
+- \`{{UPDATE_STATUS}}\` with empty string
+
+## Update Banner (Show When Update Available)
+
+If \`updateAvailable: true\`, display this banner BEFORE the main menu:
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  📦 NEW UPDATE AVAILABLE: v{{currentVersion}} → v{{latestVersion}}          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  What's New:                                                                │
+│  {{#each updateHighlights}}                                                 │
+│    • {{summary}}                                                            │
+│  {{/each}}                                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Press [N] to update now  │  Press [U] for details  │  Press any to dismiss │
+└─────────────────────────────────────────────────────────────────────────────┘
+\`\`\`
+
+**IMPORTANT**: After displaying the update banner for the first time, update the state file:
+\`updateFirstDisplayed: true\` - This prevents showing the full highlights again.
+
+On subsequent displays (when \`updateFirstDisplayed: true\`), show a compact banner:
+
+\`\`\`
+┌──────────────────────────────────────────────────────────────┐
+│ 📦 Update available: v{{currentVersion}} → v{{latestVersion}} │ [N] Update │
+└──────────────────────────────────────────────────────────────┘
+\`\`\`
+
+## Main Menu Body
+
+\`\`\`
 ║                                                                               ║
 ║   Quick Actions:                                                              ║
 ║   ─────────────                                                               ║
@@ -343,13 +404,22 @@ description: Interactive project menu - Quick access to all commands, agents, sk
 ║   Navigation:                                                                 ║
 ║   ───────────                                                                 ║
 ║   [U] Check for Updates  [R] Refresh Menu       [?] Help       [Q] Exit      ║
+{{#if updateAvailable}}
+║   [N] UPDATE NOW         Run: npm update -g claude-cli-advanced-starter-pack  ║
+{{/if}}
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 \`\`\`
 
 ## How to Use This Menu
 
-When the user invokes \`/menu\`, display the ASCII menu above and wait for their selection.
+When the user invokes \`/menu\`:
+
+1. **Read update state**: Check \`.claude/config/ccasp-state.json\` for cached update info
+2. **Build dynamic header**: Include version number and update status
+3. **Show update banner**: If updates available, show banner with highlights (first time) or compact (subsequent)
+4. **Display the menu**: Show the ASCII art menu with dynamic content
+5. **Wait for input**: Accept single character or command name
 
 ### Key Bindings
 
@@ -372,6 +442,7 @@ When the user invokes \`/menu\`, display the ASCII menu above and wait for their
 | **6** | Open documentation | Read \`.claude/docs/\` |
 | **I** | Project Implementation | \`/project-impl\` |
 | **U** | Check for Updates | \`/update-check\` |
+| **N** | Update Now | Run npm update (only shown when update available) |
 | **R** | Refresh and redisplay menu | Re-invoke \`/menu\` |
 | **?** | Show help | Display command descriptions |
 | **Q** | Exit menu | End menu interaction |
@@ -386,48 +457,86 @@ ${hooksSection}
 
 When this command is invoked:
 
-1. **Check for updates** (background check):
-   - Read \`.claude/config/ccasp-state.json\` if it exists
-   - Check if there's a cached update notification that should be shown
-   - If an update is available and not dismissed, show a banner above the menu:
+### Step 1: Read Update State
 
-   \`\`\`
-   ┌──────────────────────────────────────────────────────────────┐
-   │ 🆕 UPDATE AVAILABLE: v1.0.X → v1.0.Y                        │
-   │ New features available! Press [U] to see what's new.        │
-   └──────────────────────────────────────────────────────────────┘
-   \`\`\`
+Read \`.claude/config/ccasp-state.json\`:
 
-2. **Display the ASCII menu** exactly as shown above
-3. **Ask the user** what they would like to do (show the key bindings)
-4. **Wait for user input** - a single character or command name
-5. **Execute the corresponding action**:
-   - For slash commands: Invoke the command directly
-   - For resource views: Read and display the contents
-   - For U: Invoke \`/update-check\` to show updates and add features
-   - For I: Invoke \`/project-impl\` for project implementation
-   - For R: Redisplay the menu
-   - For Q: End the menu session
+\`\`\`bash
+cat .claude/config/ccasp-state.json 2>/dev/null || echo "{}"
+\`\`\`
 
-### Example Interaction
+Parse the JSON to extract:
+- \`currentVersion\`: Installed CCASP version
+- \`latestVersion\`: Latest version on npm
+- \`updateAvailable\`: Boolean indicating if update exists
+- \`updateHighlights\`: Array of release summaries
+- \`updateFirstDisplayed\`: Whether full highlights have been shown
+
+### Step 2: Build Dynamic Menu
+
+Replace template variables in the menu:
+- \`{{VERSION}}\` → currentVersion (e.g., "1.0.6")
+- \`{{UPDATE_STATUS}}\` → "[NEW UPDATE]" if updateAvailable, else ""
+
+### Step 3: Display Update Banner (If Applicable)
+
+**First time showing update** (\`updateAvailable && !updateFirstDisplayed\`):
+Show full banner with highlights, then update state:
+
+\`\`\`bash
+# After displaying, update the state file to mark as displayed
+\`\`\`
+
+Set \`updateFirstDisplayed: true\` in ccasp-state.json using Edit tool.
+
+**Subsequent displays** (\`updateAvailable && updateFirstDisplayed\`):
+Show compact banner only.
+
+### Step 4: Display Menu and Wait for Input
+
+Ask: "What would you like to do? Enter a key:"
+
+### Step 5: Handle User Selection
+
+| Key | Action |
+|-----|--------|
+| **N** | **Update Now**: Run \`npm update -g claude-cli-advanced-starter-pack\` via Bash, then show: "Update complete! Restart Claude Code CLI to use new features." |
+| **U** | Invoke \`/update-check\` for detailed update info and feature management |
+| **I** | Invoke \`/project-impl\` for project implementation |
+| **R** | Re-invoke \`/menu\` (refresh) |
+| **Q** | End menu session |
+| **1-6** | Read and display the corresponding resource |
+| **Other** | Invoke the corresponding slash command |
+
+### Example: Update Now Flow
 
 \`\`\`
-User: /menu
-Claude: [Shows update banner if available]
-Claude: [Displays ASCII menu]
-Claude: What would you like to do? Enter a key (T/G/P/A/H/S/M/C/E/1-6/I/U/R/?/Q):
+User: N
 
-User: U
-Claude: [Invokes /update-check to show available updates]
+Claude: Updating CCASP...
+
+[Runs: npm update -g claude-cli-advanced-starter-pack]
+
+Claude:
+┌─────────────────────────────────────────────────────────────┐
+│  ✅ Update Complete!                                         │
+│                                                              │
+│  Updated: v1.0.5 → v1.0.6                                   │
+│                                                              │
+│  ⚠️  RESTART REQUIRED                                        │
+│  Exit and restart Claude Code CLI to use new features.      │
+│                                                              │
+│  Then run: ccasp wizard → select "Prior Releases" to add    │
+│  any new commands to this project.                          │
+└─────────────────────────────────────────────────────────────┘
 \`\`\`
 
 ### Update Check Behavior
 
-When checking for updates:
-- Read \`.claude/config/ccasp-state.json\` for cached update info
-- If \`lastCheckResult.latestVersion\` is newer than installed version, show banner
-- Update notifications auto-dismiss after 1 day
-- User can press [U] anytime to check manually and add new features
+- The startup hook (\`ccasp-update-check.js\`) runs automatically on first prompt
+- Checks npm registry with 1-hour cache
+- Stores result in \`.claude/config/ccasp-state.json\`
+- Menu reads this cached state (no network call needed)
 
 ### Dynamic Content
 
@@ -1268,7 +1377,101 @@ export default async function ${hookName.replace(/-/g, '_')}(context) {
 }
 
 /**
- * Generate settings.json
+ * Generate CCASP update check hook (fallback if template not found)
+ */
+function generateUpdateCheckHook() {
+  return `/**
+ * CCASP Update Check Hook
+ *
+ * Checks for npm updates when Claude Code starts.
+ * Runs on first UserPromptSubmit per session, caches results for 1 hour.
+ *
+ * Event: UserPromptSubmit
+ */
+
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const PACKAGE_NAME = 'claude-cli-advanced-starter-pack';
+const CACHE_DURATION = 60 * 60 * 1000;
+const STATE_FILE = '.claude/config/ccasp-state.json';
+const SESSION_MARKER = '.claude/config/.ccasp-session-checked';
+
+function loadState() {
+  const statePath = path.join(process.cwd(), STATE_FILE);
+  if (fs.existsSync(statePath)) {
+    try { return JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch {}
+  }
+  return { lastCheckTimestamp: 0, updateAvailable: false };
+}
+
+function saveState(state) {
+  const statePath = path.join(process.cwd(), STATE_FILE);
+  const stateDir = path.dirname(statePath);
+  if (!fs.existsSync(stateDir)) fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf8');
+}
+
+function hasCheckedThisSession() {
+  const markerPath = path.join(process.cwd(), SESSION_MARKER);
+  if (fs.existsSync(markerPath)) {
+    try {
+      const timestamp = parseInt(fs.readFileSync(markerPath, 'utf8'), 10);
+      if (Date.now() - timestamp < 4 * 60 * 60 * 1000) return true;
+    } catch {}
+  }
+  return false;
+}
+
+function markSessionChecked() {
+  const markerPath = path.join(process.cwd(), SESSION_MARKER);
+  const markerDir = path.dirname(markerPath);
+  if (!fs.existsSync(markerDir)) fs.mkdirSync(markerDir, { recursive: true });
+  fs.writeFileSync(markerPath, Date.now().toString(), 'utf8');
+}
+
+function compareVersions(v1, v2) {
+  if (!v1 || !v2) return 0;
+  const p1 = v1.split('.').map(Number), p2 = v2.split('.').map(Number);
+  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+    if ((p1[i] || 0) > (p2[i] || 0)) return 1;
+    if ((p1[i] || 0) < (p2[i] || 0)) return -1;
+  }
+  return 0;
+}
+
+module.exports = async function ccaspUpdateCheck(context) {
+  if (hasCheckedThisSession()) return { continue: true };
+  markSessionChecked();
+
+  const state = loadState();
+  const now = Date.now();
+
+  if (state.lastCheckTimestamp && (now - state.lastCheckTimestamp) < CACHE_DURATION) {
+    return { continue: true };
+  }
+
+  try {
+    const current = execSync('npm list -g ' + PACKAGE_NAME + ' --json 2>/dev/null', { encoding: 'utf8', timeout: 5000 });
+    const currentVersion = JSON.parse(current).dependencies?.[PACKAGE_NAME]?.version;
+
+    const latest = execSync('npm view ' + PACKAGE_NAME + ' version', { encoding: 'utf8', timeout: 10000 }).trim();
+
+    state.lastCheckTimestamp = now;
+    state.currentVersion = currentVersion;
+    state.latestVersion = latest;
+    state.updateAvailable = compareVersions(latest, currentVersion) > 0;
+    saveState(state);
+  } catch {}
+
+  return { continue: true };
+};
+`;
+}
+
+/**
+ * Generate settings.json with CCASP update check hook
  */
 function generateSettingsJson(projectName) {
   return JSON.stringify({
@@ -1277,7 +1480,19 @@ function generateSettingsJson(projectName) {
       "allow": [],
       "deny": []
     },
-    "hooks": {}
+    "hooks": {
+      "UserPromptSubmit": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "node .claude/hooks/ccasp-update-check.js"
+            }
+          ]
+        }
+      ]
+    }
   }, null, 2);
 }
 
@@ -1441,6 +1656,24 @@ export async function runInit(options = {}) {
     console.log(chalk.green('  ✓ Created hooks/example-hook.js (starter template)'));
   } else {
     console.log(chalk.blue(`  ○ hooks/ has ${hookFiles.length} existing hook(s) (preserved)`));
+  }
+
+  // Always deploy the CCASP update check hook (essential for update notifications)
+  const updateCheckHookPath = join(hooksDir, 'ccasp-update-check.js');
+  if (!existsSync(updateCheckHookPath)) {
+    // Try to read from template
+    const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
+    if (existsSync(templatePath)) {
+      const hookContent = readFileSync(templatePath, 'utf8');
+      writeFileSync(updateCheckHookPath, hookContent, 'utf8');
+      console.log(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
+    } else {
+      // Fallback: create minimal version
+      writeFileSync(updateCheckHookPath, generateUpdateCheckHook(), 'utf8');
+      console.log(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
+    }
+  } else {
+    console.log(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
   }
 
   console.log('');
