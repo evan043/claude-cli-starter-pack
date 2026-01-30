@@ -42,7 +42,7 @@ const OPTIONAL_FEATURES = [
     label: 'Token Budget Management',
     description: 'Monitor and manage Claude API token usage with automatic compaction warnings, archive suggestions, and respawn thresholds. Includes hooks that track usage per session.',
     commands: ['context-audit'],
-    hooks: ['token-budget-loader', 'context-guardian', 'tool-output-cacher'],
+    hooks: ['context-guardian'],  // Only include hooks with templates
     default: false,
     requiresPostConfig: false,
   },
@@ -51,7 +51,7 @@ const OPTIONAL_FEATURES = [
     label: 'Happy Engineering Integration',
     description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses. Requires Happy Coder app installed separately.',
     commands: ['happy-start'],
-    hooks: ['happy-checkpoint-manager', 'happy-title-generator', 'happy-mode-detector'],
+    hooks: ['happy-checkpoint-manager'],  // Only include hooks with templates
     default: false,
     requiresPostConfig: true,
   },
@@ -60,7 +60,7 @@ const OPTIONAL_FEATURES = [
     label: 'GitHub Project Board Integration',
     description: 'Connect Claude to your GitHub Project Board for automated issue creation, progress tracking, and PR merge automation. Requires gh CLI authentication.',
     commands: ['github-update', 'github-task-start'],
-    hooks: ['github-progress-hook', 'issue-completion-detector'],
+    hooks: ['github-progress-hook'],  // Only include hooks with templates
     default: true,
     requiresPostConfig: true,
   },
@@ -1818,6 +1818,25 @@ export async function runInit(options = {}) {
   const enabledFeatures = OPTIONAL_FEATURES.filter((f) => selectedFeatures.includes(f.name));
   const featuresRequiringConfig = enabledFeatures.filter((f) => f.requiresPostConfig);
 
+  // Collect feature-specific commands and hooks to deploy
+  const featureCommands = [];
+  const featureHooks = [];
+  for (const feature of enabledFeatures) {
+    featureCommands.push(...feature.commands);
+    featureHooks.push(...feature.hooks);
+  }
+
+  if (featureCommands.length > 0) {
+    console.log('');
+    console.log(chalk.green(`  ✓ Selected features will add ${featureCommands.length} command(s):`));
+    console.log(chalk.dim(`    ${featureCommands.map(c => '/' + c).join(', ')}`));
+  }
+
+  if (featureHooks.length > 0) {
+    console.log(chalk.green(`  ✓ Selected features will add ${featureHooks.length} hook(s):`));
+    console.log(chalk.dim(`    ${featureHooks.join(', ')}`));
+  }
+
   if (featuresRequiringConfig.length > 0) {
     console.log('');
     console.log(chalk.yellow('  ℹ The following features require configuration after installation:'));
@@ -1878,13 +1897,19 @@ export async function runInit(options = {}) {
     },
   ]);
 
-  // Always include required commands
+  // Always include required commands AND feature-specific commands
   const requiredCommands = AVAILABLE_COMMANDS.filter(c => c.required).map(c => c.name);
-  const finalCommands = [...new Set([...requiredCommands, ...selectedCommands])];
+  const finalCommands = [...new Set([...requiredCommands, ...selectedCommands, ...featureCommands])];
 
   if (finalCommands.length === 0) {
     showWarning('No commands selected. Nothing to install.');
     return;
+  }
+
+  // Show what feature commands were auto-added
+  const autoAddedCommands = featureCommands.filter(c => !selectedCommands.includes(c) && !requiredCommands.includes(c));
+  if (autoAddedCommands.length > 0) {
+    console.log(chalk.cyan(`  ℹ Auto-including ${autoAddedCommands.length} feature command(s): ${autoAddedCommands.map(c => '/' + c).join(', ')}`));
   }
 
   console.log('');
@@ -2181,6 +2206,45 @@ export async function runInit(options = {}) {
     console.log(chalk.cyan(`\n  📁 Backed up ${backedUpFiles.length} file(s) to .claude/backups/`));
   }
 
+  // Step 6b: Deploy feature-specific hooks
+  const deployedHooks = [];
+  const failedHooks = [];
+
+  if (featureHooks.length > 0) {
+    console.log(chalk.bold('\nStep 6b: Deploying feature hooks\n'));
+
+    for (const hookName of featureHooks) {
+      try {
+        const hookPath = join(hooksDir, `${hookName}.js`);
+
+        // Skip if already exists
+        if (existsSync(hookPath)) {
+          console.log(chalk.blue(`  ○ hooks/${hookName}.js exists (preserved)`));
+          continue;
+        }
+
+        // Try to load from templates/hooks/ folder
+        const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.js`);
+        if (existsSync(templatePath)) {
+          const hookContent = readFileSync(templatePath, 'utf8');
+          writeFileSync(hookPath, hookContent, 'utf8');
+          deployedHooks.push(hookName);
+          console.log(chalk.green(`  ✓ Created hooks/${hookName}.js`));
+        } else {
+          failedHooks.push({ name: hookName, error: 'No template found' });
+          console.log(chalk.yellow(`  ⚠ Skipped hooks/${hookName}.js (no template)`));
+        }
+      } catch (error) {
+        failedHooks.push({ name: hookName, error: error.message });
+        console.log(chalk.red(`  ✗ Failed: hooks/${hookName}.js - ${error.message}`));
+      }
+    }
+
+    if (deployedHooks.length > 0) {
+      console.log(chalk.green(`\n  ✓ Deployed ${deployedHooks.length} feature hook(s)`));
+    }
+  }
+
   // Step 7: Generate INDEX.md
   const indexPath = join(commandsDir, 'INDEX.md');
   const indexContent = generateIndexFile(installed, projectName);
@@ -2308,6 +2372,15 @@ export async function runInit(options = {}) {
     },
     // Track which features need post-install configuration
     _pendingConfiguration: featuresRequiringConfig.map((f) => f.name),
+    // Track what was deployed for verification
+    _deployment: {
+      commands: installed,
+      featureCommands: featureCommands.filter(c => installed.includes(c)),
+      hooks: deployedHooks,
+      featureHooks: featureHooks,
+      enabledFeatures: selectedFeatures,
+      timestamp: new Date().toISOString(),
+    },
   };
 
   if (!existsSync(techStackPath)) {

@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "1.0.14",
+      "date": "2026-01-30",
+      "summary": "Fix: Complete feature deployment - hooks, commands, and auto-selection now work correctly",
+      "highlights": [
+        "Feature commands are now auto-included when a feature is selected",
+        "Feature hooks are now properly deployed during init",
+        "OPTIONAL_FEATURES cleaned up to only reference existing templates",
+        "tech-stack.json now tracks deployed commands and hooks for verification",
+        "Step 6b added to show feature hook deployment progress"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "feature-auto-deployment",
+            "description": "When selecting a feature, its commands and hooks are automatically deployed"
+          },
+          {
+            "name": "deployment-tracking",
+            "description": "tech-stack.json now includes _deployment section tracking what was installed"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.13",
       "date": "2026-01-30",
       "summary": "Feature: Smart Update Merge Tracking - Intelligent handling of customized assets during updates",
