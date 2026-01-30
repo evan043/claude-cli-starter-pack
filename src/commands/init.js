@@ -1,15 +1,16 @@
 /**
  * Init Command
  *
- * Deploy Claude CLI Starter Pack to a project's .claude/commands/ folder
- * Creates slash commands that will be available in Claude Code CLI
+ * Deploy Claude CLI Starter Pack to a project's .claude/ folder
+ * Creates complete folder structure with commands, skills, agents, hooks
+ * Generates a sophisticated /menu command for project navigation
  */
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync, copyFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from 'fs';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { getVersion } from '../utils.js';
@@ -21,6 +22,13 @@ const __dirname = dirname(__filename);
  * Available slash commands to deploy
  */
 const AVAILABLE_COMMANDS = [
+  {
+    name: 'menu',
+    description: 'Interactive ASCII menu for project commands and tools',
+    category: 'Navigation',
+    selected: true,
+    required: true,
+  },
   {
     name: 'e2e-test',
     description: 'Run E2E tests with Playwright (ralph loop, headed, watch modes)',
@@ -94,6 +102,175 @@ const AVAILABLE_COMMANDS = [
     selected: false,
   },
 ];
+
+/**
+ * Generate the sophisticated /menu command
+ */
+function generateMenuCommand(projectName, installedCommands, installedAgents, installedSkills, installedHooks) {
+  const date = new Date().toISOString().split('T')[0];
+
+  // Group commands by category
+  const commandsByCategory = {};
+  for (const cmdName of installedCommands) {
+    const cmd = AVAILABLE_COMMANDS.find((c) => c.name === cmdName);
+    if (cmd && cmd.name !== 'menu') {
+      if (!commandsByCategory[cmd.category]) {
+        commandsByCategory[cmd.category] = [];
+      }
+      commandsByCategory[cmd.category].push(cmd);
+    }
+  }
+
+  // Build category sections for the menu
+  let categoryMenuItems = '';
+  let categoryInstructions = '';
+  let keyIndex = 1;
+  const keyMap = {};
+
+  for (const [category, cmds] of Object.entries(commandsByCategory)) {
+    categoryMenuItems += `\n### ${category}\n`;
+    for (const cmd of cmds) {
+      const key = keyIndex <= 9 ? keyIndex.toString() : String.fromCharCode(65 + keyIndex - 10); // 1-9, then A-Z
+      keyMap[key] = cmd.name;
+      categoryMenuItems += `- **[${key}]** \`/${cmd.name}\` - ${cmd.description}\n`;
+      keyIndex++;
+    }
+  }
+
+  // Build agents section
+  let agentsSection = '';
+  if (installedAgents.length > 0) {
+    agentsSection = `\n### Agents\n`;
+    for (const agent of installedAgents) {
+      agentsSection += `- **${agent}** - Custom agent\n`;
+    }
+  }
+
+  // Build skills section
+  let skillsSection = '';
+  if (installedSkills.length > 0) {
+    skillsSection = `\n### Skills\n`;
+    for (const skill of installedSkills) {
+      skillsSection += `- **${skill}** - Custom skill\n`;
+    }
+  }
+
+  // Build hooks section
+  let hooksSection = '';
+  if (installedHooks.length > 0) {
+    hooksSection = `\n### Active Hooks\n`;
+    for (const hook of installedHooks) {
+      hooksSection += `- **${hook}**\n`;
+    }
+  }
+
+  return `---
+description: Interactive project menu - Quick access to all commands, agents, skills, and tools
+---
+
+# ${projectName} - Project Menu
+
+\`\`\`
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║   ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔═╗╔╦╗╔═╗  ╔═╗╔╦╗╔═╗╦═╗╔╦╗╔═╗╦═╗  ╔═╗╔═╗╔═╗╦╔═      ║
+║   ║  ║  ╠═╣║ ║ ║║║╣   ║  ║ ║ ║║║╣   ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝  ╠═╝╠═╣║  ╠╩╗      ║
+║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╚═╝╚═╝═╩╝╚═╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═  ╩  ╩ ╩╚═╝╩ ╩      ║
+║                                                                               ║
+║                    ${projectName.padEnd(40)}                    ║
+║                                                                               ║
+╠═══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║   Quick Actions:                                                              ║
+║   ─────────────                                                               ║
+║   [T] Run Tests          [G] GitHub Task        [P] Phase Dev Plan            ║
+║   [A] Create Agent       [H] Create Hook        [S] Create Skill              ║
+║   [M] Explore MCP        [C] Claude Audit       [E] Explore Codebase          ║
+║                                                                               ║
+║   Project Resources:                                                          ║
+║   ──────────────────                                                          ║
+║   [1] View Agents        [2] View Skills        [3] View Hooks                ║
+║   [4] View Commands      [5] Settings           [6] Documentation             ║
+║                                                                               ║
+║   Navigation:                                                                 ║
+║   ───────────                                                                 ║
+║   [R] Refresh Menu       [?] Help               [Q] Exit Menu                 ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+\`\`\`
+
+## How to Use This Menu
+
+When the user invokes \`/menu\`, display the ASCII menu above and wait for their selection.
+
+### Key Bindings
+
+| Key | Action | Command |
+|-----|--------|---------|
+| **T** | Run E2E Tests | \`/e2e-test\` |
+| **G** | Create GitHub Task | \`/github-task\` |
+| **P** | Create Phase Dev Plan | \`/phase-dev-plan\` |
+| **A** | Create Agent | \`/create-agent\` |
+| **H** | Create Hook | \`/create-hook\` |
+| **S** | Create Skill | \`/create-skill\` |
+| **M** | Explore MCP Servers | \`/explore-mcp\` |
+| **C** | Claude Audit | \`/claude-audit\` |
+| **E** | Explore Codebase | \`/codebase-explorer\` |
+| **1** | List project agents | Read \`.claude/agents/\` |
+| **2** | List project skills | Read \`.claude/skills/\` |
+| **3** | List active hooks | Read \`.claude/hooks/\` |
+| **4** | List all commands | Read \`.claude/commands/INDEX.md\` |
+| **5** | View/edit settings | Read \`.claude/settings.json\` |
+| **6** | Open documentation | Read \`.claude/docs/\` |
+| **R** | Refresh and redisplay menu | Re-invoke \`/menu\` |
+| **?** | Show help | Display command descriptions |
+| **Q** | Exit menu | End menu interaction |
+
+## Installed Commands
+${categoryMenuItems}
+${agentsSection}
+${skillsSection}
+${hooksSection}
+
+## Instructions for Claude
+
+When this command is invoked:
+
+1. **Display the ASCII menu** exactly as shown above
+2. **Ask the user** what they would like to do (show the key bindings)
+3. **Wait for user input** - a single character or command name
+4. **Execute the corresponding action**:
+   - For slash commands: Invoke the command directly
+   - For resource views: Read and display the contents
+   - For R: Redisplay the menu
+   - For Q: End the menu session
+
+### Example Interaction
+
+\`\`\`
+User: /menu
+Claude: [Displays ASCII menu]
+Claude: What would you like to do? Enter a key (T/G/P/A/H/S/M/C/E/1-6/R/?/Q):
+
+User: T
+Claude: Running E2E tests... [Invokes /e2e-test]
+\`\`\`
+
+### Dynamic Content
+
+When displaying resource views (1-6), read the actual contents from:
+- Agents: \`.claude/agents/*.md\` files
+- Skills: \`.claude/skills/*/skill.md\` files
+- Hooks: \`.claude/hooks/*.js\` files
+- Commands: \`.claude/commands/INDEX.md\`
+- Settings: \`.claude/settings.json\` and \`.claude/settings.local.json\`
+- Docs: \`.claude/docs/\` directory listing
+
+---
+
+*Generated by Claude CLI Starter Pack v${getVersion()} on ${date}*
+`;
+}
 
 /**
  * Command template generators
@@ -286,7 +463,7 @@ When invoked:
 2. Determine appropriate level (L1/L2/L3)
 3. Select relevant tools
 4. Generate agent file with proper frontmatter
-5. Register in settings if needed
+5. Register in settings.json allowedTools if needed
 `,
 
   'create-hook': () => `---
@@ -324,7 +501,7 @@ When invoked:
 2. Select event type
 3. Define target tools (for PreToolUse/PostToolUse)
 4. Generate hook file with proper exports
-5. Add to settings.local.json
+5. Add to settings.local.json hooks array
 `,
 
   'create-skill': () => `---
@@ -615,67 +792,256 @@ When invoked:
 };
 
 /**
+ * Generate starter agent file
+ */
+function generateStarterAgent(agentName) {
+  return `---
+description: ${agentName} agent - Add your description here
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+model: sonnet
+---
+
+# ${agentName} Agent
+
+## Purpose
+
+Describe what this agent does and when to use it.
+
+## Capabilities
+
+- List the agent's primary capabilities
+- What tasks it can handle
+- What domains it specializes in
+
+## Usage
+
+Invoke this agent with the Task tool:
+
+\`\`\`
+Task: "${agentName}"
+Prompt: "Your task description here"
+\`\`\`
+
+## Instructions
+
+When this agent is invoked:
+
+1. Understand the task context
+2. Use available tools to gather information
+3. Execute the required actions
+4. Report results clearly
+`;
+}
+
+/**
+ * Generate starter skill file
+ */
+function generateStarterSkill(skillName) {
+  return `---
+description: ${skillName} skill - Add your description here
+---
+
+# ${skillName} Skill
+
+## Overview
+
+Describe what this skill provides and when to use it.
+
+## Context
+
+This skill has access to supporting documentation in the \`context/\` folder.
+
+## Workflows
+
+Step-by-step procedures are available in the \`workflows/\` folder.
+
+## Usage
+
+Invoke this skill by typing \`/${skillName}\` or referencing it with the Skill tool.
+
+## Instructions
+
+When this skill is invoked:
+
+1. Load relevant context from the context folder
+2. Follow applicable workflows
+3. Apply domain expertise
+4. Provide clear, actionable guidance
+`;
+}
+
+/**
+ * Generate starter hook file
+ */
+function generateStarterHook(hookName, eventType = 'PreToolUse') {
+  return `/**
+ * ${hookName} Hook
+ *
+ * Event: ${eventType}
+ * Description: Add your description here
+ */
+
+export default async function ${hookName.replace(/-/g, '_')}(context) {
+  const { tool, input, session } = context;
+
+  // Example: Log all tool usage
+  console.log(\`[${hookName}] Tool: \${tool}, Input: \${JSON.stringify(input).slice(0, 100)}\`);
+
+  // Return decision
+  return {
+    continue: true,  // Set to false to block the action
+    // message: 'Optional message to show user',
+    // modifiedInput: input,  // Optional: modify the input
+  };
+}
+`;
+}
+
+/**
+ * Generate settings.json
+ */
+function generateSettingsJson(projectName) {
+  return JSON.stringify({
+    "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude/settings.schema.json",
+    "project": {
+      "name": projectName,
+      "description": "Project configured with Claude CLI Starter Pack"
+    },
+    "permissions": {
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "Task"],
+      "deniedTools": []
+    },
+    "agents": [],
+    "hooks": []
+  }, null, 2);
+}
+
+/**
+ * Generate settings.local.json
+ */
+function generateSettingsLocalJson() {
+  return JSON.stringify({
+    "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/.claude/settings.schema.json",
+    "permissions": {
+      "allowedTools": [],
+      "deniedTools": []
+    },
+    "hooks": []
+  }, null, 2);
+}
+
+/**
  * Run the init wizard
  */
 export async function runInit(options = {}) {
   showHeader('Claude CLI Starter Pack - Project Setup');
 
   const cwd = process.cwd();
+  const projectName = basename(cwd);
   const claudeDir = join(cwd, '.claude');
   const commandsDir = join(claudeDir, 'commands');
+  const skillsDir = join(claudeDir, 'skills');
+  const agentsDir = join(claudeDir, 'agents');
+  const hooksDir = join(claudeDir, 'hooks');
+  const docsDir = join(claudeDir, 'docs');
 
-  // Step 1: Check prerequisites
-  console.log(chalk.dim('Checking project prerequisites...\n'));
+  console.log(chalk.cyan(`  Project: ${chalk.bold(projectName)}`));
+  console.log(chalk.cyan(`  Location: ${cwd}`));
+  console.log('');
 
-  // Check if .claude folder exists
-  const hasClaudeDir = existsSync(claudeDir);
-  if (!hasClaudeDir) {
-    showWarning('.claude/ folder not found');
-    const { createDir } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'createDir',
-        message: 'Create .claude/ folder structure?',
-        default: true,
-      },
-    ]);
+  // Step 1: Check and create folder structure
+  console.log(chalk.bold('Step 1: Setting up .claude/ folder structure\n'));
 
-    if (!createDir) {
-      console.log(chalk.dim('Cancelled.'));
-      return;
+  const foldersToCreate = [
+    { path: claudeDir, name: '.claude' },
+    { path: commandsDir, name: '.claude/commands' },
+    { path: skillsDir, name: '.claude/skills' },
+    { path: agentsDir, name: '.claude/agents' },
+    { path: hooksDir, name: '.claude/hooks' },
+    { path: docsDir, name: '.claude/docs' },
+  ];
+
+  for (const folder of foldersToCreate) {
+    if (!existsSync(folder.path)) {
+      mkdirSync(folder.path, { recursive: true });
+      console.log(chalk.green(`  ✓ Created ${folder.name}/`));
+    } else {
+      console.log(chalk.dim(`  ○ ${folder.name}/ exists`));
     }
-
-    // Create .claude structure
-    mkdirSync(claudeDir, { recursive: true });
-    mkdirSync(join(claudeDir, 'commands'), { recursive: true });
-    mkdirSync(join(claudeDir, 'skills'), { recursive: true });
-    mkdirSync(join(claudeDir, 'agents'), { recursive: true });
-    mkdirSync(join(claudeDir, 'hooks'), { recursive: true });
-    mkdirSync(join(claudeDir, 'docs'), { recursive: true });
-    console.log(chalk.green('✓ Created .claude/ folder structure'));
-  } else {
-    console.log(chalk.green('✓ .claude/ folder exists'));
-  }
-
-  // Ensure commands directory exists
-  if (!existsSync(commandsDir)) {
-    mkdirSync(commandsDir, { recursive: true });
-    console.log(chalk.green('✓ Created .claude/commands/ directory'));
   }
 
   console.log('');
 
-  // Step 2: Select commands to install
-  const categories = [...new Set(AVAILABLE_COMMANDS.map((c) => c.category))];
+  // Step 2: Create settings files if they don't exist
+  console.log(chalk.bold('Step 2: Configuring settings\n'));
 
-  console.log(chalk.bold('Available Slash Commands:\n'));
+  const settingsPath = join(claudeDir, 'settings.json');
+  const settingsLocalPath = join(claudeDir, 'settings.local.json');
+
+  if (!existsSync(settingsPath)) {
+    writeFileSync(settingsPath, generateSettingsJson(projectName), 'utf8');
+    console.log(chalk.green('  ✓ Created settings.json'));
+  } else {
+    console.log(chalk.dim('  ○ settings.json exists'));
+  }
+
+  if (!existsSync(settingsLocalPath)) {
+    writeFileSync(settingsLocalPath, generateSettingsLocalJson(), 'utf8');
+    console.log(chalk.green('  ✓ Created settings.local.json'));
+  } else {
+    console.log(chalk.dim('  ○ settings.local.json exists'));
+  }
+
+  console.log('');
+
+  // Step 3: Create starter files for each folder
+  console.log(chalk.bold('Step 3: Creating starter files\n'));
+
+  // Starter agent
+  const starterAgentPath = join(agentsDir, 'example-agent.md');
+  if (!existsSync(starterAgentPath)) {
+    writeFileSync(starterAgentPath, generateStarterAgent('example-agent'), 'utf8');
+    console.log(chalk.green('  ✓ Created agents/example-agent.md'));
+  }
+
+  // Starter skill
+  const starterSkillDir = join(skillsDir, 'example-skill');
+  const starterSkillPath = join(starterSkillDir, 'skill.md');
+  if (!existsSync(starterSkillPath)) {
+    mkdirSync(starterSkillDir, { recursive: true });
+    mkdirSync(join(starterSkillDir, 'context'), { recursive: true });
+    mkdirSync(join(starterSkillDir, 'workflows'), { recursive: true });
+    writeFileSync(starterSkillPath, generateStarterSkill('example-skill'), 'utf8');
+    writeFileSync(join(starterSkillDir, 'context', 'README.md'), '# Context\n\nAdd supporting documentation here.\n', 'utf8');
+    writeFileSync(join(starterSkillDir, 'workflows', 'README.md'), '# Workflows\n\nAdd step-by-step procedures here.\n', 'utf8');
+    console.log(chalk.green('  ✓ Created skills/example-skill/'));
+  }
+
+  // Starter hook
+  const starterHookPath = join(hooksDir, 'example-hook.js');
+  if (!existsSync(starterHookPath)) {
+    writeFileSync(starterHookPath, generateStarterHook('example-hook', 'PreToolUse'), 'utf8');
+    console.log(chalk.green('  ✓ Created hooks/example-hook.js'));
+  }
+
+  console.log('');
+
+  // Step 4: Select commands to install
+  console.log(chalk.bold('Step 4: Select slash commands to install\n'));
+
+  const categories = [...new Set(AVAILABLE_COMMANDS.map((c) => c.category))];
 
   for (const category of categories) {
     console.log(chalk.cyan(`  ${category}:`));
     const cmds = AVAILABLE_COMMANDS.filter((c) => c.category === category);
     for (const cmd of cmds) {
       const marker = cmd.selected ? chalk.green('●') : chalk.dim('○');
-      console.log(`    ${marker} /${cmd.name} - ${chalk.dim(cmd.description)}`);
+      const required = cmd.required ? chalk.yellow(' (required)') : '';
+      console.log(`    ${marker} /${cmd.name}${required} - ${chalk.dim(cmd.description)}`);
     }
     console.log('');
   }
@@ -690,21 +1056,26 @@ export async function runInit(options = {}) {
         name: `/${cmd.name} - ${cmd.description}`,
         value: cmd.name,
         checked: cmd.selected,
+        disabled: cmd.required ? 'Required' : false,
       })),
       pageSize: 15,
     },
   ]);
 
-  if (selectedCommands.length === 0) {
+  // Always include required commands
+  const requiredCommands = AVAILABLE_COMMANDS.filter(c => c.required).map(c => c.name);
+  const finalCommands = [...new Set([...requiredCommands, ...selectedCommands])];
+
+  if (finalCommands.length === 0) {
     showWarning('No commands selected. Nothing to install.');
     return;
   }
 
   console.log('');
 
-  // Step 3: Check for existing commands
+  // Step 5: Check for existing commands
   const existingCommands = [];
-  for (const cmdName of selectedCommands) {
+  for (const cmdName of finalCommands) {
     const cmdPath = join(commandsDir, `${cmdName}.md`);
     if (existsSync(cmdPath)) {
       existingCommands.push(cmdName);
@@ -725,34 +1096,51 @@ export async function runInit(options = {}) {
     overwrite = confirmOverwrite;
 
     if (!overwrite) {
-      // Filter out existing commands
-      const filtered = selectedCommands.filter((c) => !existingCommands.includes(c));
-      if (filtered.length === 0) {
-        console.log(chalk.dim('All selected commands already exist. Nothing to install.'));
-        return;
-      }
-      selectedCommands.length = 0;
-      selectedCommands.push(...filtered);
+      // Filter out existing commands (except required ones)
+      const filtered = finalCommands.filter((c) => !existingCommands.includes(c) || requiredCommands.includes(c));
+      finalCommands.length = 0;
+      finalCommands.push(...filtered);
     }
   }
 
-  // Step 4: Install commands
-  const spinner = ora('Installing slash commands...').start();
+  // Step 6: Install commands
+  console.log(chalk.bold('Step 5: Installing slash commands\n'));
+
+  const spinner = ora('Installing commands...').start();
   const installed = [];
   const failed = [];
 
-  for (const cmdName of selectedCommands) {
+  // Get installed agents, skills, hooks for menu
+  const installedAgents = existsSync(agentsDir)
+    ? readdirSync(agentsDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''))
+    : [];
+  const installedSkills = existsSync(skillsDir)
+    ? readdirSync(skillsDir).filter(f => !f.startsWith('.'))
+    : [];
+  const installedHooks = existsSync(hooksDir)
+    ? readdirSync(hooksDir).filter(f => f.endsWith('.js')).map(f => f.replace('.js', ''))
+    : [];
+
+  for (const cmdName of finalCommands) {
     try {
       const cmdPath = join(commandsDir, `${cmdName}.md`);
-      const template = COMMAND_TEMPLATES[cmdName];
 
-      if (template) {
-        const content = template();
-        writeFileSync(cmdPath, content, 'utf8');
-        installed.push(cmdName);
+      let content;
+      if (cmdName === 'menu') {
+        // Generate dynamic menu command
+        content = generateMenuCommand(projectName, finalCommands, installedAgents, installedSkills, installedHooks);
       } else {
-        failed.push({ name: cmdName, error: 'No template found' });
+        const template = COMMAND_TEMPLATES[cmdName];
+        if (template) {
+          content = template();
+        } else {
+          failed.push({ name: cmdName, error: 'No template found' });
+          continue;
+        }
       }
+
+      writeFileSync(cmdPath, content, 'utf8');
+      installed.push(cmdName);
     } catch (error) {
       failed.push({ name: cmdName, error: error.message });
     }
@@ -760,27 +1148,36 @@ export async function runInit(options = {}) {
 
   spinner.stop();
 
-  // Step 5: Generate INDEX.md
+  // Step 7: Generate INDEX.md
   const indexPath = join(commandsDir, 'INDEX.md');
-  const indexContent = generateIndexFile(installed);
+  const indexContent = generateIndexFile(installed, projectName);
   writeFileSync(indexPath, indexContent, 'utf8');
 
-  // Step 6: Generate README.md
+  // Step 8: Generate README.md
   const readmePath = join(commandsDir, 'README.md');
-  const readmeContent = generateReadmeFile(installed);
+  const readmeContent = generateReadmeFile(installed, projectName);
   writeFileSync(readmePath, readmeContent, 'utf8');
 
   // Summary
   console.log('');
   if (installed.length > 0) {
-    showSuccess('Commands Installed!', [
-      `Installed: ${installed.length} commands`,
-      ...installed.map((c) => `  /${c}`),
+    showSuccess('Claude CLI Starter Pack Deployed!', [
       '',
-      `Location: ${commandsDir}`,
+      `Project: ${projectName}`,
       '',
-      'These commands are now available in Claude Code CLI.',
-      'Type /<command-name> to use them.',
+      'Folder Structure:',
+      '  .claude/',
+      '  ├── commands/     (slash commands)',
+      '  ├── agents/       (custom agents)',
+      '  ├── skills/       (skill packages)',
+      '  ├── hooks/        (enforcement hooks)',
+      '  ├── docs/         (documentation)',
+      '  ├── settings.json',
+      '  └── settings.local.json',
+      '',
+      `Commands Installed: ${installed.length}`,
+      ...installed.slice(0, 8).map((c) => `  /${c}`),
+      installed.length > 8 ? `  ... and ${installed.length - 8} more` : '',
     ]);
   }
 
@@ -792,23 +1189,34 @@ export async function runInit(options = {}) {
   }
 
   // Show next steps
-  console.log(chalk.bold('\nNext Steps:\n'));
-  console.log(chalk.dim('  1. Launch Claude Code CLI in this project'));
-  console.log(chalk.dim('  2. Type /<command-name> to use installed commands'));
-  console.log(chalk.dim('  3. Run "ccsp" again to configure GitHub integration\n'));
-
-  console.log(chalk.dim(`  To reinstall or update: npx claude-cli-starter-pack init\n`));
+  console.log(chalk.bold('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+  console.log(chalk.bold('Next Steps:\n'));
+  console.log(chalk.cyan('  1.') + ' Launch Claude Code CLI in this project');
+  console.log(chalk.cyan('  2.') + ` Type ${chalk.bold('/menu')} to see the interactive project menu`);
+  console.log(chalk.cyan('  3.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+  console.log('');
+  console.log(chalk.dim('  Customize your setup:'));
+  console.log(chalk.dim('    • Edit agents in .claude/agents/'));
+  console.log(chalk.dim('    • Create skills in .claude/skills/'));
+  console.log(chalk.dim('    • Add hooks in .claude/hooks/'));
+  console.log('');
+  console.log(chalk.dim(`  To update: ${chalk.bold('npx claude-cli-starter-pack init --force')}`));
+  console.log('');
 }
 
 /**
  * Generate INDEX.md file
  */
-function generateIndexFile(commands) {
+function generateIndexFile(commands, projectName) {
   const date = new Date().toISOString().split('T')[0];
 
-  let content = `# Claude CLI Starter Pack Commands
+  let content = `# ${projectName} - Slash Commands
 
 > Installed by Claude CLI Starter Pack v${getVersion()} on ${date}
+
+## Quick Start
+
+Type \`/menu\` to open the interactive project menu.
 
 ## Available Commands
 
@@ -824,14 +1232,23 @@ function generateIndexFile(commands) {
   }
 
   content += `
-## Usage
+## Project Structure
 
-Type \`/<command-name>\` in Claude Code CLI to invoke a command.
+\`\`\`
+.claude/
+├── commands/     # Slash commands (you are here)
+├── agents/       # Custom agents
+├── skills/       # Skill packages
+├── hooks/        # Enforcement hooks
+├── docs/         # Documentation
+├── settings.json
+└── settings.local.json
+\`\`\`
 
 ## Reinstall/Update
 
 \`\`\`bash
-npx claude-cli-starter-pack init
+npx claude-cli-starter-pack init --force
 \`\`\`
 
 ## Learn More
@@ -846,7 +1263,7 @@ npx claude-cli-starter-pack init
 /**
  * Generate README.md file
  */
-function generateReadmeFile(commands) {
+function generateReadmeFile(commands, projectName) {
   const categories = {};
 
   for (const cmdName of commands) {
@@ -859,9 +1276,13 @@ function generateReadmeFile(commands) {
     }
   }
 
-  let content = `# Slash Commands
+  let content = `# ${projectName} - Slash Commands
 
 This folder contains Claude Code CLI slash commands installed by Claude CLI Starter Pack.
+
+## Interactive Menu
+
+Type \`/menu\` to access the interactive ASCII menu with quick access to all commands.
 
 ## Commands by Category
 
@@ -906,7 +1327,7 @@ Instructions for Claude to follow when this command is invoked.
 To reinstall or update commands:
 
 \`\`\`bash
-npx claude-cli-starter-pack init
+npx claude-cli-starter-pack init --force
 \`\`\`
 `;
 
