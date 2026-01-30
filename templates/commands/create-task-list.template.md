@@ -212,6 +212,21 @@ options:
     description: "I'll describe what to change"
 ```
 
+**Question 5: Task Execution Strategy**
+```
+header: "Execution"
+question: "How would you like to execute tasks?"
+options:
+  - label: "Sequential - One at a time (Recommended)"
+    description: "Complete each task fully, commit, then move to next. More control, easier rollback"
+  - label: "Grouped - Related tasks together"
+    description: "Group related tasks, commit after each group. Balanced approach"
+  - label: "All at once"
+    description: "Execute all tasks, single final commit. Fastest but harder to debug"
+```
+
+**Store the user's execution preference** for use in Step 8.
+
 ---
 
 ### Step 5: Create Task List
@@ -267,6 +282,49 @@ Task N: "Commit all changes"
 
 If user selected GitHub integration:
 
+#### Step 6a: Preview Issue Before Creation
+
+**Present issue preview to user** before creating:
+
+```markdown
+## GitHub Issue Preview
+
+**Title:** [Generated from user prompt]
+**Priority:** P2-Medium (or determined from analysis)
+**Labels:** [Determined from exploration - frontend, backend, feature, bug, etc.]
+**Stack:** [Frontend only | Backend only | Both]
+
+**Description Preview:**
+> [First 200 characters of the analysis from Step 3...]
+
+**Task Checklist:**
+- [ ] Task 1: [First task]
+- [ ] Task 2: [Second task]
+- [ ] ...
+```
+
+**Ask for confirmation using AskUserQuestion:**
+```
+header: "Create GitHub Issue?"
+question: "Ready to create this GitHub issue? Review the preview above."
+options:
+  - label: "Yes - Create Issue"
+    description: "Create the issue and enable auto-progress tracking"
+  - label: "Modify Details"
+    description: "I want to change the title, priority, or labels"
+  - label: "Skip GitHub"
+    description: "Don't create issue, use local TodoWrite only"
+```
+
+**Handle user response:**
+- **"Yes - Create Issue"**: Proceed to create the issue (Step 6b)
+- **"Modify Details"**: Ask which fields to change, then show preview again
+- **"Skip GitHub"**: Skip to Step 7, note that GitHub tracking is disabled
+
+---
+
+#### Step 6b: Create the Issue
+
 1. **Create comprehensive issue** using `/github-create-task`:
    ```bash
    /github-create-task --batch-mode
@@ -311,6 +369,43 @@ If user selected GitHub integration:
      - Adds a progress comment if significant milestone
    - See `.claude/hooks/tools/github-progress-hook.js`
 
+#### Step 6c: Post-Creation Confirmation
+
+After the issue is created, **display confirmation and ask how to proceed**:
+
+```markdown
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ GitHub Issue Created Successfully                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Issue: #[ISSUE_NUMBER]                                       ║
+║  URL: https://github.com/[owner]/[repo]/issues/[number]       ║
+║                                                               ║
+║  Auto-progress tracking enabled:                              ║
+║  • Tasks will auto-update issue as they complete              ║
+║  • Checkboxes will be checked off automatically               ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Ask user how to proceed using AskUserQuestion:**
+```
+header: "Issue Created"
+question: "GitHub issue #[NUMBER] created. What would you like to do?"
+options:
+  - label: "Continue to Task Execution"
+    description: "Proceed with creating and executing the task list"
+  - label: "View Issue in Browser"
+    description: "Open the issue, then come back to continue"
+  - label: "Exit for Now"
+    description: "Save session state, I'll continue later"
+```
+
+**Handle user response:**
+- **"Continue to Task Execution"**: Proceed to Step 7
+- **"View Issue in Browser"**: Provide clickable link, wait for user to return, then proceed
+- **"Exit for Now"**: Save session state to `.claude/task-lists/session-{timestamp}.json` and exit gracefully
+
 ---
 
 ### Step 7: Configure Ralph Loop (If Selected)
@@ -330,9 +425,11 @@ const config = {
 
 ---
 
-### Step 8: Compact Session & Begin
+### Step 8: Final Review & Begin Execution
 
-1. **Display task summary**:
+#### Step 8a: Display Task Summary
+
+1. **Display comprehensive task summary**:
    ```
    ## Task List Created
 
@@ -343,21 +440,60 @@ const config = {
    | 2 | [Task 2 subject] | pending |
    ...
 
-   **Testing Mode:** [Ralph Loop / Manual / Minimal]
-   **Environment:** [{{devEnvironment.tunnel.service}} / {{urls.production.frontend}}]
-   **GitHub Issue:** [#123 (if created) | Not tracked]
-
-   Ready to begin. Starting with Task 1...
+   **Configuration:**
+   - Testing Mode: [Ralph Loop / Manual / Minimal]
+   - Environment: [{{devEnvironment.tunnel.service}} / {{urls.production.frontend}}]
+   - Execution Strategy: [Sequential / Grouped / All at once]
+   - GitHub Issue: [#123 (if created) | Not tracked]
    ```
+
+#### Step 8b: Final Confirmation Before Execution
+
+**Ask user to confirm before starting using AskUserQuestion:**
+```
+header: "Ready to Begin?"
+question: "Review the task list above. How would you like to proceed?"
+options:
+  - label: "Start Task 1 Now"
+    description: "Begin executing the first task immediately"
+  - label: "Start from Different Task"
+    description: "Skip to a specific task number"
+  - label: "Modify Task List"
+    description: "Add, remove, or edit tasks before starting"
+  - label: "Save & Exit"
+    description: "Save the task list for later, exit now"
+```
+
+**Handle user response:**
+- **"Start Task 1 Now"**: Proceed to Step 8c
+- **"Start from Different Task"**: Ask which task number, validate it exists, start there
+- **"Modify Task List"**: Allow user to describe changes, update TaskList, show summary again
+- **"Save & Exit"**: Save full session state to `.claude/task-lists/session-{timestamp}.json`, display resume instructions, exit
+
+#### Step 8c: Begin Execution
 
 2. **Compact context** (use /compact if token usage is high)
 
-3. **Begin Task 1**:
+3. **Execute based on user's chosen strategy** (from Step 4, Question 5):
+
+   **Sequential Execution (One at a time):**
    - Use `TaskUpdate` to set Task 1 to `in_progress`
-   - Execute the task
+   - Execute the task fully
    - Use `TaskUpdate` to set Task 1 to `completed`
-   - Commit changes
-   - Move to Task 2
+   - **Commit changes for this task**
+   - Ask: "Task 1 complete. Ready for Task 2?" (brief confirmation)
+   - Repeat for each task
+
+   **Grouped Execution:**
+   - Identify related task groups (e.g., all frontend tasks, all backend tasks)
+   - Execute all tasks in a group
+   - Commit after completing each group
+   - Brief status update between groups
+
+   **All at Once Execution:**
+   - Execute all tasks without intermediate commits
+   - Single comprehensive commit at the end
+   - Higher risk but faster for simple changes
 
 ---
 
