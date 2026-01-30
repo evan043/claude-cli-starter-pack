@@ -15,31 +15,29 @@ ${chalk.bold.cyan('🚀 Claude CLI Advanced Starter Pack')}
 
 ${chalk.green('✓')} Installation complete!
 
-${chalk.bold('Quick Setup Options:')}
+${chalk.bold('Step 1: Terminal Commands')} ${chalk.dim('(no AI needed)')}
 
 ${chalk.yellow('1.')} Run vibe-friendly setup wizard:
-   ${chalk.dim('$')} ${chalk.white('npx ccasp wizard')}
+   ${chalk.dim('$')} ${chalk.white('ccasp wizard')}
 
 ${chalk.yellow('2.')} Quick init (auto-detect + deploy):
-   ${chalk.dim('$')} ${chalk.white('npx ccasp init')}
+   ${chalk.dim('$')} ${chalk.white('ccasp init')}
 
-${chalk.yellow('3.')} Full interactive menu:
-   ${chalk.dim('$')} ${chalk.white('npx ccasp')}
+${chalk.dim('These read your project files to detect tech stack.')}
+${chalk.dim('No Claude/AI connection required.')}
 
 ${chalk.dim('─────────────────────────────────────')}
 
-${chalk.bold('After init, in Claude Code CLI:')}
+${chalk.bold('Step 2: Restart Claude Code CLI')}
+
+After running ${chalk.cyan('ccasp init')}, restart Claude Code CLI.
+
+${chalk.bold('Step 3: Slash Commands')} ${chalk.dim('(AI-powered, inside Claude)')}
   ${chalk.cyan('/menu')}         - Project command menu
-  ${chalk.cyan('/ccasp-setup')}  - Setup wizard (vibe-code friendly)
+  ${chalk.cyan('/ccasp-setup')}  - Setup wizard
+  ${chalk.cyan('/github-update')} - GitHub Project Board
 
-${chalk.dim('─────────────────────────────────────')}
-
-${chalk.bold('Terminal commands:')}
-  ${chalk.cyan('ccasp wizard')}   - Setup wizard (recommended)
-  ${chalk.cyan('ccasp init')}     - Initialize .claude folder
-  ${chalk.cyan('ccasp detect')}   - Auto-detect tech stack
-  ${chalk.cyan('ccasp audit')}    - Audit/enhance CLAUDE.md
-  ${chalk.cyan('ccasp help')}     - Show all commands
+${chalk.dim('These only work inside Claude Code CLI.')}
 `;
 
 console.log(
