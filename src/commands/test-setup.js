@@ -142,7 +142,7 @@ export async function runTestSetup(options) {
       {
         type: 'input',
         name: 'subdomain',
-        message: 'ngrok subdomain (e.g., my.app.benefits360):',
+        message: 'ngrok subdomain (e.g., my-app-name):',
         default: 'my.app',
         validate: (s) => (s.length > 0 ? true : 'Subdomain required'),
       },
