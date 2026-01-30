@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "1.0.6",
+      "date": "2026-01-30",
+      "summary": "Release notes pending",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.5",
       "date": "2025-01-30",
       "summary": "Added agent-powered project implementation and version tracking",
@@ -238,28 +253,82 @@
   ],
   "featureRegistry": {
     "commands": {
-      "menu": { "addedIn": "1.0.0", "required": true },
-      "e2e-test": { "addedIn": "1.0.0", "required": false },
-      "github-task": { "addedIn": "1.0.0", "required": false },
-      "phase-dev-plan": { "addedIn": "1.0.0", "required": false },
-      "create-agent": { "addedIn": "1.0.0", "required": false },
-      "create-hook": { "addedIn": "1.0.0", "required": false },
-      "create-skill": { "addedIn": "1.0.0", "required": false },
-      "explore-mcp": { "addedIn": "1.0.0", "required": false },
-      "claude-audit": { "addedIn": "1.0.0", "required": false },
-      "codebase-explorer": { "addedIn": "1.0.0", "required": false },
-      "create-task-list": { "addedIn": "1.0.0", "required": false },
-      "ccasp-setup": { "addedIn": "1.0.0", "required": true },
-      "project-impl": { "addedIn": "1.0.5", "required": false },
-      "update-check": { "addedIn": "1.0.5", "required": false }
+      "menu": {
+        "addedIn": "1.0.0",
+        "required": true
+      },
+      "e2e-test": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "github-task": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "phase-dev-plan": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "create-agent": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "create-hook": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "create-skill": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "explore-mcp": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "claude-audit": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "codebase-explorer": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "create-task-list": {
+        "addedIn": "1.0.0",
+        "required": false
+      },
+      "ccasp-setup": {
+        "addedIn": "1.0.0",
+        "required": true
+      },
+      "project-impl": {
+        "addedIn": "1.0.5",
+        "required": false
+      },
+      "update-check": {
+        "addedIn": "1.0.5",
+        "required": false
+      }
     },
     "optionalFeatures": {
-      "githubIntegration": { "addedIn": "1.0.0" },
-      "phasedDevelopment": { "addedIn": "1.0.0" },
-      "tokenManagement": { "addedIn": "1.0.0" },
-      "happyMode": { "addedIn": "1.0.0" },
-      "deploymentAutomation": { "addedIn": "1.0.0" },
-      "tunnelServices": { "addedIn": "1.0.0" }
+      "githubIntegration": {
+        "addedIn": "1.0.0"
+      },
+      "phasedDevelopment": {
+        "addedIn": "1.0.0"
+      },
+      "tokenManagement": {
+        "addedIn": "1.0.0"
+      },
+      "happyMode": {
+        "addedIn": "1.0.0"
+      },
+      "deploymentAutomation": {
+        "addedIn": "1.0.0"
+      },
+      "tunnelServices": {
+        "addedIn": "1.0.0"
+      }
     }
   }
 }
