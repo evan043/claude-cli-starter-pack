@@ -61,10 +61,11 @@ function saveState(state) {
  */
 function getCurrentVersion() {
   try {
-    // Try global install first
-    const result = execSync(`npm list -g ${PACKAGE_NAME} --json 2>/dev/null`, {
+    // Try global install first (Windows-compatible: use stdio to suppress stderr)
+    const result = execSync(`npm list -g ${PACKAGE_NAME} --json`, {
       encoding: 'utf8',
       timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     const data = JSON.parse(result);
     return data.dependencies?.[PACKAGE_NAME]?.version || null;
