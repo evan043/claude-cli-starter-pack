@@ -1607,7 +1607,58 @@ export async function runInit(options = {}) {
     writeFileSync(settingsPath, generateSettingsJson(projectName), 'utf8');
     console.log(chalk.green('  ✓ Created settings.json'));
   } else {
-    console.log(chalk.blue('  ○ settings.json exists (preserved)'));
+    // Merge update check hook into existing settings.json
+    try {
+      const existingSettings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+      let settingsUpdated = false;
+
+      // Ensure hooks object exists
+      if (!existingSettings.hooks) {
+        existingSettings.hooks = {};
+      }
+
+      // Add UserPromptSubmit hook for update checking if not present
+      if (!existingSettings.hooks.UserPromptSubmit) {
+        existingSettings.hooks.UserPromptSubmit = [
+          {
+            matcher: '',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node .claude/hooks/ccasp-update-check.js',
+              },
+            ],
+          },
+        ];
+        settingsUpdated = true;
+      } else {
+        // Check if update check hook already exists
+        const hasUpdateHook = existingSettings.hooks.UserPromptSubmit.some(
+          (h) => h.hooks?.some((hook) => hook.command?.includes('ccasp-update-check'))
+        );
+        if (!hasUpdateHook) {
+          existingSettings.hooks.UserPromptSubmit.push({
+            matcher: '',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node .claude/hooks/ccasp-update-check.js',
+              },
+            ],
+          });
+          settingsUpdated = true;
+        }
+      }
+
+      if (settingsUpdated) {
+        writeFileSync(settingsPath, JSON.stringify(existingSettings, null, 2), 'utf8');
+        console.log(chalk.green('  ✓ Updated settings.json (added update check hook)'));
+      } else {
+        console.log(chalk.blue('  ○ settings.json exists (preserved)'));
+      }
+    } catch (error) {
+      console.log(chalk.blue('  ○ settings.json exists (preserved)'));
+    }
   }
 
   if (!existsSync(settingsLocalPath)) {
