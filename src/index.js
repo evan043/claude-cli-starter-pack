@@ -20,6 +20,13 @@ export { showHelp } from './commands/help.js';
 export { runClaudeSettings } from './commands/claude-settings.js';
 export { runGtaskInit } from './commands/gtask-init.js';
 export { detectTechStack, runDetection } from './commands/detect-tech-stack.js';
+export {
+  runClaudeAudit,
+  showClaudeAuditMenu,
+  ENHANCEMENT_TEMPLATES,
+  runEnhancement,
+} from './commands/claude-audit.js';
+export { runSetupWizard, generateSlashCommand } from './commands/setup-wizard.js';
 
 // Template Engine
 export {

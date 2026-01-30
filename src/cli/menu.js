@@ -39,7 +39,7 @@ const BANNER = `
 /**
  * Show Project Settings submenu
  */
-async function showProjectSettingsMenu() {
+export async function showProjectSettingsMenu() {
   console.log('');
   console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.bold('                           PROJECT CONFIGURATION                               ') + chalk.cyan('║'));

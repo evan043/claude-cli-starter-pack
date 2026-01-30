@@ -1,366 +1,395 @@
 # Claude CLI Advanced Starter Pack
 
-**Advanced Claude Code CLI Toolkit - Agents, Hooks, Skills, MCP Servers, and GitHub Integration**
+**Advanced Claude Code CLI Toolkit - Agents, Hooks, Skills, MCP Servers, Phased Development, and GitHub Integration**
 
-Everything you need to supercharge your Claude Code CLI experience: create agents, hooks, skills, discover MCP servers, audit your setup, and manage GitHub issues with codebase analysis.
+A platform-agnostic toolkit for supercharging your Claude Code CLI experience with:
+- Vibe-code friendly setup wizard (mobile-ready, single-character inputs)
+- Tech stack auto-detection and template-based configuration
+- L1/L2/L3 agent hierarchy, hooks, and RAG-enhanced skills
+- GitHub Project Board integration with codebase analysis
+- Phased development planning with 95%+ success rate
+
+## Quick Start
+
+```bash
+# Install globally
+npm install -g claude-cli-advanced-starter-pack
+
+# Run the vibe-code friendly setup wizard (recommended)
+ccasp wizard
+
+# Or quick init with auto-detection
+ccasp init
+```
+
+After installation, a welcome message shows your options:
+
+```
+🚀 Claude CLI Advanced Starter Pack
+
+✓ Installation complete!
+
+Quick Setup Options:
+
+1. Run vibe-friendly setup wizard:
+   $ npx ccasp wizard
+
+2. Quick init (auto-detect + deploy):
+   $ npx ccasp init
+
+3. Full interactive menu:
+   $ npx ccasp
+```
 
 ## Features
 
+### Vibe-Code Friendly Setup Wizard
+
+Mobile-ready setup with single-character inputs:
+
+```
+🚀 CCASP Setup Wizard
+
+? What would you like to do?
+  1. Quick Start      - Detect stack + init .claude
+  2. Full Setup       - All features + customization
+  3. GitHub Setup     - Connect project board
+  4. Audit CLAUDE.md  - Check existing config
+  5. Enhance CLAUDE.md - Generate/improve docs
+  6. Detect Tech Stack - Auto-detect project
+  7. View Templates   - Browse available items
+  8. Project Settings - Configure deployment, tunnels, etc.
+  0. Exit
+```
+
+**Feature Presets** (just type A, B, C, or D):
+| Letter | Preset | Features |
+|--------|--------|----------|
+| A | Minimal | Menu + help only |
+| B | Standard | GitHub + phased dev (recommended) |
+| C | Full | All features including deployment |
+| D | Custom | Pick individual features |
+
+### Tech Stack Auto-Detection
+
+Automatically detects your project's tech stack from:
+- `package.json` - Frontend/backend frameworks, testing tools
+- Configuration files - Vite, Next.js, Playwright, Jest
+- Git remotes - Repository info
+- Directory structure - src/, apps/, backend/, etc.
+
+Generates `tech-stack.json` with all detected values for template placeholders.
+
+### Platform-Agnostic Templates
+
+All templates use `{{placeholder}}` syntax - no hardcoded values:
+
+```markdown
+{{#if deployment.backend.platform}}
+## Backend Deployment
+
+{{#if (eq deployment.backend.platform "railway")}}
+Using Railway MCP:
+mcp__railway-mcp-server__deployment_trigger({
+  projectId: "{{deployment.backend.projectId}}",
+  serviceId: "{{deployment.backend.serviceId}}"
+})
+{{/if}}
+
+{{#if (eq deployment.backend.platform "vercel")}}
+Using Vercel:
+vercel --prod
+{{/if}}
+{{/if}}
+```
+
 ### Claude Code Tooling
+
 - **Agent Creation Suite** - Create L1 orchestrators, L2 specialists, L3 workers, and RAG pipelines
 - **Hook Generator** - Build PreToolUse, PostToolUse, and UserPromptSubmit enforcement hooks
 - **Skill Builder** - Create RAG-enhanced skill packages with context and workflows
 - **Command Generator** - Create custom slash commands for Claude Code
 - **Claude Settings** - Configure permissions, agent-only mode, and allow/deny rules
-- **Claude Code Audit** - Verify CLAUDE.md and .claude/ folder against Anthropic best practices
+- **Claude Audit + Enhance** - Verify and generate CLAUDE.md against Anthropic best practices
 
-### MCP & Automation
-- **MCP Server Explorer** - Discover and install MCP servers based on your tech stack
-- **Auto-Detection** - Detects Supabase, n8n, Stripe, Auth0, Clerk, Resend, Twilio
-- **Smart Recommendations** - Suggests MCPs based on codebase analysis
+### Optional Features
 
-### Development Planning
-- **Phased Development** - Create comprehensive development plans (95%+ success rate)
-- **Roadmap Integration** - Sync /create-roadmap with GitHub Project Board bidirectionally
-- **Task Decomposition** - Break down issues into granular, actionable tasks
+Select during setup - each adds specific commands and hooks:
 
-### GitHub Integration
-- **Codebase Analysis** - Automatically finds relevant files, functions, and patterns
-- **Rich Issue Bodies** - Generates comprehensive documentation with code snippets
-- **Bidirectional Sync** - Pull tasks from GitHub, push progress back
-- **Project Board Integration** - Adds issues to GitHub Projects and updates status
+| Feature | Description | Commands Added |
+|---------|-------------|----------------|
+| **GitHub Integration** | Project Board tracking, issue creation | `/github-update`, `/github-task-start` |
+| **Token Management** | API usage tracking with thresholds | `/context-audit` |
+| **Phased Development** | 95%+ success rate planning | `/phase-dev-plan`, `/phase-track` |
+| **Deployment Automation** | Railway, Vercel, Cloudflare, self-hosted | `/deploy-full` |
+| **Tunnel Services** | ngrok, localtunnel, cloudflare-tunnel | `/tunnel-start`, `/tunnel-stop` |
+| **Happy Mode** | Mobile app integration | `/happy-start` |
 
-### Testing
-- **Ralph Loop** - Test-fix cycle until all tests pass
-- **Playwright Integration** - E2E testing with headed/headless modes
-- **Watch Mode** - Interactive test tracking with auto-sync
-
-## Quick Start
-
-```bash
-# Deploy to your project (creates slash commands in .claude/commands/)
-npx claude-cli-advanced-starter-pack init
-
-# Or install globally for terminal access
-npm install -g claude-cli-advanced-starter-pack
-
-# Launch interactive menu
-ccasp
-
-# Quick commands
-ccasp init               # Deploy slash commands to project
-ccasp create-agent       # Create agents, hooks, skills
-ccasp explore-mcp        # Discover MCP servers
-ccasp claude-audit       # Audit your Claude setup
-ccasp create-phase-dev   # Create phased development plan
-```
-
-## Project Setup (Recommended)
-
-The `init` command deploys slash commands directly to your project's `.claude/commands/` folder:
-
-```bash
-# Navigate to your project
-cd my-project
-
-# Run the init wizard
-npx claude-cli-advanced-starter-pack init
-
-# Select which commands to install
-# Commands are now available when you launch Claude Code CLI
-```
-
-**What gets installed:**
-- `/menu` - Interactive ASCII menu for quick access to all commands
-- `/e2e-test` - Run Playwright tests with ralph loop, watch, or headed modes
-- `/github-task` - Create GitHub issues with codebase analysis
-- `/phase-dev-plan` - Generate phased development plans
-- `/create-agent` - Create L1/L2/L3 agents
-- `/create-hook` - Build enforcement hooks
-- `/create-skill` - Create RAG skill packages
-- `/explore-mcp` - Discover MCP servers
-- `/claude-audit` - Audit your Claude setup
-- And more...
-
-**Safe Integration:** If you have an existing `.claude/` folder, the init wizard will detect it and preserve your existing files. New commands are added alongside your setup without overwriting anything.
-
-After installation, these commands are available as slash commands in Claude Code CLI.
-
-## Prerequisites
-
-1. **GitHub CLI** (`gh`) - [Install from cli.github.com](https://cli.github.com/)
-2. **Node.js 18+**
-
-```bash
-# Verify prerequisites
-gh --version   # Should be 2.40+
-node --version # Should be 18+
-
-# Authenticate with GitHub
-gh auth login
-```
-
-## Usage
-
-### Interactive Menu
-
-```bash
-ccasp
-```
-
-```
-╔════════════════════════════════════════════════════════════════════════════╗
-║                                                                            ║
-║   ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔╦╗╦  ╦╔═╗╔╗╔╔═╗╔═╗╔╦╗  ╔═╗╔╦╗╔═╗╦═╗╔╦╗╔═╗╦═╗    ║
-║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝    ║
-║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═    ║
-║                                                                            ║
-║    Advanced Claude Code CLI Toolkit - Agents, MCP, GitHub & More           ║
-║                                                                            ║
-╚════════════════════════════════════════════════════════════════════════════╝
-
-   [1] Create New Task        Create issue with codebase analysis
-   [2] Decompose Issue        Break down issue into tasks
-   [3] Sync Tasks             Sync progress with GitHub
-   ──────────────
-   [A] Agent Creator          Create agents, hooks, skills, commands
-   [C] Claude Settings        Permission modes, agent-only launcher
-   [P] Phase Dev Plan         Create phased development plan (95%+)
-   [M] MCP Explorer           Discover & install MCP servers
-   [V] Claude Audit           Verify CLAUDE.md & .claude/ best practices
-   [R] Roadmap Integration    Sync roadmaps with GitHub Project Board
-   ──────────────
-   [T] Testing Setup          Configure testing mode & credentials
-   [R] Run Tests              Run tests (Ralph Loop / Manual / Watch)
-```
-
-### Agent Creation Suite
-
-Create Claude Code agents, hooks, commands, and skills:
-
-```bash
-# Interactive menu for all creation types
-ccasp create-agent
-
-# Create enforcement hook
-ccasp create-hook
-
-# Create slash command
-ccasp create-command
-
-# Create RAG-enhanced skill package
-ccasp create-skill
-```
-
-**What you can create:**
-- **Individual Agent** - L1 orchestrator, L2 specialist, or L3 worker
-- **Sub-Agent** - Add specialist to existing pipeline
-- **RAG Pipeline** - Full L1 orchestrator + L2 specialists
-- **Skill Package** - RAG-enhanced skill with context and workflows
-- **Hook** - PreToolUse, PostToolUse, UserPromptSubmit triggers
-- **Slash Command** - Custom commands for Claude Code
+Features marked with (*) require post-install configuration via `/menu` → Project Settings.
 
 ### MCP Server Explorer
 
-Discover and install MCP servers to extend Claude's capabilities:
+Discover and install MCP servers based on your tech stack:
 
 ```bash
-# Interactive menu
-ccasp explore-mcp
-
-# Smart recommendations based on your tech stack
-ccasp explore-mcp --recommend
-
-# Quick install testing MCPs (Playwright + Puppeteer)
-ccasp explore-mcp --testing
+ccasp explore-mcp              # Interactive menu
+ccasp explore-mcp --recommend  # Auto-recommend based on codebase
+ccasp explore-mcp --testing    # Quick install Playwright + Puppeteer
 ```
 
-**Available MCP Categories:**
-- **Testing** - Playwright, Puppeteer, Playwright Extended
-- **VCS** - GitHub, Git
-- **Deployment** - Railway, Cloudflare, DigitalOcean, Vercel
-- **Database** - PostgreSQL, SQLite, Supabase
-- **Automation** - n8n workflow automation
-- **Communication** - Slack, Resend (email)
-- **Utilities** - Filesystem, Fetch
-
-### Claude Code Audit
-
-Verify your `CLAUDE.md` files and `.claude/` folder structure against Anthropic's official best practices:
-
-```bash
-# Run full audit
-ccasp claude-audit
-
-# Audit specific component
-ccasp claude-audit --mode claudemd   # Just CLAUDE.md files
-ccasp claude-audit --mode folder     # Just .claude/ structure
-```
-
-**What it checks:**
-- **CLAUDE.md file length** - Warns if >150 lines, errors if >300 lines
-- **Anti-patterns** - Long code blocks, vague instructions, self-evident rules
-- **Good patterns** - Emphasis keywords (IMPORTANT, MUST), bash commands, @imports
-- **Folder structure** - Verifies commands/, skills/, agents/, hooks/, settings.json
-- **Frontmatter validation** - Skills and agents have required fields
+**Available Categories:** Testing, VCS, Deployment, Database, Automation, Communication, Utilities
 
 ### Phased Development Plans
 
 Create comprehensive development plans with 95%+ success probability:
 
 ```bash
-# Interactive wizard
-ccasp create-phase-dev
-
-# Force specific scale
-ccasp create-phase-dev --scale M        # Medium: 3-4 phases
-ccasp create-phase-dev --scale L        # Large: 5+ phases
-
-# Autonomous mode (minimal prompts)
-ccasp create-phase-dev --autonomous --name "My Project"
+ccasp create-phase-dev                    # Interactive wizard
+ccasp create-phase-dev --scale M          # Medium: 3-4 phases
+ccasp create-phase-dev --autonomous       # Minimal prompts
 ```
 
-**What gets generated:**
+**Generated Artifacts:**
 - `PROGRESS.json` - Task tracking and state management
 - `EXECUTIVE_SUMMARY.md` - Project overview
-- RAG Phase Executor Agent - Autonomous phase execution
-- Interactive Slash Command - `/phase-dev-{project-slug}`
-- Enforcement Hooks - Pattern and quality enforcement
+- Phase Executor Agent - Autonomous execution
+- Slash Command - `/phase-dev-{project-slug}`
 
-### Roadmap Integration
-
-Bridge your local `/create-roadmap` roadmaps with GitHub Project Board:
+### GitHub Integration
 
 ```bash
-# Interactive menu
-ccasp roadmap
-
-# Import roadmap projects as GitHub issues
-ccasp roadmap import --file=.claude/docs/tech-debt-2025/ROADMAP.json
-
-# Sync progress to GitHub
-ccasp roadmap sync
-
-# Create ROADMAP.json from existing GitHub issues
-ccasp roadmap create --from-issues
-
-# Show sync status dashboard
-ccasp roadmap status
+ccasp create              # Create issue with codebase analysis
+ccasp decompose 123       # Break down issue into tasks
+ccasp sync watch 123      # Bidirectional sync
+ccasp list                # List recent tasks
 ```
 
-### GitHub Task Management
+## Installation Paths
+
+### Path A: Vibe Wizard (Recommended)
 
 ```bash
-# Create a task with codebase analysis
-ccasp create
-
-# Decompose issue into tasks
-ccasp decompose 123
-
-# Sync tasks bidirectionally
-ccasp sync watch 123
-
-# List recent tasks
-ccasp list
+npm install -g claude-cli-advanced-starter-pack
+ccasp wizard
 ```
 
-### Testing
+Single-character inputs, mobile-friendly, progressive disclosure.
+
+### Path B: Quick Init
 
 ```bash
-# Configure testing environment
-ccasp test-setup
+npx claude-cli-advanced-starter-pack init
+```
 
-# Run tests
-ccasp test                   # Use configured mode
-ccasp test --mode ralph      # Test-fix cycle until all pass
-ccasp test --mode manual     # Run once
-ccasp test --mode watch      # Interactive Playwright UI
-ccasp test --headed          # Show browser
+Auto-detects tech stack, deploys commands with minimal prompts.
+
+### Path C: Full Wizard
+
+```bash
+ccasp project-init
+```
+
+Full interactive wizard with all configuration options.
+
+## What Gets Installed
+
+After running init, your project gets:
+
+```
+.claude/
+├── commands/           # Slash commands
+│   ├── menu.md
+│   ├── ccasp-setup.md  # Setup wizard (always included)
+│   ├── github-update.md
+│   └── ...
+├── agents/             # Agent definitions
+├── skills/             # Skill packages
+├── hooks/              # Enforcement hooks
+├── docs/               # Generated documentation
+├── settings.json       # Project settings
+└── tech-stack.json     # Detected/configured values
+```
+
+**Safe Integration:** Existing `.claude/` folders are preserved - new files are added alongside.
+
+## After Installation
+
+**Important:** Changes to `.claude/` require a new Claude Code session.
+
+```
+⚠️  RESTART REQUIRED
+
+Changes to .claude/ require a new Claude Code session.
+
+To apply changes:
+1. Exit this session (Ctrl+C or /exit)
+2. Restart: claude or claude .
+3. New commands will be available
 ```
 
 ## Commands Reference
 
-### Terminal Commands (PowerShell/Bash)
+### Terminal Commands
 
 | Command | Description |
 |---------|-------------|
-| `ccasp init` | **Deploy slash commands to project** |
+| `ccasp wizard` | **Vibe-code friendly setup wizard** |
+| `ccasp init` | Deploy slash commands to project |
 | `ccasp` | Interactive menu |
+| `ccasp detect-stack` | Auto-detect tech stack |
+| `ccasp claude-audit` | Audit CLAUDE.md & .claude/ |
 | `ccasp create-agent` | Agent creation menu |
 | `ccasp create-hook` | Create enforcement hook |
-| `ccasp create-command` | Create slash command |
 | `ccasp create-skill` | Create RAG skill package |
-| `ccasp claude-settings` | Configure Claude CLI settings |
-| `ccasp explore-mcp` | Discover and install MCP servers |
-| `ccasp claude-audit` | Audit CLAUDE.md & .claude/ folder |
+| `ccasp explore-mcp` | Discover MCP servers |
 | `ccasp create-phase-dev` | Create phased development plan |
 | `ccasp roadmap` | Roadmap integration |
-| `ccasp create` | Create GitHub issue with analysis |
-| `ccasp decompose <issue>` | Break down issue into tasks |
-| `ccasp sync` | Sync tasks with GitHub |
-| `ccasp list` | List recent tasks |
-| `ccasp test-setup` | Configure testing environment |
-| `ccasp test` | Run tests |
 
-### Slash Commands (Claude Code CLI)
-
-After running `ccasp init`, these slash commands are available in Claude Code:
+### Slash Commands (After Init)
 
 | Command | Description |
 |---------|-------------|
-| `/menu` | Interactive ASCII menu for all commands |
+| `/menu` | Interactive ASCII menu |
+| `/ccasp-setup` | Setup wizard (vibe-code friendly) |
 | `/e2e-test` | Run E2E tests with Playwright |
-| `/github-task` | Create GitHub issues with codebase analysis |
+| `/github-update` | View GitHub Project Board status |
+| `/github-task-start` | Start/complete GitHub task |
 | `/phase-dev-plan` | Create phased development plans |
+| `/phase-track` | Track phased development progress |
+| `/deploy-full` | Full-stack deployment |
 | `/create-agent` | Create L1/L2/L3 agents |
 | `/create-hook` | Build enforcement hooks |
-| `/create-skill` | Create RAG skill packages |
 | `/explore-mcp` | Discover MCP servers |
-| `/claude-audit` | Audit CLAUDE.md and .claude/ |
-| `/roadmap-sync` | Sync roadmaps with GitHub |
-| `/claude-settings` | Configure permissions |
-| `/codebase-explorer` | Analyze codebase structure |
-| `/rag-pipeline` | Generate RAG pipelines |
-
-## CLI Aliases
-
-The package provides multiple command aliases for convenience:
-
-- `ccasp` - Short form (Claude CLI Advanced Starter Pack)
-- `claude-advanced` - Medium form
-- `claude-cli-advanced-starter-pack` - Full name
+| `/claude-audit` | Audit CLAUDE.md |
 
 ## Configuration
 
-Configuration is stored in `.gtaskrc` (YAML format) for GitHub integration.
+### tech-stack.json
 
-```yaml
-project_board:
-  owner: "myuser"
-  repo: "my-project"
-  project_number: 1
+Auto-generated during init with detected values:
+
+```json
+{
+  "version": "2.0.0",
+  "project": {
+    "name": "my-project",
+    "type": "fullstack"
+  },
+  "frontend": {
+    "framework": "react",
+    "port": 5173
+  },
+  "backend": {
+    "framework": "fastapi",
+    "port": 8001
+  },
+  "deployment": {
+    "backend": {
+      "platform": "railway",
+      "projectId": "{{DEPLOY_BACKEND_PROJECT_ID}}"
+    }
+  },
+  "githubIntegration": { "enabled": true },
+  "phasedDevelopment": { "enabled": true },
+  "tokenManagement": { "enabled": false }
+}
+```
+
+### Post-Install Configuration
+
+For features requiring additional setup, use the Project Settings menu:
+
+```bash
+ccasp wizard
+# Select: 8. Project Settings
+```
+
+Or from Claude Code CLI:
+```
+/menu → Project Settings
+```
+
+Configure:
+- GitHub Project Board connection
+- Deployment platform credentials
+- Tunnel service selection
+- Token management thresholds
+- Happy Mode settings
+
+## Template Engine
+
+Supports advanced templating:
+
+```handlebars
+{{#if condition}}...{{/if}}
+{{#if (eq path "value")}}...{{/if}}
+{{#each array}}{{this}}{{/each}}
+${CWD}, ${HOME} path variables
+```
+
+## Prerequisites
+
+1. **Node.js 18+**
+2. **GitHub CLI** (`gh`) - For GitHub integration features
+
+```bash
+gh --version   # Should be 2.40+
+node --version # Should be 18+
+gh auth login  # Authenticate
 ```
 
 ## API Usage
 
 ```javascript
 import {
-  runCreateAgent,
-  runExploreMcp,
+  runSetupWizard,
+  detectTechStack,
   runClaudeAudit,
-  runCreatePhaseDev,
-  analyzeForIssue,
-  generateIssueBody,
+  runEnhancement,
+  ENHANCEMENT_TEMPLATES,
+  replacePlaceholders,
 } from 'claude-cli-advanced-starter-pack';
 
-// Analyze codebase for MCP recommendations
-const analysis = await analyzeForIssue(['authentication', 'login']);
+// Detect tech stack
+const techStack = await detectTechStack(process.cwd());
 
-// Generate issue body with code references
-const body = generateIssueBody({
-  description: 'Fix login bug',
-  codeAnalysis: analysis,
-});
+// Generate CLAUDE.md content
+const content = ENHANCEMENT_TEMPLATES.fullTemplate(techStack, 'My Project');
+
+// Process templates with values
+const { content, warnings } = replacePlaceholders(template, techStack);
+```
+
+## CLI Aliases
+
+- `ccasp` - Short form (recommended)
+- `ccasp w` - Wizard shortcut
+- `claude-advanced` - Medium form
+- `claude-cli-advanced-starter-pack` - Full name
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                CLAUDE CLI ADVANCED STARTER PACK              │
+│                                                              │
+│  npm install → postinstall message → ccasp wizard            │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
+│  │ Tech Stack  │  │  Template   │  │   Feature   │          │
+│  │  Detection  │→ │   Engine    │→ │  Selection  │          │
+│  └─────────────┘  └─────────────┘  └─────────────┘          │
+│                          ↓                                   │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │              YOUR PROJECT (.claude/)             │        │
+│  │  commands/ │ agents/ │ skills/ │ hooks/ │ docs/ │        │
+│  └─────────────────────────────────────────────────┘        │
+│                          ↓                                   │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │           CLAUDE CODE CLI (restart required)     │        │
+│  │  /menu │ /ccasp-setup │ /github-update │ ...    │        │
+│  └─────────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Contributing
@@ -370,3 +399,7 @@ Contributions welcome! Please read our contributing guidelines first.
 ## License
 
 MIT
+
+---
+
+**Made for Claude Code CLI** - Supercharge your AI-assisted development workflow.

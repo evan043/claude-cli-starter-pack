@@ -58,6 +58,22 @@ When this command is invoked:
    - Analyze against Anthropic best practices
    - Suggest improvements or generate new content
 
+6. **IMPORTANT - Session Restart Reminder**:
+   After ANY action that modifies `.claude/` or `CLAUDE.md`, display:
+   ```
+   ⚠️  RESTART REQUIRED
+
+   Changes to .claude/ require a new Claude Code session.
+
+   To apply changes:
+   1. Exit this session (Ctrl+C or /exit)
+   2. Restart: claude or claude .
+   3. New commands will be available
+   ```
+
+   Actions requiring restart: 1, 2, 3, 5
+   Actions NOT requiring restart: 4 (audit), 6 (detect), 7 (templates)
+
 ## Vibe-Code Design Principles
 
 This wizard is designed for mobile/remote use:

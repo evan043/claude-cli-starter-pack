@@ -175,6 +175,63 @@ const AVAILABLE_COMMANDS = [
     selected: true,
     required: true,
   },
+  // Feature-specific commands (deployed based on OPTIONAL_FEATURES selection)
+  {
+    name: 'context-audit',
+    description: 'Audit context usage and token budget (requires tokenManagement feature)',
+    category: 'Token Management',
+    selected: false,
+    feature: 'tokenManagement',
+  },
+  {
+    name: 'happy-start',
+    description: 'Start Happy Mode for mobile app integration (requires happyMode feature)',
+    category: 'Happy Mode',
+    selected: false,
+    feature: 'happyMode',
+  },
+  {
+    name: 'github-update',
+    description: 'View and sync GitHub Project Board status',
+    category: 'GitHub',
+    selected: false,
+    feature: 'githubIntegration',
+  },
+  {
+    name: 'github-task-start',
+    description: 'Start or complete a GitHub Project Board task',
+    category: 'GitHub',
+    selected: false,
+    feature: 'githubIntegration',
+  },
+  {
+    name: 'tunnel-start',
+    description: 'Start tunnel service for mobile testing (requires tunnelServices feature)',
+    category: 'Development',
+    selected: false,
+    feature: 'tunnelServices',
+  },
+  {
+    name: 'tunnel-stop',
+    description: 'Stop running tunnel service',
+    category: 'Development',
+    selected: false,
+    feature: 'tunnelServices',
+  },
+  {
+    name: 'phase-track',
+    description: 'Track progress of phased development plan',
+    category: 'Planning',
+    selected: false,
+    feature: 'phasedDevelopment',
+  },
+  {
+    name: 'deploy-full',
+    description: 'Full-stack deployment (requires deploymentAutomation feature)',
+    category: 'Deployment',
+    selected: false,
+    feature: 'deploymentAutomation',
+  },
 ];
 
 /**
@@ -1021,6 +1078,21 @@ When this command is invoked:
    - Show summary of detected stack
    - Create .claude/ folder with commands, settings
    - Generate CLAUDE.md with detected stack info
+
+5. **CRITICAL - Session Restart Reminder**:
+   After ANY action that modifies \`.claude/\` or \`CLAUDE.md\`, display:
+
+   ⚠️  RESTART REQUIRED
+
+   Changes to .claude/ require a new Claude Code session.
+
+   To apply changes:
+   1. Exit this session (Ctrl+C or /exit)
+   2. Restart: claude or claude .
+   3. New commands will be available
+
+   Actions requiring restart: 1, 2, 3, 5
+   Actions NOT requiring restart: 4 (audit), 6 (detect), 7 (templates)
 
 ## Vibe-Code Design
 

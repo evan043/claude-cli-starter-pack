@@ -11,7 +11,9 @@
   "type": "module",
   "scripts": {
     "start": "node bin/gtask.js",
-    "test": "node --check bin/gtask.js && echo 'Syntax OK'",
+    "setup": "node bin/gtask.js setup",
+    "postinstall": "node bin/postinstall.js",
+    "test": "node --check bin/gtask.js && node --check bin/postinstall.js && echo 'Syntax OK'",
     "lint": "eslint src/",
     "prepublishOnly": "npm run test"
   },
@@ -59,7 +61,9 @@
   "files": [
     "bin/",
     "src/",
+    "templates/",
     "README.md",
+    "OVERVIEW.md",
     "LICENSE"
   ]
 }

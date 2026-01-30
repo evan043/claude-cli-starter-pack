@@ -10,9 +10,10 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, mkdirSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { showHeader } from '../cli/menu.js';
+import { detectTechStack } from './detect-tech-stack.js';
 
 /**
  * Audit rules based on Anthropic documentation
@@ -50,6 +51,372 @@ const AUDIT_RULES = {
       skills: { ext: '.md', frontmatter: true, requiredFrontmatter: ['name', 'description'] },
       agents: { ext: '.md', frontmatter: true, requiredFrontmatter: ['name', 'description', 'tools'] },
     },
+  },
+};
+
+/**
+ * Enhancement templates for generating CLAUDE.md content
+ */
+const ENHANCEMENT_TEMPLATES = {
+  // Quick Start section - most important
+  quickStart: (techStack) => {
+    const lines = ['## Quick Start', ''];
+
+    // Build commands based on detected stack
+    if (techStack.devEnvironment?.packageManager) {
+      const pm = techStack.devEnvironment.packageManager;
+      const installCmd = pm === 'yarn' ? 'yarn' : pm === 'pnpm' ? 'pnpm install' : pm === 'bun' ? 'bun install' : 'npm install';
+      lines.push('```bash');
+      lines.push(`# Install dependencies`);
+      lines.push(installCmd);
+      lines.push('');
+    }
+
+    if (techStack.frontend?.framework) {
+      lines.push(`# Run frontend (${techStack.frontend.framework})`);
+      lines.push(`${techStack.devEnvironment?.packageManager || 'npm'} run dev`);
+      lines.push('');
+    }
+
+    if (techStack.backend?.framework) {
+      lines.push(`# Run backend (${techStack.backend.framework})`);
+      if (techStack.backend.language === 'python') {
+        lines.push('python -m uvicorn main:app --reload  # or python run_api.py');
+      } else {
+        lines.push(`${techStack.devEnvironment?.packageManager || 'npm'} run server`);
+      }
+      lines.push('');
+    }
+
+    if (techStack.testing?.e2e?.framework) {
+      lines.push(`# Run E2E tests (${techStack.testing.e2e.framework})`);
+      if (techStack.testing.e2e.framework === 'playwright') {
+        lines.push('npx playwright test');
+      } else if (techStack.testing.e2e.framework === 'cypress') {
+        lines.push('npx cypress run');
+      }
+    }
+
+    lines.push('```');
+    lines.push('');
+    return lines.join('\n');
+  },
+
+  // Tech stack overview table
+  techStackTable: (techStack) => {
+    const lines = ['## Tech Stack', '', '| Layer | Technology |', '|-------|------------|'];
+
+    if (techStack.frontend?.framework) {
+      let frontend = techStack.frontend.framework;
+      if (techStack.frontend.buildTool) frontend += ` + ${techStack.frontend.buildTool}`;
+      if (techStack.frontend.stateManager) frontend += ` + ${techStack.frontend.stateManager}`;
+      lines.push(`| Frontend | ${frontend} |`);
+    }
+
+    if (techStack.backend?.framework) {
+      lines.push(`| Backend | ${techStack.backend.framework} (${techStack.backend.language || 'unknown'}) |`);
+    }
+
+    if (techStack.database?.primary) {
+      let db = techStack.database.primary;
+      if (techStack.database.orm) db += ` + ${techStack.database.orm}`;
+      lines.push(`| Database | ${db} |`);
+    }
+
+    if (techStack.testing?.e2e?.framework) {
+      lines.push(`| E2E Testing | ${techStack.testing.e2e.framework} |`);
+    }
+
+    if (techStack.testing?.unit?.framework) {
+      lines.push(`| Unit Testing | ${techStack.testing.unit.framework} |`);
+    }
+
+    lines.push('');
+    return lines.join('\n');
+  },
+
+  // Key locations section
+  keyLocations: (techStack) => {
+    const lines = ['## Key Locations', '', '| Type | Path |', '|------|------|'];
+
+    if (techStack.frontend?.framework) {
+      lines.push('| Frontend Entry | `src/main.tsx` or `src/index.tsx` |');
+      lines.push('| Components | `src/components/` |');
+    }
+
+    if (techStack.backend?.framework) {
+      if (techStack.backend.language === 'python') {
+        lines.push('| Backend Entry | `main.py` or `run_api.py` |');
+        lines.push('| API Routes | `routes/` or `routers/` |');
+      } else {
+        lines.push('| Backend Entry | `src/index.ts` or `server.js` |');
+        lines.push('| API Routes | `src/routes/` |');
+      }
+    }
+
+    if (techStack.testing?.e2e?.framework) {
+      lines.push('| E2E Tests | `tests/` or `e2e/` |');
+    }
+
+    lines.push('| Config | `.env`, `package.json` |');
+    lines.push('');
+    return lines.join('\n');
+  },
+
+  // Import patterns based on language/framework
+  importPatterns: (techStack) => {
+    const lines = ['## Import Patterns', ''];
+
+    if (techStack.frontend?.framework === 'react') {
+      lines.push('**React/TypeScript:**');
+      lines.push('```typescript');
+      lines.push("import { useState, useEffect } from 'react';");
+      lines.push("import { Button } from '@/components/ui';");
+      if (techStack.frontend.stateManager === 'zustand') {
+        lines.push("import { useStore } from '@/store';");
+      } else if (techStack.frontend.stateManager === 'redux') {
+        lines.push("import { useSelector, useDispatch } from 'react-redux';");
+      }
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (techStack.backend?.language === 'python') {
+      lines.push('**Python (FastAPI):**');
+      lines.push('```python');
+      lines.push('from fastapi import APIRouter, Depends, HTTPException');
+      lines.push('from sqlalchemy.orm import Session');
+      lines.push('from app.database import get_db');
+      lines.push('```');
+      lines.push('');
+    } else if (techStack.backend?.framework === 'express') {
+      lines.push('**Node.js (Express):**');
+      lines.push('```typescript');
+      lines.push("import express from 'express';");
+      lines.push("import { Router } from 'express';");
+      lines.push('```');
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  },
+
+  // Testing section
+  testingInstructions: (techStack) => {
+    const lines = ['## Testing', ''];
+
+    if (techStack.testing?.e2e?.framework === 'playwright') {
+      lines.push('**Playwright E2E:**');
+      lines.push('```bash');
+      lines.push('npx playwright test              # Run all tests');
+      lines.push('npx playwright test --ui         # Open UI mode');
+      lines.push('npx playwright test --headed     # Show browser');
+      lines.push('npx playwright codegen           # Generate tests');
+      lines.push('```');
+      lines.push('');
+    } else if (techStack.testing?.e2e?.framework === 'cypress') {
+      lines.push('**Cypress E2E:**');
+      lines.push('```bash');
+      lines.push('npx cypress run                  # Run headless');
+      lines.push('npx cypress open                 # Open UI');
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (techStack.testing?.unit?.framework === 'vitest') {
+      lines.push('**Vitest Unit Tests:**');
+      lines.push('```bash');
+      lines.push('npm run test                     # Run tests');
+      lines.push('npm run test -- --coverage       # With coverage');
+      lines.push('```');
+      lines.push('');
+    } else if (techStack.testing?.unit?.framework === 'jest') {
+      lines.push('**Jest Unit Tests:**');
+      lines.push('```bash');
+      lines.push('npm test                         # Run tests');
+      lines.push('npm test -- --coverage           # With coverage');
+      lines.push('```');
+      lines.push('');
+    } else if (techStack.testing?.unit?.framework === 'pytest') {
+      lines.push('**Pytest:**');
+      lines.push('```bash');
+      lines.push('pytest                           # Run all tests');
+      lines.push('pytest -v                        # Verbose');
+      lines.push('pytest --cov=app                 # With coverage');
+      lines.push('```');
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  },
+
+  // Deployment section
+  deploymentSection: (techStack) => {
+    const lines = ['## Deployment', ''];
+
+    if (techStack.deployment?.frontend?.platform) {
+      lines.push(`**Frontend (${techStack.deployment.frontend.platform}):**`);
+      lines.push('```bash');
+
+      if (techStack.deployment.frontend.platform === 'cloudflare') {
+        lines.push('npm run build');
+        lines.push('npx wrangler pages deploy dist --project-name=YOUR_PROJECT');
+      } else if (techStack.deployment.frontend.platform === 'vercel') {
+        lines.push('vercel --prod');
+      } else if (techStack.deployment.frontend.platform === 'netlify') {
+        lines.push('netlify deploy --prod');
+      }
+
+      lines.push('```');
+      lines.push('');
+    }
+
+    if (techStack.deployment?.backend?.platform) {
+      lines.push(`**Backend (${techStack.deployment.backend.platform}):**`);
+      lines.push('```bash');
+
+      if (techStack.deployment.backend.platform === 'railway') {
+        lines.push('# Use Railway MCP or dashboard');
+        lines.push('# railway up');
+      } else if (techStack.deployment.backend.platform === 'docker') {
+        lines.push('docker build -t app .');
+        lines.push('docker push registry/app');
+      }
+
+      lines.push('```');
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  },
+
+  // Reference documentation links
+  referenceLinks: (techStack) => {
+    const lines = ['## Reference Documentation', ''];
+    const links = [];
+
+    // Frontend
+    if (techStack.frontend?.framework === 'react') {
+      links.push('- [React Docs](https://react.dev/)');
+    } else if (techStack.frontend?.framework === 'vue') {
+      links.push('- [Vue.js Docs](https://vuejs.org/)');
+    } else if (techStack.frontend?.framework === 'angular') {
+      links.push('- [Angular Docs](https://angular.io/docs)');
+    } else if (techStack.frontend?.framework === 'svelte') {
+      links.push('- [Svelte Docs](https://svelte.dev/docs)');
+    } else if (techStack.frontend?.framework === 'nextjs') {
+      links.push('- [Next.js Docs](https://nextjs.org/docs)');
+    }
+
+    // Build tools
+    if (techStack.frontend?.buildTool === 'vite') {
+      links.push('- [Vite Docs](https://vitejs.dev/)');
+    }
+
+    // State
+    if (techStack.frontend?.stateManager === 'zustand') {
+      links.push('- [Zustand Docs](https://github.com/pmndrs/zustand)');
+    } else if (techStack.frontend?.stateManager === 'redux') {
+      links.push('- [Redux Toolkit](https://redux-toolkit.js.org/)');
+    }
+
+    // Styling
+    if (techStack.frontend?.styling === 'tailwind') {
+      links.push('- [Tailwind CSS](https://tailwindcss.com/docs)');
+    }
+
+    // Backend
+    if (techStack.backend?.framework === 'fastapi') {
+      links.push('- [FastAPI Docs](https://fastapi.tiangolo.com/)');
+    } else if (techStack.backend?.framework === 'express') {
+      links.push('- [Express.js Docs](https://expressjs.com/)');
+    } else if (techStack.backend?.framework === 'nestjs') {
+      links.push('- [NestJS Docs](https://docs.nestjs.com/)');
+    }
+
+    // Database/ORM
+    if (techStack.database?.orm === 'prisma') {
+      links.push('- [Prisma Docs](https://www.prisma.io/docs)');
+    } else if (techStack.database?.orm === 'sqlalchemy') {
+      links.push('- [SQLAlchemy Docs](https://docs.sqlalchemy.org/)');
+    }
+
+    // Testing
+    if (techStack.testing?.e2e?.framework === 'playwright') {
+      links.push('- [Playwright Docs](https://playwright.dev/)');
+    } else if (techStack.testing?.e2e?.framework === 'cypress') {
+      links.push('- [Cypress Docs](https://docs.cypress.io/)');
+    }
+
+    if (links.length === 0) {
+      return '';
+    }
+
+    lines.push(...links, '');
+    return lines.join('\n');
+  },
+
+  // Architecture rules based on stack
+  architectureRules: (techStack) => {
+    const lines = ['## Architecture Rules', ''];
+
+    if (techStack.frontend?.framework === 'react') {
+      lines.push('**React Guidelines:**');
+      lines.push('- Use functional components with hooks');
+      lines.push('- Colocate component styles and tests');
+      lines.push('- Extract shared logic into custom hooks');
+      lines.push('');
+    }
+
+    if (techStack.backend?.language === 'python') {
+      lines.push('**Python Guidelines:**');
+      lines.push('- Use type hints for all function signatures');
+      lines.push('- Keep route handlers thin - delegate to services');
+      lines.push('- Use dependency injection for database sessions');
+      lines.push('');
+    }
+
+    if (techStack.database?.primary === 'postgresql') {
+      lines.push('**Database Guidelines:**');
+      lines.push('- Use migrations for schema changes');
+      lines.push('- Index frequently queried columns');
+      lines.push('- Use connection pooling in production');
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  },
+
+  // Critical rules with emphasis
+  criticalRules: () => {
+    return `## Critical Rules
+
+**IMPORTANT**: These rules MUST be followed:
+
+1. **NEVER commit secrets** - Use environment variables
+2. **Run tests before committing** - All tests must pass
+3. **Use conventional commits** - feat:, fix:, chore:, etc.
+
+`;
+  },
+
+  // Full CLAUDE.md template
+  fullTemplate: (techStack, projectName) => {
+    const sections = [];
+
+    sections.push(`# ${projectName || 'Project'} - Quick Reference`);
+    sections.push('');
+    sections.push(ENHANCEMENT_TEMPLATES.quickStart(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.techStackTable(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.keyLocations(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.importPatterns(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.testingInstructions(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.deploymentSection(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.architectureRules(techStack));
+    sections.push(ENHANCEMENT_TEMPLATES.criticalRules());
+    sections.push(ENHANCEMENT_TEMPLATES.referenceLinks(techStack));
+
+    return sections.filter(s => s.trim()).join('\n');
   },
 };
 
@@ -632,6 +999,20 @@ async function showFixSuggestions(results, cwd) {
   if (overall.errors === 0 && overall.warnings === 0) {
     console.log(chalk.green.bold('🎉 Great job! Your Claude configuration follows best practices.'));
     console.log('');
+
+    // Still offer enhancement even if passing
+    const { wantEnhance } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'wantEnhance',
+        message: 'Would you like to enhance CLAUDE.md with additional sections based on your tech stack?',
+        default: false,
+      },
+    ]);
+
+    if (wantEnhance) {
+      await runEnhancement(cwd);
+    }
     return;
   }
 
@@ -641,6 +1022,7 @@ async function showFixSuggestions(results, cwd) {
       name: 'action',
       message: 'What would you like to do?',
       choices: [
+        { name: chalk.cyan('✨ Auto-enhance CLAUDE.md (Recommended)'), value: 'enhance' },
         { name: 'Show detailed fix instructions', value: 'details' },
         { name: 'Show best practices reference', value: 'reference' },
         { name: 'Exit', value: 'exit' },
@@ -648,7 +1030,9 @@ async function showFixSuggestions(results, cwd) {
     },
   ]);
 
-  if (action === 'details') {
+  if (action === 'enhance') {
+    await runEnhancement(cwd);
+  } else if (action === 'details') {
     showDetailedFixes(results);
   } else if (action === 'reference') {
     showBestPracticesReference();
@@ -735,6 +1119,331 @@ function showBestPracticesReference() {
 }
 
 /**
+ * Run CLAUDE.md enhancement
+ */
+async function runEnhancement(cwd) {
+  console.log('');
+  console.log(chalk.bold('━'.repeat(60)));
+  console.log(chalk.bold.cyan('🚀 CLAUDE.md Enhancement Mode'));
+  console.log(chalk.bold('━'.repeat(60)));
+  console.log('');
+
+  const spinner = ora('Detecting tech stack...').start();
+
+  // Detect tech stack
+  const techStack = await detectTechStack(cwd, { silent: true });
+
+  spinner.succeed('Tech stack detected');
+
+  // Show what was detected
+  console.log('');
+  console.log(chalk.cyan('Detected Technologies:'));
+  const detected = techStack._detected || [];
+  for (const item of detected.slice(0, 8)) {
+    console.log(`  ${chalk.green('✓')} ${item}`);
+  }
+  if (detected.length > 8) {
+    console.log(chalk.dim(`  ... and ${detected.length - 8} more`));
+  }
+  console.log('');
+
+  // Get project name
+  const projectName = techStack.project?.name || basename(cwd);
+
+  // Ask what to enhance
+  const { enhanceMode } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'enhanceMode',
+      message: 'What would you like to do?',
+      choices: [
+        { name: 'Generate full CLAUDE.md from scratch', value: 'full' },
+        { name: 'Add missing sections to existing CLAUDE.md', value: 'add' },
+        { name: 'Generate specific section', value: 'section' },
+        { name: 'Preview generated content', value: 'preview' },
+        { name: 'Back', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (enhanceMode === 'back') return;
+
+  if (enhanceMode === 'preview') {
+    console.log('');
+    console.log(chalk.bold('━'.repeat(60)));
+    console.log(chalk.bold('Generated CLAUDE.md Preview:'));
+    console.log(chalk.bold('━'.repeat(60)));
+    console.log('');
+    console.log(ENHANCEMENT_TEMPLATES.fullTemplate(techStack, projectName));
+    console.log(chalk.bold('━'.repeat(60)));
+    console.log('');
+
+    const { savePreview } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'savePreview',
+        message: 'Save this to CLAUDE.md?',
+        default: false,
+      },
+    ]);
+
+    if (savePreview) {
+      await saveClaudeMd(cwd, techStack, projectName, 'full');
+    }
+    return;
+  }
+
+  if (enhanceMode === 'section') {
+    const { section } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'section',
+        message: 'Which section to generate?',
+        choices: [
+          { name: 'Quick Start (commands to run)', value: 'quickStart' },
+          { name: 'Tech Stack Table', value: 'techStackTable' },
+          { name: 'Key Locations', value: 'keyLocations' },
+          { name: 'Import Patterns', value: 'importPatterns' },
+          { name: 'Testing Instructions', value: 'testingInstructions' },
+          { name: 'Deployment Section', value: 'deploymentSection' },
+          { name: 'Architecture Rules', value: 'architectureRules' },
+          { name: 'Critical Rules', value: 'criticalRules' },
+          { name: 'Reference Documentation Links', value: 'referenceLinks' },
+        ],
+      },
+    ]);
+
+    const content = ENHANCEMENT_TEMPLATES[section](techStack);
+    console.log('');
+    console.log(chalk.bold('Generated Content:'));
+    console.log(chalk.bold('━'.repeat(60)));
+    console.log(content);
+    console.log(chalk.bold('━'.repeat(60)));
+    console.log('');
+
+    const { appendSection } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'appendSection',
+        message: 'Append this section to CLAUDE.md?',
+        default: true,
+      },
+    ]);
+
+    if (appendSection) {
+      await appendToClaudeMd(cwd, content);
+    }
+    return;
+  }
+
+  if (enhanceMode === 'full') {
+    await saveClaudeMd(cwd, techStack, projectName, 'full');
+    return;
+  }
+
+  if (enhanceMode === 'add') {
+    await addMissingSections(cwd, techStack, projectName);
+    return;
+  }
+}
+
+/**
+ * Save full CLAUDE.md
+ */
+async function saveClaudeMd(cwd, techStack, projectName, mode) {
+  const claudeMdPath = join(cwd, 'CLAUDE.md');
+  const backupPath = join(cwd, 'CLAUDE.md.backup');
+
+  // Check for existing file
+  if (existsSync(claudeMdPath)) {
+    const { overwrite } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'overwrite',
+        message: 'CLAUDE.md already exists. What would you like to do?',
+        choices: [
+          { name: 'Backup existing and replace', value: 'backup' },
+          { name: 'Merge with existing (add missing sections)', value: 'merge' },
+          { name: 'Cancel', value: 'cancel' },
+        ],
+      },
+    ]);
+
+    if (overwrite === 'cancel') {
+      console.log(chalk.yellow('Cancelled.'));
+      return;
+    }
+
+    if (overwrite === 'backup') {
+      const existingContent = readFileSync(claudeMdPath, 'utf8');
+      writeFileSync(backupPath, existingContent, 'utf8');
+      console.log(chalk.dim(`Backed up to ${backupPath}`));
+    }
+
+    if (overwrite === 'merge') {
+      await addMissingSections(cwd, techStack, projectName);
+      return;
+    }
+  }
+
+  // Generate and save
+  const content = ENHANCEMENT_TEMPLATES.fullTemplate(techStack, projectName);
+  writeFileSync(claudeMdPath, content, 'utf8');
+
+  console.log(chalk.green.bold('✓ CLAUDE.md generated successfully!'));
+  console.log(chalk.dim(`  Path: ${claudeMdPath}`));
+  console.log('');
+
+  // Show stats
+  const lines = content.split('\n').length;
+  console.log(chalk.cyan('Stats:'));
+  console.log(`  Lines: ${lines} (recommended: <60, max: 300)`);
+  console.log(`  Size: ${(content.length / 1024).toFixed(1)} KB`);
+  console.log('');
+}
+
+/**
+ * Append content to existing CLAUDE.md
+ */
+async function appendToClaudeMd(cwd, content) {
+  const claudeMdPath = join(cwd, 'CLAUDE.md');
+
+  let existingContent = '';
+  if (existsSync(claudeMdPath)) {
+    existingContent = readFileSync(claudeMdPath, 'utf8');
+  }
+
+  const newContent = existingContent.trim() + '\n\n' + content;
+  writeFileSync(claudeMdPath, newContent, 'utf8');
+
+  console.log(chalk.green.bold('✓ Section appended to CLAUDE.md'));
+}
+
+/**
+ * Add missing sections to existing CLAUDE.md
+ */
+async function addMissingSections(cwd, techStack, projectName) {
+  const claudeMdPath = join(cwd, 'CLAUDE.md');
+
+  let existingContent = '';
+  if (existsSync(claudeMdPath)) {
+    existingContent = readFileSync(claudeMdPath, 'utf8');
+  }
+
+  const missingSections = [];
+
+  // Check which sections are missing
+  const sectionChecks = [
+    { pattern: /##\s*quick\s*start/i, name: 'Quick Start', key: 'quickStart' },
+    { pattern: /##\s*tech\s*stack/i, name: 'Tech Stack', key: 'techStackTable' },
+    { pattern: /##\s*key\s*locations/i, name: 'Key Locations', key: 'keyLocations' },
+    { pattern: /##\s*import\s*patterns/i, name: 'Import Patterns', key: 'importPatterns' },
+    { pattern: /##\s*testing/i, name: 'Testing', key: 'testingInstructions' },
+    { pattern: /##\s*deploy/i, name: 'Deployment', key: 'deploymentSection' },
+    { pattern: /##\s*architecture/i, name: 'Architecture Rules', key: 'architectureRules' },
+    { pattern: /##\s*critical/i, name: 'Critical Rules', key: 'criticalRules' },
+    { pattern: /##\s*reference/i, name: 'Reference Links', key: 'referenceLinks' },
+  ];
+
+  for (const check of sectionChecks) {
+    if (!check.pattern.test(existingContent)) {
+      missingSections.push(check);
+    }
+  }
+
+  if (missingSections.length === 0) {
+    console.log(chalk.green.bold('✓ CLAUDE.md already has all recommended sections!'));
+    return;
+  }
+
+  console.log('');
+  console.log(chalk.yellow(`Found ${missingSections.length} missing sections:`));
+  for (const section of missingSections) {
+    console.log(`  ${chalk.dim('-')} ${section.name}`);
+  }
+  console.log('');
+
+  const { sectionsToAdd } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'sectionsToAdd',
+      message: 'Select sections to add:',
+      choices: missingSections.map((s) => ({
+        name: s.name,
+        value: s.key,
+        checked: true,
+      })),
+    },
+  ]);
+
+  if (sectionsToAdd.length === 0) {
+    console.log(chalk.yellow('No sections selected.'));
+    return;
+  }
+
+  // Generate and append selected sections
+  let newContent = existingContent.trim();
+
+  for (const key of sectionsToAdd) {
+    const sectionContent = ENHANCEMENT_TEMPLATES[key](techStack);
+    if (sectionContent.trim()) {
+      newContent += '\n\n' + sectionContent;
+    }
+  }
+
+  writeFileSync(claudeMdPath, newContent, 'utf8');
+
+  console.log(chalk.green.bold(`✓ Added ${sectionsToAdd.length} sections to CLAUDE.md`));
+}
+
+/**
+ * Suggest enhancements based on audit results
+ */
+function generateEnhancementSuggestions(results, techStack) {
+  const suggestions = [];
+
+  // Check if missing Quick Start
+  const hasQuickStart = results.claudeMd.passed.some((p) =>
+    p.message?.includes('Quick Start')
+  );
+  if (!hasQuickStart) {
+    suggestions.push({
+      type: 'section',
+      name: 'Quick Start',
+      priority: 'high',
+      reason: 'Every CLAUDE.md should have runnable commands',
+      content: ENHANCEMENT_TEMPLATES.quickStart(techStack),
+    });
+  }
+
+  // Check if file is too short
+  const veryShort = results.claudeMd.warnings.some((w) =>
+    w.message?.includes('Very little content')
+  );
+  if (veryShort) {
+    suggestions.push({
+      type: 'full',
+      name: 'Full Enhancement',
+      priority: 'high',
+      reason: 'CLAUDE.md has minimal content',
+    });
+  }
+
+  // Suggest reference docs based on tech stack
+  if (techStack.frontend?.framework || techStack.backend?.framework) {
+    suggestions.push({
+      type: 'section',
+      name: 'Reference Links',
+      priority: 'medium',
+      reason: 'Add framework documentation links',
+      content: ENHANCEMENT_TEMPLATES.referenceLinks(techStack),
+    });
+  }
+
+  return suggestions;
+}
+
+/**
  * Interactive menu entry point
  */
 export async function showClaudeAuditMenu() {
@@ -747,6 +1456,7 @@ export async function showClaudeAuditMenu() {
         { name: 'Run Full Audit', value: 'full' },
         { name: 'Audit CLAUDE.md only', value: 'claudemd' },
         { name: 'Audit .claude/ folder only', value: 'folder' },
+        { name: chalk.cyan('✨ Enhance CLAUDE.md (NEW)'), value: 'enhance' },
         { name: 'Show Best Practices Reference', value: 'reference' },
         { name: 'Back', value: 'back' },
       ],
@@ -760,5 +1470,13 @@ export async function showClaudeAuditMenu() {
     return;
   }
 
+  if (mode === 'enhance') {
+    await runEnhancement(process.cwd());
+    return;
+  }
+
   await runClaudeAudit({ mode });
 }
+
+// Export enhancement templates for use by other modules
+export { ENHANCEMENT_TEMPLATES, runEnhancement };

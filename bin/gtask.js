@@ -30,6 +30,7 @@ import { runClaudeAudit } from '../src/commands/claude-audit.js';
 import { runRoadmap } from '../src/commands/roadmap.js';
 import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
+import { runSetupWizard } from '../src/commands/setup-wizard.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -266,6 +267,15 @@ program
   .description('Show detailed help with examples')
   .action(() => {
     showHelp();
+  });
+
+// Setup Wizard - vibe-code friendly
+program
+  .command('wizard')
+  .alias('w')
+  .description('Interactive setup wizard (vibe-code friendly, mobile-ready)')
+  .action(async () => {
+    await runSetupWizard();
   });
 
 // Parse and run
