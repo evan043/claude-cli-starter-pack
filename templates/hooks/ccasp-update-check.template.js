@@ -39,6 +39,7 @@ function loadState() {
     updateHighlights: [],
     updateFirstDisplayed: false,
     dismissedUntil: 0,
+    projectImplCompleted: false,
   };
 }
 

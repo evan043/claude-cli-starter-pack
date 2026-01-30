@@ -305,6 +305,19 @@ Questions:
 After completing any option, ask the user:
 - "Would you like to perform another action? (1-4, B to go back, Q to quit)"
 
+## Mark Setup Complete
+
+**IMPORTANT:** After the user successfully completes ANY option (1-4), update the state file to mark setup as complete:
+
+```bash
+# Read current state, add projectImplCompleted: true, write back
+```
+
+Use the Edit tool to update `.claude/config/ccasp-state.json`:
+- Set `"projectImplCompleted": true`
+
+This removes the "Run /project-impl" recommendation banner from `/menu`.
+
 ## Terminal Alternative
 
 These operations can also be run from the terminal:

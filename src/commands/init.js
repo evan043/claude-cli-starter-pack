@@ -471,6 +471,7 @@ Parse the JSON to extract:
 - \`updateAvailable\`: Boolean indicating if update exists
 - \`updateHighlights\`: Array of release summaries
 - \`updateFirstDisplayed\`: Whether full highlights have been shown
+- \`projectImplCompleted\`: Whether user has run /project-impl (default: false)
 
 ### Step 2: Build Dynamic Menu
 
@@ -491,6 +492,16 @@ Set \`updateFirstDisplayed: true\` in ccasp-state.json using Edit tool.
 
 **Subsequent displays** (\`updateAvailable && updateFirstDisplayed\`):
 Show compact banner only.
+
+### Step 3b: Show Setup Recommendation (If Applicable)
+
+If \`projectImplCompleted\` is \`false\` or missing, display this banner at the BOTTOM of the menu (after the closing box but before the input prompt):
+
+\`\`\`
+💡 Tip: Run /project-impl to configure your project (audit CLAUDE.md, detect tech stack, set up deployment)
+\`\`\`
+
+This banner should be subtle - just a single line tip. Once the user runs any option in /project-impl, update the state file to set \`projectImplCompleted: true\` and this banner will no longer appear.
 
 ### Step 4: Display Menu and Wait for Input
 
@@ -1403,7 +1414,7 @@ function loadState() {
   if (fs.existsSync(statePath)) {
     try { return JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch {}
   }
-  return { lastCheckTimestamp: 0, updateAvailable: false };
+  return { lastCheckTimestamp: 0, updateAvailable: false, projectImplCompleted: false };
 }
 
 function saveState(state) {
