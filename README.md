@@ -38,21 +38,50 @@ Everything you need to supercharge your Claude Code CLI experience: create agent
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g claude-cli-starter-pack
+# Deploy to your project (creates slash commands in .claude/commands/)
+npx claude-cli-starter-pack init
 
-# Or run without installing
-npx claude-cli-starter-pack
+# Or install globally for terminal access
+npm install -g claude-cli-starter-pack
 
 # Launch interactive menu
 ccsp
 
 # Quick commands
+ccsp init               # Deploy slash commands to project
 ccsp create-agent       # Create agents, hooks, skills
 ccsp explore-mcp        # Discover MCP servers
 ccsp claude-audit       # Audit your Claude setup
 ccsp create-phase-dev   # Create phased development plan
 ```
+
+## Project Setup (Recommended)
+
+The `init` command deploys slash commands directly to your project's `.claude/commands/` folder:
+
+```bash
+# Navigate to your project
+cd my-project
+
+# Run the init wizard
+npx claude-cli-starter-pack init
+
+# Select which commands to install
+# Commands are now available when you launch Claude Code CLI
+```
+
+**What gets installed:**
+- `/e2e-test` - Run Playwright tests with ralph loop, watch, or headed modes
+- `/github-task` - Create GitHub issues with codebase analysis
+- `/phase-dev-plan` - Generate phased development plans
+- `/create-agent` - Create L1/L2/L3 agents
+- `/create-hook` - Build enforcement hooks
+- `/create-skill` - Create RAG skill packages
+- `/explore-mcp` - Discover MCP servers
+- `/claude-audit` - Audit your Claude setup
+- And more...
+
+After installation, these commands are available as slash commands in Claude Code CLI.
 
 ## Prerequisites
 
@@ -248,8 +277,11 @@ ccsp test --headed          # Show browser
 
 ## Commands Reference
 
+### Terminal Commands (PowerShell/Bash)
+
 | Command | Description |
 |---------|-------------|
+| `ccsp init` | **Deploy slash commands to project** |
 | `ccsp` | Interactive menu |
 | `ccsp create-agent` | Agent creation menu |
 | `ccsp create-hook` | Create enforcement hook |
@@ -266,6 +298,25 @@ ccsp test --headed          # Show browser
 | `ccsp list` | List recent tasks |
 | `ccsp test-setup` | Configure testing environment |
 | `ccsp test` | Run tests |
+
+### Slash Commands (Claude Code CLI)
+
+After running `ccsp init`, these slash commands are available in Claude Code:
+
+| Command | Description |
+|---------|-------------|
+| `/e2e-test` | Run E2E tests with Playwright |
+| `/github-task` | Create GitHub issues with codebase analysis |
+| `/phase-dev-plan` | Create phased development plans |
+| `/create-agent` | Create L1/L2/L3 agents |
+| `/create-hook` | Build enforcement hooks |
+| `/create-skill` | Create RAG skill packages |
+| `/explore-mcp` | Discover MCP servers |
+| `/claude-audit` | Audit CLAUDE.md and .claude/ |
+| `/roadmap-sync` | Sync roadmaps with GitHub |
+| `/claude-settings` | Configure permissions |
+| `/codebase-explorer` | Analyze codebase structure |
+| `/rag-pipeline` | Generate RAG pipelines |
 
 ## CLI Aliases
 

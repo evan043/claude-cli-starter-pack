@@ -26,6 +26,7 @@ import { runCreatePhaseDev } from '../src/commands/create-phase-dev.js';
 import { runExploreMcp } from '../src/commands/explore-mcp.js';
 import { runClaudeAudit } from '../src/commands/claude-audit.js';
 import { runRoadmap } from '../src/commands/roadmap.js';
+import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
@@ -33,6 +34,15 @@ program
   .name('ccsp')
   .description('Claude CLI Starter Pack - Complete toolkit for Claude Code CLI')
   .version(getVersion());
+
+// Init command - deploy to project
+program
+  .command('init')
+  .description('Deploy Claude CLI Starter Pack to current project')
+  .option('--force', 'Overwrite existing commands')
+  .action(async (options) => {
+    await runInit(options);
+  });
 
 // Interactive menu (default when no command)
 program
