@@ -1,12 +1,12 @@
 {
-  "name": "claude-cli-starter-pack",
+  "name": "claude-cli-advanced-starter-pack",
   "version": "1.0.0",
-  "description": "Complete Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
+  "description": "Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
-    "ccsp": "./bin/gtask.js",
-    "claude-starter": "./bin/gtask.js",
-    "claude-cli-starter-pack": "./bin/gtask.js"
+    "ccasp": "./bin/gtask.js",
+    "claude-advanced": "./bin/gtask.js",
+    "claude-cli-advanced-starter-pack": "./bin/gtask.js"
   },
   "type": "module",
   "scripts": {
@@ -34,12 +34,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/evan043/claude-cli-starter-pack.git"
+    "url": "git+https://github.com/evan043/claude-cli-advanced-starter-pack.git"
   },
   "bugs": {
-    "url": "https://github.com/evan043/claude-cli-starter-pack/issues"
+    "url": "https://github.com/evan043/claude-cli-advanced-starter-pack/issues"
   },
-  "homepage": "https://github.com/evan043/claude-cli-starter-pack#readme",
+  "homepage": "https://github.com/evan043/claude-cli-advanced-starter-pack#readme",
   "engines": {
     "node": ">=18.0.0"
   },

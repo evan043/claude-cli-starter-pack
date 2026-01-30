@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Claude CLI Starter Pack - CLI Entry Point
+ * Claude CLI Advanced Starter Pack - CLI Entry Point
  *
- * Complete Claude Code CLI toolkit - agents, hooks, skills, MCP servers,
+ * Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers,
  * phased development, and GitHub integration
  */
 
@@ -31,14 +31,14 @@ import { showHelp } from '../src/commands/help.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
-  .name('ccsp')
-  .description('Claude CLI Starter Pack - Complete toolkit for Claude Code CLI')
+  .name('ccasp')
+  .description('Claude CLI Advanced Starter Pack - Complete toolkit for Claude Code CLI')
   .version(getVersion());
 
 // Init command - deploy to project
 program
   .command('init')
-  .description('Deploy Claude CLI Starter Pack to current project')
+  .description('Deploy Claude CLI Advanced Starter Pack to current project')
   .option('--force', 'Overwrite existing commands')
   .action(async (options) => {
     await runInit(options);
