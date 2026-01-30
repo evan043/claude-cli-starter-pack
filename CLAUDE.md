@@ -1,151 +1,103 @@
-# CLAUDE.md - CCASP Development Guide
+# CLAUDE.md
 
-This file provides guidance to Claude Code when working on the **Claude CLI Advanced Starter Pack (CCASP)** npm package.
-
----
-
-## CRITICAL: Auto-Build Requirement
-
-**IMPORTANT**: When modifying ANY file in these directories, you MUST run `npm test` to verify syntax before committing:
-
-- `src/` - Core CLI source code
-- `templates/` - Slash command and hook templates
-- `bin/` - CLI entry points
-- `.claude/` - Local development commands/hooks
-
-This ensures the npm package remains functional. The PostToolUse hook `ccasp-auto-build.js` will remind you if you forget.
-
-**Exception**: If the user explicitly says "don't build", "skip build", or "no build needed", skip the build step.
-
----
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-CCASP is a Node.js CLI toolkit that extends Claude Code CLI with:
-- **Agents** (L1 orchestrators, L2 specialists, L3 workers)
-- **Hooks** (PreToolUse, PostToolUse, UserPromptSubmit enforcement)
-- **Skills** (RAG-enhanced command packages)
-- **MCP Server Discovery** (auto-detect and configure)
-- **Phased Development** (95%+ success rate planning)
-- **GitHub Project Board Integration** (issue tracking, progress sync)
-
-### Two-Phase Architecture
+Claude CLI Advanced Starter Pack (CCASP) is a Node.js CLI toolkit that extends Claude Code CLI with agents, hooks, skills, MCP server discovery, phased development planning, and GitHub Project Board integration. It operates in two phases:
 
 1. **Terminal phase** (no AI): File-based tech stack detection, template processing, `.claude/` scaffolding
 2. **Claude Code phase** (AI-powered): Slash commands, agent orchestration, interactive workflows
 
----
+## Build and Run Commands
 
-## Quick Reference
-
-### Run Commands
 ```bash
-npm start                    # Run CLI (node bin/gtask.js)
-ccasp                        # Interactive menu (if globally installed)
-ccasp init                   # Deploy to a project
-ccasp wizard                 # Setup wizard
-npm test                     # Syntax validation
-npm run lint                 # ESLint
-```
+# Run CLI
+npm start                    # or: node bin/gtask.js
 
-### Publish to npm
-```bash
-npm version patch            # Bump version
-npm publish                  # Publish (runs prepublishOnly first)
-```
+# Run with menu (default)
+ccasp                        # Opens interactive menu
 
----
+# Setup wizard (mobile-friendly, single-char inputs)
+ccasp wizard
+
+# Quick init (auto-detect + deploy to project)
+ccasp init
+
+# Linting
+npm run lint                 # ESLint on src/
+
+# Syntax validation (no test framework)
+npm test                     # node --check on entry points
+```
 
 ## Architecture
 
 ```
 bin/
-├── gtask.js              # CLI entry point (Commander.js)
-└── postinstall.js        # npm install welcome message
+├── gtask.js          # CLI entry point (Commander.js)
+└── postinstall.js    # npm install welcome message
 
 src/
-├── commands/             # Command implementations
-│   ├── init.js           # Deploy to project, create .claude/
-│   ├── detect-tech-stack.js  # File-based tech detection (core engine)
-│   ├── setup-wizard.js   # Vibe-code friendly setup
-│   ├── test-setup.js     # Testing configuration wizard
-│   └── ...               # 20+ other commands
+├── commands/         # 23 command implementations
+│   ├── init.js              # Deploy to project, create .claude/
+│   ├── detect-tech-stack.js # File-based tech detection (44KB, core engine)
+│   ├── setup-wizard.js      # Vibe-code friendly setup
+│   ├── claude-audit.js      # CLAUDE.md validation/enhancement
+│   ├── create-agent.js      # L1/L2/L3 agent builder
+│   ├── create-hook.js       # Enforcement hook generator
+│   ├── create-skill.js      # RAG skill builder
+│   ├── create-phase-dev.js  # Phased development planner
+│   └── explore-mcp.js       # MCP server discovery
 ├── cli/
-│   └── menu.js           # Interactive ASCII menu
+│   └── menu.js              # Interactive ASCII menu
 ├── github/
-│   └── client.js         # GitHub API wrapper (uses gh CLI)
-├── testing/
-│   └── config.js         # Testing config (saves to tech-stack.json)
+│   └── client.js            # GitHub API wrapper (uses gh CLI)
 ├── utils/
-│   └── template-engine.js  # Handlebars-style placeholder replacement
+│   └── template-engine.js   # Handlebars-style placeholder replacement
 ├── agents/
-│   └── templates.js      # Agent definition generators
-└── index.js              # Main exports
+│   └── templates.js         # Agent definition generators
+└── index.js                 # Main exports
 
 templates/
-├── commands/             # Slash command templates (.template.md)
-└── hooks/                # Enforcement hook templates (.template.js)
+├── commands/         # Slash command templates (.template.md)
+└── hooks/            # Enforcement hook templates (.template.js)
 ```
-
----
 
 ## Key Patterns
 
+### Two-Phase Architecture
+Terminal commands read files and generate config without AI. Slash commands (deployed to `.claude/commands/`) are AI-powered and run inside Claude Code CLI.
+
+### Tech Stack Detection (`src/commands/detect-tech-stack.js`)
+Scans `package.json`, config files, and directory structure to detect frameworks. Outputs `tech-stack.json` used for template placeholder replacement. No AI - pure pattern matching.
+
 ### Template Engine (`src/utils/template-engine.js`)
-Supports Handlebars-style syntax with tech-stack.json values:
+Supports Handlebars-style syntax:
 ```handlebars
 {{#if deployment.backend.platform}}
   {{#if (eq deployment.backend.platform "railway")}}...{{/if}}
 {{/if}}
-{{testing.e2e.framework}}
-{{testing.selectors.username}}
+{{variable.path}}
 ${CWD}, ${HOME}
 ```
 
-### Testing Configuration
-Testing config is stored in `tech-stack.json` under the `testing` section:
-- `testing.e2e.framework` - Playwright, Cypress, etc.
-- `testing.selectors.*` - Login form selectors
-- `testing.credentials.*` - Env var names for credentials
-- `testing.environment.*` - Base URL and setup
-
-Run `ccasp test-setup` to configure interactively.
+### CLI Structure
+Uses Commander.js with `menu` as default command. Subcommands: `init`, `wizard`, `setup`, `create`, `detect-stack`, `create-agent`, `create-hook`, etc.
 
 ### ES Modules
-All code uses ES6 `import`/`export`. Package has `"type": "module"`.
-
----
-
-## GitHub Project Board
-
-**Project:** CCASP Development
-**URL:** https://github.com/users/evan043/projects/6
-**Number:** 6
-
-View issues: `gh issue list`
-Add to board: `gh project item-add 6 --owner evan043 --url <issue-url>`
-
----
-
-## Development Workflow
-
-1. **Make changes** to `src/`, `templates/`, or `bin/`
-2. **Run `npm test`** to verify syntax
-3. **Test locally** with `npm start` or `node bin/gtask.js`
-4. **Commit** with descriptive message
-5. **Bump version** if publishing: `npm version patch`
-6. **Publish** with `npm publish`
-
----
+All code uses ES6 `import`/`export` syntax. Package has `"type": "module"`.
 
 ## External Dependencies
 
-- **Node.js 18+**: Minimum version
-- **GitHub CLI (`gh`)**: Required for GitHub features (v2.40+, authenticated)
+- **GitHub CLI (`gh`)**: Required for GitHub integration features. Must be v2.40+ and authenticated.
+- **Node.js 18+**: Minimum version requirement.
 
----
+## Session Restart Requirement
 
-## Feature Presets (during `ccasp init`)
+After running `ccasp init` or modifying `.claude/`, users must restart Claude Code CLI for new commands to appear.
+
+## Feature Presets (during init)
 
 | Letter | Preset | Features |
 |--------|--------|----------|
@@ -153,9 +105,3 @@ Add to board: `gh project item-add 6 --owner evan043 --url <issue-url>`
 | B | Standard | GitHub + phased dev (recommended) |
 | C | Full | All features including deployment |
 | D | Custom | Pick individual features |
-
----
-
-## Session Restart Requirement
-
-After running `ccasp init` or modifying `.claude/` in a target project, users must restart Claude Code CLI for new commands to appear.
