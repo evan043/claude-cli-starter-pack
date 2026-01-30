@@ -1,15 +1,42 @@
 {
   "releases": [
     {
-      "version": "1.0.7",
+      "version": "1.0.8",
       "date": "2026-01-30",
-      "summary": "Release notes pending",
-      "highlights": [],
+      "summary": "Fix: settings.json hook merging for existing projects",
+      "highlights": [
+        "Init now merges update check hook into existing settings.json",
+        "Existing projects get automatic update notifications"
+      ],
       "newFeatures": {
         "commands": [],
         "agents": [],
         "skills": [],
         "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.0.7",
+      "date": "2026-01-30",
+      "summary": "Automatic update notifications with startup hook",
+      "highlights": [
+        "Startup hook checks npm for updates automatically",
+        "Dynamic menu header with version and [NEW UPDATE] badge",
+        "One-key update with [N] in menu"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [
+          {
+            "name": "ccasp-update-check",
+            "description": "Checks npm for updates on Claude startup"
+          }
+        ],
         "other": []
       },
       "breaking": [],
