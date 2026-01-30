@@ -245,42 +245,48 @@ To apply changes:
 
 ## Commands Reference
 
-### Terminal Commands (Run in your shell - no AI needed)
+### Setup Commands (Terminal - one-time use)
 
-These commands run directly in your terminal (bash, PowerShell, etc.) and do **not** require Claude or any AI connection. They use file-based detection and template generation.
+These terminal commands are used **once** to set up your project. They don't require AI.
 
 | Command | Description |
 |---------|-------------|
 | `ccasp wizard` | **Vibe-code friendly setup wizard** |
 | `ccasp init` | Deploy slash commands to project |
-| `ccasp` | Interactive menu |
 | `ccasp detect-stack` | Auto-detect tech stack (reads files) |
-| `ccasp claude-audit` | Audit CLAUDE.md & .claude/ |
-| `ccasp create-agent` | Agent creation menu |
-| `ccasp create-hook` | Create enforcement hook |
-| `ccasp create-skill` | Create RAG skill package |
-| `ccasp explore-mcp` | Discover MCP servers |
-| `ccasp create-phase-dev` | Create phased development plan |
-| `ccasp roadmap` | Roadmap integration |
 
-### Slash Commands (Run inside Claude Code CLI - AI-powered)
+### Slash Commands (Inside Claude Code CLI - AI-powered)
 
-These commands only work **inside an active Claude Code CLI session**. They are AI-powered and can understand context, execute complex tasks, and interact with your codebase intelligently.
+After running `ccasp init`, these slash commands become available inside Claude Code CLI. They are AI-powered and can understand context, execute complex tasks, and interact with your codebase intelligently.
+
+**Core Commands (always installed):**
 
 | Command | Description |
 |---------|-------------|
 | `/menu` | Interactive ASCII menu |
 | `/ccasp-setup` | Setup wizard (vibe-code friendly) |
 | `/e2e-test` | Run E2E tests with Playwright |
-| `/github-update` | View GitHub Project Board status |
-| `/github-task-start` | Start/complete GitHub task |
-| `/phase-dev-plan` | Create phased development plans |
-| `/phase-track` | Track phased development progress |
-| `/deploy-full` | Full-stack deployment |
 | `/create-agent` | Create L1/L2/L3 agents |
 | `/create-hook` | Build enforcement hooks |
+| `/create-skill` | Create RAG skill packages |
 | `/explore-mcp` | Discover MCP servers |
 | `/claude-audit` | Audit CLAUDE.md |
+| `/phase-dev-plan` | Create phased development plans |
+| `/create-task-list` | Create intelligent task list |
+| `/codebase-explorer` | Analyze codebase structure |
+
+**Feature-Specific Commands (based on preset selection):**
+
+| Command | Feature | Description |
+|---------|---------|-------------|
+| `/github-update` | GitHub Integration | View Project Board status |
+| `/github-task-start` | GitHub Integration | Start/complete GitHub task |
+| `/phase-track` | Phased Development | Track phase progress |
+| `/deploy-full` | Deployment Automation | Full-stack deployment |
+| `/tunnel-start` | Tunnel Services | Start ngrok/localtunnel |
+| `/tunnel-stop` | Tunnel Services | Stop tunnel |
+| `/context-audit` | Token Management | Audit token usage |
+| `/happy-start` | Happy Mode | Start mobile integration |
 
 > **Note:** Slash commands are created in `.claude/commands/` by the terminal commands. You must restart Claude Code CLI after running `ccasp init` for slash commands to become available.
 
