@@ -33,3 +33,10 @@ coverage/
 # Build
 dist/
 build/
+
+# Local Claude config (personal commands)
+.claude/
+CLAUDE.md
+
+# Temp files
+npm-output.txt

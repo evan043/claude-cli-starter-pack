@@ -6,7 +6,7 @@ Welcome to the CCASP documentation wiki. This toolkit supercharges your Claude C
 
 | Page | Description |
 |------|-------------|
-| [Getting Started](Getting-Started) | Installation and first steps |
+| [Getting Started](Getting-Started) | Installation, first steps, and uninstalling |
 | [Agents](Agents) | L1/L2/L3 agent hierarchy |
 | [Hooks](Hooks) | PreToolUse, PostToolUse, UserPromptSubmit |
 | [Skills](Skills) | RAG-enhanced skill packages |
@@ -15,6 +15,7 @@ Welcome to the CCASP documentation wiki. This toolkit supercharges your Claude C
 | [Phased Development](Phased-Development) | 95%+ success rate planning |
 | [CLAUDE.md Guide](CLAUDE-MD-Guide) | Best practices for CLAUDE.md |
 | [MCP Servers](MCP-Servers) | Model Context Protocol integration |
+| [Version Updates](Version-Updates) | Auto-updates and version tracking |
 | [Troubleshooting](Troubleshooting) | Common issues and solutions |
 
 ## Architecture Overview

@@ -68,6 +68,83 @@ Common issues and solutions for CCASP.
 
 ---
 
+## Backup & Restore Issues
+
+### Restore option not showing
+
+**Problem**: "Restore from backup" option doesn't appear in removal wizard.
+
+**Solutions**:
+
+1. Check backups exist:
+   ```bash
+   ls -la .claude-backup/
+   ```
+
+2. Verify backup structure - must contain `.claude/` or `CLAUDE.md`:
+   ```bash
+   ls -la .claude-backup/*/
+   ```
+
+3. Ensure backups were created by CCASP (not manual copies)
+
+### Restore fails
+
+**Problem**: Restore completes but files are missing.
+
+**Solutions**:
+
+1. Check backup contains expected files:
+   ```bash
+   ls -la .claude-backup/{timestamp}/.claude/
+   cat .claude-backup/{timestamp}/CLAUDE.md
+   ```
+
+2. Check write permissions:
+   ```bash
+   touch .test-write && rm .test-write
+   ```
+
+3. Try manual restore:
+   ```bash
+   cp -r .claude-backup/{timestamp}/.claude .claude
+   cp .claude-backup/{timestamp}/CLAUDE.md CLAUDE.md
+   ```
+
+### Old backups not cleaned up
+
+**Problem**: Too many backups taking space.
+
+**Solution**: Manually remove old backups:
+```bash
+# List backups sorted by date
+ls -lt .claude-backup/
+
+# Remove specific backup
+rm -rf .claude-backup/2025-01-01T12-00-00
+
+# Remove all backups
+rm -rf .claude-backup
+```
+
+### Backup doesn't include custom files
+
+**Problem**: Custom files in `.claude/` not in backup.
+
+**Solution**: The backup only includes standard CCASP directories. For custom files:
+
+1. Manually back up before removal:
+   ```bash
+   cp -r .claude/my-custom-folder my-custom-backup
+   ```
+
+2. Restore after re-setup:
+   ```bash
+   cp -r my-custom-backup .claude/my-custom-folder
+   ```
+
+---
+
 ## Setup Issues
 
 ### Slash commands not available

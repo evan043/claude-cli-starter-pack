@@ -6,6 +6,7 @@
 - [Installation](Getting-Started#installation)
 - [Quick Start](Getting-Started#quick-start)
 - [Setup Wizard](Getting-Started#setup-wizard)
+- [Uninstalling](Getting-Started#uninstalling--removing-ccasp)
 
 ## Core Concepts
 - [Agents](Agents)
@@ -33,6 +34,7 @@
 - [MCP Servers](MCP-Servers)
 
 ## Reference
+- [Version Updates](Version-Updates)
 - [Troubleshooting](Troubleshooting)
 - [Commands Reference](Getting-Started#commands-reference)
 

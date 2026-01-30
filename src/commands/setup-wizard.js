@@ -54,14 +54,188 @@ export function createBackup(filePath) {
 }
 
 /**
+ * Find existing CCASP backups in the project
+ */
+function findExistingBackups() {
+  const backupDir = join(process.cwd(), '.claude-backup');
+  const backups = [];
+
+  if (!existsSync(backupDir)) {
+    return backups;
+  }
+
+  try {
+    const entries = readdirSync(backupDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const backupPath = join(backupDir, entry.name);
+        const hasClaudeDir = existsSync(join(backupPath, '.claude'));
+        const hasClaudeMd = existsSync(join(backupPath, 'CLAUDE.md'));
+
+        if (hasClaudeDir || hasClaudeMd) {
+          // Parse timestamp from folder name (format: 2025-01-30T12-30-45)
+          let date = entry.name;
+          try {
+            const isoDate = entry.name.replace(/T(\d{2})-(\d{2})-(\d{2})/, 'T$1:$2:$3');
+            date = new Date(isoDate).toLocaleString();
+          } catch {
+            // Keep original name if parsing fails
+          }
+
+          backups.push({
+            name: entry.name,
+            path: backupPath,
+            date,
+            hasClaudeDir,
+            hasClaudeMd,
+          });
+        }
+      }
+    }
+  } catch {
+    // Silently fail
+  }
+
+  // Sort by name (newest first)
+  return backups.sort((a, b) => b.name.localeCompare(a.name));
+}
+
+/**
+ * Restore from a backup
+ */
+async function runRestore(backups) {
+  if (backups.length === 0) {
+    console.log(chalk.yellow('\n⚠️  No backups found in .claude-backup/\n'));
+    return false;
+  }
+
+  console.log(chalk.bold('\n📦 Available backups:\n'));
+
+  const choices = backups.map((backup, index) => {
+    const contents = [];
+    if (backup.hasClaudeDir) contents.push('.claude/');
+    if (backup.hasClaudeMd) contents.push('CLAUDE.md');
+
+    return {
+      name: `${chalk.yellow(`${index + 1}.`)} ${backup.date} ${chalk.dim(`(${contents.join(', ')})`)}`,
+      value: backup,
+      short: backup.date,
+    };
+  });
+
+  choices.push({
+    name: `${chalk.green('0.')} Cancel`,
+    value: null,
+    short: 'Cancel',
+  });
+
+  const { selectedBackup } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'selectedBackup',
+      message: 'Select a backup to restore:',
+      choices,
+    },
+  ]);
+
+  if (!selectedBackup) {
+    console.log(chalk.dim('\nCancelled. No changes made.\n'));
+    return false;
+  }
+
+  // Confirm restore
+  const claudeDir = join(process.cwd(), '.claude');
+  const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+  const willOverwrite = [];
+
+  if (existsSync(claudeDir) && selectedBackup.hasClaudeDir) {
+    willOverwrite.push('.claude/');
+  }
+  if (existsSync(claudeMdPath) && selectedBackup.hasClaudeMd) {
+    willOverwrite.push('CLAUDE.md');
+  }
+
+  if (willOverwrite.length > 0) {
+    console.log(chalk.yellow(`\n⚠️  This will overwrite: ${willOverwrite.join(', ')}`));
+  }
+
+  const { confirmRestore } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'confirmRestore',
+      message: `Restore from backup "${selectedBackup.date}"?`,
+      default: true,
+    },
+  ]);
+
+  if (!confirmRestore) {
+    console.log(chalk.dim('\nCancelled. No changes made.\n'));
+    return false;
+  }
+
+  const spinner = ora('Restoring from backup...').start();
+
+  try {
+    // Restore .claude folder
+    if (selectedBackup.hasClaudeDir) {
+      const backupClaudeDir = join(selectedBackup.path, '.claude');
+      if (existsSync(claudeDir)) {
+        rmSync(claudeDir, { recursive: true, force: true });
+      }
+      copyDirRecursive(backupClaudeDir, claudeDir);
+      spinner.text = 'Restored .claude folder...';
+    }
+
+    // Restore CLAUDE.md
+    if (selectedBackup.hasClaudeMd) {
+      const backupClaudeMd = join(selectedBackup.path, 'CLAUDE.md');
+      copyFileSync(backupClaudeMd, claudeMdPath);
+      spinner.text = 'Restored CLAUDE.md...';
+    }
+
+    spinner.succeed('Backup restored successfully!');
+
+    console.log(
+      boxen(
+        chalk.green('✅ Restored from backup\n\n') +
+          `Backup date: ${chalk.cyan(selectedBackup.date)}\n` +
+          (selectedBackup.hasClaudeDir ? `  • ${chalk.cyan('.claude/')} restored\n` : '') +
+          (selectedBackup.hasClaudeMd ? `  • ${chalk.cyan('CLAUDE.md')} restored\n` : '') +
+          '\n' +
+          chalk.dim('Restart Claude Code CLI to use restored configuration.'),
+        {
+          padding: 1,
+          borderStyle: 'round',
+          borderColor: 'green',
+        }
+      )
+    );
+
+    return true;
+  } catch (error) {
+    spinner.fail('Restore failed');
+    console.error(chalk.red(error.message));
+    return false;
+  }
+}
+
+/**
  * Remove CCASP from a project
  */
 async function runRemove() {
   const claudeDir = join(process.cwd(), '.claude');
+  const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+  const existingBackups = findExistingBackups();
 
-  if (!existsSync(claudeDir)) {
+  // Check if there's anything to work with
+  const hasClaudeDir = existsSync(claudeDir);
+  const hasClaudeMd = existsSync(claudeMdPath);
+
+  if (!hasClaudeDir && existingBackups.length === 0) {
     console.log(chalk.yellow('\n⚠️  No .claude folder found in this project.\n'));
-    return false;
+    if (!hasClaudeMd) {
+      return false;
+    }
   }
 
   // Show what will be removed
@@ -126,47 +300,78 @@ async function runRemove() {
     }
   }
 
-  if (itemsToRemove.length === 0) {
+  // Check for CLAUDE.md in project root
+  if (hasClaudeMd) {
+    console.log(`  ${chalk.cyan('CLAUDE.md')} ${chalk.dim('(project root)')}`);
+    itemsToRemove.push({ type: 'file', path: claudeMdPath, label: 'CLAUDE.md', isRoot: true });
+  }
+
+  if (itemsToRemove.length === 0 && existingBackups.length === 0) {
     console.log(chalk.yellow('  No CCASP items found.\n'));
     return false;
   }
 
+  // Show existing backups count
+  if (existingBackups.length > 0) {
+    console.log(chalk.dim(`\n  📦 ${existingBackups.length} backup(s) available in .claude-backup/`));
+  }
+
   console.log('');
 
-  // Removal options
+  // Removal options - dynamically build based on what exists
+  const removeChoices = [];
+
+  if (itemsToRemove.length > 0) {
+    removeChoices.push(
+      {
+        name: `${chalk.red('1.')} Remove ALL ${chalk.dim('- Delete .claude/ and CLAUDE.md')}`,
+        value: 'all',
+        short: 'Remove All',
+      },
+      {
+        name: `${chalk.yellow('2.')} Remove with backup ${chalk.dim('- Full backup to .claude-backup/ first')}`,
+        value: 'backup',
+        short: 'Backup & Remove',
+      },
+      {
+        name: `${chalk.cyan('3.')} Selective removal ${chalk.dim('- Choose what to remove')}`,
+        value: 'selective',
+        short: 'Selective',
+      }
+    );
+  }
+
+  if (existingBackups.length > 0) {
+    removeChoices.push({
+      name: `${chalk.green('4.')} Restore from backup ${chalk.dim(`- ${existingBackups.length} backup(s) available`)}`,
+      value: 'restore',
+      short: 'Restore',
+    });
+  }
+
+  removeChoices.push({
+    name: `${chalk.dim('0.')} Cancel ${chalk.dim('- Keep everything')}`,
+    value: 'cancel',
+    short: 'Cancel',
+  });
+
   const { removeAction } = await inquirer.prompt([
     {
       type: 'list',
       name: 'removeAction',
       message: 'What would you like to do?',
-      choices: [
-        {
-          name: `${chalk.red('1.')} Remove ALL ${chalk.dim('- Delete entire .claude folder')}`,
-          value: 'all',
-          short: 'Remove All',
-        },
-        {
-          name: `${chalk.yellow('2.')} Remove with backup ${chalk.dim('- Backup to .claude-backup/ first')}`,
-          value: 'backup',
-          short: 'Backup & Remove',
-        },
-        {
-          name: `${chalk.cyan('3.')} Selective removal ${chalk.dim('- Choose what to remove')}`,
-          value: 'selective',
-          short: 'Selective',
-        },
-        {
-          name: `${chalk.green('0.')} Cancel ${chalk.dim('- Keep everything')}`,
-          value: 'cancel',
-          short: 'Cancel',
-        },
-      ],
+      choices: removeChoices,
     },
   ]);
 
   if (removeAction === 'cancel') {
     console.log(chalk.dim('\nCancelled. No changes made.\n'));
     return false;
+  }
+
+  // Handle restore action
+  if (removeAction === 'restore') {
+    return await runRestore(existingBackups);
   }
 
   if (removeAction === 'backup' || removeAction === 'all') {
@@ -190,24 +395,49 @@ async function runRemove() {
 
   try {
     if (removeAction === 'backup') {
-      // Create backup first
-      const backupDir = join(process.cwd(), '.claude-backup', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
+      // Create backup first - include timestamp folder
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const backupDir = join(process.cwd(), '.claude-backup', timestamp);
       mkdirSync(backupDir, { recursive: true });
 
-      // Copy entire .claude folder to backup
-      copyDirRecursive(claudeDir, backupDir);
+      // Copy entire .claude folder to backup (nested under .claude/)
+      if (hasClaudeDir) {
+        const backupClaudeDir = join(backupDir, '.claude');
+        copyDirRecursive(claudeDir, backupClaudeDir);
+        spinner.text = 'Backed up .claude folder...';
+      }
+
+      // Also backup CLAUDE.md if it exists
+      if (hasClaudeMd) {
+        copyFileSync(claudeMdPath, join(backupDir, 'CLAUDE.md'));
+        spinner.text = 'Backed up CLAUDE.md...';
+      }
+
       spinner.succeed(`Backed up to ${chalk.cyan(backupDir)}`);
 
-      // Then remove
-      spinner.start('Removing .claude folder...');
-      rmSync(claudeDir, { recursive: true, force: true });
-      spinner.succeed('.claude folder removed');
+      // Then remove .claude folder
+      if (hasClaudeDir) {
+        spinner.start('Removing .claude folder...');
+        rmSync(claudeDir, { recursive: true, force: true });
+        spinner.succeed('.claude folder removed');
+      }
+
+      // Remove CLAUDE.md
+      if (hasClaudeMd) {
+        spinner.start('Removing CLAUDE.md...');
+        rmSync(claudeMdPath, { force: true });
+        spinner.succeed('CLAUDE.md removed');
+      }
 
       console.log(
         boxen(
-          chalk.green('✅ CCASP removed with backup\n\n') +
+          chalk.green('✅ CCASP removed with full backup\n\n') +
             `Backup location:\n${chalk.cyan(backupDir)}\n\n` +
-            chalk.dim('To restore: copy backup contents to .claude/'),
+            chalk.bold('Contents backed up:\n') +
+            (hasClaudeDir ? `  • ${chalk.cyan('.claude/')} folder\n` : '') +
+            (hasClaudeMd ? `  • ${chalk.cyan('CLAUDE.md')} file\n` : '') +
+            '\n' +
+            chalk.dim('To restore: run ') + chalk.cyan('ccasp wizard') + chalk.dim(' → Remove CCASP → Restore'),
           {
             padding: 1,
             borderStyle: 'round',
@@ -217,12 +447,22 @@ async function runRemove() {
       );
     } else if (removeAction === 'all') {
       // Remove without backup
-      rmSync(claudeDir, { recursive: true, force: true });
-      spinner.succeed('.claude folder removed');
+      if (hasClaudeDir) {
+        rmSync(claudeDir, { recursive: true, force: true });
+        spinner.text = '.claude folder removed...';
+      }
+
+      if (hasClaudeMd) {
+        rmSync(claudeMdPath, { force: true });
+        spinner.text = 'CLAUDE.md removed...';
+      }
+
+      spinner.succeed('CCASP files removed');
 
       console.log(
         boxen(
           chalk.green('✅ CCASP removed\n\n') +
+            chalk.yellow('⚠️  No backup was created.\n\n') +
             chalk.dim('Run ') + chalk.cyan('ccasp wizard') + chalk.dim(' to set up again.'),
           {
             padding: 1,
@@ -240,8 +480,8 @@ async function runRemove() {
           type: 'checkbox',
           name: 'itemsToDelete',
           message: 'Select items to remove:',
-          choices: itemsToRemove.map(item => ({
-            name: item.label,
+          choices: itemsToRemove.map((item) => ({
+            name: item.isRoot ? `${item.label} ${chalk.dim('(project root)')}` : item.label,
             value: item,
             checked: false,
           })),
@@ -253,22 +493,44 @@ async function runRemove() {
         return false;
       }
 
-      // Create backups for selected items
-      const backupDir = join(process.cwd(), '.claude', 'backups', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
-      mkdirSync(backupDir, { recursive: true });
+      // Create backups for selected items in .claude-backup/ (not .claude/backups/)
+      // This ensures backups survive if user removes entire .claude folder
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const backupDir = join(process.cwd(), '.claude-backup', `selective-${timestamp}`);
+      const backupClaudeDir = join(backupDir, '.claude');
+      mkdirSync(backupClaudeDir, { recursive: true });
 
       for (const item of itemsToDelete) {
+        // Determine backup destination - CLAUDE.md goes to backup root, others under .claude/
+        const backupDest = item.isRoot ? join(backupDir, basename(item.path)) : join(backupClaudeDir, basename(item.path));
+
         if (item.type === 'dir') {
-          copyDirRecursive(item.path, join(backupDir, basename(item.path)));
+          copyDirRecursive(item.path, backupDest);
           rmSync(item.path, { recursive: true, force: true });
         } else {
-          copyFileSync(item.path, join(backupDir, basename(item.path)));
+          // Ensure parent directory exists
+          const parentDir = dirname(backupDest);
+          if (!existsSync(parentDir)) {
+            mkdirSync(parentDir, { recursive: true });
+          }
+          copyFileSync(item.path, backupDest);
           rmSync(item.path, { force: true });
         }
         console.log(`  ${chalk.red('✗')} Removed ${item.label}`);
       }
 
-      console.log(chalk.dim(`\nBackups saved to: ${backupDir}\n`));
+      console.log(
+        boxen(
+          chalk.green('✅ Selected items removed\n\n') +
+            `Backup location:\n${chalk.cyan(backupDir)}\n\n` +
+            chalk.dim('To restore: run ') + chalk.cyan('ccasp wizard') + chalk.dim(' → Remove CCASP → Restore'),
+          {
+            padding: 1,
+            borderStyle: 'round',
+            borderColor: 'green',
+          }
+        )
+      );
     }
 
     return true;
