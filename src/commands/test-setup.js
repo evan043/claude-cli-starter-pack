@@ -243,8 +243,8 @@ export async function runTestSetup(options) {
         console.log(chalk.dim(`  export ${passwordVar}="your_password"`));
       }
     } else if (credentialSource === 'config') {
-      showWarning('Credentials will be stored in .gtask/testing.json');
-      console.log(chalk.dim('This file will be added to .gitignore'));
+      showWarning('Storing credentials in config is not recommended for security.');
+      console.log(chalk.dim('Consider using environment variables instead.'));
       console.log('');
 
       const { username, password } = await inquirer.prompt([
@@ -398,9 +398,9 @@ export async function runTestSetup(options) {
 
   const testingConfig = createTestingConfig(config);
 
-  // Save main config
+  // Save main config to tech-stack.json
   const configPath = saveTestingConfig(testingConfig);
-  spinner.text = 'Saved testing.json';
+  spinner.text = 'Saved testing config to tech-stack.json';
 
   // Save testing rules markdown
   const { generateRules } = await inquirer.prompt([
@@ -415,7 +415,7 @@ export async function runTestSetup(options) {
   let rulesPath = null;
   if (generateRules) {
     rulesPath = saveTestingRules(testingConfig);
-    spinner.text = 'Saved TESTING_RULES.md';
+    spinner.text = 'Saved TESTING_RULES.md to .claude/task-lists/';
   }
 
   spinner.succeed('Configuration files created');
@@ -427,7 +427,8 @@ export async function runTestSetup(options) {
     `Credentials: ${CREDENTIAL_SOURCES[config.credentialSource].name}`,
     `Playwright: ${config.playwrightEnabled ? 'Enabled' : 'Disabled'}`,
     '',
-    `Config: ${configPath}`,
+    `Config saved to: ${configPath}`,
+    'Testing config is now stored in tech-stack.json under the "testing" section.',
   ];
 
   if (rulesPath) {

@@ -1,15 +1,64 @@
 /**
  * Testing Configuration Module
  *
- * Manages testing modes, credentials, and environment configuration
+ * Manages testing modes, credentials, and environment configuration.
+ * Testing config is stored in tech-stack.json under the `testing` section
+ * for unified configuration management.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 
-// Default paths
-const CONFIG_DIR = join(process.cwd(), '.gtask');
+// Default paths - now uses tech-stack.json
+const TECH_STACK_PATHS = [
+  join(process.cwd(), '.claude', 'tech-stack.json'),
+  join(process.cwd(), 'tech-stack.json'),
+];
+const RULES_DIR = join(process.cwd(), '.claude', 'task-lists');
 const TESTING_RULES_FILE = 'TESTING_RULES.md';
+
+/**
+ * Get path to tech-stack.json (prefers .claude/tech-stack.json)
+ */
+function getTechStackPath() {
+  for (const path of TECH_STACK_PATHS) {
+    if (existsSync(path)) {
+      return path;
+    }
+  }
+  return TECH_STACK_PATHS[0];
+}
+
+/**
+ * Load tech-stack.json
+ */
+function loadTechStackJson() {
+  const techStackPath = getTechStackPath();
+  if (existsSync(techStackPath)) {
+    try {
+      return JSON.parse(readFileSync(techStackPath, 'utf8'));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Save tech-stack.json
+ */
+function saveTechStackJson(techStack) {
+  const techStackPath = getTechStackPath();
+  const configDir = dirname(techStackPath);
+
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true });
+  }
+
+  techStack._lastModified = new Date().toISOString();
+  writeFileSync(techStackPath, JSON.stringify(techStack, null, 2), 'utf8');
+  return techStackPath;
+}
 
 /**
  * Testing mode definitions
@@ -99,23 +148,49 @@ export const CREDENTIAL_SOURCES = {
 };
 
 /**
- * Testing configuration structure
+ * Testing configuration structure (compatible with tech-stack.json `testing` section)
+ *
+ * This structure maps to tech-stack.json testing fields:
+ * - testing.e2e.framework -> e2e framework
+ * - testing.e2e.configFile -> playwright config
+ * - testing.selectors.* -> login selectors
+ * - testing.credentials.* -> env var names
  */
 export function createTestingConfig(options = {}) {
   return {
-    version: '1.0.0',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    // E2E testing configuration
+    e2e: {
+      framework: options.playwrightEnabled ? 'playwright' : 'none',
+      configFile: options.playwrightConfig || 'playwright.config.ts',
+      testCommand: 'npx playwright test',
+      browser: options.browser || 'chromium',
+      headless: options.headless ?? true,
+      timeout: options.timeout || 30000,
+    },
 
-    // Testing mode
-    mode: options.mode || 'manual',
-    ralphConfig: options.mode === 'ralph' ? {
-      maxIterations: options.maxIterations || 10,
-      completionPromise: options.completionPromise || 'all tasks complete and tests passing',
-      autoRetry: true,
-    } : null,
+    // Unit testing (preserved from existing config)
+    unit: {
+      framework: 'none',
+      testCommand: 'npm test',
+    },
 
-    // Environment
+    // Test selectors for login flow
+    selectors: {
+      strategy: 'data-testid',
+      username: options.usernameSelector || '[data-testid="username-input"]',
+      password: options.passwordSelector || '[data-testid="password-input"]',
+      loginButton: options.loginButtonSelector || '[data-testid="login-submit"]',
+      loginSuccess: options.loginSuccessSelector || '[data-testid="dashboard"]',
+    },
+
+    // Credentials (env var names, never actual credentials)
+    credentials: {
+      usernameEnvVar: options.envVars?.username || 'TEST_USER_USERNAME',
+      passwordEnvVar: options.envVars?.password || 'TEST_USER_PASSWORD',
+      source: options.credentialSource || 'env',
+    },
+
+    // Environment configuration
     environment: {
       type: options.envType || 'localhost',
       baseUrl: options.baseUrl || 'http://localhost:5173',
@@ -123,83 +198,105 @@ export function createTestingConfig(options = {}) {
       requiresSetup: options.requiresSetup || [],
     },
 
-    // Credentials
-    credentials: {
-      source: options.credentialSource || 'env',
-      envVars: options.envVars || {
-        username: 'TEST_USER_USERNAME',
-        password: 'TEST_USER_PASSWORD',
-      },
-      // Only stored if source is 'config'
-      username: options.credentialSource === 'config' ? options.username : undefined,
-      password: options.credentialSource === 'config' ? options.password : undefined,
-    },
-
-    // Playwright configuration
-    playwright: {
-      enabled: options.playwrightEnabled ?? true,
-      configPath: options.playwrightConfig || 'playwright.config.ts',
-      browser: options.browser || 'chromium',
-      headless: options.headless ?? true,
-      timeout: options.timeout || 30000,
-    },
-
-    // Test selectors (for login flow)
-    selectors: {
-      usernameInput: options.usernameSelector || '[data-testid="username-input"]',
-      passwordInput: options.passwordSelector || '[data-testid="password-input"]',
-      loginButton: options.loginButtonSelector || '[data-testid="login-submit"]',
-      loginSuccessIndicator: options.loginSuccessSelector || '[data-testid="dashboard"]',
-    },
+    // Testing mode (ralph loop, manual, minimal)
+    mode: options.mode || 'manual',
+    ralphConfig: options.mode === 'ralph' ? {
+      maxIterations: options.maxIterations || 10,
+      completionPromise: options.completionPromise || 'all tasks complete and tests passing',
+      autoRetry: true,
+    } : null,
 
     // Persistent rules file path
     rulesFile: options.rulesFile || null,
+
+    // Configuration metadata
+    _configuredAt: new Date().toISOString(),
+    _configuredBy: 'ccasp-test-setup',
   };
 }
 
 /**
- * Save testing configuration
+ * Save testing configuration to tech-stack.json
  */
 export function saveTestingConfig(config) {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-  }
+  // Load existing tech-stack or create default
+  let techStack = loadTechStackJson() || {
+    version: '2.0.0',
+    project: { name: 'unnamed', description: '' },
+    frontend: {},
+    backend: {},
+    testing: {},
+  };
 
-  const configPath = join(CONFIG_DIR, 'testing.json');
-  config.updatedAt = new Date().toISOString();
+  // Merge testing config into tech-stack
+  techStack.testing = {
+    ...techStack.testing,
+    ...config,
+  };
 
-  writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+  const configPath = saveTechStackJson(techStack);
 
-  // Add to .gitignore if credentials are stored
-  if (config.credentials.source === 'config') {
-    ensureGitignore('.gtask/testing.json');
+  // Also save to legacy location for backwards compatibility
+  // (will be removed in future version)
+  const legacyDir = join(process.cwd(), '.gtask');
+  if (existsSync(legacyDir)) {
+    try {
+      writeFileSync(
+        join(legacyDir, 'testing.json'),
+        JSON.stringify(config, null, 2),
+        'utf8'
+      );
+    } catch {
+      // Ignore legacy save errors
+    }
   }
 
   return configPath;
 }
 
 /**
- * Load testing configuration
+ * Load testing configuration from tech-stack.json
  */
 export function loadTestingConfig() {
-  const configPath = join(CONFIG_DIR, 'testing.json');
+  const techStack = loadTechStackJson();
 
-  if (!existsSync(configPath)) {
-    return null;
+  if (techStack?.testing && Object.keys(techStack.testing).length > 0) {
+    return techStack.testing;
   }
 
-  try {
-    return JSON.parse(readFileSync(configPath, 'utf8'));
-  } catch {
-    return null;
+  // Fallback to legacy .gtask/testing.json for backwards compatibility
+  const legacyPath = join(process.cwd(), '.gtask', 'testing.json');
+  if (existsSync(legacyPath)) {
+    try {
+      return JSON.parse(readFileSync(legacyPath, 'utf8'));
+    } catch {
+      return null;
+    }
   }
+
+  return null;
 }
 
 /**
- * Check if testing is configured
+ * Check if testing is configured (checks tech-stack.json and legacy location)
  */
 export function hasTestingConfig() {
-  return existsSync(join(CONFIG_DIR, 'testing.json'));
+  const techStack = loadTechStackJson();
+
+  // Check if tech-stack.json has meaningful testing config
+  if (techStack?.testing) {
+    const testing = techStack.testing;
+    // Consider configured if has e2e framework or selectors
+    if (testing.e2e?.framework && testing.e2e.framework !== 'none') {
+      return true;
+    }
+    if (testing.selectors?.username) {
+      return true;
+    }
+  }
+
+  // Fallback to legacy location
+  return existsSync(join(process.cwd(), '.gtask', 'testing.json'));
 }
 
 /**
@@ -320,14 +417,14 @@ npx playwright test --ui
 }
 
 /**
- * Save testing rules markdown file
+ * Save testing rules markdown file to .claude/task-lists/
  */
 export function saveTestingRules(config, filename = TESTING_RULES_FILE) {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  if (!existsSync(RULES_DIR)) {
+    mkdirSync(RULES_DIR, { recursive: true });
   }
 
-  const rulesPath = join(CONFIG_DIR, filename);
+  const rulesPath = join(RULES_DIR, filename);
   const content = generateTestingRules(config);
 
   writeFileSync(rulesPath, content, 'utf8');
@@ -356,24 +453,19 @@ function ensureGitignore(pattern) {
 }
 
 /**
- * Get credentials based on config
+ * Get credentials based on config (uses new tech-stack.json structure)
  */
 export function getCredentials(config) {
-  if (!config || config.credentials.source === 'none') {
+  if (!config || config.credentials?.source === 'none') {
     return null;
   }
 
-  if (config.credentials.source === 'env') {
+  if (config.credentials?.source === 'env') {
+    const usernameVar = config.credentials.usernameEnvVar || config.credentials.envVars?.username;
+    const passwordVar = config.credentials.passwordEnvVar || config.credentials.envVars?.password;
     return {
-      username: process.env[config.credentials.envVars.username] || null,
-      password: process.env[config.credentials.envVars.password] || null,
-    };
-  }
-
-  if (config.credentials.source === 'config') {
-    return {
-      username: config.credentials.username,
-      password: config.credentials.password,
+      username: process.env[usernameVar] || null,
+      password: process.env[passwordVar] || null,
     };
   }
 
@@ -382,10 +474,11 @@ export function getCredentials(config) {
 }
 
 /**
- * Validate testing configuration
+ * Validate testing configuration (works with tech-stack.json structure)
  */
 export function validateConfig(config) {
   const errors = [];
+  const warnings = [];
 
   if (!config.environment?.baseUrl) {
     errors.push('Base URL is required');
@@ -393,9 +486,12 @@ export function validateConfig(config) {
 
   if (config.credentials?.source === 'env') {
     const creds = getCredentials(config);
+    const usernameVar = config.credentials.usernameEnvVar || config.credentials.envVars?.username;
+    const passwordVar = config.credentials.passwordEnvVar || config.credentials.envVars?.password;
+
     if (!creds?.username || !creds?.password) {
-      errors.push(
-        `Environment variables not set: ${config.credentials.envVars.username}, ${config.credentials.envVars.password}`
+      warnings.push(
+        `Environment variables not set: ${usernameVar}, ${passwordVar}`
       );
     }
   }
@@ -404,8 +500,41 @@ export function validateConfig(config) {
     errors.push('Ralph configuration missing');
   }
 
+  if (config.e2e?.framework === 'none') {
+    warnings.push('No E2E testing framework configured');
+  }
+
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
+  };
+}
+
+/**
+ * Get a summary of what testing features are configured
+ */
+export function getTestingConfigSummary() {
+  const config = loadTestingConfig();
+
+  if (!config) {
+    return {
+      configured: false,
+      e2eFramework: null,
+      hasSelectors: false,
+      hasCredentials: false,
+      environment: null,
+      mode: null,
+    };
+  }
+
+  return {
+    configured: true,
+    e2eFramework: config.e2e?.framework || config.playwright?.enabled ? 'playwright' : null,
+    hasSelectors: !!(config.selectors?.username || config.selectors?.usernameInput),
+    hasCredentials: !!(config.credentials?.usernameEnvVar || config.credentials?.envVars?.username),
+    environment: config.environment?.type || 'localhost',
+    baseUrl: config.environment?.baseUrl,
+    mode: config.mode || 'manual',
   };
 }

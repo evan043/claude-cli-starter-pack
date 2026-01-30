@@ -50,15 +50,95 @@ These rules are loaded automatically and apply to ALL task lists created by this
 
 ## EXECUTION FLOW
 
-### Step 0: Load Persistent Rules
+### Step 0: Check Testing Configuration (Graceful Degradation)
 
-**FIRST ACTION**: Read `.claude/task-lists/TESTING_RULES.md` to load testing and deployment rules.
+**FIRST ACTION**: Check what testing configuration is available and display status.
+
+**Configuration Check**:
+
+1. **Read tech-stack.json** (`.claude/tech-stack.json` or `tech-stack.json`)
+2. **Check testing section** for:
+   - `testing.e2e.framework` - E2E framework (playwright, cypress, etc.)
+   - `testing.selectors.*` - Login form selectors
+   - `testing.credentials.*` - Environment variable names
+   - `testing.environment.*` - Base URL and setup
+
+3. **Display Configuration Status**:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📋 Testing Configuration Status                               ║
+╠═══════════════════════════════════════════════════════════════╣
+{{#if testing.e2e.framework}}
+║  ✅ E2E Framework: {{testing.e2e.framework}}                   ║
+{{else}}
+║  ⚠️  E2E Framework: Not configured                             ║
+{{/if}}
+{{#if testing.selectors.username}}
+║  ✅ Login Selectors: Configured                                ║
+{{else}}
+║  ⚠️  Login Selectors: Not configured                           ║
+{{/if}}
+{{#if testing.credentials.usernameEnvVar}}
+║  ✅ Credentials: Using env vars                                ║
+{{else}}
+║  ⚠️  Credentials: Not configured                               ║
+{{/if}}
+{{#if testing.environment.baseUrl}}
+║  ✅ Test URL: {{testing.environment.baseUrl}}                  ║
+{{else}}
+║  ⚠️  Test URL: Not configured                                  ║
+{{/if}}
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Graceful Degradation Rules**:
+
+| Config Status | Behavior |
+|---------------|----------|
+| **Fully configured** | Include all testing tasks (login, verification, E2E) |
+| **Partially configured** | Include available tests, warn about missing pieces |
+| **Not configured** | Skip testing tasks, show setup reminder at end |
+
+**If testing is NOT configured**, display this reminder and continue:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ℹ️  Testing not configured - skipping E2E verification        ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  To enable automated testing, run:                            ║
+║                                                               ║
+║    ccasp test-setup                                           ║
+║                                                               ║
+║  Or configure manually in tech-stack.json under "testing"     ║
+║                                                               ║
+║  Task list will be created WITHOUT testing tasks.             ║
+║  You can still test manually after implementation.            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Store configuration status** for use in later steps:
+- `TESTING_CONFIGURED`: true/false
+- `E2E_ENABLED`: true if framework is set and not 'none'
+- `SELECTORS_AVAILABLE`: true if login selectors exist
+
+---
+
+### Step 0b: Load Persistent Rules (if configured)
+
+{{#if testing.e2e.framework}}
+**Read `.claude/task-lists/TESTING_RULES.md`** to load testing and deployment rules.
 
 These rules govern:
 - Which URLs to use ({{devEnvironment.tunnel.service}} vs {{urls.production.frontend}})
 - Login credentials
 - Deployment workflow (delete {{frontend.distDir}}, rebuild, verify SHA)
 - Task completion workflow (curl → {{testing.e2e.framework}} → commit)
+{{else}}
+**Skip loading TESTING_RULES.md** - testing not configured.
+{{/if}}
 
 ---
 
@@ -164,7 +244,8 @@ Based on my exploration, here's what I found:
 
 **MANDATORY QUESTIONS** (use AskUserQuestion with multiple questions):
 
-**Question 1: Testing Approach**
+{{#if testing.e2e.framework}}
+**Question 1: Testing Approach** (only if E2E_ENABLED)
 ```
 header: "Testing"
 question: "Do you want to use 'Ralph Wiggum Loop' style testing? (Continuous test-fix cycle until all tests pass)"
@@ -176,8 +257,23 @@ options:
   - label: "Minimal Testing"
     description: "Only test at the end of all tasks"
 ```
+{{else}}
+**Question 1: Testing Approach** (testing not configured - simplified options)
+```
+header: "Testing"
+question: "Testing is not configured. How would you like to verify your changes?"
+options:
+  - label: "Manual verification only"
+    description: "I'll test the changes manually - no automated tests"
+  - label: "Setup testing first"
+    description: "I want to configure automated testing before proceeding (run: ccasp test-setup)"
+```
 
-**Question 2: {{testing.e2e.framework}} Environment**
+**Note**: If user selects "Setup testing first", provide instructions to run `ccasp test-setup` and restart the task list creation.
+{{/if}}
+
+{{#if testing.e2e.framework}}
+**Question 2: {{testing.e2e.framework}} Environment** (only if E2E_ENABLED)
 ```
 header: "{{testing.e2e.framework}}"
 question: "Where should {{testing.e2e.framework}} E2E tests run?"
@@ -189,6 +285,9 @@ options:
   - label: "No {{testing.e2e.framework}}"
     description: "Skip E2E tests, use curl/unit tests only"
 ```
+{{else}}
+**Question 2: SKIP** (E2E not configured - skip this question)
+{{/if}}
 
 **Question 3: GitHub Integration**
 ```
@@ -233,8 +332,9 @@ options:
 
 Use **TaskCreate** to build the task list with Claude's native system.
 
-**Task List Structure**:
+**Task List Structure** (adapts based on TESTING_CONFIGURED status):
 
+{{#if testing.e2e.framework}}
 ```
 Task 0: "Review Testing Rules" (DO NOT MARK COMPLETE)
   description: "Read .claude/task-lists/TESTING_RULES.md before starting. These rules apply to all tasks."
@@ -259,7 +359,7 @@ Task 2: "[First actual task]"
   description: "[What needs to be done]"
   activeForm: "[Present participle form]"
 
-Task 2: "[Second task]"
+Task 3: "[Second task]"
   ...
 
 Task N-1: "Run final verification tests"
@@ -270,11 +370,41 @@ Task N: "Commit all changes"
   description: "Create a git commit with all changes from this session"
   activeForm: "Committing changes"
 ```
+{{else}}
+```
+Task 0: "Context Reference" (DO NOT MARK COMPLETE)
+  description: "Testing not configured. To enable: run 'ccasp test-setup'. Tasks below will NOT include automated testing."
+  activeForm: "Maintaining context"
+
+Task 1: "[First actual task]"
+  description: "[What needs to be done]"
+  activeForm: "[Present participle form]"
+
+Task 2: "[Second task]"
+  ...
+
+Task N-1: "Manual verification"
+  description: "Manually test the changes in your browser/application to verify everything works"
+  activeForm: "Manually verifying changes"
+
+Task N: "Commit all changes"
+  description: "Create a git commit with all changes from this session"
+  activeForm: "Committing changes"
+```
+
+**Note**: Since E2E testing is not configured, the task list excludes:
+- Login via Playwright/Puppeteer task
+- Automated E2E verification tests
+
+The user should manually verify changes work before committing.
+{{/if}}
 
 **IMPORTANT**:
 - Task 0 with persistent instructions should NEVER be marked complete
 - Each task should be atomic and independently verifiable
+{{#if testing.e2e.framework}}
 - Include curl testing tasks BEFORE {{testing.e2e.framework}} tasks when debugging
+{{/if}}
 
 ---
 
@@ -441,8 +571,14 @@ const config = {
    ...
 
    **Configuration:**
+{{#if testing.e2e.framework}}
    - Testing Mode: [Ralph Loop / Manual / Minimal]
+   - E2E Framework: {{testing.e2e.framework}}
    - Environment: [{{devEnvironment.tunnel.service}} / {{urls.production.frontend}}]
+{{else}}
+   - Testing: Not configured (manual verification only)
+   - To enable: run `ccasp test-setup`
+{{/if}}
    - Execution Strategy: [Sequential / Grouped / All at once]
    - GitHub Issue: [#123 (if created) | Not tracked]
    ```
@@ -494,6 +630,49 @@ options:
    - Execute all tasks without intermediate commits
    - Single comprehensive commit at the end
    - Higher risk but faster for simple changes
+
+---
+
+### Step 9: Post-Execution Summary
+
+After all tasks are complete, display a summary:
+
+{{#if testing.e2e.framework}}
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ All Tasks Completed                                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Tasks completed: [N]                                         ║
+║  E2E tests: [Passed/Failed]                                   ║
+║  Commits made: [M]                                            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+{{else}}
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ All Tasks Completed                                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Tasks completed: [N]                                         ║
+║  Commits made: [M]                                            ║
+║                                                               ║
+║  ℹ️  Testing was skipped (not configured)                      ║
+║                                                               ║
+║  To enable automated E2E testing for future tasks:            ║
+║                                                               ║
+║    ccasp test-setup                                           ║
+║                                                               ║
+║  This will configure:                                         ║
+║  • Playwright/Cypress/Puppeteer integration                   ║
+║  • Login selectors for authenticated testing                  ║
+║  • Test environment URLs                                      ║
+║  • Ralph Loop continuous testing                              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+{{/if}}
 
 ---
 
