@@ -1583,8 +1583,14 @@ export async function runInit(options = {}) {
         if (template) {
           content = template();
         } else {
-          failed.push({ name: cmdName, error: 'No template found' });
-          continue;
+          // Try to load from templates/commands/ folder
+          const templatePath = join(__dirname, '..', '..', 'templates', 'commands', `${cmdName}.template.md`);
+          if (existsSync(templatePath)) {
+            content = readFileSync(templatePath, 'utf8');
+          } else {
+            failed.push({ name: cmdName, error: 'No template found' });
+            continue;
+          }
         }
       }
 
