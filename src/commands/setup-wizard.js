@@ -743,7 +743,8 @@ async function runQuickSetup() {
 
     // Run init with selected features
     // Features are already in init.js-compatible format (INDIVIDUAL_FEATURES uses correct names)
-    spinner.start('Initializing .claude folder...');
+    // Note: Don't use spinner here since runInit has its own console output
+    console.log('');
 
     // Check if any features require post-configuration
     const featuresRequiringConfig = features.filter((f) =>
@@ -757,7 +758,7 @@ async function runQuickSetup() {
       skipPrompts: true,
     });
 
-    spinner.succeed('.claude folder created!');
+    console.log(chalk.green('\n✓ .claude folder setup complete!'));
 
     // Show which features need post-configuration
     if (featuresRequiringConfig.length > 0) {
@@ -793,7 +794,7 @@ async function runQuickSetup() {
     showCompletionMessage();
     return true;
   } catch (error) {
-    spinner.fail('Setup failed');
+    console.error(chalk.red('\n✗ Setup failed'));
     console.error(chalk.red(error.message));
     return false;
   }

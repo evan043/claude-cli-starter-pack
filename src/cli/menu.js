@@ -20,9 +20,11 @@ import { runCreatePhaseDev, showPhasDevMainMenu } from '../commands/create-phase
 import { runExploreMcp, showExploreMcpMenu } from '../commands/explore-mcp.js';
 import { runClaudeAudit, showClaudeAuditMenu } from '../commands/claude-audit.js';
 import { runRoadmap, showRoadmapMenu } from '../commands/roadmap.js';
+import { launchPanel } from '../commands/panel.js';
 import { hasTestingConfig } from '../testing/config.js';
 import { showHelp } from '../commands/help.js';
 import { hasValidConfig, getVersion, loadTechStack, saveTechStack } from '../utils.js';
+import { performVersionCheck, formatUpdateBanner } from '../utils/version-check.js';
 
 /**
  * Get bypass permissions status from settings.json
@@ -668,6 +670,20 @@ export async function showMainMenu() {
     console.log(chalk.yellow('  ⚠ Not configured - run Setup first'));
   }
   console.log(chalk.dim(`  v${getVersion()}`));
+
+  // Check for updates (uses 1-hour cache)
+  try {
+    const updateCheck = await performVersionCheck(process.cwd(), false);
+    if (updateCheck.updateAvailable && updateCheck.shouldNotify) {
+      const banner = formatUpdateBanner(updateCheck);
+      if (banner) {
+        console.log(chalk.yellow(banner));
+      }
+    }
+  } catch {
+    // Silently ignore update check failures
+  }
+
   console.log('');
 
   const choices = [
@@ -701,6 +717,12 @@ export async function showMainMenu() {
       name: `${chalk.yellow('6)')} ${chalk.bold('Install Claude Command')} Add to .claude/commands/`,
       value: 'install',
       short: 'Install',
+    },
+    new inquirer.Separator(),
+    {
+      name: `${chalk.bold.white('⚡')} ${chalk.bold.cyan('Launch Control Panel')}   ${chalk.dim('Agents, Skills, Hooks, MCP (new window)')}`,
+      value: 'launch-panel',
+      short: 'Panel',
     },
     new inquirer.Separator(),
     {
@@ -858,6 +880,11 @@ export async function showMainMenu() {
 
     case 'install':
       await runInstall({});
+      await returnToMenu();
+      break;
+
+    case 'launch-panel':
+      await launchPanel();
       await returnToMenu();
       break;
 

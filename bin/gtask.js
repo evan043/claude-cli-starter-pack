@@ -33,6 +33,8 @@ import { showHelp } from '../src/commands/help.js';
 import { runSetupWizard } from '../src/commands/setup-wizard.js';
 import { installSkillCommand, listSkills } from '../src/commands/install-skill.js';
 import { runInstallScripts } from '../src/commands/install-scripts.js';
+import { runPanel, launchPanel } from '../src/commands/panel.js';
+import { runInstallPanelHook } from '../src/commands/install-panel-hook.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -300,6 +302,33 @@ program
   .option('--list', 'List available scripts')
   .action(async (options) => {
     await runInstallScripts(options);
+  });
+
+// Panel - persistent control panel for Claude Code
+program
+  .command('panel')
+  .description('Launch persistent control panel (run in separate terminal)')
+  .action(async () => {
+    await runPanel();
+  });
+
+// Panel launcher - opens panel in new window
+program
+  .command('panel-launch')
+  .alias('pl')
+  .description('Open CCASP panel in a new terminal window')
+  .action(async () => {
+    await launchPanel();
+  });
+
+// Install panel hook
+program
+  .command('install-panel-hook')
+  .description('Install queue reader hook for panel integration')
+  .option('--global', 'Install to ~/.claude/ (all projects)')
+  .option('--force', 'Overwrite existing hook')
+  .action(async (options) => {
+    await runInstallPanelHook(options);
   });
 
 // Parse and run

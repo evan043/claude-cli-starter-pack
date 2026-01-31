@@ -400,9 +400,9 @@ export async function runTestSetup(options) {
 
   // Save main config to tech-stack.json
   const configPath = saveTestingConfig(testingConfig);
-  spinner.text = 'Saved testing config to tech-stack.json';
+  spinner.succeed('Saved testing config to tech-stack.json');
 
-  // Save testing rules markdown
+  // Save testing rules markdown - ask user AFTER spinner is stopped
   const { generateRules } = await inquirer.prompt([
     {
       type: 'confirm',
@@ -414,11 +414,10 @@ export async function runTestSetup(options) {
 
   let rulesPath = null;
   if (generateRules) {
+    const rulesSpinner = ora('Generating TESTING_RULES.md...').start();
     rulesPath = saveTestingRules(testingConfig);
-    spinner.text = 'Saved TESTING_RULES.md to .claude/task-lists/';
+    rulesSpinner.succeed('Saved TESTING_RULES.md to .claude/task-lists/');
   }
-
-  spinner.succeed('Configuration files created');
 
   // Summary
   const details = [

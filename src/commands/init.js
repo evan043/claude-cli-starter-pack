@@ -116,7 +116,7 @@ const OPTIONAL_FEATURES = [
     description: 'Pre-built skills for agent creation, hook creation, and RAG-enhanced agent building. Provides best-practice templates for extending Claude Code.',
     commands: [],
     hooks: [],
-    skills: ['agent-creator', 'hook-creator', 'rag-agent-creator'],
+    skills: ['agent-creator', 'hook-creator', 'rag-agent-creator', 'panel'],
     default: true,
     requiresPostConfig: false,
   },
@@ -150,6 +150,12 @@ const AVAILABLE_COMMANDS = [
     category: 'Navigation',
     selected: true,
     required: true,
+  },
+  {
+    name: 'ccasp-panel',
+    description: 'Launch control panel in new terminal (agents, skills, hooks, MCP)',
+    category: 'Navigation',
+    selected: true,
   },
   {
     name: 'e2e-test',
@@ -349,316 +355,87 @@ const AVAILABLE_COMMANDS = [
 ];
 
 /**
- * Generate the sophisticated /menu command
+ * Generate the /menu command - launches CCASP Panel in new terminal
  */
 function generateMenuCommand(projectName, installedCommands, installedAgents, installedSkills, installedHooks) {
   const date = new Date().toISOString().split('T')[0];
 
-  // Group commands by category
-  const commandsByCategory = {};
+  // Build command list for reference
+  let commandList = '';
   for (const cmdName of installedCommands) {
     const cmd = AVAILABLE_COMMANDS.find((c) => c.name === cmdName);
     if (cmd && cmd.name !== 'menu') {
-      if (!commandsByCategory[cmd.category]) {
-        commandsByCategory[cmd.category] = [];
-      }
-      commandsByCategory[cmd.category].push(cmd);
+      commandList += `| /${cmd.name} | ${cmd.description} |\n`;
     }
   }
-
-  // Build category sections for the menu
-  let categoryMenuItems = '';
-  let categoryInstructions = '';
-  let keyIndex = 1;
-  const keyMap = {};
-
-  for (const [category, cmds] of Object.entries(commandsByCategory)) {
-    categoryMenuItems += `\n### ${category}\n`;
-    for (const cmd of cmds) {
-      const key = keyIndex <= 9 ? keyIndex.toString() : String.fromCharCode(65 + keyIndex - 10); // 1-9, then A-Z
-      keyMap[key] = cmd.name;
-      categoryMenuItems += `- **[${key}]** \`/${cmd.name}\` - ${cmd.description}\n`;
-      keyIndex++;
-    }
-  }
-
-  // Build agents section
-  let agentsSection = '';
-  if (installedAgents.length > 0) {
-    agentsSection = `\n### Agents\n`;
-    for (const agent of installedAgents) {
-      agentsSection += `- **${agent}** - Custom agent\n`;
-    }
-  }
-
-  // Build skills section
-  let skillsSection = '';
-  if (installedSkills.length > 0) {
-    skillsSection = `\n### Skills\n`;
-    for (const skill of installedSkills) {
-      skillsSection += `- **${skill}** - Custom skill\n`;
-    }
-  }
-
-  // Build hooks section
-  let hooksSection = '';
-  if (installedHooks.length > 0) {
-    hooksSection = `\n### Active Hooks\n`;
-    for (const hook of installedHooks) {
-      hooksSection += `- **${hook}**\n`;
-    }
-  }
-
-  const ccaspVersion = getVersion();
 
   return `---
-description: Interactive project menu - Quick access to all commands, agents, skills, and tools
+description: Launch CCASP Control Panel - Interactive menu in separate terminal
 ---
 
-# ${projectName} - Project Menu
-
-## IMPORTANT: Check Update State First
-
-Before displaying the menu, read \`.claude/config/ccasp-state.json\` to check for updates:
-
-\`\`\`javascript
-{
-  "currentVersion": "1.0.5",
-  "latestVersion": "1.0.6",
-  "updateAvailable": true,
-  "updateHighlights": [...],
-  "updateFirstDisplayed": false
-}
-\`\`\`
-
-## Dynamic Menu Header
-
-Build the header based on update state. Replace \`{{VERSION}}\` and \`{{UPDATE_STATUS}}\` dynamically:
-
-\`\`\`
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                                                                               ║
-║   ╔═╗╦  ╔═╗╦ ╦╔╦╗╔═╗  ╔═╗╔╦╗╦  ╦╔═╗╔╗╔╔═╗╔═╗╔╦╗  ╔═╗╔╦╗╔═╗╦═╗╔╦╗╔═╗╦═╗       ║
-║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
-║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
-║                                                                               ║
-║   ${projectName.padEnd(35)}  v{{VERSION}} {{UPDATE_STATUS}}     ║
-║                                                                               ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
-\`\`\`
-
-**If update is available**, replace:
-- \`{{VERSION}}\` with current version (e.g., "1.0.5")
-- \`{{UPDATE_STATUS}}\` with \`[NEW UPDATE]\` in bold/highlighted
-
-**If up to date**, replace:
-- \`{{VERSION}}\` with current version
-- \`{{UPDATE_STATUS}}\` with empty string
-
-## Update Banner (Show When Update Available)
-
-If \`updateAvailable: true\`, display this banner BEFORE the main menu:
-
-\`\`\`
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  📦 NEW UPDATE AVAILABLE: v{{currentVersion}} → v{{latestVersion}}          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  What's New:                                                                │
-│  {{#each updateHighlights}}                                                 │
-│    • {{summary}}                                                            │
-│  {{/each}}                                                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Press [N] to update now  │  Press [U] for details  │  Press any to dismiss │
-└─────────────────────────────────────────────────────────────────────────────┘
-\`\`\`
-
-**IMPORTANT**: After displaying the update banner for the first time, update the state file:
-\`updateFirstDisplayed: true\` - This prevents showing the full highlights again.
-
-On subsequent displays (when \`updateFirstDisplayed: true\`), show a compact banner:
-
-\`\`\`
-┌──────────────────────────────────────────────────────────────┐
-│ 📦 Update available: v{{currentVersion}} → v{{latestVersion}} │ [N] Update │
-└──────────────────────────────────────────────────────────────┘
-\`\`\`
-
-## Main Menu Body
-
-\`\`\`
-║                                                                               ║
-║   Quick Actions:                                                              ║
-║   ─────────────                                                               ║
-║   [T] Run Tests          [G] GitHub Task        [P] Phase Dev Plan            ║
-║   [A] Create Agent       [H] Create Hook        [S] Create Skill              ║
-║   [M] Explore MCP        [C] Claude Audit       [E] Explore Codebase          ║
-║                                                                               ║
-║   Project Resources:                                                          ║
-║   ──────────────────                                                          ║
-║   [1] View Agents        [2] View Skills        [3] View Hooks                ║
-║   [4] View Commands      [5] Settings           [6] Documentation             ║
-║                                                                               ║
-║   Project Implementation:                                                     ║
-║   ───────────────────────                                                     ║
-║   [I] /project-impl      Agent-powered setup & configuration                  ║
-║                                                                               ║
-║   Navigation:                                                                 ║
-║   ───────────                                                                 ║
-║   [U] Check for Updates  [R] Refresh Menu       [?] Help       [Q] Exit      ║
-{{#if updateAvailable}}
-║   [N] UPDATE NOW         Run: npm update -g claude-cli-advanced-starter-pack  ║
-{{/if}}
-║                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
-\`\`\`
-
-## How to Use This Menu
-
-When the user invokes \`/menu\`:
-
-1. **Read update state**: Check \`.claude/config/ccasp-state.json\` for cached update info
-2. **Build dynamic header**: Include version number and update status
-3. **Show update banner**: If updates available, show banner with highlights (first time) or compact (subsequent)
-4. **Display the menu**: Show the ASCII art menu with dynamic content
-5. **Wait for input**: Accept single character or command name
-
-### Key Bindings
-
-| Key | Action | Command |
-|-----|--------|---------|
-| **T** | Run E2E Tests | \`/e2e-test\` |
-| **G** | Create GitHub Task | \`/github-task\` |
-| **P** | Create Phase Dev Plan | \`/phase-dev-plan\` |
-| **A** | Create Agent | \`/create-agent\` |
-| **H** | Create Hook | \`/create-hook\` |
-| **S** | Create Skill | \`/create-skill\` |
-| **M** | Explore MCP Servers | \`/explore-mcp\` |
-| **C** | Claude Audit | \`/claude-audit\` |
-| **E** | Explore Codebase | \`/codebase-explorer\` |
-| **1** | List project agents | Read \`.claude/agents/\` |
-| **2** | List project skills | Read \`.claude/skills/\` |
-| **3** | List active hooks | Read \`.claude/hooks/\` |
-| **4** | List all commands | Read \`.claude/commands/INDEX.md\` |
-| **5** | View/edit settings | Read \`.claude/settings.json\` |
-| **6** | Open documentation | Read \`.claude/docs/\` |
-| **I** | Project Implementation | \`/project-impl\` |
-| **U** | Check for Updates | \`/update-check\` |
-| **N** | Update Now | Run npm update (only shown when update available) |
-| **R** | Refresh and redisplay menu | Re-invoke \`/menu\` |
-| **?** | Show help | Display command descriptions |
-| **Q** | Exit menu | End menu interaction |
-
-## Installed Commands
-${categoryMenuItems}
-${agentsSection}
-${skillsSection}
-${hooksSection}
+# ${projectName} - Menu
 
 ## Instructions for Claude
 
-When this command is invoked:
+**EXECUTE IMMEDIATELY**: Launch the CCASP Control Panel in a new terminal window.
 
-### Step 1: Read Update State
+### Step 1: Launch Panel
 
-Read \`.claude/config/ccasp-state.json\`:
+Use the Bash tool to run this command:
 
+**Windows:**
 \`\`\`bash
-cat .claude/config/ccasp-state.json 2>/dev/null || echo "{}"
+start powershell -NoExit -Command "ccasp panel"
 \`\`\`
 
-Parse the JSON to extract:
-- \`currentVersion\`: Installed CCASP version
-- \`latestVersion\`: Latest version on npm
-- \`updateAvailable\`: Boolean indicating if update exists
-- \`updateHighlights\`: Array of release summaries
-- \`updateFirstDisplayed\`: Whether full highlights have been shown
-- \`projectImplCompleted\`: Whether user has run /project-impl (default: false)
-
-### Step 2: Build Dynamic Menu
-
-Replace template variables in the menu:
-- \`{{VERSION}}\` → currentVersion (e.g., "1.0.6")
-- \`{{UPDATE_STATUS}}\` → "[NEW UPDATE]" if updateAvailable, else ""
-
-### Step 3: Display Update Banner (If Applicable)
-
-**First time showing update** (\`updateAvailable && !updateFirstDisplayed\`):
-Show full banner with highlights, then update state:
-
+**macOS:**
 \`\`\`bash
-# After displaying, update the state file to mark as displayed
+osascript -e 'tell application "Terminal" to do script "ccasp panel"'
 \`\`\`
 
-Set \`updateFirstDisplayed: true\` in ccasp-state.json using Edit tool.
-
-**Subsequent displays** (\`updateAvailable && updateFirstDisplayed\`):
-Show compact banner only.
-
-### Step 3b: Show Setup Recommendation (If Applicable)
-
-If \`projectImplCompleted\` is \`false\` or missing, display this banner at the BOTTOM of the menu (after the closing box but before the input prompt):
-
-\`\`\`
-💡 Tip: Run /project-impl to configure your project (audit CLAUDE.md, detect tech stack, set up deployment)
+**Linux:**
+\`\`\`bash
+gnome-terminal -- ccasp panel &
 \`\`\`
 
-This banner should be subtle - just a single line tip. Once the user runs any option in /project-impl, update the state file to set \`projectImplCompleted: true\` and this banner will no longer appear.
+### Step 2: Confirm Launch
 
-### Step 4: Display Menu and Wait for Input
-
-Ask: "What would you like to do? Enter a key:"
-
-### Step 5: Handle User Selection
-
-| Key | Action |
-|-----|--------|
-| **N** | **Update Now**: Run \`npm update -g claude-cli-advanced-starter-pack\` via Bash, then show: "Update complete! Restart Claude Code CLI to use new features." |
-| **U** | Invoke \`/update-check\` for detailed update info and feature management |
-| **I** | Invoke \`/project-impl\` for project implementation |
-| **R** | Re-invoke \`/menu\` (refresh) |
-| **Q** | End menu session |
-| **1-6** | Read and display the corresponding resource |
-| **Other** | Invoke the corresponding slash command |
-
-### Example: Update Now Flow
+After running the command, display this confirmation:
 
 \`\`\`
-User: N
+✅ CCASP Control Panel launched in a new terminal window!
 
-Claude: Updating CCASP...
+┌─────────────────────────────────────────────────────────────────┐
+│ CCASP Control Panel (NEW WINDOW)                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Agents & Skills:                                               │
+│    [A] Create Agent     [H] Create Hook      [S] Create Skill  │
+│    [M] Explore MCP      [C] Claude Audit     [E] Explore Code  │
+│                                                                 │
+│  Quick Actions:                                                 │
+│    [P] Phase Dev Plan   [G] GitHub Task      [T] Run E2E Tests │
+│    [U] Update Check                                             │
+│                                                                 │
+│  Controls:                                                      │
+│    [Q] Quit   [R] Refresh   [X] Clear Queue   [?] Help         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-[Runs: npm update -g claude-cli-advanced-starter-pack]
-
-Claude:
-┌─────────────────────────────────────────────────────────────┐
-│  ✅ Update Complete!                                         │
-│                                                              │
-│  Updated: v1.0.5 → v1.0.6                                   │
-│                                                              │
-│  ⚠️  RESTART REQUIRED                                        │
-│  Exit and restart Claude Code CLI to use new features.      │
-│                                                              │
-│  Then run: ccasp wizard → select "Prior Releases" to add    │
-│  any new commands to this project.                          │
-└─────────────────────────────────────────────────────────────┘
+How to use:
+1. Switch to the new PowerShell window with the panel
+2. Press a single key to select a command (e.g., 'A' for Create Agent)
+3. Return to this Claude Code session
+4. Press Enter on an empty prompt - the command will execute automatically
 \`\`\`
 
-### Update Check Behavior
+## Direct Commands (Alternative)
 
-- The startup hook (\`ccasp-update-check.js\`) runs automatically on first prompt
-- Checks npm registry with 1-hour cache
-- Stores result in \`.claude/config/ccasp-state.json\`
-- Menu reads this cached state (no network call needed)
+If the panel doesn't work, you can invoke these commands directly:
 
-### Dynamic Content
-
-When displaying resource views (1-6), read the actual contents from:
-- Agents: \`.claude/agents/*.md\` files
-- Skills: \`.claude/skills/*/skill.md\` files
-- Hooks: \`.claude/hooks/*.js\` files
-- Commands: \`.claude/commands/INDEX.md\`
-- Settings: \`.claude/settings.json\` and \`.claude/settings.local.json\`
-- Docs: \`.claude/docs/\` directory listing
+| Command | Description |
+|---------|-------------|
+${commandList}
 
 ---
 
@@ -1679,20 +1456,23 @@ export async function runInit(options = {}) {
     console.log(chalk.dim('    Use --force flag to overwrite specific commands if needed.'));
     console.log('');
 
-    const { confirmProceed } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'confirmProceed',
-        message: 'Continue with installation? (existing files are safe)',
-        default: true,
-      },
-    ]);
+    // Skip prompt if called non-interactively (e.g., from wizard)
+    if (!options.skipPrompts) {
+      const { confirmProceed } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'confirmProceed',
+          message: 'Continue with installation? (existing files are safe)',
+          default: true,
+        },
+      ]);
 
-    if (!confirmProceed) {
-      console.log(chalk.dim('\nCancelled. No changes made.'));
-      return;
+      if (!confirmProceed) {
+        console.log(chalk.dim('\nCancelled. No changes made.'));
+        return;
+      }
+      console.log('');
     }
-    console.log('');
   }
 
   // Step 1: Check and create folder structure
@@ -1866,35 +1646,50 @@ export async function runInit(options = {}) {
   console.log('');
 
   // Step 4: Select optional features
-  console.log(chalk.bold('Step 4: Select optional features\n'));
-  console.log(chalk.dim('  Each feature adds commands and hooks to your project.'));
-  console.log(chalk.dim('  Features marked with (*) require additional configuration via /menu after installation.\n'));
+  let selectedFeatures;
 
-  // Display feature descriptions in a nice format
-  for (const feature of OPTIONAL_FEATURES) {
-    const marker = feature.default ? chalk.green('●') : chalk.dim('○');
-    const postConfig = feature.requiresPostConfig ? chalk.yellow(' (*)') : '';
-    console.log(`  ${marker} ${chalk.bold(feature.label)}${postConfig}`);
-    console.log(chalk.dim(`     ${feature.description}`));
-    if (feature.commands.length > 0) {
-      console.log(chalk.dim(`     Adds: ${feature.commands.map(c => '/' + c).join(', ')}`));
+  if (options.skipPrompts && options.features) {
+    // Use features passed from wizard
+    selectedFeatures = options.features;
+    console.log(chalk.bold('Step 4: Using pre-selected features\n'));
+    if (selectedFeatures.length > 0) {
+      console.log(chalk.dim(`  Features: ${selectedFeatures.join(', ')}`));
+    } else {
+      console.log(chalk.dim('  Minimal mode - essential commands only'));
     }
     console.log('');
-  }
+  } else {
+    console.log(chalk.bold('Step 4: Select optional features\n'));
+    console.log(chalk.dim('  Each feature adds commands and hooks to your project.'));
+    console.log(chalk.dim('  Features marked with (*) require additional configuration via /menu after installation.\n'));
 
-  const { selectedFeatures } = await inquirer.prompt([
-    {
-      type: 'checkbox',
-      name: 'selectedFeatures',
-      message: 'Select features to enable:',
-      choices: OPTIONAL_FEATURES.map((feature) => ({
-        name: `${feature.label}${feature.requiresPostConfig ? ' (*)' : ''} - ${feature.commands.length} commands, ${feature.hooks.length} hooks`,
-        value: feature.name,
-        checked: feature.default,
-      })),
-      pageSize: 10,
-    },
-  ]);
+    // Display feature descriptions in a nice format
+    for (const feature of OPTIONAL_FEATURES) {
+      const marker = feature.default ? chalk.green('●') : chalk.dim('○');
+      const postConfig = feature.requiresPostConfig ? chalk.yellow(' (*)') : '';
+      console.log(`  ${marker} ${chalk.bold(feature.label)}${postConfig}`);
+      console.log(chalk.dim(`     ${feature.description}`));
+      if (feature.commands.length > 0) {
+        console.log(chalk.dim(`     Adds: ${feature.commands.map(c => '/' + c).join(', ')}`));
+      }
+      console.log('');
+    }
+
+    const result = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'selectedFeatures',
+        message: 'Select features to enable:',
+        choices: OPTIONAL_FEATURES.map((feature) => ({
+          name: `${feature.label}${feature.requiresPostConfig ? ' (*)' : ''} - ${feature.commands.length} commands, ${feature.hooks.length} hooks`,
+          value: feature.name,
+          checked: feature.default,
+        })),
+        pageSize: 10,
+      },
+    ]);
+    selectedFeatures = result.selectedFeatures;
+  }
 
   // Store selected features for later use
   const enabledFeatures = OPTIONAL_FEATURES.filter((f) => selectedFeatures.includes(f.name));
@@ -1937,7 +1732,7 @@ export async function runInit(options = {}) {
 
   // Check for optional npm package installs from selected features
   const featuresWithNpm = enabledFeatures.filter((f) => f.npmPackage);
-  if (featuresWithNpm.length > 0) {
+  if (featuresWithNpm.length > 0 && !options.skipPrompts) {
     console.log('');
     console.log(chalk.bold('  Optional Package Installation\n'));
 
@@ -1969,6 +1764,10 @@ export async function runInit(options = {}) {
         console.log(chalk.dim(`  Skipped. Install later with: npm install -g ${feature.npmPackage}`));
       }
     }
+  } else if (featuresWithNpm.length > 0) {
+    // In skipPrompts mode, just inform about optional packages
+    console.log(chalk.dim(`  ℹ Optional packages available: ${featuresWithNpm.map(f => f.npmPackage).join(', ')}`));
+    console.log(chalk.dim('    Install manually if needed.'));
   }
 
   console.log('');
@@ -1982,45 +1781,54 @@ export async function runInit(options = {}) {
     : [];
   const existingCmdNames = existingCmdFiles.map(f => f.replace('.md', ''));
 
-  if (existingCmdNames.length > 0) {
+  if (existingCmdNames.length > 0 && !options.skipPrompts) {
     console.log(chalk.blue(`  ℹ Found ${existingCmdNames.length} existing command(s) in your project:`));
     console.log(chalk.dim(`    ${existingCmdNames.map(c => '/' + c).join(', ')}`));
     console.log(chalk.dim('    These will be preserved unless you choose to overwrite.\n'));
   }
 
-  const categories = [...new Set(AVAILABLE_COMMANDS.map((c) => c.category))];
+  let selectedCommands;
 
-  for (const category of categories) {
-    console.log(chalk.cyan(`  ${category}:`));
-    const cmds = AVAILABLE_COMMANDS.filter((c) => c.category === category);
-    for (const cmd of cmds) {
-      const isExisting = existingCmdNames.includes(cmd.name);
-      const marker = cmd.selected ? chalk.green('●') : chalk.dim('○');
-      const required = cmd.required ? chalk.yellow(' (required)') : '';
-      const existing = isExisting ? chalk.blue(' [exists]') : '';
-      console.log(`    ${marker} /${cmd.name}${required}${existing} - ${chalk.dim(cmd.description)}`);
-    }
-    console.log('');
-  }
+  if (options.skipPrompts) {
+    // Use default selections when called non-interactively
+    selectedCommands = AVAILABLE_COMMANDS.filter(c => c.selected).map(c => c.name);
+    console.log(chalk.dim(`  Auto-selecting ${selectedCommands.length} default command(s)`));
+  } else {
+    const categories = [...new Set(AVAILABLE_COMMANDS.map((c) => c.category))];
 
-  // Ask which commands to install
-  const { selectedCommands } = await inquirer.prompt([
-    {
-      type: 'checkbox',
-      name: 'selectedCommands',
-      message: 'Select commands to install (existing commands marked with [exists]):',
-      choices: AVAILABLE_COMMANDS.map((cmd) => {
+    for (const category of categories) {
+      console.log(chalk.cyan(`  ${category}:`));
+      const cmds = AVAILABLE_COMMANDS.filter((c) => c.category === category);
+      for (const cmd of cmds) {
         const isExisting = existingCmdNames.includes(cmd.name);
-        return {
-          name: `/${cmd.name}${isExisting ? ' [exists]' : ''} - ${cmd.description}`,
-          value: cmd.name,
-          checked: cmd.selected,
-          disabled: cmd.required ? 'Required' : false,
-        };
-      }),
-      pageSize: 15,
-    },
-  ]);
+        const marker = cmd.selected ? chalk.green('●') : chalk.dim('○');
+        const required = cmd.required ? chalk.yellow(' (required)') : '';
+        const existing = isExisting ? chalk.blue(' [exists]') : '';
+        console.log(`    ${marker} /${cmd.name}${required}${existing} - ${chalk.dim(cmd.description)}`);
+      }
+      console.log('');
+    }
+
+    // Ask which commands to install
+    const result = await inquirer.prompt([
+      {
+        type: 'checkbox',
+        name: 'selectedCommands',
+        message: 'Select commands to install (existing commands marked with [exists]):',
+        choices: AVAILABLE_COMMANDS.map((cmd) => {
+          const isExisting = existingCmdNames.includes(cmd.name);
+          return {
+            name: `/${cmd.name}${isExisting ? ' [exists]' : ''} - ${cmd.description}`,
+            value: cmd.name,
+            checked: cmd.selected,
+            disabled: cmd.required ? 'Required' : false,
+          };
+        }),
+        pageSize: 15,
+      },
+    ]);
+    selectedCommands = result.selectedCommands;
+  }
 
   // Always include required commands AND feature-specific commands
   const requiredCommands = AVAILABLE_COMMANDS.filter(c => c.required).map(c => c.name);
@@ -2047,6 +1855,17 @@ export async function runInit(options = {}) {
 
   let overwrite = options.force || false;
   if (commandsToOverwrite.length > 0 && !overwrite) {
+    // In skipPrompts mode, preserve all existing commands (no overwrite)
+    if (options.skipPrompts) {
+      for (const cmd of commandsToOverwrite) {
+        smartMergeDecisions[cmd] = 'skip';
+      }
+      // Filter out skipped commands
+      const filtered = finalCommands.filter((c) => !commandsToOverwrite.includes(c) || requiredCommands.includes(c));
+      finalCommands.length = 0;
+      finalCommands.push(...filtered);
+      console.log(chalk.dim(`  Preserving ${commandsToOverwrite.length} existing command(s), installing ${finalCommands.length} new`));
+    } else {
     // Check for customized assets that have been used
     const assetsNeedingMerge = getAssetsNeedingMerge(process.cwd());
     const customizedCommands = commandsToOverwrite.filter(cmd =>
@@ -2239,6 +2058,7 @@ export async function runInit(options = {}) {
         finalCommands.push(...filtered);
       }
     }
+    } // end else (!options.skipPrompts)
   }
 
   // Track if we should create backups (set outside the if block for use later)
@@ -2341,9 +2161,10 @@ export async function runInit(options = {}) {
     for (const hookName of featureHooks) {
       try {
         const hookPath = join(hooksDir, `${hookName}.js`);
+        const hookExists = existsSync(hookPath);
 
-        // Skip if already exists
-        if (existsSync(hookPath)) {
+        // Respect overwrite setting for hooks (like commands)
+        if (hookExists && !overwrite) {
           console.log(chalk.blue(`  ○ hooks/${hookName}.js exists (preserved)`));
           continue;
         }
@@ -2351,10 +2172,18 @@ export async function runInit(options = {}) {
         // Try to load from templates/hooks/ folder
         const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.js`);
         if (existsSync(templatePath)) {
+          // Create backup if overwriting existing hook
+          if (hookExists && overwrite) {
+            const backupPath = createBackup(hookPath);
+            if (backupPath) {
+              backedUpFiles.push({ original: hookPath, backup: backupPath });
+            }
+          }
           const hookContent = readFileSync(templatePath, 'utf8');
           writeFileSync(hookPath, hookContent, 'utf8');
           deployedHooks.push(hookName);
-          console.log(chalk.green(`  ✓ Created hooks/${hookName}.js`));
+          const action = hookExists ? 'Updated' : 'Created';
+          console.log(chalk.green(`  ✓ ${action} hooks/${hookName}.js`));
         } else {
           failedHooks.push({ name: hookName, error: 'No template found' });
           console.log(chalk.yellow(`  ⚠ Skipped hooks/${hookName}.js (no template)`));
@@ -2380,9 +2209,10 @@ export async function runInit(options = {}) {
     for (const skillName of featureSkills) {
       try {
         const skillPath = join(skillsDir, skillName);
+        const skillExists = existsSync(skillPath);
 
-        // Skip if already exists
-        if (existsSync(skillPath)) {
+        // Respect overwrite setting for skills (like commands)
+        if (skillExists && !overwrite) {
           console.log(chalk.blue(`  ○ skills/${skillName}/ exists (preserved)`));
           continue;
         }
@@ -2390,12 +2220,20 @@ export async function runInit(options = {}) {
         // Try to load from templates/skills/ folder
         const templatePath = join(__dirname, '..', '..', 'templates', 'skills', skillName);
         if (existsSync(templatePath)) {
+          // Create backup if overwriting existing skill
+          if (skillExists && overwrite) {
+            const backupPath = createBackup(skillPath);
+            if (backupPath) {
+              backedUpFiles.push({ original: skillPath, backup: backupPath });
+            }
+          }
           // Create skill directory and copy recursively
           mkdirSync(skillPath, { recursive: true });
           const { cpSync } = await import('fs');
           cpSync(templatePath, skillPath, { recursive: true });
           deployedSkills.push(skillName);
-          console.log(chalk.green(`  ✓ Created skills/${skillName}/`));
+          const action = skillExists ? 'Updated' : 'Created';
+          console.log(chalk.green(`  ✓ ${action} skills/${skillName}/`));
         } else {
           failedSkills.push({ name: skillName, error: 'No template found' });
           console.log(chalk.yellow(`  ⚠ Skipped skills/${skillName}/ (no template)`));
@@ -2557,6 +2395,26 @@ export async function runInit(options = {}) {
   } else {
     console.log(chalk.blue('  ○ config/tech-stack.json exists (preserved)'));
   }
+
+  // Update ccasp-state.json with current version (fixes version display in /menu)
+  const ccaspStatePath = join(configDir, 'ccasp-state.json');
+  const currentVersion = getVersion();
+  let ccaspState = { currentVersion, lastCheckTimestamp: 0, updateAvailable: false };
+
+  if (existsSync(ccaspStatePath)) {
+    try {
+      ccaspState = JSON.parse(readFileSync(ccaspStatePath, 'utf8'));
+    } catch {
+      // Use default state if parse fails
+    }
+  }
+
+  // Always update the current version to match installed CCASP
+  ccaspState.currentVersion = currentVersion;
+  ccaspState.installedAt = new Date().toISOString();
+
+  writeFileSync(ccaspStatePath, JSON.stringify(ccaspState, null, 2), 'utf8');
+  console.log(chalk.green(`  ✓ Updated ccasp-state.json (v${currentVersion})`));
 
   // Show next steps
   console.log(chalk.bold('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
