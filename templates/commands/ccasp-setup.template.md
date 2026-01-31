@@ -11,7 +11,26 @@ Linear setup wizard that configures your entire project in one pass. No menus to
 
 This is a **linear wizard** - walk through each step sequentially, collecting all inputs before writing config at the end.
 
-### Step 0: Initialize State
+### CRITICAL: Autonomous Execution
+
+**DO NOT wait for user input on steps that don't require it.** Execute these steps automatically and proceed immediately:
+
+| Step | Autonomous? | Action |
+|------|-------------|--------|
+| Step 0 | ✅ AUTO | Initialize state silently |
+| Step 1 | ✅ AUTO | Scan project, display status, continue immediately |
+| Step 2 | ❌ USER | Ask for preset selection |
+| Step 3 | ❌ USER | Ask about GitHub |
+| Step 4 | ❌ USER | Ask about deployment |
+| Step 5 | ❌ USER | Ask about tunnel |
+| Step 6 | ❌ USER | Ask about CLAUDE.md, then auto-detect/audit |
+| Step 7 | ✅ AUTO | Display summary, then ask confirmation |
+| Step 8 | ✅ AUTO | Write all config (no user input needed) |
+| Step 9 | ✅ AUTO | Display completion message |
+
+**After each USER step**, immediately proceed to the next step without waiting. Use AskUserQuestion to batch multiple questions when possible.
+
+### Step 0: Initialize State (AUTO - no user input)
 
 Create an internal state object to track selections:
 
@@ -61,7 +80,9 @@ ls -la package.json 2>/dev/null
 
 If `.claude/config/tech-stack.json` exists, read it and show current settings.
 
-### Step 2: Feature Preset
+**IMMEDIATELY proceed to Step 2 after displaying status - do not wait for user input.**
+
+### Step 2: Feature Preset (USER INPUT REQUIRED)
 
 Ask using AskUserQuestion:
 
@@ -94,7 +115,9 @@ Select features to install (comma-separated, e.g., "1,3,5"):
 
 Store selection in `wizardState.preset` and `wizardState.features`.
 
-### Step 3: GitHub Project Board
+**After user responds, immediately proceed to Step 3.**
+
+### Step 3: GitHub Project Board (USER INPUT REQUIRED)
 
 Ask:
 
@@ -117,9 +140,9 @@ Project number (from URL github.com/users/OWNER/projects/NUMBER):
 
 Store in `wizardState.github`.
 
-**If N**, skip and continue.
+**If N**, skip and immediately continue to Step 4.
 
-### Step 4: Deployment Platforms
+### Step 4: Deployment Platforms (USER INPUT REQUIRED)
 
 Ask frontend platform:
 
@@ -164,7 +187,9 @@ Railway service ID:
 
 Store in `wizardState.deployment`.
 
-### Step 5: Dev Environment (Tunnel)
+**After user responds, immediately proceed to Step 5.**
+
+### Step 5: Dev Environment / Tunnel (USER INPUT REQUIRED)
 
 Ask:
 
@@ -186,7 +211,9 @@ Preferred subdomain (press Enter to skip):
 
 Store in `wizardState.tunnel`.
 
-### Step 6: CLAUDE.md Setup
+**After user responds, immediately proceed to Step 6.**
+
+### Step 6: CLAUDE.md Setup (USER INPUT → then AUTO)
 
 Ask:
 
@@ -194,21 +221,21 @@ Ask:
 Would you like to set up CLAUDE.md? (Y/N)
 ```
 
-**If Y**, perform these actions automatically:
+**If Y**, perform these actions **AUTOMATICALLY without waiting for user input**:
 
-1. **Detect tech stack** by scanning:
+1. **Detect tech stack** by scanning (AUTO - just do it):
    - `package.json` for frameworks (react, vue, next, etc.)
    - Config files (vite.config.*, tsconfig.json, etc.)
    - Backend indicators (requirements.txt, go.mod, etc.)
    - Deployment configs (railway.json, vercel.json, wrangler.toml)
 
-2. **Check existing CLAUDE.md** (if present):
+2. **Check existing CLAUDE.md** (AUTO - if present):
    - Count lines (warn if >60, error if >300)
    - Check for anti-patterns (vague instructions, long code blocks)
    - Check for good patterns (IMPORTANT/MUST/NEVER keywords, runnable commands)
    - Calculate score (0-100)
 
-3. **Display audit results** if CLAUDE.md exists:
+3. **Display audit results** (AUTO - display immediately, no wait):
    ```
    📊 CLAUDE.md Audit: Score 72/100
    ├─ ✓ Has runnable commands
@@ -217,7 +244,7 @@ Would you like to set up CLAUDE.md? (Y/N)
    └─ ⚠ Found 2 vague instructions
    ```
 
-4. **Ask enhancement preference**:
+4. **Ask enhancement preference** (USER INPUT):
    ```
    CLAUDE.md action?
    [1] Generate new (from detected stack)
@@ -225,7 +252,7 @@ Would you like to set up CLAUDE.md? (Y/N)
    [3] Skip - keep as is
    ```
 
-5. **If 1 or 2**, generate/enhance content:
+5. **If 1 or 2**, prepare content (AUTO - stored for Step 8):
    - Project overview from package.json
    - Tech stack summary from detection
    - Key commands (dev, build, test, deploy)
@@ -241,9 +268,11 @@ Would you like to set up CLAUDE.md? (Y/N)
    }
    ```
 
-**If N**, skip and continue.
+**If N**, skip and immediately continue to Step 7.
 
-### Step 7: Summary & Confirmation
+**After user responds to CLAUDE.md action, immediately proceed to Step 7.**
+
+### Step 7: Summary & Confirmation (AUTO display → USER confirm)
 
 Display all collected settings:
 
@@ -271,16 +300,18 @@ Display all collected settings:
 Proceed with setup? (Y to confirm, N to restart)
 ```
 
-### Step 8: Write Configuration
+**Display summary automatically, then ask for confirmation.**
 
-**If confirmed (Y)**:
+### Step 8: Write Configuration (AUTO - no user input)
 
-1. **Create .claude/ structure** if it doesn't exist:
+**If confirmed (Y)**, execute ALL of the following automatically without stopping:
+
+1. **Create .claude/ structure** (AUTO):
    ```bash
    mkdir -p .claude/commands .claude/agents .claude/hooks .claude/skills .claude/config .claude/docs .claude/backups
    ```
 
-2. **Write tech-stack.json** using Edit/Write tool:
+2. **Write tech-stack.json** (AUTO):
 
    Read existing `.claude/config/tech-stack.json` if present, then merge with wizard selections:
 
@@ -333,7 +364,7 @@ Proceed with setup? (Y to confirm, N to restart)
    }
    ```
 
-3. **Deploy feature commands** based on preset:
+3. **Deploy feature commands** (AUTO):
 
    - **A (Minimal)**: menu.md, INDEX.md
    - **B (Standard)**: Above + github-task.md, phase-dev-plan.md, e2e-test.md, create-task-list.md
@@ -345,7 +376,7 @@ Proceed with setup? (Y to confirm, N to restart)
    npx ccasp init --preset <A|B|C|D> --features <list>
    ```
 
-4. **Write/update CLAUDE.md** (if selected in Step 6):
+4. **Write/update CLAUDE.md** (AUTO - if selected in Step 6):
 
    **If "Generate new"**:
    - Backup existing to `.claude/backups/CLAUDE.md.{timestamp}.bak`
@@ -386,7 +417,7 @@ Proceed with setup? (Y to confirm, N to restart)
    - Add missing sections only (don't overwrite existing content)
    - Append detected tech stack info if not present
 
-5. **Update ccasp-state.json**:
+5. **Update ccasp-state.json** (AUTO):
    ```json
    {
      "projectImplCompleted": true,
@@ -396,7 +427,9 @@ Proceed with setup? (Y to confirm, N to restart)
    }
    ```
 
-### Step 9: Completion Message
+**Execute all 5 sub-steps in sequence without pausing.**
+
+### Step 9: Completion Message (AUTO - display and done)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
