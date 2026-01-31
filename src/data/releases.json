@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "1.8.4",
+      "date": "2026-01-31",
+      "summary": "Release notes pending",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.5.0",
       "date": "2026-01-30",
       "summary": "Feature: Phase 5 of 85 Recommendations - Documentation Templates",
