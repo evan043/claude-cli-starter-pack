@@ -79,11 +79,25 @@ options:
 
 **If user selects an issue (A-Z):**
 
-Show issue details:
+First, fetch full issue details including body:
+
+```bash
+gh issue view [NUMBER] --json number,title,body,createdAt,labels,url
+```
+
+**Detect Issue Format:**
+
+Check if the issue body contains BOTH of these indicators of `/github-task` format:
+- `## Acceptance Criteria` OR `## Task Checklist` section
+- `## Suggested Implementation` OR `## Implementation Approach` section
+
+**If PROPERLY FORMATTED** (created by `/github-task`):
+
+Show issue details with format indicator:
 
 ```
 ╔═══════════════════════════════════════╗
-║  Issue #123                           ║
+║  Issue #123  ✓ Task-Ready             ║
 ╠═══════════════════════════════════════╣
 ║                                       ║
 ║  Fix login redirect bug               ║
@@ -92,9 +106,11 @@ Show issue details:
 ║  Labels: P1, frontend, bug            ║
 ║  URL: github.com/.../issues/123       ║
 ║                                       ║
+║  Format: Task-ready (has checklist)   ║
+║                                       ║
 ╠═══════════════════════════════════════╣
-║  [S] Start working  [V] View in gh    ║
-║  [B] Back to list   [X] Exit          ║
+║  [S] Start (use existing tasks)       ║
+║  [V] View details  [B] Back  [X] Exit ║
 ╚═══════════════════════════════════════╝
 ```
 
@@ -105,18 +121,91 @@ header: "Action"
 question: "What would you like to do?"
 options:
   - label: "S - Start working"
-    description: "Create task list for this issue"
+    description: "Execute task checklist from issue"
   - label: "V - View details"
     description: "Show full issue body"
   - label: "B - Back"
     description: "Return to issues list"
-  - label: "X - Exit"
-    description: "Close menu"
 ```
 
-**Actions:**
-- **S (Start)**: Run `/create-task-list for issue #[NUMBER]`
-- **V (View)**: Run `gh issue view [NUMBER]` and display
+**If NOT PROPERLY FORMATTED** (generic issue):
+
+Show issue details with exploration indicator:
+
+```
+╔═══════════════════════════════════════╗
+║  Issue #123  ⚠ Needs Analysis         ║
+╠═══════════════════════════════════════╣
+║                                       ║
+║  Fix login redirect bug               ║
+║                                       ║
+║  Created: 01/30/2026                  ║
+║  Labels: P1, frontend, bug            ║
+║  URL: github.com/.../issues/123       ║
+║                                       ║
+║  Format: Needs task list generation   ║
+║                                       ║
+╠═══════════════════════════════════════╣
+║  [S] Start (explore + generate tasks) ║
+║  [V] View details  [B] Back  [X] Exit ║
+╚═══════════════════════════════════════╝
+```
+
+Then ask:
+
+```
+header: "Action"
+question: "What would you like to do?"
+options:
+  - label: "S - Start working"
+    description: "Run /create-task-list to analyze and generate tasks"
+  - label: "V - View details"
+    description: "Show full issue body"
+  - label: "B - Back"
+    description: "Return to issues list"
+```
+
+### Step 5: Handle "Start Working" Based on Format
+
+**For PROPERLY FORMATTED issues (S action):**
+
+1. Extract the task checklist from the issue body
+2. Parse tasks from `## Acceptance Criteria` or `## Task Checklist` section
+3. Create TodoWrite entries from the checklist items
+4. Begin implementing tasks in order
+5. As each task completes, optionally update issue with progress comment
+
+**For NOT PROPERLY FORMATTED issues (S action):**
+
+1. Run `/create-task-list for issue #[NUMBER]`
+2. After task list is generated, ask:
+
+```
+header: "Update"
+question: "Update GitHub issue with generated task list?"
+options:
+  - label: "Y - Yes, update issue"
+    description: "Add task checklist to issue body"
+  - label: "N - No, just implement"
+    description: "Keep issue as-is, start work"
+```
+
+3. If user selects Y:
+   ```bash
+   # Append task checklist to issue body
+   gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
+
+   ## Task Checklist (Auto-generated)
+
+   - [ ] Task 1
+   - [ ] Task 2
+   ..."
+   ```
+
+4. Begin implementing generated task list
+
+**Other Actions:**
+- **V (View)**: Run `gh issue view [NUMBER]` and display full body
 - **B (Back)**: Return to Step 2
 - **R (Refresh)**: Re-fetch issues and display
 - **X (Exit)**: End command
