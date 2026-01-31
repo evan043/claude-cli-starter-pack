@@ -320,8 +320,8 @@ const AVAILABLE_COMMANDS = [
     feature: 'deploymentAutomation',
   },
   {
-    name: 'project-impl',
-    description: 'Agent-powered project implementation (audit, enhance, detect, configure)',
+    name: 'project-implementation-for-ccasp',
+    description: 'Complete CCASP project setup - tech stack, CLAUDE.md, GitHub, MCPs',
     category: 'Setup',
     selected: true,
   },

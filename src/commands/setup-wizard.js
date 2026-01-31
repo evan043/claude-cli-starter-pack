@@ -578,17 +578,17 @@ function showSetupHeader() {
 }
 
 /**
- * Streamlined setup options - 3 core paths for easy mobile input
- * Issue #8: Simplified from 7 options to reduce scrolling
+ * Streamlined setup options - Issue #14: Full Install by default
+ * No A/B/C/D presets - just Full Install with deselection option
  */
 const SETUP_OPTIONS = [
   {
-    name: `${chalk.green('1.')} Auto Install ${chalk.dim('- Full features + backup (recommended)')}`,
-    value: 'auto',
-    short: 'Auto Install',
+    name: `${chalk.green('1.')} Full Install ${chalk.dim('- All features, customize with deselection (recommended)')}`,
+    value: 'full',
+    short: 'Full Install',
   },
   {
-    name: `${chalk.yellow('2.')} GitHub Setup ${chalk.dim('- Connect project board')}`,
+    name: `${chalk.yellow('2.')} GitHub Setup ${chalk.dim('- Connect project board only')}`,
     value: 'github',
     short: 'GitHub',
   },
@@ -606,25 +606,21 @@ const SETUP_OPTIONS = [
 
 /**
  * Advanced options submenu - accessed via "More Options"
+ * Issue #14: Removed "Custom Setup" since Full Install already allows customization
  */
 const ADVANCED_OPTIONS = [
   {
-    name: `${chalk.yellow('1.')} Custom Setup ${chalk.dim('- Choose specific features')}`,
-    value: 'custom',
-    short: 'Custom',
-  },
-  {
-    name: `${chalk.yellow('2.')} View Templates ${chalk.dim('- Browse available items')}`,
+    name: `${chalk.yellow('1.')} View Templates ${chalk.dim('- Browse available items')}`,
     value: 'templates',
     short: 'Templates',
   },
   {
-    name: `${chalk.yellow('3.')} Prior Releases ${chalk.dim('- Add features from past versions')}`,
+    name: `${chalk.yellow('2.')} Prior Releases ${chalk.dim('- Add features from past versions')}`,
     value: 'releases',
     short: 'Releases',
   },
   {
-    name: `${chalk.yellow('4.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
+    name: `${chalk.yellow('3.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
     value: 'remove',
     short: 'Remove',
   },
@@ -636,184 +632,342 @@ const ADVANCED_OPTIONS = [
 ];
 
 /**
- * Feature selection for quick setup - simplified for vibe coding
+ * Feature categories organized by type
+ * All features pre-selected by default - user can deselect
  */
-const QUICK_FEATURE_PRESETS = [
+const FEATURE_CATEGORIES = [
   {
-    name: `${chalk.green('A.')} Minimal ${chalk.dim('- Menu + help only')}`,
-    value: 'minimal',
-    features: [], // Essential commands always included
+    name: 'COMMANDS',
+    features: [
+      { name: 'GitHub (update, task, issues)', value: 'githubIntegration', checked: true, short: 'GitHub integration' },
+      { name: 'Planning (phase-dev, task-list)', value: 'phasedDevelopment', checked: true, short: 'Phased development' },
+      { name: 'Testing (e2e-test, smoke)', value: 'testing', checked: true, short: 'Testing commands' },
+      { name: 'Deploy (full, tunnel)', value: 'deploymentAutomation', checked: true, short: 'Deployment automation' },
+      { name: 'Refactor (check, cleanup)', value: 'refactoring', checked: true, short: 'Refactoring tools' },
+      { name: 'MCP Explorer', value: 'mcpExplorer', checked: true, short: 'MCP discovery' },
+      { name: 'Analysis (codebase, audit)', value: 'analysis', checked: true, short: 'Code analysis' },
+    ],
   },
   {
-    name: `${chalk.green('B.')} Standard ${chalk.dim('- GitHub + phased dev (recommended)')}`,
-    value: 'standard',
-    features: ['githubIntegration', 'phasedDevelopment'],
+    name: 'AGENTS',
+    features: [
+      { name: 'Example Agent', value: 'exampleAgent', checked: true, short: 'Example agent template' },
+      { name: 'Create Agent Command', value: 'createAgent', checked: true, short: 'Agent creator' },
+    ],
   },
   {
-    name: `${chalk.green('C.')} Full ${chalk.dim('- All features including deployment')}`,
-    value: 'full',
-    features: ['githubIntegration', 'phasedDevelopment', 'deploymentAutomation', 'tunnelServices', 'tokenManagement'],
+    name: 'HOOKS',
+    features: [
+      { name: 'Update Checker', value: 'updateChecker', checked: true, short: 'Auto-update check' },
+      { name: 'Advanced Hook Suite', value: 'advancedHooks', checked: true, short: 'Advanced hooks' },
+    ],
   },
   {
-    name: `${chalk.green('D.')} Custom ${chalk.dim('- Pick individual features')}`,
-    value: 'custom',
-    features: [],
+    name: 'SKILLS',
+    features: [
+      { name: 'Example Skill', value: 'exampleSkill', checked: true, short: 'Example skill template' },
+      { name: 'Skill Templates', value: 'skillTemplates', checked: true, short: 'Skill creators' },
+    ],
+  },
+  {
+    name: 'EXTRAS',
+    features: [
+      { name: 'Token Management', value: 'tokenManagement', checked: true, short: 'Token budget tracking' },
+      { name: 'Tunnel Services', value: 'tunnelServices', checked: true, short: 'Dev tunnels' },
+      { name: 'Happy Mode', value: 'happyMode', checked: true, short: 'Mobile app integration' },
+    ],
+  },
+  {
+    name: 'DOCUMENTATION',
+    features: [
+      { name: 'INDEX.md', value: 'indexMd', checked: true, short: 'Command index' },
+      { name: 'README.md', value: 'readmeMd', checked: true, short: 'Slash commands docs' },
+    ],
   },
 ];
 
 /**
- * Individual features for custom selection
- * NOTE: These values MUST match the feature names in init.js OPTIONAL_FEATURES
+ * Flatten all features for checkbox prompt
  */
-const INDIVIDUAL_FEATURES = [
-  { name: 'Essential commands (menu, help)', value: 'essential', checked: true },
-  { name: 'GitHub Project Board integration (*)', value: 'githubIntegration', checked: false },
-  { name: 'Token Budget Management', value: 'tokenManagement', checked: false },
-  { name: 'Phased Development System', value: 'phasedDevelopment', checked: false },
-  { name: 'Deployment Automation (*)', value: 'deploymentAutomation', checked: false },
-  { name: 'Tunnel Services (*)', value: 'tunnelServices', checked: false },
-  { name: 'Happy Mode Integration (*)', value: 'happyMode', checked: false },
-];
-
-/**
- * Map generic preset feature names to init.js OPTIONAL_FEATURES names
- */
-const FEATURE_NAME_MAP = {
-  essential: 'essential',
-  github: 'githubIntegration',
-  testing: 'phasedDevelopment', // Testing uses phased dev for Ralph loop
-  deployment: 'deploymentAutomation',
-  agents: 'agents', // Not a direct feature, handled separately
-  hooks: 'hooks', // Not a direct feature, handled separately
-  tunnel: 'tunnelServices',
-  token: 'tokenManagement',
-  happy: 'happyMode',
-  phasedDev: 'phasedDevelopment',
-};
-
-/**
- * Translate preset features to init.js compatible feature names
- */
-function translateFeatures(presetFeatures) {
-  return presetFeatures
-    .map((f) => FEATURE_NAME_MAP[f] || f)
-    .filter((f) => f !== 'essential'); // essential is always included
+function getAllFeatures() {
+  const features = [];
+  for (const category of FEATURE_CATEGORIES) {
+    // Add category header as separator
+    features.push(new inquirer.Separator(chalk.bold.cyan(`\n  ${category.name}`)));
+    for (const feature of category.features) {
+      features.push({
+        name: `  ${feature.name}`,
+        value: feature.value,
+        checked: feature.checked,
+        short: feature.short,
+      });
+    }
+  }
+  return features;
 }
 
 /**
- * Run quick setup with auto-detection
+ * Map feature selections to init.js feature names
  */
-async function runQuickSetup() {
-  const spinner = ora('Detecting tech stack...').start();
+function mapFeaturesToInit(selectedFeatures) {
+  const featureMap = {
+    // Commands
+    githubIntegration: 'githubIntegration',
+    phasedDevelopment: 'phasedDevelopment',
+    testing: 'testing',
+    deploymentAutomation: 'deploymentAutomation',
+    refactoring: 'refactoring',
+    mcpExplorer: null, // Always included in base
+    analysis: null, // Always included in base
+    // Agents
+    exampleAgent: null, // Handled by init
+    createAgent: null, // Always included
+    // Hooks
+    updateChecker: null, // Always included
+    advancedHooks: 'advancedHooks',
+    // Skills
+    exampleSkill: null, // Handled by init
+    skillTemplates: 'skillTemplates',
+    // Extras
+    tokenManagement: 'tokenManagement',
+    tunnelServices: 'tunnelServices',
+    happyMode: 'happyMode',
+    // Documentation
+    indexMd: null, // Always included
+    readmeMd: null, // Always included
+  };
 
-  try {
-    const techStack = await detectTechStack(process.cwd());
-    spinner.succeed('Tech stack detected!');
+  return selectedFeatures
+    .map((f) => featureMap[f])
+    .filter((f) => f !== null && f !== undefined);
+}
 
-    // Show detected stack
-    console.log('\n' + chalk.bold('Detected:'));
-    if (techStack.frontend?.framework) {
-      console.log(`  ${chalk.cyan('Frontend:')} ${techStack.frontend.framework}`);
+/**
+ * Get all feature values that are checked by default
+ */
+function getDefaultFeatures() {
+  const defaults = [];
+  for (const category of FEATURE_CATEGORIES) {
+    for (const feature of category.features) {
+      if (feature.checked) {
+        defaults.push(feature.value);
+      }
     }
-    if (techStack.backend?.framework) {
-      console.log(`  ${chalk.cyan('Backend:')} ${techStack.backend.framework}`);
-    }
-    if (techStack.database?.type) {
-      console.log(`  ${chalk.cyan('Database:')} ${techStack.database.type}`);
-    }
-    if (techStack.testing?.framework) {
-      console.log(`  ${chalk.cyan('Testing:')} ${techStack.testing.framework}`);
-    }
-    if (techStack.deployment?.platform) {
-      console.log(`  ${chalk.cyan('Deploy:')} ${techStack.deployment.platform}`);
-    }
-    console.log('');
+  }
+  return defaults;
+}
 
-    // Preset selection - vibe-code friendly (single letter/number)
-    const { preset } = await inquirer.prompt([
+/**
+ * Run full install with organized checkbox deselection
+ * Issue #14: All features pre-selected, organized by type
+ */
+async function runFullInstall() {
+  // Display header
+  console.log(
+    boxen(
+      chalk.bold.cyan('📦 CCASP Full Install\n\n') +
+        chalk.white('All features selected by default.\n') +
+        chalk.dim('Space to toggle • Enter to install'),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'cyan',
+      }
+    )
+  );
+
+  // Get feature selection with organized categories
+  const { selectedFeatures } = await inquirer.prompt([
+    {
+      type: 'checkbox',
+      name: 'selectedFeatures',
+      message: 'Select features to install:',
+      choices: getAllFeatures(),
+      pageSize: 25, // Show all without scrolling
+      loop: false,
+    },
+  ]);
+
+  // Map to init.js features
+  const initFeatures = mapFeaturesToInit(selectedFeatures);
+
+  // Count selections by category for summary
+  const summary = {
+    commands: selectedFeatures.filter((f) => ['githubIntegration', 'phasedDevelopment', 'testing', 'deploymentAutomation', 'refactoring', 'mcpExplorer', 'analysis'].includes(f)).length,
+    agents: selectedFeatures.filter((f) => ['exampleAgent', 'createAgent'].includes(f)).length,
+    hooks: selectedFeatures.filter((f) => ['updateChecker', 'advancedHooks'].includes(f)).length,
+    skills: selectedFeatures.filter((f) => ['exampleSkill', 'skillTemplates'].includes(f)).length,
+    extras: selectedFeatures.filter((f) => ['tokenManagement', 'tunnelServices', 'happyMode'].includes(f)).length,
+    docs: selectedFeatures.filter((f) => ['indexMd', 'readmeMd'].includes(f)).length,
+  };
+
+  console.log(chalk.dim(`\nSelected: ${Object.values(summary).reduce((a, b) => a + b, 0)} features`));
+
+  // Check if .claude folder exists and ask about backup/overwrite strategy
+  const claudeDir = join(process.cwd(), '.claude');
+  const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+  const hasExisting = existsSync(claudeDir) || existsSync(claudeMdPath);
+
+  let installStrategy = 'backup'; // Default: backup then overwrite
+
+  if (hasExisting) {
+    const existing = [];
+    if (existsSync(claudeDir)) existing.push('.claude/');
+    if (existsSync(claudeMdPath)) existing.push('CLAUDE.md');
+
+    console.log(chalk.yellow(`\n⚠️  Existing files found: ${existing.join(', ')}`));
+
+    const { strategy } = await inquirer.prompt([
       {
         type: 'list',
-        name: 'preset',
-        message: 'Select feature preset:',
-        choices: QUICK_FEATURE_PRESETS,
-        pageSize: 10,
+        name: 'strategy',
+        message: 'How should existing files be handled?',
+        choices: [
+          {
+            name: `${chalk.green('1.')} Backup + Overwrite ${chalk.dim('- Create backup, then replace (recommended)')}`,
+            value: 'backup',
+            short: 'Backup + Overwrite',
+          },
+          {
+            name: `${chalk.yellow('2.')} Skip Existing ${chalk.dim('- Only add new files, keep existing')}`,
+            value: 'skip',
+            short: 'Skip Existing',
+          },
+          {
+            name: `${chalk.red('3.')} Overwrite All ${chalk.dim('- Replace everything without backup')}`,
+            value: 'force',
+            short: 'Overwrite All',
+          },
+          {
+            name: `${chalk.dim('0.')} Cancel`,
+            value: 'cancel',
+            short: 'Cancel',
+          },
+        ],
+        pageSize: 5,
       },
     ]);
 
-    let features;
-    const selectedPreset = QUICK_FEATURE_PRESETS.find((p) => p.value === preset);
-
-    if (preset === 'custom') {
-      const { customFeatures } = await inquirer.prompt([
-        {
-          type: 'checkbox',
-          name: 'customFeatures',
-          message: 'Select features (Space to toggle):',
-          choices: INDIVIDUAL_FEATURES,
-          pageSize: 10,
-        },
-      ]);
-      features = customFeatures;
-    } else {
-      features = selectedPreset.features;
+    if (strategy === 'cancel') {
+      console.log(chalk.dim('\nInstallation cancelled. No changes made.\n'));
+      return false;
     }
 
-    // Run init with selected features
-    // Features are already in init.js-compatible format (INDIVIDUAL_FEATURES uses correct names)
-    // Note: Don't use spinner here since runInit has its own console output
-    console.log('');
+    installStrategy = strategy;
+  }
 
-    // Check if any features require post-configuration
-    const featuresRequiringConfig = features.filter((f) =>
-      ['githubIntegration', 'deploymentAutomation', 'tunnelServices', 'happyMode'].includes(f)
-    );
+  // Run init with selected features and strategy
+  const spinner = ora('Installing CCASP features...').start();
 
+  try {
     await runInit({
-      techStack,
-      features,
-      minimal: preset === 'minimal',
+      features: initFeatures,
       skipPrompts: true,
+      preset: 'full',
+      backup: installStrategy === 'backup',
+      force: installStrategy === 'force',
+      skipExisting: installStrategy === 'skip',
     });
 
-    console.log(chalk.green('\n✓ .claude folder setup complete!'));
+    spinner.succeed('CCASP features installed!');
 
-    // Show which features need post-configuration
-    if (featuresRequiringConfig.length > 0) {
-      console.log(
-        chalk.yellow('\n⚠️  Some features require additional configuration:')
-      );
-      featuresRequiringConfig.forEach((f) => {
-        const labels = {
-          githubIntegration: 'GitHub Project Board',
-          deploymentAutomation: 'Deployment Platforms',
-          tunnelServices: 'Tunnel Service',
-          happyMode: 'Happy Mode',
-        };
-        console.log(`   • ${labels[f] || f}`);
-      });
-      console.log(chalk.dim('\n   Configure via: npx ccasp menu → Project Settings'));
-    }
+    // Show summary
+    console.log(
+      boxen(
+        chalk.bold.green('✅ Installation Complete\n\n') +
+          `Commands:  ${chalk.cyan(summary.commands)}\n` +
+          `Agents:    ${chalk.cyan(summary.agents)}\n` +
+          `Hooks:     ${chalk.cyan(summary.hooks)}\n` +
+          `Skills:    ${chalk.cyan(summary.skills)}\n` +
+          `Extras:    ${chalk.cyan(summary.extras)}\n` +
+          `Docs:      ${chalk.cyan(summary.docs)}\n\n` +
+          chalk.bold('Next Steps:\n') +
+          chalk.dim('1. Restart Claude Code CLI\n') +
+          chalk.dim('2. Run ') + chalk.yellow('/project-implementation-for-ccasp') + chalk.dim(' for full setup'),
+        {
+          padding: 1,
+          borderStyle: 'round',
+          borderColor: 'green',
+        }
+      )
+    );
 
-    // Offer to generate CLAUDE.md
-    const { generateClaudeMd } = await inquirer.prompt([
+    // Offer to launch Claude CLI
+    const { launchClaude } = await inquirer.prompt([
       {
         type: 'confirm',
-        name: 'generateClaudeMd',
-        message: 'Generate CLAUDE.md from detected stack?',
+        name: 'launchClaude',
+        message: 'Launch Claude Code CLI now?',
         default: true,
       },
     ]);
 
-    if (generateClaudeMd) {
-      await runEnhancement({ techStack, mode: 'generate' });
+    if (launchClaude) {
+      await launchClaudeCLI();
+    } else {
+      showRestartReminder();
     }
 
-    showCompletionMessage();
     return true;
   } catch (error) {
-    console.error(chalk.red('\n✗ Setup failed'));
+    spinner.fail('Installation failed');
     console.error(chalk.red(error.message));
     return false;
+  }
+}
+
+/**
+ * Launch Claude Code CLI with auto-injected command
+ */
+async function launchClaudeCLI() {
+  console.log(chalk.cyan('\n🚀 Launching Claude Code CLI...\n'));
+
+  const platform = process.platform;
+  const command = '/project-implementation-for-ccasp';
+
+  try {
+    // Different launch commands per platform
+    if (platform === 'win32') {
+      // Windows: Open new terminal with claude command
+      const { execSync } = await import('child_process');
+      execSync(`start cmd /k "claude \\"${command}\\""`, { stdio: 'inherit' });
+    } else if (platform === 'darwin') {
+      // macOS: Open Terminal app with claude command
+      const { execSync } = await import('child_process');
+      execSync(`osascript -e 'tell application "Terminal" to do script "claude \\"${command}\\""'`, { stdio: 'inherit' });
+    } else {
+      // Linux: Try common terminals
+      const { execSync } = await import('child_process');
+      try {
+        execSync(`gnome-terminal -- bash -c "claude '${command}'; exec bash"`, { stdio: 'inherit' });
+      } catch {
+        try {
+          execSync(`xterm -e "claude '${command}'"`, { stdio: 'inherit' });
+        } catch {
+          console.log(chalk.yellow('\nCould not auto-launch terminal.'));
+          console.log(chalk.dim('Please run manually:'));
+          console.log(chalk.cyan(`  claude "${command}"`));
+        }
+      }
+    }
+
+    console.log(
+      boxen(
+        chalk.green('Claude CLI launched!\n\n') +
+          chalk.dim('A new terminal window opened with:\n') +
+          chalk.yellow(`claude "${command}"\n\n`) +
+          chalk.dim('This will run the full CCASP project setup.'),
+        {
+          padding: 1,
+          borderStyle: 'round',
+          borderColor: 'green',
+        }
+      )
+    );
+  } catch (error) {
+    console.log(chalk.yellow('\nCould not auto-launch Claude CLI.'));
+    console.log(chalk.dim('Please run manually:'));
+    console.log(chalk.cyan(`  claude "${command}"`));
   }
 }
 
@@ -1323,17 +1477,9 @@ export async function runSetupWizard(options = {}) {
     ]);
 
     switch (action) {
-      case 'auto':
-        // Auto Install: Full features with mandatory backup (Issue #8 requirement)
-        console.log(chalk.cyan('\n📦 Auto Install Mode - Full features with backup\n'));
-        await runInit({
-          interactive: false,
-          backup: true,  // Mandatory backup
-          force: true,   // Overwrite enabled for testing phase
-          skipPrompts: true,
-          preset: 'full' // All features
-        });
-        showRestartReminder();
+      case 'full':
+        // Full Install: Issue #14 - organized checkbox with deselection
+        await runFullInstall();
         running = false;
         break;
 
@@ -1356,7 +1502,7 @@ export async function runSetupWizard(options = {}) {
 }
 
 /**
- * Advanced options submenu - Issue #8: Moved less-used options here
+ * Advanced options submenu - Issue #14: Removed custom (Full Install has customization)
  */
 async function showAdvancedOptions() {
   let inSubmenu = true;
@@ -1368,17 +1514,11 @@ async function showAdvancedOptions() {
         name: 'action',
         message: 'Advanced Options:',
         choices: ADVANCED_OPTIONS,
-        pageSize: 6,
+        pageSize: 5,
       },
     ]);
 
     switch (action) {
-      case 'custom':
-        await runInit({ interactive: true });
-        showRestartReminder();
-        inSubmenu = false;
-        break;
-
       case 'templates':
         await showTemplates();
         break;
