@@ -14,7 +14,9 @@ allowed-tools:
 
 # /project-impl - Project Implementation
 
-Agent-powered project configuration, tech stack detection, and CLAUDE.md management.
+Advanced project tools for CLAUDE.md management and codebase analysis.
+
+**For initial setup**, use `/ccasp-setup` instead - it's a one-shot linear wizard that configures everything in a single pass.
 
 ## Quick Menu
 
@@ -23,12 +25,14 @@ Agent-powered project configuration, tech stack detection, and CLAUDE.md managem
 | **1** | Audit CLAUDE.md | Analyze configuration against best practices |
 | **2** | Enhance CLAUDE.md | Generate/improve documentation from codebase |
 | **3** | Detect Tech Stack | Scan codebase and identify technologies |
-| **4** | Project Settings | Configure deployment, tunnels, GitHub |
+| **S** | Full Setup | Run `/ccasp-setup` linear wizard |
 | **B** | Back to /menu | Return to main menu |
 
 ## Instructions for Claude
 
 When invoked, display the menu above and use AskUserQuestion to get the user's selection.
+
+**If user selects S**: Invoke `/ccasp-setup` skill for the linear setup wizard.
 
 ---
 
@@ -198,120 +202,14 @@ Deployment:
 
 ---
 
-### Option 4: Project Settings
-
-Use AskUserQuestion for interactive configuration:
-
-**GitHub Project Board:**
-```
-Questions:
-1. Do you have a GitHub Project Board? (Yes/No)
-2. Repository owner (e.g., 'username' or 'org-name')
-3. Repository name
-4. Project number (from URL: /projects/NUMBER)
-```
-
-**Deployment Platforms:**
-```
-Questions:
-1. Frontend deployment platform?
-   - Cloudflare Pages
-   - Vercel
-   - Netlify
-   - GitHub Pages
-   - None
-2. Backend deployment platform?
-   - Railway
-   - Heroku
-   - Render
-   - AWS
-   - None
-3. Project identifiers (IDs, names) for each platform
-```
-
-**Tunnel Services:**
-```
-Questions:
-1. Tunnel service for mobile testing?
-   - ngrok
-   - localtunnel
-   - cloudflare-tunnel
-   - serveo
-   - None
-2. Subdomain preference (optional)
-```
-
-**Token Management:**
-```
-Questions:
-1. Enable token budget tracking? (Yes/No)
-2. Daily budget limit (default: 200000)
-3. Compact threshold (default: 75%)
-```
-
-**Happy Mode:**
-```
-Questions:
-1. Enable Happy Mode integration? (Yes/No)
-2. Checkpoint interval (default: 10 tasks)
-3. Verbosity level (condensed/normal/verbose)
-```
-
-**Write selections to `.claude/config/tech-stack.json`:**
-```json
-{
-  "versionControl": {
-    "provider": "github",
-    "projectBoard": {
-      "type": "github-projects-v2",
-      "owner": "username",
-      "repo": "repo-name",
-      "projectNumber": 1
-    }
-  },
-  "deployment": {
-    "frontend": {
-      "platform": "cloudflare",
-      "projectName": "my-project"
-    },
-    "backend": {
-      "platform": "railway",
-      "projectId": "xxx",
-      "serviceId": "yyy"
-    }
-  },
-  "devEnvironment": {
-    "tunnel": {
-      "service": "ngrok",
-      "subdomain": "my-app"
-    }
-  },
-  "tokenManagement": {
-    "enabled": true,
-    "dailyBudget": 200000,
-    "thresholds": { "compact": 0.75 }
-  },
-  "happyMode": {
-    "enabled": true,
-    "checkpointInterval": 10
-  }
-}
-```
-
----
-
 ## Navigation
 
 After completing any option, ask the user:
-- "Would you like to perform another action? (1-4, B to go back, Q to quit)"
+- "Would you like to perform another action? (1-3, S for setup, B to go back)"
 
 ## Mark Setup Complete
 
-**IMPORTANT:** After the user successfully completes ANY option (1-4), update the state file to mark setup as complete:
-
-```bash
-# Read current state, add projectImplCompleted: true, write back
-```
+**IMPORTANT:** After the user successfully completes ANY option (1-3), update the state file:
 
 Use the Edit tool to update `.claude/config/ccasp-state.json`:
 - Set `"projectImplCompleted": true`
@@ -320,10 +218,8 @@ This removes the "Run /project-impl" recommendation banner from `/menu`.
 
 ## Terminal Alternative
 
-These operations can also be run from the terminal:
-
 ```bash
-npx ccasp wizard          # Interactive setup wizard
+npx ccasp wizard          # Linear setup wizard (recommended)
 npx ccasp detect-stack    # Detect tech stack
 npx ccasp claude-audit    # Audit CLAUDE.md
 ```
