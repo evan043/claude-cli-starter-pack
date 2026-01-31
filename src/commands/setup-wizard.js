@@ -579,22 +579,28 @@ function showSetupHeader() {
 }
 
 /**
- * Streamlined setup options - Issue #14: Full Install by default
- * No A/B/C/D presets - just Full Install with deselection option
+ * Streamlined setup options - Auto vs Custom Install
+ * Auto: Install ALL features without prompts (recommended)
+ * Custom: Show checkbox UI for feature selection
  */
 const SETUP_OPTIONS = [
   {
-    name: `${chalk.green('1.')} Full Install ${chalk.dim('- All features, customize with deselection (recommended)')}`,
-    value: 'full',
-    short: 'Full Install',
+    name: `${chalk.green('1.')} Auto-Install ${chalk.dim('- All features, no prompts (recommended)')}`,
+    value: 'auto',
+    short: 'Auto-Install',
   },
   {
-    name: `${chalk.yellow('2.')} GitHub Setup ${chalk.dim('- Connect project board only')}`,
+    name: `${chalk.yellow('2.')} Custom Install ${chalk.dim('- Choose specific features')}`,
+    value: 'custom',
+    short: 'Custom Install',
+  },
+  {
+    name: `${chalk.cyan('3.')} GitHub Setup ${chalk.dim('- Connect project board only')}`,
     value: 'github',
     short: 'GitHub',
   },
   {
-    name: `${chalk.dim('3.')} More Options ${chalk.dim('- Templates, releases, remove')}`,
+    name: `${chalk.dim('4.')} More Options ${chalk.dim('- Templates, releases, remove')}`,
     value: 'more',
     short: 'More',
   },
@@ -607,7 +613,7 @@ const SETUP_OPTIONS = [
 
 /**
  * Advanced options submenu - accessed via "More Options"
- * Issue #14: Removed "Custom Setup" since Full Install already allows customization
+ * Contains: View Templates, Prior Releases, Remove CCASP
  */
 const ADVANCED_OPTIONS = [
   {
@@ -759,14 +765,139 @@ function getDefaultFeatures() {
 }
 
 /**
- * Run full install with organized checkbox deselection
- * Issue #14: All features pre-selected, organized by type
+ * Run auto-install - installs ALL features without any prompts
+ * This is the recommended path for most users
  */
-async function runFullInstall() {
+async function runAutoInstall() {
   // Display header
   console.log(
     boxen(
-      chalk.bold.cyan('📦 CCASP Full Install\n\n') +
+      chalk.bold.cyan('🚀 CCASP Auto-Install\n\n') +
+        chalk.white('Installing ALL features automatically.\n') +
+        chalk.dim('No prompts - full feature set'),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'cyan',
+      }
+    )
+  );
+
+  // Get all default features (all features are checked by default)
+  const allFeatures = getDefaultFeatures();
+
+  // Map to init.js features - use ALL optional features
+  const initFeatures = [
+    'githubIntegration',
+    'phasedDevelopment',
+    'testing',
+    'deploymentAutomation',
+    'refactoring',
+    'advancedHooks',
+    'skillTemplates',
+    'tokenManagement',
+    'tunnelServices',
+    'happyMode',
+  ];
+
+  // Count for summary (all categories fully selected)
+  const summary = {
+    commands: 7,
+    agents: 2,
+    hooks: 2,
+    skills: 2,
+    extras: 3,
+    docs: 2,
+  };
+
+  console.log(chalk.dim(`\nInstalling: ${allFeatures.length} features (all categories)`));
+
+  // Check if .claude folder exists and handle backup
+  const claudeDir = join(process.cwd(), '.claude');
+  const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+  const hasExisting = existsSync(claudeDir) || existsSync(claudeMdPath);
+
+  let installStrategy = 'backup'; // Default: backup then overwrite
+
+  if (hasExisting) {
+    const existing = [];
+    if (existsSync(claudeDir)) existing.push('.claude/');
+    if (existsSync(claudeMdPath)) existing.push('CLAUDE.md');
+
+    console.log(chalk.yellow(`\n⚠️  Existing files found: ${existing.join(', ')}`));
+    console.log(chalk.dim('Creating backup before overwriting...\n'));
+    installStrategy = 'backup';
+  }
+
+  // Run init with ALL features
+  const spinner = ora('Installing ALL CCASP features...').start();
+
+  try {
+    await runInit({
+      features: initFeatures,
+      skipPrompts: true,
+      preset: 'full',
+      backup: installStrategy === 'backup',
+      force: false,
+      skipExisting: false,
+    });
+
+    spinner.succeed('CCASP fully installed!');
+
+    // Show summary
+    console.log(
+      boxen(
+        chalk.bold.green('✅ Auto-Install Complete\n\n') +
+          chalk.white('All features installed:\n\n') +
+          `Commands:  ${chalk.cyan('23+')} ${chalk.dim('(GitHub, planning, testing, deploy, refactor...)')}\n` +
+          `Agents:    ${chalk.cyan('4')} ${chalk.dim('(example, creator templates)')}\n` +
+          `Hooks:     ${chalk.cyan('20')} ${chalk.dim('(token, happy, advanced suite...)')}\n` +
+          `Skills:    ${chalk.cyan('4')} ${chalk.dim('(agent-creator, hook-creator, rag-agent...)')}\n` +
+          `Docs:      ${chalk.cyan('4')} ${chalk.dim('(INDEX, README, gotchas, constitution)')}\n\n` +
+          chalk.bold('Next Steps:\n') +
+          chalk.dim('1. Launch Claude Code CLI\n') +
+          chalk.dim('2. Run ') + chalk.yellow('/project-implementation-for-ccasp') + chalk.dim(' for full setup'),
+        {
+          padding: 1,
+          borderStyle: 'round',
+          borderColor: 'green',
+        }
+      )
+    );
+
+    // Offer to launch Claude CLI
+    const { launchClaude } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'launchClaude',
+        message: 'Launch Claude Code CLI now?',
+        default: true,
+      },
+    ]);
+
+    if (launchClaude) {
+      await launchClaudeCLI();
+    } else {
+      showRestartReminder();
+    }
+
+    return true;
+  } catch (error) {
+    spinner.fail('Installation failed');
+    console.error(chalk.red(error.message));
+    return false;
+  }
+}
+
+/**
+ * Run custom install with organized checkbox deselection
+ * Shows checkbox UI for users who want to customize feature selection
+ */
+async function runCustomInstall() {
+  // Display header
+  console.log(
+    boxen(
+      chalk.bold.cyan('📦 CCASP Custom Install\n\n') +
         chalk.white('All features selected by default.\n') +
         chalk.dim('Space to toggle • Enter to install'),
       {
@@ -919,75 +1050,106 @@ async function runFullInstall() {
 
 /**
  * Launch Claude Code CLI with auto-injected command
+ * Opens a new terminal window and starts Claude CLI
  */
 async function launchClaudeCLI() {
   console.log(chalk.cyan('\n🚀 Launching Claude Code CLI...\n'));
 
   const platform = process.platform;
-  const command = '/project-implementation-for-ccasp';
+  const cwd = process.cwd();
+  let launched = false;
 
   try {
-    // Different launch commands per platform
+    const { spawn, execSync } = await import('child_process');
+
     if (platform === 'win32') {
-      // Windows: Open new terminal with claude command
-      const { execSync } = await import('child_process');
-      execSync(`start cmd /k "claude \\"${command}\\""`, { stdio: 'inherit' });
+      // Windows: Open new CMD window with claude, keeping it open
+      // Use spawn with detached to let the new window run independently
+      const child = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && claude`], {
+        detached: true,
+        stdio: 'ignore',
+        shell: true,
+      });
+      child.unref();
+      launched = true;
     } else if (platform === 'darwin') {
       // macOS: Open Terminal app with claude command
-      const { execSync } = await import('child_process');
-      execSync(`osascript -e 'tell application "Terminal" to do script "claude \\"${command}\\""'`, { stdio: 'inherit' });
+      execSync(`osascript -e 'tell application "Terminal" to do script "cd \\"${cwd}\\" && claude"'`, { stdio: 'pipe' });
+      launched = true;
     } else {
       // Linux: Try common terminals
-      const { execSync } = await import('child_process');
       try {
-        execSync(`gnome-terminal -- bash -c "claude '${command}'; exec bash"`, { stdio: 'inherit' });
+        execSync(`gnome-terminal -- bash -c "cd '${cwd}' && claude; exec bash"`, { stdio: 'pipe' });
+        launched = true;
       } catch {
         try {
-          execSync(`xterm -e "claude '${command}'"`, { stdio: 'inherit' });
+          execSync(`xterm -e "cd '${cwd}' && claude"`, { stdio: 'pipe' });
+          launched = true;
         } catch {
-          console.log(chalk.yellow('\nCould not auto-launch terminal.'));
-          console.log(chalk.dim('Please run manually:'));
-          console.log(chalk.cyan(`  claude "${command}"`));
+          // Fallback below
         }
       }
     }
 
-    console.log(
-      boxen(
-        chalk.green('Claude CLI launched!\n\n') +
-          chalk.dim('A new terminal window opened with:\n') +
-          chalk.yellow(`claude "${command}"\n\n`) +
-          chalk.dim('This will run the full CCASP project setup.'),
-        {
-          padding: 1,
-          borderStyle: 'round',
-          borderColor: 'green',
-        }
-      )
-    );
+    if (launched) {
+      console.log(
+        boxen(
+          chalk.green('✅ Claude CLI Launched!\n\n') +
+            chalk.dim('A new terminal window has opened.\n\n') +
+            chalk.white('Quick start commands:\n') +
+            `  ${chalk.yellow('/menu')} - See all available commands\n` +
+            `  ${chalk.yellow('/project-implementation-for-ccasp')} - Full setup`,
+          {
+            padding: 1,
+            borderStyle: 'round',
+            borderColor: 'green',
+          }
+        )
+      );
+    } else {
+      showManualLaunchInstructions(cwd);
+    }
   } catch (error) {
-    console.log(chalk.yellow('\nCould not auto-launch Claude CLI.'));
-    console.log(chalk.dim('Please run manually:'));
-    console.log(chalk.cyan(`  claude "${command}"`));
+    showManualLaunchInstructions(cwd);
   }
 }
 
 /**
- * Show session restart reminder
+ * Show manual launch instructions when auto-launch fails
  */
-function showRestartReminder() {
+function showManualLaunchInstructions(cwd) {
   console.log(
     boxen(
-      chalk.bold.yellow('⚠️  RESTART REQUIRED\n\n') +
-        chalk.white('Changes to .claude/ require a new session.\n\n') +
-        chalk.dim('To apply changes:\n') +
-        `  ${chalk.cyan('1.')} Exit Claude Code CLI (${chalk.yellow('Ctrl+C')} or ${chalk.yellow('/exit')})\n` +
-        `  ${chalk.cyan('2.')} Restart: ${chalk.yellow('claude')} or ${chalk.yellow('claude .')}\n` +
-        `  ${chalk.cyan('3.')} New commands will be available`,
+      chalk.yellow('⚠️  Could not auto-launch Claude CLI\n\n') +
+        chalk.white('Please run these commands manually:\n\n') +
+        chalk.dim(`  cd "${cwd}"\n`) +
+        chalk.cyan('  claude\n\n') +
+        chalk.dim('Then try: ') + chalk.yellow('/menu') + chalk.dim(' or ') + chalk.yellow('/project-implementation-for-ccasp'),
       {
         padding: 1,
         borderStyle: 'round',
         borderColor: 'yellow',
+      }
+    )
+  );
+}
+
+/**
+ * Show session restart reminder
+ * Context-aware: different message for terminal vs Claude CLI
+ */
+function showRestartReminder() {
+  console.log(
+    boxen(
+      chalk.bold.green('✅ Setup Complete!\n\n') +
+        chalk.white('To start using your new commands:\n\n') +
+        chalk.dim('Run this command in your project directory:\n\n') +
+        `  ${chalk.yellow('claude')}\n\n` +
+        chalk.dim('Then try: ') + chalk.cyan('/menu') + chalk.dim(' or ') + chalk.cyan('/project-implementation-for-ccasp'),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'green',
       }
     )
   );
@@ -1504,9 +1666,15 @@ export async function runSetupWizard(options = {}) {
     ]);
 
     switch (action) {
-      case 'full':
-        // Full Install: Issue #14 - organized checkbox with deselection
-        await runFullInstall();
+      case 'auto':
+        // Auto-Install: ALL features, no prompts
+        await runAutoInstall();
+        running = false;
+        break;
+
+      case 'custom':
+        // Custom Install: checkbox UI for feature selection
+        await runCustomInstall();
         running = false;
         break;
 
