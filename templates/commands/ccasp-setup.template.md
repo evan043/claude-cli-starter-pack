@@ -11,24 +11,25 @@ Linear setup wizard that configures your entire project in one pass. No menus to
 
 This is a **linear wizard** - walk through each step sequentially, collecting all inputs before writing config at the end.
 
-### CRITICAL: Autonomous Execution
+### CRITICAL: Smart Detection + Recommendations
 
-**DO NOT wait for user input on steps that don't require it.** Execute these steps automatically and proceed immediately:
+**Auto-detect everything possible, then present recommendations for user confirmation.**
 
-| Step | Autonomous? | Action |
-|------|-------------|--------|
+| Step | Mode | Action |
+|------|------|--------|
 | Step 0 | ✅ AUTO | Initialize state silently |
-| Step 1 | ✅ AUTO | Scan project, display status, continue immediately |
-| Step 2 | ❌ USER | Ask for preset selection |
-| Step 3 | ❌ USER | Ask about GitHub |
-| Step 4 | ❌ USER | Ask about deployment |
-| Step 5 | ❌ USER | Ask about tunnel |
-| Step 6 | ❌ USER | Ask about CLAUDE.md, then auto-detect/audit |
-| Step 7 | ✅ AUTO | Display summary, then ask confirmation |
-| Step 8 | ✅ AUTO | Write all config (no user input needed) |
-| Step 9 | ✅ AUTO | Display completion message |
+| Step 1 | ✅ AUTO | Deep scan: .claude/, CLAUDE.md, package.json, configs, git remote |
+| Step 2 | 🔍 RECOMMEND | Suggest preset based on project complexity |
+| Step 3 | 🔍 RECOMMEND | Auto-detect GitHub from git remote, suggest project board |
+| Step 4 | 🔍 RECOMMEND | Detect deployment configs, suggest platforms |
+| Step 5 | 🔍 RECOMMEND | Check for tunnel configs, suggest if none found |
+| Step 6 | 🔍 RECOMMEND | Auto-audit CLAUDE.md, recommend action |
+| Step 7 | ✅ AUTO | Display summary with all recommendations |
+| Step 8 | ❌ USER | Single confirmation: "Apply these settings? (Y/N)" |
+| Step 9 | ✅ AUTO | Write all config |
+| Step 10 | ✅ AUTO | Display completion message |
 
-**After each USER step**, immediately proceed to the next step without waiting. Use AskUserQuestion to batch multiple questions when possible.
+**Key principle**: Explore first, ask once. Batch all confirmations into Step 8.
 
 ### Step 0: Initialize State (AUTO - no user input)
 
@@ -52,259 +53,273 @@ const wizardState = {
 }
 ```
 
-### Step 1: Project Detection
+### Step 1: Deep Project Scan (AUTO)
 
-**Auto-scan the project** using Bash/Glob:
+**Scan everything in parallel** - gather all data needed for recommendations:
 
-```bash
-ls -la .claude 2>/dev/null
-ls -la CLAUDE.md 2>/dev/null
-ls -la package.json 2>/dev/null
+```javascript
+// Run these scans in parallel using Glob/Read/Bash
+const scans = {
+  // Basic structure
+  hasClaudeFolder: exists('.claude/'),
+  hasClaudeMd: exists('CLAUDE.md'),
+  hasTechStackConfig: exists('.claude/config/tech-stack.json'),
+
+  // Package info
+  packageJson: read('package.json'),  // Get name, scripts, dependencies
+
+  // Git/GitHub detection
+  gitRemote: bash('git remote get-url origin 2>/dev/null'),  // e.g., git@github.com:user/repo.git
+
+  // Deployment config detection
+  hasRailway: exists('railway.json') || exists('railway.toml'),
+  hasVercel: exists('vercel.json'),
+  hasWrangler: exists('wrangler.toml'),
+  hasDockerfile: exists('Dockerfile'),
+
+  // Framework detection (from package.json dependencies)
+  frameworks: detectFromPackageJson(),  // react, vue, next, express, etc.
+
+  // Tunnel detection
+  hasNgrokConfig: exists('ngrok.yml') || exists('.ngrok'),
+
+  // Existing CLAUDE.md analysis
+  claudeMdContent: read('CLAUDE.md'),
+  claudeMdLineCount: countLines('CLAUDE.md')
+}
 ```
 
-**Display status:**
-
-```
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║   CCASP Setup Wizard                                                          ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
-║                                                                               ║
-║   Project Status:                                                             ║
-║   ├─ .claude/ folder:     ✅ Exists  OR  ❌ Not found                         ║
-║   ├─ CLAUDE.md:           ✅ Exists  OR  ❌ Not found                         ║
-║   ├─ package.json:        ✅ Found   OR  ❌ Not found                         ║
-║   └─ Tech stack config:   ✅ Configured  OR  ❌ Not configured                ║
-║                                                                               ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+**Parse git remote to extract GitHub info:**
+```javascript
+// git@github.com:user/repo.git → { owner: 'user', repo: 'repo' }
+// https://github.com/user/repo.git → { owner: 'user', repo: 'repo' }
 ```
 
-If `.claude/config/tech-stack.json` exists, read it and show current settings.
+**Store all findings in wizardState.detected** - DO NOT display yet, continue to Step 2.
 
-**IMMEDIATELY proceed to Step 2 after displaying status - do not wait for user input.**
+### Step 2: Recommend Feature Preset (AUTO)
 
-### Step 2: Feature Preset (USER INPUT REQUIRED)
+**Analyze detected data to recommend a preset:**
 
-Ask using AskUserQuestion:
+```javascript
+function recommendPreset(detected) {
+  const hasGitHub = detected.gitRemote?.includes('github.com');
+  const hasTests = detected.packageJson?.scripts?.test;
+  const hasDeploy = detected.hasRailway || detected.hasVercel || detected.hasWrangler;
+  const dependencyCount = Object.keys(detected.packageJson?.dependencies || {}).length;
 
-```
-Which feature preset would you like?
-
-[A] Minimal    - Menu + help only (for simple projects)
-[B] Standard   - GitHub + phased dev + testing (recommended)
-[C] Full       - All features including agents, hooks, skills
-[D] Custom     - Pick individual features
-```
-
-**If D (Custom)**, show feature checklist:
-
-```
-Select features to install (comma-separated, e.g., "1,3,5"):
-
-[1] /menu              - Interactive project menu
-[2] /github-task       - Create GitHub issues with codebase analysis
-[3] /phase-dev-plan    - Phased development planning
-[4] /e2e-test          - Playwright E2E testing
-[5] /create-agent      - Create L1/L2/L3 agents
-[6] /create-hook       - Create enforcement hooks
-[7] /create-skill      - Create RAG skills
-[8] /explore-mcp       - MCP server discovery
-[9] /claude-audit      - CLAUDE.md validation
-[A] /codebase-explorer - Codebase analysis
-[B] /create-task-list  - Intelligent task lists
+  if (dependencyCount > 20 || hasDeploy) {
+    return 'C';  // Full - complex project
+  } else if (hasGitHub || hasTests) {
+    return 'B';  // Standard - typical project
+  } else {
+    return 'A';  // Minimal - simple project
+  }
+}
 ```
 
-Store selection in `wizardState.preset` and `wizardState.features`.
+**Store recommendation** in `wizardState.preset` - continue immediately to Step 3.
 
-**After user responds, immediately proceed to Step 3.**
+### Step 3: Detect GitHub (AUTO)
 
-### Step 3: GitHub Project Board (USER INPUT REQUIRED)
+**Extract GitHub info from git remote:**
 
-Ask:
+```javascript
+// Already parsed in Step 1
+const { owner, repo } = parseGitRemote(detected.gitRemote);
 
-```
-Do you use GitHub Projects for task tracking? (Y/N)
-```
-
-**If Y**, ask three quick questions:
-
-```
-GitHub repository owner (username or org):
-> _
-
-Repository name:
-> _
-
-Project number (from URL github.com/users/OWNER/projects/NUMBER):
-> _
+if (owner && repo) {
+  wizardState.github = {
+    enabled: true,
+    owner: owner,
+    repo: repo,
+    projectNumber: null  // Can't auto-detect, will ask in Step 8 if needed
+  };
+}
 ```
 
-Store in `wizardState.github`.
+**Continue immediately to Step 4.**
 
-**If N**, skip and immediately continue to Step 4.
+### Step 4: Detect Deployment (AUTO)
 
-### Step 4: Deployment Platforms (USER INPUT REQUIRED)
+**Infer deployment platforms from config files:**
 
-Ask frontend platform:
+```javascript
+function detectDeployment(detected) {
+  const deployment = { frontend: null, backend: null };
 
-```
-Frontend deployment platform?
+  // Frontend detection
+  if (detected.hasWrangler) {
+    // Read wrangler.toml for project name
+    const wranglerContent = read('wrangler.toml');
+    deployment.frontend = {
+      platform: 'cloudflare',
+      projectName: parseWranglerName(wranglerContent)
+    };
+  } else if (detected.hasVercel) {
+    deployment.frontend = { platform: 'vercel', projectName: detected.packageJson?.name };
+  }
 
-[1] Cloudflare Pages
-[2] Vercel
-[3] Netlify
-[4] GitHub Pages
-[0] None / Skip
-```
+  // Backend detection
+  if (detected.hasRailway) {
+    // Read railway.json/toml for project info
+    deployment.backend = { platform: 'railway', projectId: null, serviceId: null };
+  }
 
-**If 1-4**, ask for project name/ID:
+  // Fallback: check package.json scripts for deploy hints
+  const scripts = detected.packageJson?.scripts || {};
+  if (scripts['deploy:cloudflare'] || scripts['pages:deploy']) {
+    deployment.frontend = deployment.frontend || { platform: 'cloudflare' };
+  }
+  if (scripts['deploy:railway']) {
+    deployment.backend = deployment.backend || { platform: 'railway' };
+  }
 
-```
-Cloudflare project name (e.g., "my-app"):
-> _
-```
+  return deployment;
+}
 
-Ask backend platform:
-
-```
-Backend deployment platform?
-
-[1] Railway
-[2] Render
-[3] Heroku
-[4] AWS
-[0] None / Skip
-```
-
-**If Railway (1)**, ask:
-
-```
-Railway project ID (from dashboard URL):
-> _
-
-Railway service ID:
-> _
+wizardState.deployment = detectDeployment(detected);
 ```
 
-Store in `wizardState.deployment`.
+**Continue immediately to Step 5.**
 
-**After user responds, immediately proceed to Step 5.**
+### Step 5: Detect Tunnel (AUTO)
 
-### Step 5: Dev Environment / Tunnel (USER INPUT REQUIRED)
+**Check for existing tunnel configuration:**
 
-Ask:
+```javascript
+function detectTunnel(detected) {
+  if (detected.hasNgrokConfig) {
+    return { service: 'ngrok', subdomain: parseNgrokSubdomain() };
+  }
 
-```
-Tunnel service for mobile/remote testing?
+  // Check package.json scripts for tunnel hints
+  const scripts = detected.packageJson?.scripts || {};
+  if (scripts.tunnel?.includes('ngrok')) return { service: 'ngrok' };
+  if (scripts.tunnel?.includes('localtunnel')) return { service: 'localtunnel' };
 
-[1] ngrok
-[2] localtunnel
-[3] cloudflare-tunnel
-[0] None / Skip
-```
+  // No tunnel detected - that's fine, leave as 'none'
+  return { service: 'none' };
+}
 
-**If 1-3**, optionally ask:
-
-```
-Preferred subdomain (press Enter to skip):
-> _
-```
-
-Store in `wizardState.tunnel`.
-
-**After user responds, immediately proceed to Step 6.**
-
-### Step 6: CLAUDE.md Setup (USER INPUT → then AUTO)
-
-Ask:
-
-```
-Would you like to set up CLAUDE.md? (Y/N)
+wizardState.tunnel = detectTunnel(detected);
 ```
 
-**If Y**, perform these actions **AUTOMATICALLY without waiting for user input**:
+**Continue immediately to Step 6.**
 
-1. **Detect tech stack** by scanning (AUTO - just do it):
-   - `package.json` for frameworks (react, vue, next, etc.)
-   - Config files (vite.config.*, tsconfig.json, etc.)
-   - Backend indicators (requirements.txt, go.mod, etc.)
-   - Deployment configs (railway.json, vercel.json, wrangler.toml)
+### Step 6: Analyze CLAUDE.md (AUTO)
 
-2. **Check existing CLAUDE.md** (AUTO - if present):
-   - Count lines (warn if >60, error if >300)
-   - Check for anti-patterns (vague instructions, long code blocks)
-   - Check for good patterns (IMPORTANT/MUST/NEVER keywords, runnable commands)
-   - Calculate score (0-100)
+**Audit existing CLAUDE.md and recommend action:**
 
-3. **Display audit results** (AUTO - display immediately, no wait):
-   ```
-   📊 CLAUDE.md Audit: Score 72/100
-   ├─ ✓ Has runnable commands
-   ├─ ✓ Uses emphasis keywords
-   ├─ ⚠ Line count: 85 (recommended <60)
-   └─ ⚠ Found 2 vague instructions
-   ```
+```javascript
+function analyzeCLAUDEmd(detected) {
+  const result = {
+    exists: detected.hasClaudeMd,
+    lineCount: detected.claudeMdLineCount || 0,
+    score: 0,
+    issues: [],
+    recommendation: 'skip'
+  };
 
-4. **Ask enhancement preference** (USER INPUT):
-   ```
-   CLAUDE.md action?
-   [1] Generate new (from detected stack)
-   [2] Enhance existing (add missing sections)
-   [3] Skip - keep as is
-   ```
+  if (!detected.hasClaudeMd) {
+    result.recommendation = 'generate';
+    return result;
+  }
 
-5. **If 1 or 2**, prepare content (AUTO - stored for Step 8):
-   - Project overview from package.json
-   - Tech stack summary from detection
-   - Key commands (dev, build, test, deploy)
-   - Important paths
-   - Architecture notes based on detected patterns
+  const content = detected.claudeMdContent;
 
-6. **Store in wizardState**:
-   ```javascript
-   wizardState.claudeMd = {
-     action: 'generate' | 'enhance' | 'skip',
-     detectedStack: { ... },
-     auditScore: 72
-   }
-   ```
+  // Scoring
+  if (content.includes('```bash')) result.score += 20;
+  if (/IMPORTANT|MUST|NEVER|CRITICAL/i.test(content)) result.score += 20;
+  if (content.includes('## Commands') || content.includes('## Tech Stack')) result.score += 20;
+  if (result.lineCount <= 60) result.score += 20;
+  if (result.lineCount <= 300) result.score += 20;
 
-**If N**, skip and immediately continue to Step 7.
+  // Issues
+  if (result.lineCount > 300) result.issues.push('Too long (>300 lines)');
+  if (result.lineCount > 60) result.issues.push('Consider shortening (<60 recommended)');
+  if (/be careful|try to|maybe/i.test(content)) result.issues.push('Vague instructions found');
 
-**After user responds to CLAUDE.md action, immediately proceed to Step 7.**
+  // Recommendation
+  if (result.score < 40) {
+    result.recommendation = 'generate';  // Too broken, start fresh
+  } else if (result.score < 70) {
+    result.recommendation = 'enhance';   // Could use improvement
+  } else {
+    result.recommendation = 'skip';      // Good enough
+  }
 
-### Step 7: Summary & Confirmation (AUTO display → USER confirm)
+  return result;
+}
 
-Display all collected settings:
+wizardState.claudeMd = analyzeCLAUDEmd(detected);
+wizardState.claudeMd.detectedStack = detected.frameworks;
+```
+
+**Continue immediately to Step 7.**
+
+### Step 7: Display Recommendations (AUTO)
+
+**Show all detected settings and recommendations:**
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║   Setup Summary                                                               ║
+║   CCASP Setup - Detected Configuration                                       ║
 ╠═══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                               ║
-║   Feature Preset:        Standard (B)                                         ║
+║   Project: my-project (from package.json)                                     ║
+║   Tech Stack: React 19 + Vite + Tailwind (auto-detected)                      ║
 ║                                                                               ║
-║   GitHub Project Board:  ✅ Enabled                                           ║
-║   ├─ Repository:         owner/repo-name                                      ║
-║   └─ Project Number:     6                                                    ║
+║   Recommendations:                                                            ║
+║   ─────────────────                                                           ║
+║   Feature Preset:    [C] Full (complex project with 25+ dependencies)         ║
+║                                                                               ║
+║   GitHub:            ✅ Detected from git remote                              ║
+║   ├─ Repository:     user/my-project                                          ║
+║   └─ Project Board:  ❓ Not detected (optional - enter number if you have one)║
 ║                                                                               ║
 ║   Deployment:                                                                 ║
-║   ├─ Frontend:           Cloudflare Pages (my-app)                            ║
-║   └─ Backend:            Railway (project-id)                                 ║
+║   ├─ Frontend:       Cloudflare (detected from wrangler.toml)                 ║
+║   └─ Backend:        Railway (detected from railway.json)                     ║
 ║                                                                               ║
-║   Tunnel:                ngrok                                                ║
+║   Tunnel:            None detected                                            ║
 ║                                                                               ║
-║   CLAUDE.md:             Generate new (detected: React + Vite + Tailwind)     ║
+║   CLAUDE.md:         Enhance (score: 65/100, 2 issues found)                  ║
+║   └─ Issues:         Line count 85 (>60), vague instructions                  ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
-
-Proceed with setup? (Y to confirm, N to restart)
 ```
 
-**Display summary automatically, then ask for confirmation.**
+**Continue immediately to Step 8.**
 
-### Step 8: Write Configuration (AUTO - no user input)
+### Step 8: User Confirmation (ONLY USER INPUT STEP)
 
-**If confirmed (Y)**, execute ALL of the following automatically without stopping:
+**This is the ONLY step requiring user input.** Ask for confirmation and any missing values:
+
+```
+Apply these settings?
+
+[Y] Yes, apply all recommendations
+[N] No, let me customize
+[Q] Quit without changes
+
+If you have a GitHub Project Board, enter the number (or press Enter to skip):
+> _
+```
+
+**If Y**: Proceed to Step 9 with all detected/recommended values.
+
+**If N**: Use AskUserQuestion to let user override specific settings:
+- Feature preset (A/B/C/D)
+- GitHub project number
+- Deployment project names/IDs (if detected but need correction)
+- CLAUDE.md action (generate/enhance/skip)
+
+**After confirmation, proceed to Step 9.**
+
+### Step 9: Write Configuration (AUTO - no user input)
+
+**Execute ALL of the following automatically without stopping:**
 
 1. **Create .claude/ structure** (AUTO):
    ```bash
@@ -429,7 +444,7 @@ Proceed with setup? (Y to confirm, N to restart)
 
 **Execute all 5 sub-steps in sequence without pausing.**
 
-### Step 9: Completion Message (AUTO - display and done)
+### Step 10: Completion Message (AUTO - display and done)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -456,21 +471,20 @@ Proceed with setup? (Y to confirm, N to restart)
 
 ## Quick Reference
 
-| Step | Question | Input Type |
-|------|----------|------------|
-| 2 | Feature preset | A/B/C/D |
-| 2b | Custom features (if D) | 1,2,3... |
-| 3 | Use GitHub Projects? | Y/N |
-| 3b | Owner, repo, number | Text (3x) |
-| 4 | Frontend platform | 0-4 |
-| 4b | Project name | Text |
-| 4c | Backend platform | 0-4 |
-| 4d | Project/service IDs | Text (2x) |
-| 5 | Tunnel service | 0-3 |
-| 5b | Subdomain | Text (optional) |
-| 6 | Set up CLAUDE.md? | Y/N |
-| 6b | CLAUDE.md action | 1/2/3 |
-| 7 | Confirm? | Y/N |
+| Step | Action | User Input? |
+|------|--------|-------------|
+| 1 | Deep scan project (package.json, git, configs) | ✅ AUTO |
+| 2 | Recommend preset based on project complexity | ✅ AUTO |
+| 3 | Extract GitHub from git remote | ✅ AUTO |
+| 4 | Detect deployment from config files | ✅ AUTO |
+| 5 | Check for tunnel configuration | ✅ AUTO |
+| 6 | Audit CLAUDE.md and recommend action | ✅ AUTO |
+| 7 | Display all recommendations | ✅ AUTO |
+| 8 | Confirm settings (Y/N) + optional project # | ❌ USER |
+| 9 | Write all configuration | ✅ AUTO |
+| 10 | Display completion message | ✅ AUTO |
+
+**Total user inputs: 1-2** (confirmation + optional GitHub project number)
 
 ## Terminal Alternative
 
