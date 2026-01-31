@@ -120,6 +120,24 @@ const OPTIONAL_FEATURES = [
     default: true,
     requiresPostConfig: false,
   },
+  {
+    name: 'refactoring',
+    label: 'Refactoring Tools',
+    description: 'Code quality commands for linting, cleanup, and safe refactoring. Includes pre-commit checks, auto-fix, and safety checklists.',
+    commands: ['refactor-check', 'refactor-cleanup', 'refactor-prep'],
+    hooks: [],
+    default: false,
+    requiresPostConfig: false,
+  },
+  {
+    name: 'testing',
+    label: 'Advanced Testing',
+    description: 'Extended testing capabilities including smoke test generation and test coverage analysis.',
+    commands: ['create-smoke-test'],
+    hooks: [],
+    default: false,
+    requiresPostConfig: false,
+  },
 ];
 
 /**
@@ -292,6 +310,41 @@ const AVAILABLE_COMMANDS = [
     description: 'Smart merge manager for customized assets during updates',
     category: 'Maintenance',
     selected: true,
+  },
+  // Refactoring commands (Phase 4)
+  {
+    name: 'refactor-check',
+    description: 'Fast pre-commit quality gate - lint, type-check, test affected files',
+    category: 'Refactoring',
+    selected: false,
+    feature: 'refactoring',
+  },
+  {
+    name: 'refactor-cleanup',
+    description: 'Daily maintenance automation - fix lint, remove unused imports, format',
+    category: 'Refactoring',
+    selected: false,
+    feature: 'refactoring',
+  },
+  {
+    name: 'refactor-prep',
+    description: 'Pre-refactoring safety checklist - ensure safe conditions',
+    category: 'Refactoring',
+    selected: false,
+    feature: 'refactoring',
+  },
+  {
+    name: 'ask-claude',
+    description: 'Natural language command discovery - find the right command for any task',
+    category: 'Discovery',
+    selected: true,
+  },
+  {
+    name: 'create-smoke-test',
+    description: 'Auto-generate Playwright smoke tests for critical user flows',
+    category: 'Testing',
+    selected: false,
+    feature: 'testing',
   },
 ];
 

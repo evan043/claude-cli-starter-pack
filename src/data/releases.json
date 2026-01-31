@@ -1,6 +1,50 @@
 {
   "releases": [
     {
+      "version": "1.4.0",
+      "date": "2026-01-30",
+      "summary": "Feature: Phase 4 of 85 Recommendations - Additional Commands",
+      "highlights": [
+        "Added refactor-check command - Fast pre-commit quality gate",
+        "Added refactor-cleanup command - Auto-fix lint, format, imports",
+        "Added refactor-prep command - Pre-refactoring safety checklist",
+        "Added ask-claude command - Natural language command discovery",
+        "Added create-smoke-test command - Auto-generate Playwright tests",
+        "New 'refactoring' optional feature - Quality tools suite",
+        "New 'testing' optional feature - Advanced test generation"
+      ],
+      "newFeatures": {
+        "commands": [
+          {
+            "name": "refactor-check",
+            "description": "Fast pre-commit quality gate - lint, type-check, test affected"
+          },
+          {
+            "name": "refactor-cleanup",
+            "description": "Daily maintenance automation - fix lint, remove unused imports"
+          },
+          {
+            "name": "refactor-prep",
+            "description": "Pre-refactoring safety checklist - ensure safe conditions"
+          },
+          {
+            "name": "ask-claude",
+            "description": "Natural language command discovery"
+          },
+          {
+            "name": "create-smoke-test",
+            "description": "Auto-generate Playwright smoke tests for critical flows"
+          }
+        ],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.3.0",
       "date": "2026-01-30",
       "summary": "Feature: Phase 3 of 85 Recommendations - Skills Infrastructure",
