@@ -216,6 +216,160 @@ function generateHighlights(parsed) {
 }
 
 /**
+ * Get files changed in commits that reference a specific issue
+ * @param {number} issueNumber - The issue number to find commits for
+ * @param {Array} commits - Array of commit objects with hash and message
+ * @returns {Array} Array of file paths that were changed
+ */
+function getChangedFilesForIssue(issueNumber, commits) {
+  const changedFiles = new Set();
+  const issuePattern = new RegExp(`#${issueNumber}\\b`, 'i');
+
+  for (const commit of commits) {
+    if (issuePattern.test(commit.message)) {
+      try {
+        const files = execSilent(`git diff-tree --no-commit-id --name-only -r ${commit.hash}`);
+        if (files) {
+          files.split('\n').filter(Boolean).forEach(f => changedFiles.add(f));
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  return Array.from(changedFiles);
+}
+
+/**
+ * Get git diff snippet for a file (limited to reasonable size)
+ * @param {string} filePath - Path to the file
+ * @param {string} baseRef - Base reference (tag or commit) to diff from
+ * @returns {string} Formatted diff snippet or null
+ */
+function getDiffSnippet(filePath, baseRef) {
+  try {
+    const diff = execSilent(`git diff ${baseRef}..HEAD -- "${filePath}"`);
+    if (!diff || diff.length < 10) return null;
+
+    // Limit diff size to prevent huge issue bodies
+    const lines = diff.split('\n');
+    const maxLines = 50;
+
+    if (lines.length > maxLines) {
+      return lines.slice(0, maxLines).join('\n') + `\n... (${lines.length - maxLines} more lines truncated)`;
+    }
+
+    return diff;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Generate resolution section with code snippets
+ * @param {number} issueNumber - Issue number
+ * @param {string} version - Release version
+ * @param {Array} commits - Commits since last release
+ * @param {string} lastTag - Last release tag for diff base
+ * @returns {string} Markdown content for resolution section
+ */
+function generateResolutionSection(issueNumber, version, commits, lastTag) {
+  const changedFiles = getChangedFilesForIssue(issueNumber, commits);
+  const baseRef = lastTag || 'HEAD~10';
+
+  let section = `\n\n---\n\n## Resolution\n\n`;
+  section += `**Completed in v${version}**\n\n`;
+
+  if (changedFiles.length === 0) {
+    section += `_No specific file changes detected for this issue._\n`;
+    return section;
+  }
+
+  section += `### Files Changed (${changedFiles.length})\n\n`;
+
+  // Filter to only show relevant source files (not package-lock, etc.)
+  const relevantFiles = changedFiles.filter(f =>
+    !f.includes('package-lock.json') &&
+    !f.includes('node_modules/') &&
+    !f.endsWith('.lock')
+  );
+
+  for (const file of relevantFiles.slice(0, 5)) { // Max 5 files
+    const ext = file.split('.').pop() || '';
+    const langMap = {
+      js: 'javascript',
+      ts: 'typescript',
+      py: 'python',
+      json: 'json',
+      md: 'markdown',
+      css: 'css',
+      html: 'html',
+      jsx: 'jsx',
+      tsx: 'tsx',
+    };
+    const lang = langMap[ext] || '';
+
+    section += `<details>\n<summary><code>${file}</code></summary>\n\n`;
+
+    const diff = getDiffSnippet(file, baseRef);
+    if (diff) {
+      section += `\`\`\`diff\n${diff}\n\`\`\`\n`;
+    } else {
+      section += `_No diff available_\n`;
+    }
+
+    section += `\n</details>\n\n`;
+  }
+
+  if (relevantFiles.length > 5) {
+    section += `_... and ${relevantFiles.length - 5} more files_\n`;
+  }
+
+  return section;
+}
+
+/**
+ * Update issue body by appending resolution section
+ * @param {number} issueNumber - Issue number to update
+ * @param {string} resolutionSection - Markdown content to append
+ * @returns {boolean} Success status
+ */
+function updateIssueBody(issueNumber, resolutionSection) {
+  try {
+    // Get current issue body
+    const issueData = execSilent(`gh issue view ${issueNumber} --json body`);
+    if (!issueData) return false;
+
+    const { body: currentBody } = JSON.parse(issueData);
+
+    // Check if resolution section already exists
+    if (currentBody && currentBody.includes('## Resolution')) {
+      log(`  Issue #${issueNumber} already has a Resolution section, skipping body update`, 'dim');
+      return true;
+    }
+
+    // Append resolution section to body
+    const newBody = (currentBody || '') + resolutionSection;
+
+    // Write to temp file to handle complex markdown
+    const tempFile = join(ROOT, '.issue-body-temp.md');
+    writeFileSync(tempFile, newBody, 'utf8');
+
+    // Update issue body using file input
+    execSilent(`gh issue edit ${issueNumber} --body-file "${tempFile}"`);
+
+    // Clean up temp file
+    try {
+      execSync(`del "${tempFile}"`, { cwd: ROOT, stdio: 'pipe', shell: 'powershell.exe' });
+    } catch { /* ignore cleanup errors */ }
+
+    return true;
+  } catch (error) {
+    log(`  Failed to update issue #${issueNumber} body: ${error.message}`, 'yellow');
+    return false;
+  }
+}
+
+/**
  * Extract issue numbers from commit messages
  * Looks for patterns like: #123, fixes #123, closes #123, resolves #123
  */
@@ -258,17 +412,39 @@ function checkOpenIssues(issueNumbers) {
 }
 
 /**
- * Close GitHub issues with a comment linking to the release
+ * Close GitHub issues by updating their body with resolution details and code snippets
+ * @param {Array} issues - Array of issue objects to close
+ * @param {string} version - Release version
+ * @param {Array} commits - Commits since last release (for finding changed files)
+ * @param {string} lastTag - Last release tag (for diff base)
  */
-function closeIssues(issues, version) {
+function closeIssues(issues, version, commits = [], lastTag = null) {
   const closed = [];
   const failed = [];
 
   for (const issue of issues) {
     try {
-      // Add comment and close
-      const comment = `Completed in v${version}. Closing automatically as part of release.`;
-      execSilent(`gh issue close ${issue.number} --comment "${comment}"`);
+      // Generate resolution section with code snippets
+      const resolutionSection = generateResolutionSection(
+        issue.number,
+        version,
+        commits,
+        lastTag
+      );
+
+      // Update issue body with resolution section
+      const bodyUpdated = updateIssueBody(issue.number, resolutionSection);
+
+      if (!bodyUpdated) {
+        log(`  ⚠ Could not update issue #${issue.number} body, adding comment instead`, 'yellow');
+        // Fallback to comment if body update fails
+        const comment = `Completed in v${version}. Closing automatically as part of release.`;
+        execSilent(`gh issue close ${issue.number} --comment "${comment}"`);
+      } else {
+        // Close without additional comment (body has all the info)
+        execSilent(`gh issue close ${issue.number}`);
+      }
+
       closed.push(issue);
     } catch {
       failed.push(issue);
@@ -281,8 +457,12 @@ function closeIssues(issues, version) {
 /**
  * Pre-deploy checkpoint: Audit session for unclosed issues
  * Scans commits for issue references and offers to close them
+ * @param {Array} commits - Commits since last release
+ * @param {string} newVersion - New version being released
+ * @param {boolean} autoMode - Whether to auto-close without prompting
+ * @param {string} lastTag - Last release tag for diff base
  */
-async function auditAndCloseIssues(commits, newVersion, autoMode) {
+async function auditAndCloseIssues(commits, newVersion, autoMode, lastTag = null) {
   log('\n[0/8] Pre-deploy checkpoint: Auditing issues...', 'cyan');
 
   // Extract issue numbers from commits
@@ -312,8 +492,8 @@ async function auditAndCloseIssues(commits, newVersion, autoMode) {
 
   // Auto mode: close automatically
   if (autoMode) {
-    log('\n[AUTO MODE] Closing issues automatically...', 'cyan');
-    const result = closeIssues(openIssues, newVersion);
+    log('\n[AUTO MODE] Closing issues with code snippets...', 'cyan');
+    const result = closeIssues(openIssues, newVersion, commits, lastTag);
 
     if (result.closed.length > 0) {
       log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
@@ -351,8 +531,8 @@ async function auditAndCloseIssues(commits, newVersion, autoMode) {
     }
 
     if (toClose.length > 0) {
-      const result = closeIssues(toClose, newVersion);
-      log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
+      const result = closeIssues(toClose, newVersion, commits, lastTag);
+      log(`  ✓ Closed ${result.closed.length} issue(s) with code snippets`, 'green');
       return { checked: true, closed: result.closed, skipped: openIssues.filter(i => !toClose.includes(i)) };
     }
 
@@ -360,7 +540,7 @@ async function auditAndCloseIssues(commits, newVersion, autoMode) {
   }
 
   // Default: close all
-  const result = closeIssues(openIssues, newVersion);
+  const result = closeIssues(openIssues, newVersion, commits, lastTag);
 
   if (result.closed.length > 0) {
     log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
@@ -468,9 +648,10 @@ async function main() {
 
   // 0. Get commits for release notes and issue audit
   const commits = getCommitsSinceLastRelease();
+  const lastTag = getLastReleaseTag();
 
-  // Pre-deploy checkpoint: Audit and close issues
-  const issueAudit = await auditAndCloseIssues(commits, newVersion, autoMode);
+  // Pre-deploy checkpoint: Audit and close issues (with code snippets)
+  const issueAudit = await auditAndCloseIssues(commits, newVersion, autoMode, lastTag);
 
   console.log('\n' + '─'.repeat(60));
 
