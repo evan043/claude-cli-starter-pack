@@ -13,11 +13,7 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
 import { execSync, spawn } from 'child_process';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// fileURLToPath is available if needed for future CLI enhancements
 
 /**
  * Display npm fund information
@@ -26,7 +22,7 @@ function showFundingInfo() {
   try {
     console.log(chalk.dim('\n📦 Checking funding information...\n'));
     execSync('npm fund', { stdio: 'inherit', encoding: 'utf8' });
-  } catch (error) {
+  } catch {
     // npm fund might not exist or fail silently - that's OK
   }
 }
@@ -58,7 +54,7 @@ async function launchWizard() {
     // Import and run the wizard directly
     const { runSetupWizard } = await import('../src/commands/setup-wizard.js');
     await runSetupWizard({ fromPostinstall: true });
-  } catch (error) {
+  } catch {
     // If direct import fails, try spawning ccasp wizard
     console.log(chalk.yellow('\nStarting wizard in new process...\n'));
 
@@ -71,10 +67,10 @@ async function launchWizard() {
         shell: true,
       });
 
-      child.on('error', (err) => {
+      child.on('error', () => {
         console.log(chalk.dim('\nRun manually: ccasp wizard\n'));
       });
-    } catch (spawnError) {
+    } catch {
       console.log(chalk.dim('\nRun manually: ccasp wizard\n'));
     }
   }
