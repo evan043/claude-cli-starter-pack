@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "1.8.12",
+      "date": "2026-01-31",
+      "summary": "Fix: use PowerShell for reliable Windows CLI launch",
+      "highlights": [
+        "Fixed: use PowerShell for reliable Windows CLI launch",
+        "Fixed: inject setup command when launching Claude CLI"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.10",
       "date": "2026-01-31",
       "summary": "Bug fixes and improvements",
