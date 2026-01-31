@@ -49,11 +49,13 @@ const OPTIONAL_FEATURES = [
   {
     name: 'happyMode',
     label: 'Happy Engineering Integration',
-    description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses. Requires Happy Coder app installed separately.',
+    description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses.',
     commands: ['happy-start'],
     hooks: ['happy-checkpoint-manager'],  // Only include hooks with templates
     default: false,
     requiresPostConfig: true,
+    npmPackage: 'happy-coder',  // Optional npm package to install
+    npmInstallPrompt: 'Install Happy Coder CLI globally? (npm i -g happy-coder)',
   },
   {
     name: 'githubIntegration',
@@ -1844,6 +1846,42 @@ export async function runInit(options = {}) {
       console.log(chalk.yellow(`    • ${feature.label}`));
     }
     console.log(chalk.dim('    Run /menu → Project Settings after installation to complete setup.'));
+  }
+
+  // Check for optional npm package installs from selected features
+  const featuresWithNpm = enabledFeatures.filter((f) => f.npmPackage);
+  if (featuresWithNpm.length > 0) {
+    console.log('');
+    console.log(chalk.bold('  Optional Package Installation\n'));
+
+    for (const feature of featuresWithNpm) {
+      const { installPackage } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'installPackage',
+          message: feature.npmInstallPrompt || `Install ${feature.npmPackage} globally?`,
+          default: true,
+        },
+      ]);
+
+      if (installPackage) {
+        const npmSpinner = ora(`Installing ${feature.npmPackage}...`).start();
+        try {
+          const { execSync } = await import('child_process');
+          execSync(`npm install -g ${feature.npmPackage}`, {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+            timeout: 120000, // 2 minutes timeout
+          });
+          npmSpinner.succeed(`Installed ${feature.npmPackage} globally`);
+        } catch (error) {
+          npmSpinner.fail(`Failed to install ${feature.npmPackage}`);
+          console.log(chalk.dim(`    Run manually: npm install -g ${feature.npmPackage}`));
+        }
+      } else {
+        console.log(chalk.dim(`  Skipped. Install later with: npm install -g ${feature.npmPackage}`));
+      }
+    }
   }
 
   console.log('');

@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "1.0.15",
+      "date": "2026-01-30",
+      "summary": "Feature: Optional npm package installation for features (Happy Coder support)",
+      "highlights": [
+        "Features can now define optional npm packages to install globally",
+        "Happy Mode feature prompts to install happy-coder CLI during init",
+        "Graceful fallback with manual install instructions on failure",
+        "2-minute timeout for npm install operations"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "npm-package-install",
+            "description": "Features can specify npmPackage and npmInstallPrompt for optional global installs"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.14",
       "date": "2026-01-30",
       "summary": "Fix: Complete feature deployment - hooks, commands, and auto-selection now work correctly",
