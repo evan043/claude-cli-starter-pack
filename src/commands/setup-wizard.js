@@ -1064,14 +1064,13 @@ async function launchClaudeCLI() {
     const { spawn, execSync } = await import('child_process');
 
     if (platform === 'win32') {
-      // Windows: Open new CMD window with claude and inject the setup command
-      // Claude CLI takes prompt as positional argument: claude "prompt"
-      const child = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && claude "${setupCommand}"`], {
-        detached: true,
+      // Windows: Use PowerShell Start-Process with argument array
+      // This reliably handles paths with spaces and special characters
+      const psArgs = `/k','cd /d "${cwd}" && claude "${setupCommand}"`;
+      execSync(`powershell -Command "Start-Process cmd -ArgumentList '${psArgs}'"`, {
         stdio: 'ignore',
-        shell: true,
+        cwd: cwd,
       });
-      child.unref();
       launched = true;
     } else if (platform === 'darwin') {
       // macOS: Open Terminal app with claude command and inject setup
