@@ -177,6 +177,12 @@ const AVAILABLE_COMMANDS = [
     selected: true,
   },
   {
+    name: 'run-git-issue',
+    description: 'Start working on a GitHub issue by number',
+    category: 'GitHub',
+    selected: true,
+  },
+  {
     name: 'phase-dev-plan',
     description: 'Create phased development plans (95%+ success rate)',
     category: 'Planning',
