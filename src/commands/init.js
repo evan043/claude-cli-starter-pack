@@ -42,7 +42,7 @@ const OPTIONAL_FEATURES = [
     label: 'Token Budget Management',
     description: 'Monitor and manage Claude API token usage with automatic compaction warnings, archive suggestions, and respawn thresholds. Includes hooks that track usage per session.',
     commands: ['context-audit'],
-    hooks: ['context-guardian'],  // Only include hooks with templates
+    hooks: ['context-guardian', 'token-budget-loader', 'tool-output-cacher'],
     default: false,
     requiresPostConfig: false,
   },
@@ -51,10 +51,10 @@ const OPTIONAL_FEATURES = [
     label: 'Happy Engineering Integration',
     description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses.',
     commands: ['happy-start'],
-    hooks: ['happy-checkpoint-manager'],  // Only include hooks with templates
+    hooks: ['happy-checkpoint-manager', 'happy-title-generator', 'happy-mode-detector', 'context-injector'],
     default: false,
     requiresPostConfig: true,
-    npmPackage: 'happy-coder',  // Optional npm package to install
+    npmPackage: 'happy-coder',
     npmInstallPrompt: 'Install Happy Coder CLI globally? (npm i -g happy-coder)',
   },
   {
@@ -92,6 +92,23 @@ const OPTIONAL_FEATURES = [
     hooks: [],
     default: false,
     requiresPostConfig: true,
+  },
+  {
+    name: 'advancedHooks',
+    label: 'Advanced Hook Suite',
+    description: 'Extended hook system with session management, git commit tracking, branch validation, issue detection, token monitoring, autonomous logging, and phase validation gates.',
+    commands: [],
+    hooks: [
+      'session-id-generator',
+      'git-commit-tracker',
+      'branch-merge-checker',
+      'issue-completion-detector',
+      'token-usage-monitor',
+      'autonomous-decision-logger',
+      'phase-validation-gates',
+    ],
+    default: false,
+    requiresPostConfig: false,
   },
 ];
 

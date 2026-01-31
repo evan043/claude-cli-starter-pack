@@ -1,6 +1,104 @@
 {
   "releases": [
     {
+      "version": "1.2.0",
+      "date": "2026-01-30",
+      "summary": "Feature: Phase 2 of 85 Recommendations - 7 Advanced Hook Templates",
+      "highlights": [
+        "Added session-id-generator.template.js - UUID sessions with PID-keyed registry",
+        "Added git-commit-tracker.template.js - Track commits per phase in PROGRESS.json",
+        "Added branch-merge-checker.template.js - Validate main branch sync before deployments",
+        "Added issue-completion-detector.template.js - Natural language completion detection",
+        "Added token-usage-monitor.template.js - Cumulative token tracking with respawn warning",
+        "Added autonomous-decision-logger.template.js - JSONL audit trail for agent decisions",
+        "Added phase-validation-gates.template.js - 5-gate validation before phase auto-chaining",
+        "New 'advancedHooks' optional feature in init.js"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [
+          {
+            "name": "session-id-generator",
+            "description": "Generates UUID sessions with PID-keyed registry for parallel session isolation"
+          },
+          {
+            "name": "git-commit-tracker",
+            "description": "Tracks git commits per phase and updates PROGRESS.json for rollback support"
+          },
+          {
+            "name": "branch-merge-checker",
+            "description": "Validates main branch sync status before deployments"
+          },
+          {
+            "name": "issue-completion-detector",
+            "description": "Detects completion phrases and triggers deployment pipeline"
+          },
+          {
+            "name": "token-usage-monitor",
+            "description": "Tracks cumulative token usage with auto-respawn warning at 90%"
+          },
+          {
+            "name": "autonomous-decision-logger",
+            "description": "Creates JSONL audit trail for all agent decisions"
+          },
+          {
+            "name": "phase-validation-gates",
+            "description": "5-gate validation before phase auto-chaining"
+          }
+        ],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-01-30",
+      "summary": "Feature: Phase 1 of 85 Recommendations - 5 New Hook Templates",
+      "highlights": [
+        "Added tool-output-cacher.template.js - Caches large outputs, saves ~500 tokens per output",
+        "Added token-budget-loader.template.js - Pre-calculates daily budget, ~5K tokens/session savings",
+        "Added happy-title-generator.template.js - Auto-generates session titles with issue numbers",
+        "Added happy-mode-detector.template.js - Detects Happy daemon environment",
+        "Added context-injector.template.js - Injects prior session context for continuity",
+        "All hooks now configurable via .claude/config/hooks-config.json",
+        "Updated tokenManagement feature to include token-budget-loader and tool-output-cacher",
+        "Updated happyMode feature to include all Happy-related hooks"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [
+          {
+            "name": "tool-output-cacher",
+            "description": "Caches large tool outputs to reduce context consumption"
+          },
+          {
+            "name": "token-budget-loader",
+            "description": "Pre-calculates daily token budget at session start"
+          },
+          {
+            "name": "happy-title-generator",
+            "description": "Auto-generates session titles for Happy daemon"
+          },
+          {
+            "name": "happy-mode-detector",
+            "description": "Detects Happy daemon environment and enables mobile mode"
+          },
+          {
+            "name": "context-injector",
+            "description": "Injects prior session context for seamless resumption"
+          }
+        ],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.16",
       "date": "2026-01-30",
       "summary": "Feature: Bypass All Permissions toggle in Project Settings menu",
