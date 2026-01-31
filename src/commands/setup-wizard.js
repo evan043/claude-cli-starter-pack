@@ -605,6 +605,11 @@ const SETUP_OPTIONS = [
     short: 'More',
   },
   {
+    name: `${chalk.magenta('5.')} Install Happy.engineering ${chalk.dim('- Mobile app + hooks')}`,
+    value: 'happy',
+    short: 'Happy',
+  },
+  {
     name: `${chalk.dim('0.')} Exit`,
     value: 'exit',
     short: 'Exit',
@@ -1610,6 +1615,172 @@ async function checkAndShowUpdateBanner() {
 }
 
 /**
+ * Install Happy.engineering - opens website and installs Happy commands/hooks
+ */
+async function installHappyEngineering() {
+  const cwd = process.cwd();
+  const claudeDir = join(cwd, '.claude');
+  const commandsDir = join(claudeDir, 'commands');
+  const hooksDir = join(claudeDir, 'hooks');
+
+  console.log(boxen(
+    chalk.magenta.bold('🎉 Happy.engineering Integration\n\n') +
+    chalk.white('This will:\n') +
+    chalk.dim('  1. Open happy.engineering in your browser\n') +
+    chalk.dim('  2. Install Happy commands to .claude/commands/\n') +
+    chalk.dim('  3. Install Happy hooks to .claude/hooks/\n') +
+    chalk.dim('  4. Optionally install the Happy CLI globally'),
+    { padding: 1, margin: 1, borderStyle: 'round', borderColor: 'magenta' }
+  ));
+
+  // Confirm installation
+  const { proceed } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'proceed',
+      message: 'Proceed with Happy.engineering installation?',
+      default: true,
+    },
+  ]);
+
+  if (!proceed) {
+    console.log(chalk.dim('\nInstallation cancelled.\n'));
+    return;
+  }
+
+  // Step 1: Open Happy.engineering in browser
+  const spinner = ora('Opening happy.engineering...').start();
+  try {
+    const { exec } = await import('child_process');
+    const url = 'https://happy.engineering';
+
+    // Cross-platform browser open
+    const platform = process.platform;
+    let cmd;
+    if (platform === 'win32') {
+      cmd = `start "" "${url}"`;
+    } else if (platform === 'darwin') {
+      cmd = `open "${url}"`;
+    } else {
+      cmd = `xdg-open "${url}"`;
+    }
+
+    await new Promise((resolve, reject) => {
+      exec(cmd, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+    spinner.succeed('Opened happy.engineering in browser');
+  } catch (error) {
+    spinner.warn(`Could not open browser automatically. Visit: ${chalk.cyan('https://happy.engineering')}`);
+  }
+
+  // Step 2: Ensure .claude directories exist
+  if (!existsSync(claudeDir)) {
+    mkdirSync(claudeDir, { recursive: true });
+    console.log(chalk.green('  ✓ Created .claude/'));
+  }
+  if (!existsSync(commandsDir)) {
+    mkdirSync(commandsDir, { recursive: true });
+    console.log(chalk.green('  ✓ Created .claude/commands/'));
+  }
+  if (!existsSync(hooksDir)) {
+    mkdirSync(hooksDir, { recursive: true });
+    console.log(chalk.green('  ✓ Created .claude/hooks/'));
+  }
+
+  // Step 3: Install Happy commands
+  const happyCommands = ['happy-start'];
+  const templatesDir = join(__dirname, '..', '..', 'templates', 'commands');
+  const installedCommands = [];
+
+  console.log(chalk.bold('\nInstalling Happy commands...\n'));
+
+  for (const cmdName of happyCommands) {
+    try {
+      const templatePath = join(templatesDir, `${cmdName}.template.md`);
+      const destPath = join(commandsDir, `${cmdName}.md`);
+
+      if (existsSync(templatePath)) {
+        const content = readFileSync(templatePath, 'utf8');
+        writeFileSync(destPath, content, 'utf8');
+        installedCommands.push(cmdName);
+        console.log(chalk.green(`  ✓ commands/${cmdName}.md`));
+      } else {
+        console.log(chalk.yellow(`  ⚠ Template not found: ${cmdName}`));
+      }
+    } catch (error) {
+      console.log(chalk.red(`  ✗ Failed: ${cmdName} - ${error.message}`));
+    }
+  }
+
+  // Step 4: Install Happy hooks
+  const happyHooks = [
+    'happy-checkpoint-manager',
+    'happy-title-generator',
+    'happy-mode-detector',
+    'context-injector',
+  ];
+  const hooksTemplatesDir = join(__dirname, '..', '..', 'templates', 'hooks');
+  const installedHooks = [];
+
+  console.log(chalk.bold('\nInstalling Happy hooks...\n'));
+
+  for (const hookName of happyHooks) {
+    try {
+      const templatePath = join(hooksTemplatesDir, `${hookName}.template.js`);
+      const destPath = join(hooksDir, `${hookName}.js`);
+
+      if (existsSync(templatePath)) {
+        const content = readFileSync(templatePath, 'utf8');
+        writeFileSync(destPath, content, 'utf8');
+        installedHooks.push(hookName);
+        console.log(chalk.green(`  ✓ hooks/${hookName}.js`));
+      } else {
+        console.log(chalk.yellow(`  ⚠ Template not found: ${hookName}`));
+      }
+    } catch (error) {
+      console.log(chalk.red(`  ✗ Failed: ${hookName} - ${error.message}`));
+    }
+  }
+
+  // Step 5: Optionally install Happy CLI globally
+  const { installCli } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'installCli',
+      message: 'Install Happy Coder CLI globally? (npm i -g happy-coder)',
+      default: false,
+    },
+  ]);
+
+  if (installCli) {
+    const npmSpinner = ora('Installing happy-coder CLI...').start();
+    try {
+      const { execSync } = await import('child_process');
+      execSync('npm i -g happy-coder', { stdio: 'pipe' });
+      npmSpinner.succeed('Installed happy-coder CLI globally');
+    } catch (error) {
+      npmSpinner.fail(`Failed to install: ${error.message}`);
+      console.log(chalk.dim('  You can install manually: npm i -g happy-coder'));
+    }
+  }
+
+  // Summary
+  console.log(boxen(
+    chalk.green.bold('✓ Happy.engineering installed!\n\n') +
+    chalk.white(`Commands: ${installedCommands.length} installed\n`) +
+    chalk.white(`Hooks: ${installedHooks.length} installed\n\n`) +
+    chalk.dim('Use /happy-start to begin a Happy session\n') +
+    chalk.dim('Learn more: https://happy.engineering'),
+    { padding: 1, margin: 1, borderStyle: 'round', borderColor: 'green' }
+  ));
+
+  showRestartReminder();
+}
+
+/**
  * Main setup wizard - entry point
  * @param {Object} options - Configuration options
  * @param {boolean} options.fromPostinstall - Whether launched from postinstall (enables directory selection)
@@ -1689,6 +1860,11 @@ export async function runSetupWizard(options = {}) {
       case 'more':
         // Advanced options submenu
         await showAdvancedOptions();
+        break;
+
+      case 'happy':
+        // Install Happy.engineering integration
+        await installHappyEngineering();
         break;
 
       case 'exit':
