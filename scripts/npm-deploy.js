@@ -216,6 +216,160 @@ function generateHighlights(parsed) {
 }
 
 /**
+ * Extract issue numbers from commit messages
+ * Looks for patterns like: #123, fixes #123, closes #123, resolves #123
+ */
+function extractIssueNumbers(commits) {
+  const issueNumbers = new Set();
+  const issuePattern = /(?:fixes|closes|resolves|fix|close|resolve)?\s*#(\d+)/gi;
+
+  for (const commit of commits) {
+    let match;
+    while ((match = issuePattern.exec(commit.message)) !== null) {
+      issueNumbers.add(parseInt(match[1], 10));
+    }
+  }
+
+  return Array.from(issueNumbers).sort((a, b) => a - b);
+}
+
+/**
+ * Check GitHub for open issues that should be closed
+ * Returns array of { number, title, state } for issues referenced in commits
+ */
+function checkOpenIssues(issueNumbers) {
+  const openIssues = [];
+
+  for (const num of issueNumbers) {
+    try {
+      const output = execSilent(`gh issue view ${num} --json number,title,state`);
+      if (output) {
+        const issue = JSON.parse(output);
+        if (issue.state === 'OPEN') {
+          openIssues.push(issue);
+        }
+      }
+    } catch {
+      // Issue doesn't exist or gh not available
+    }
+  }
+
+  return openIssues;
+}
+
+/**
+ * Close GitHub issues with a comment linking to the release
+ */
+function closeIssues(issues, version) {
+  const closed = [];
+  const failed = [];
+
+  for (const issue of issues) {
+    try {
+      // Add comment and close
+      const comment = `Completed in v${version}. Closing automatically as part of release.`;
+      execSilent(`gh issue close ${issue.number} --comment "${comment}"`);
+      closed.push(issue);
+    } catch {
+      failed.push(issue);
+    }
+  }
+
+  return { closed, failed };
+}
+
+/**
+ * Pre-deploy checkpoint: Audit session for unclosed issues
+ * Scans commits for issue references and offers to close them
+ */
+async function auditAndCloseIssues(commits, newVersion, autoMode) {
+  log('\n[0/8] Pre-deploy checkpoint: Auditing issues...', 'cyan');
+
+  // Extract issue numbers from commits
+  const issueNumbers = extractIssueNumbers(commits);
+
+  if (issueNumbers.length === 0) {
+    log('  ✓ No issue references found in commits', 'green');
+    return { checked: true, closed: [], skipped: [] };
+  }
+
+  log(`  Found ${issueNumbers.length} issue reference(s): #${issueNumbers.join(', #')}`, 'dim');
+
+  // Check which issues are still open
+  const openIssues = checkOpenIssues(issueNumbers);
+
+  if (openIssues.length === 0) {
+    log('  ✓ All referenced issues are already closed', 'green');
+    return { checked: true, closed: [], skipped: [] };
+  }
+
+  // Display open issues
+  console.log('\n' + '─'.repeat(60));
+  log('\n⚠️  Found open issues that may need closing:', 'yellow');
+  for (const issue of openIssues) {
+    log(`  • #${issue.number}: ${issue.title}`, 'yellow');
+  }
+
+  // Auto mode: close automatically
+  if (autoMode) {
+    log('\n[AUTO MODE] Closing issues automatically...', 'cyan');
+    const result = closeIssues(openIssues, newVersion);
+
+    if (result.closed.length > 0) {
+      log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
+      for (const issue of result.closed) {
+        log(`    • #${issue.number}: ${issue.title}`, 'dim');
+      }
+    }
+
+    if (result.failed.length > 0) {
+      log(`  ⚠ Failed to close ${result.failed.length} issue(s)`, 'yellow');
+      for (const issue of result.failed) {
+        log(`    • #${issue.number}: ${issue.title}`, 'dim');
+      }
+    }
+
+    return { checked: true, closed: result.closed, skipped: result.failed };
+  }
+
+  // Interactive mode: ask user
+  const answer = await prompt(`\nClose these ${openIssues.length} issue(s) before deploying? (Y/n/select): `);
+
+  if (answer.toLowerCase() === 'n') {
+    log('  Skipping issue closure', 'dim');
+    return { checked: true, closed: [], skipped: openIssues };
+  }
+
+  if (answer.toLowerCase() === 'select' || answer.toLowerCase() === 's') {
+    // Let user pick which issues to close
+    const toClose = [];
+    for (const issue of openIssues) {
+      const closeThis = await prompt(`  Close #${issue.number} (${issue.title})? (Y/n): `);
+      if (closeThis.toLowerCase() !== 'n') {
+        toClose.push(issue);
+      }
+    }
+
+    if (toClose.length > 0) {
+      const result = closeIssues(toClose, newVersion);
+      log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
+      return { checked: true, closed: result.closed, skipped: openIssues.filter(i => !toClose.includes(i)) };
+    }
+
+    return { checked: true, closed: [], skipped: openIssues };
+  }
+
+  // Default: close all
+  const result = closeIssues(openIssues, newVersion);
+
+  if (result.closed.length > 0) {
+    log(`  ✓ Closed ${result.closed.length} issue(s)`, 'green');
+  }
+
+  return { checked: true, closed: result.closed, skipped: result.failed };
+}
+
+/**
  * Prompt for release notes with commit context
  */
 async function promptForReleaseNotes(commits, bumpType, autoMode) {
@@ -312,20 +466,27 @@ async function main() {
 
   console.log('\n' + '─'.repeat(60));
 
-  // 1b. Get commits for release notes generation
+  // 0. Get commits for release notes and issue audit
   const commits = getCommitsSinceLastRelease();
+
+  // Pre-deploy checkpoint: Audit and close issues
+  const issueAudit = await auditAndCloseIssues(commits, newVersion, autoMode);
+
+  console.log('\n' + '─'.repeat(60));
+
+  // 1. Generate release notes
   const releaseNotes = await promptForReleaseNotes(commits, bumpType, autoMode);
 
   console.log('\n' + '─'.repeat(60));
 
   // 2. Update version in package.json
-  log('\n[1/7] Updating package.json...', 'cyan');
+  log('\n[1/8] Updating package.json...', 'cyan');
   packageJson.version = newVersion;
   writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
   log(`  ✓ Updated to v${newVersion}`, 'green');
 
   // 3. Update releases.json with new version entry and release notes
-  log('\n[2/7] Updating releases.json with release notes...', 'cyan');
+  log('\n[2/8] Updating releases.json with release notes...', 'cyan');
   const releasesPath = join(ROOT, 'src', 'data', 'releases.json');
   try {
     const releasesData = JSON.parse(readFileSync(releasesPath, 'utf8'));
@@ -367,7 +528,7 @@ async function main() {
 
   // 4. Run tests
   if (!skipTests) {
-    log('\n[3/7] Running tests...', 'cyan');
+    log('\n[3/8] Running tests...', 'cyan');
     try {
       exec('npm test');
       log('  ✓ Tests passed', 'green');
@@ -379,31 +540,31 @@ async function main() {
       process.exit(1);
     }
   } else {
-    log('\n[3/7] Skipping tests...', 'yellow');
+    log('\n[3/8] Skipping tests...', 'yellow');
   }
 
   // 5. Git commit and push
   if (!skipCommit) {
-    log('\n[4/7] Committing changes...', 'cyan');
+    log('\n[4/8] Committing changes...', 'cyan');
     exec('git add -A');
     exec(`git commit -m "chore: release v${newVersion}"`);
     log('  ✓ Committed', 'green');
 
     if (!skipPush) {
-      log('\n[5/7] Pushing to remote...', 'cyan');
+      log('\n[5/8] Pushing to remote...', 'cyan');
       exec('git push origin master');
       log('  ✓ Pushed', 'green');
     } else {
-      log('\n[5/7] Skipping push...', 'yellow');
+      log('\n[5/8] Skipping push...', 'yellow');
     }
   } else {
-    log('\n[4/7] Skipping commit...', 'yellow');
-    log('\n[5/7] Skipping push...', 'yellow');
+    log('\n[4/8] Skipping commit...', 'yellow');
+    log('\n[5/8] Skipping push...', 'yellow');
   }
 
   // 6. Create GitHub release with release notes
   if (!skipCommit && !skipPush) {
-    log('\n[6/7] Creating GitHub release...', 'cyan');
+    log('\n[6/8] Creating GitHub release...', 'cyan');
     try {
       const tagName = `v${newVersion}`;
       const releaseBody = `## ${releaseNotes.summary}
@@ -426,11 +587,11 @@ ${releaseNotes.highlights.length > 0 ? '### Highlights\n' + releaseNotes.highlig
       log('  Create manually at: https://github.com/evan043/claude-cli-advanced-starter-pack/releases/new', 'dim');
     }
   } else {
-    log('\n[6/7] Skipping GitHub release (commit/push skipped)...', 'yellow');
+    log('\n[6/8] Skipping GitHub release (commit/push skipped)...', 'yellow');
   }
 
   // 7. Publish to npm
-  log('\n[7/7] Publishing to npm...', 'cyan');
+  log('\n[7/8] Publishing to npm...', 'cyan');
   try {
     exec('npm publish');
     log(`  ✓ Published v${newVersion} to npm`, 'green');
@@ -460,6 +621,12 @@ ${releaseNotes.highlights.length > 0 ? '### Highlights\n' + releaseNotes.highlig
   log('  ✓ Deployment Complete!', 'green');
   console.log('═'.repeat(60));
   log(`\n  Version: ${currentVersion} → ${newVersion}`, 'cyan');
+
+  // Show closed issues in summary
+  if (issueAudit.closed.length > 0) {
+    log(`  Issues closed: ${issueAudit.closed.map(i => `#${i.number}`).join(', ')}`, 'green');
+  }
+
   log(`  npm: https://www.npmjs.com/package/claude-cli-advanced-starter-pack`, 'dim');
   log(`  GitHub: https://github.com/evan043/claude-cli-advanced-starter-pack\n`, 'dim');
 }
