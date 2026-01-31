@@ -27,8 +27,29 @@ allowed-tools:
 ```bash
 /create-task-list fix the login page redirect bug
 /create-task-list add dark mode to the settings panel
+/create-task-list for issue #123                      # Analyze issue, generate tasks
+/create-task-list for issue #123 --use-existing-tasks # Use issue's task checklist
 /create-task-list
 ```
+
+---
+
+## FLAGS & ARGUMENTS
+
+| Argument | Description |
+|----------|-------------|
+| `for issue #[N]` | Pull context from GitHub issue #N |
+| `--use-existing-tasks` | Skip task generation, use issue's existing `## Task Checklist` |
+
+**When `for issue #[NUMBER]` is specified:**
+1. Fetch issue via `gh issue view [NUMBER] --json number,title,body,labels`
+2. Use issue title + body as the task prompt
+3. Extract labels for context (frontend, backend, P1, etc.)
+
+**When `--use-existing-tasks` is specified:**
+1. Parse existing checklist from `## Task Checklist` or `## Acceptance Criteria`
+2. Skip Step 5 (task generation) - use parsed tasks directly
+3. Still run full workflow: exploration, testing questions, workflow options
 
 ---
 
@@ -142,14 +163,52 @@ These rules govern:
 
 ---
 
-### Step 1: Capture User Prompt
+### Step 1: Capture User Prompt & Parse Flags
 
 ```
 PROMPT: $ARGUMENTS
 
+Parse for special patterns:
+  - "for issue #[NUMBER]" → Set GITHUB_ISSUE_NUMBER, fetch issue
+  - "--use-existing-tasks" → Set USE_EXISTING_TASKS=true
+
 If no arguments provided:
   → Use AskUserQuestion: "What would you like to accomplish today?"
 ```
+
+**If GITHUB_ISSUE_NUMBER is set:**
+
+```bash
+# Fetch full issue details
+gh issue view [NUMBER] --json number,title,body,labels,url
+```
+
+**Store issue data:**
+```json
+{
+  "issue_number": [NUMBER],
+  "issue_title": "[title]",
+  "issue_body": "[body]",
+  "issue_labels": ["label1", "label2"],
+  "issue_url": "[url]"
+}
+```
+
+**Set PROMPT** to: `[Issue Title]: [First 500 chars of body]`
+
+**If USE_EXISTING_TASKS is true:**
+1. Parse `## Task Checklist` or `## Acceptance Criteria` from issue body
+2. Extract checkbox items: `- [ ] Task description`
+3. Store as `EXISTING_TASKS` array
+4. Display:
+   ```
+   ╔═══════════════════════════════════════════════════════════════╗
+   ║  📋 Using Existing Tasks from Issue #[NUMBER]                 ║
+   ╠═══════════════════════════════════════════════════════════════╣
+   ║  Found [N] tasks in issue checklist                           ║
+   ║  Will skip task generation, use these tasks directly          ║
+   ╚═══════════════════════════════════════════════════════════════╝
+   ```
 
 ### Step 2: Context Assessment
 
@@ -361,6 +420,25 @@ options:
 ---
 
 ### Step 5: Create Task List
+
+**If USE_EXISTING_TASKS is true (from `--use-existing-tasks` flag):**
+
+Skip task generation. Use the tasks parsed from the GitHub issue in Step 1.
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📋 Using Existing Tasks from Issue #[NUMBER]                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Skipping task generation - using issue's checklist           ║
+║  Tasks will be wrapped with testing/deployment context        ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Convert EXISTING_TASKS to TodoWrite format**, wrapping with context tasks (Task 0 for rules, final task for commit).
+
+---
+
+**If USE_EXISTING_TASKS is false (default):**
 
 Use **TaskCreate** to build the task list with Claude's native system.
 

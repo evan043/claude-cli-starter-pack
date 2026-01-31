@@ -165,43 +165,70 @@ options:
     description: "Return to issues list"
 ```
 
-### Step 5: Handle "Start Working" Based on Format
+### Step 5: Handle "Start Working" - ALWAYS Run Full /create-task-list Process
 
-**BOTH PATHS END WITH**: Creating a Claude CLI task list via TodoWrite and beginning implementation.
+**BOTH PATHS run the full `/create-task-list` workflow**, including:
+- Agent-based codebase exploration
+- Testing options (Ralph loop, E2E framework selection)
+- Environment configuration from tech-stack.json
+- Workflow options (branch, worktree, project board)
+
+The only difference is whether we **generate** a new task list or **use** the existing one from the issue.
 
 ---
 
 **For PROPERLY FORMATTED issues (S action):**
 
-1. Extract the task checklist from the issue body
-2. Parse tasks from `## Acceptance Criteria` or `## Task Checklist` section
-3. **CREATE CLAUDE CLI TASK LIST** using TodoWrite:
-   ```
-   TodoWrite([
-     { content: "Task 1 from issue", status: "pending", activeForm: "Working on task 1" },
-     { content: "Task 2 from issue", status: "pending", activeForm: "Working on task 2" },
-     ...
-   ])
-   ```
-4. Display task list confirmation:
-   ```
-   ╔═══════════════════════════════════════════════════════════════╗
-   ║  📋 Task List Created from Issue #[NUMBER]                    ║
-   ╠═══════════════════════════════════════════════════════════════╣
-   ║  Tasks loaded: [N] items                                      ║
-   ║  Source: GitHub issue task checklist                          ║
-   ╚═══════════════════════════════════════════════════════════════╝
-   ```
-5. Begin implementing tasks in order (mark in_progress → completed)
-6. As each task completes, optionally update issue checkbox via `gh issue edit`
+Run `/create-task-list for issue #[NUMBER] --use-existing-tasks`
+
+This executes the full `/create-task-list` process but:
+1. **Skips task generation** - uses the existing `## Task Checklist` from issue body
+2. **Runs codebase exploration** - agents analyze relevant files for context
+3. **Asks testing questions** - Ralph loop, E2E framework, test environment
+4. **Asks workflow questions** - branch creation, worktree, project board sync
+5. **Creates TodoWrite entries** from the issue's existing checklist
+6. **Begins implementation** with full context
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📋 Starting Issue #[NUMBER] (Task-Ready)                     ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Using existing task checklist from issue                     ║
+║  Running full /create-task-list workflow for:                 ║
+║    • Codebase exploration & context                           ║
+║    • Testing configuration (Ralph loop, E2E)                  ║
+║    • Workflow setup (branch, board sync)                      ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 ---
 
 **For NOT PROPERLY FORMATTED issues (S action):**
 
-1. Run `/create-task-list for issue #[NUMBER]`
-   - This explores codebase and generates task list via TodoWrite
-2. After `/create-task-list` completes, ask:
+Run `/create-task-list for issue #[NUMBER]`
+
+This executes the full `/create-task-list` process:
+1. **Generates task list** - agents explore codebase and create tasks
+2. **Runs codebase exploration** - deep analysis of relevant files
+3. **Asks testing questions** - Ralph loop, E2E framework, test environment
+4. **Asks workflow questions** - branch creation, worktree, project board sync
+5. **Creates TodoWrite entries** from generated tasks
+6. **Offers to update GitHub issue** with the generated task list
+7. **Begins implementation** with full context
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📋 Starting Issue #[NUMBER] (Needs Analysis)                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Running full /create-task-list workflow for:                 ║
+║    • Task generation via codebase exploration                 ║
+║    • Testing configuration (Ralph loop, E2E)                  ║
+║    • Workflow setup (branch, board sync)                      ║
+║    • Option to update issue with generated tasks              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+After task list is generated, ask:
 
 ```
 header: "Update"
@@ -213,28 +240,17 @@ options:
     description: "Keep issue as-is, start work"
 ```
 
-3. If user selects Y, update the issue:
-   ```bash
-   # Append task checklist to issue body
-   gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
+If user selects Y:
+```bash
+# Append task checklist to issue body
+gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
 
-   ## Task Checklist (Auto-generated)
+## Task Checklist (Auto-generated)
 
-   - [ ] Task 1
-   - [ ] Task 2
-   ..."
-   ```
-4. Display confirmation:
-   ```
-   ╔═══════════════════════════════════════════════════════════════╗
-   ║  📋 Task List Created for Issue #[NUMBER]                     ║
-   ╠═══════════════════════════════════════════════════════════════╣
-   ║  Tasks generated: [N] items                                   ║
-   ║  Source: /create-task-list exploration                        ║
-   ║  Issue updated: [Yes/No]                                      ║
-   ╚═══════════════════════════════════════════════════════════════╝
-   ```
-5. Begin implementing TodoWrite task list (already created by `/create-task-list`)
+- [ ] Task 1
+- [ ] Task 2
+..."
+```
 
 **Other Actions:**
 - **V (View)**: Run `gh issue view [NUMBER]` and display full body
