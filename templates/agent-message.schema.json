@@ -1,0 +1,252 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent Message",
+  "description": "Schema for inter-agent communication messages in CCASP orchestration",
+  "type": "object",
+  "required": ["id", "type", "sender", "timestamp"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique message identifier",
+      "pattern": "^msg-[0-9]+-[a-z0-9]+$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "task_assignment",
+        "task_complete",
+        "task_failed",
+        "task_blocked",
+        "task_progress",
+        "status_update",
+        "context_request",
+        "context_response",
+        "l3_spawn_request",
+        "l3_result",
+        "l3_aggregation",
+        "error",
+        "shutdown",
+        "heartbeat"
+      ],
+      "description": "Type of message determining how it should be processed"
+    },
+    "sender": {
+      "type": "string",
+      "description": "ID of the sending agent (e.g., 'orchestrator', 'l2-backend-abc123')"
+    },
+    "recipient": {
+      "type": "string",
+      "description": "ID of the receiving agent, or 'all' for broadcast",
+      "default": "orchestrator"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Task or request ID that this message relates to"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when message was created"
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the message has been processed by the recipient"
+    },
+    "processedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when message was processed"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "critical"],
+      "default": "normal",
+      "description": "Message priority for queue ordering"
+    },
+    "ttl": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Time-to-live in seconds, after which message can be discarded"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Message-type-specific payload data"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "task_assignment" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["taskId", "title"],
+            "properties": {
+              "taskId": { "type": "string" },
+              "title": { "type": "string" },
+              "details": { "type": "string" },
+              "targetFile": { "type": "string" },
+              "phase": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" }
+                }
+              },
+              "constraints": {
+                "type": "object",
+                "properties": {
+                  "maxDuration": { "type": "integer" },
+                  "readOnly": { "type": "boolean" },
+                  "requiredTools": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "task_complete" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["taskId", "status"],
+            "properties": {
+              "taskId": { "type": "string" },
+              "status": { "const": "completed" },
+              "artifacts": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "summary": { "type": "string" },
+              "duration": { "type": "integer" },
+              "testsRun": { "type": "boolean" },
+              "testsPassed": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "task_failed" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["taskId", "error"],
+            "properties": {
+              "taskId": { "type": "string" },
+              "error": { "type": "string" },
+              "stackTrace": { "type": "string" },
+              "attempted": { "type": "string" },
+              "retryable": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "task_blocked" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["taskId", "blocker"],
+            "properties": {
+              "taskId": { "type": "string" },
+              "blocker": { "type": "string" },
+              "suggestedAction": { "type": "string" },
+              "dependencies": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "l3_spawn_request" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["workerId", "type", "description"],
+            "properties": {
+              "workerId": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["search", "analyze", "count", "extract", "validate", "lint"]
+              },
+              "description": { "type": "string" },
+              "scope": { "type": "string" },
+              "parallel": { "type": "boolean" },
+              "parentAgentId": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "l3_result" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["workerId", "status"],
+            "properties": {
+              "workerId": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["completed", "failed"]
+              },
+              "data": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "error": { "type": "string" },
+              "metrics": { "type": "object" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "l3_aggregation" } }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["workers", "combinedResult"],
+            "properties": {
+              "workers": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "combinedResult": { "type": "string" },
+              "synthesis": { "type": "string" },
+              "totalItems": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

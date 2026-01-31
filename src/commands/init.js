@@ -186,6 +186,27 @@ const OPTIONAL_FEATURES = [
     default: true,
     requiresPostConfig: false,
   },
+  {
+    name: 'agentOrchestration',
+    label: 'Agent Orchestration System',
+    description: 'Hierarchical agent orchestration (L1/L2/L3) for phased development. L1 orchestrator spawns L2 specialists by domain, L2s spawn L3 workers for atomic tasks. Auto-updates PROGRESS.json, syncs to GitHub issues, enforces delegation hierarchy.',
+    commands: ['orchestration-guide'],
+    hooks: [
+      'orchestrator-init',
+      'orchestrator-enforcer',
+      'hierarchy-validator',
+      'progress-tracker',
+      'github-progress-sync',
+      'l2-completion-reporter',
+      'l3-parallel-executor',
+      'subagent-context-injector',
+      'completion-verifier',
+      'agent-error-recovery',
+      'orchestrator-audit-logger',
+    ],
+    default: true,
+    requiresPostConfig: false,
+  },
 ];
 
 /**
@@ -453,6 +474,13 @@ const AVAILABLE_COMMANDS = [
     category: 'Testing',
     selected: false,
     feature: 'testing',
+  },
+  {
+    name: 'orchestration-guide',
+    description: 'Quick reference for L1/L2/L3 agent orchestration',
+    category: 'Orchestration',
+    selected: false,
+    feature: 'agentOrchestration',
   },
 ];
 

@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.8.22  •  Production Ready                         ║
+║                          v1.8.24  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -29,7 +29,8 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [What's New in v1.8.22](#whats-new-in-v1822)
+- [What's New in v1.8.24](#whats-new-in-v1824)
+- [Agent Orchestration](#agent-orchestration)
 - [Key Features](#key-features)
 - [Refactoring System](#refactoring-system)
 - [Project Scaffolding](#project-scaffolding)
@@ -68,9 +69,26 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
-## What's New in v1.8.22
+## What's New in v1.8.24
 
 **Major additions in v1.8.x:**
+
+### Agent Orchestration System (v1.8.24) - NEW!
+- **Hierarchical Agent Execution**: L1 Orchestrator → L2 Specialists → L3 Workers
+- **Automatic PROGRESS.json Updates**: Agents report completion, state auto-updates
+- **GitHub Issue Sync**: Progress comments pushed to linked issues
+- **Enforcement Hooks**: 11 new hooks for hierarchy validation, error recovery, audit logging
+- **L2 Domain Specialists**: Frontend, backend, testing, deployment experts
+- **L3 Worker Templates**: Search, analyze, validate, lint workers (Haiku model for cost efficiency)
+- **Error Recovery**: Retry/escalate/abort strategies with max retry limits
+- **Audit Logging**: All agent actions logged to `.claude/logs/orchestrator-audit.jsonl`
+- **`/orchestration-guide`**: Quick reference for spawning agents and completion formats
+
+### Roadmap Management System (v1.8.23)
+- **Multi-phase Roadmaps**: ROADMAP.json with dependency graphs
+- **GitHub Epic Hierarchy**: Auto-create epic → child issue structure
+- **Complexity Detection**: Recommends roadmaps for plans with 30+ tasks
+- **Auto Documentation**: Generate architecture docs from roadmap structure
 
 ### Refactoring System (v1.8.19-1.8.22)
 - **`/ralph`**: Ralph Loop - continuous test-fix cycles until all tests pass
@@ -156,12 +174,27 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | `refactor-audit` | Flag files >500 lines, suggest refactoring | 90% |
 | `refactor-transaction` | Atomic refactoring with savepoints/rollback | 85% |
 
-#### Agent Delegation Hooks (NEW)
+#### Agent Delegation Hooks
 | Hook | Purpose | Portability |
 |------|---------|-------------|
 | `task-classifier` | Classify tasks by complexity/domain | 95% |
 | `agent-delegator` | Route tasks to appropriate agents | 90% |
 | `delegation-enforcer` | Enforce agent-only mode for complex tasks | 90% |
+
+#### Agent Orchestration Hooks (NEW v1.8.24)
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `orchestrator-init` | Initialize orchestration on /phase-dev | 95% |
+| `orchestrator-enforcer` | Suggest/warn/enforce delegation hierarchy | 90% |
+| `hierarchy-validator` | Validate L1→L2→L3 spawning rules | 95% |
+| `progress-tracker` | Auto-update PROGRESS.json on completions | 90% |
+| `github-progress-sync` | Push progress updates to GitHub issues | 85% |
+| `l2-completion-reporter` | Capture L2 completion reports | 90% |
+| `l3-parallel-executor` | Manage parallel L3 worker execution | 85% |
+| `subagent-context-injector` | Inject orchestrator context to agents | 90% |
+| `completion-verifier` | Validate completion report format | 95% |
+| `agent-error-recovery` | Handle failures with retry/escalate/abort | 90% |
+| `orchestrator-audit-logger` | Log all agent actions to JSONL | 95% |
 
 #### Phase & Validation Hooks
 | Hook | Purpose | Portability |
@@ -208,6 +241,75 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | `autonomous-decision-logger.js` | Node.js | JSONL audit trail for agents |
 | `phase-validation-gates.js` | Node.js | 5-gate validation system |
 | `git-history-analyzer.py` | Python | Security audit for secrets in git |
+
+---
+
+## Agent Orchestration
+
+The Agent Orchestration System (v1.8.24) enables hierarchical agent execution for phased development plans:
+
+### Hierarchy
+
+```
+L1 Orchestrator (You / Main Conversation)
+├── L2 Frontend Specialist (Sonnet)
+│   ├── L3 Component Search Worker (Haiku)
+│   └── L3 Style Analyzer Worker (Haiku)
+├── L2 Backend Specialist (Sonnet)
+│   └── L3 API Discovery Worker (Haiku)
+├── L2 Testing Specialist (Sonnet)
+│   └── L3 Coverage Analyzer Worker (Haiku)
+└── L2 Deployment Specialist (Sonnet)
+    └── L3 Config Validator Worker (Haiku)
+```
+
+### How It Works
+
+1. **Create an Orchestrated Plan**: Use `/phase-dev-plan` and select "Orchestrated"
+2. **Orchestrator Initializes**: State file created at `.claude/orchestrator/state.json`
+3. **Spawn L2 Specialists**: Task tool with domain-specific prompts
+4. **L2 Spawns L3 Workers**: For atomic subtasks (search, analyze, validate)
+5. **Completion Reports**: Agents output `TASK_COMPLETE: {taskId}` format
+6. **Auto-Update Progress**: `progress-tracker` hook updates PROGRESS.json
+7. **GitHub Sync**: Progress comments pushed to linked issues
+
+### Completion Report Format
+
+All agents must end with one of:
+
+```
+TASK_COMPLETE: P1.1
+ARTIFACTS: src/Button.tsx, src/Button.test.tsx
+SUMMARY: Created button component with tests
+
+TASK_FAILED: P1.1
+ERROR: Database connection refused
+
+TASK_BLOCKED: P1.1
+BLOCKER: Waiting for API credentials from admin
+```
+
+### Enabling Orchestration
+
+```bash
+# Option 1: During init
+ccasp init  # Select "Agent Orchestration System"
+
+# Option 2: Add to existing project
+ccasp update-check  # Select "agentOrchestration" feature
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `.claude/orchestrator/state.json` | Active agents, messages, metrics |
+| `.claude/docs/<project>/PROGRESS.json` | Task completion tracking |
+| `.claude/logs/orchestrator-audit.jsonl` | All agent action logs |
+
+### Quick Reference
+
+Use `/orchestration-guide` inside Claude Code for spawning syntax, error handling, and domain detection rules.
 
 ---
 

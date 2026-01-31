@@ -119,6 +119,58 @@ For each phase in the roadmap, create a PROGRESS.json using the phase developmen
 3. Generate EXECUTIVE_SUMMARY.md
 4. Generate phase-specific documentation
 
+### Step 5.5: Enable Agent Orchestration (Auto-enabled for Roadmaps)
+
+Roadmaps automatically enable agent orchestration for coordinated execution:
+
+1. **Initialize Orchestrator State**
+   Create `.claude/orchestrator/state.json`:
+   ```json
+   {
+     "status": "active",
+     "roadmapSlug": "{{slug}}",
+     "currentPhase": "phase-1",
+     "activeAgents": [],
+     "completedTasks": [],
+     "pendingTasks": [],
+     "failedTasks": [],
+     "blockedTasks": [],
+     "messages": [],
+     "tokenBudget": {
+       "total": 200000,
+       "used": 0,
+       "reserved": 20000
+     },
+     "metrics": {
+       "agentsSpawned": 0,
+       "tasksCompleted": 0,
+       "tasksFailed": 0,
+       "tasksBlocked": 0
+     }
+   }
+   ```
+
+2. **Configure L2 Specialists**
+   Based on roadmap domains, generate specialist configurations:
+   - `l2-frontend-specialist` - UI/component tasks
+   - `l2-backend-specialist` - API/service tasks
+   - `l2-testing-specialist` - Test/validation tasks
+   - `l2-deployment-specialist` - CI/CD tasks
+
+3. **Set Up Enforcement Hooks**
+   Ensure these hooks are active in `.claude/settings.json`:
+   - `hierarchy-validator` - Enforce L1 → L2 → L3 hierarchy
+   - `orchestrator-enforcer` - Suggest delegation for direct operations
+   - `progress-tracker` - Auto-update PROGRESS.json on completions
+   - `github-progress-sync` - Push updates to GitHub issues
+
+4. **Add Orchestration Commands**
+   Generate `/orchestration-guide` command with:
+   - How to spawn L2 specialists
+   - L3 worker templates
+   - Completion report format
+   - Error handling procedures
+
 ### Step 6: Create GitHub Issues (if enabled)
 
 When GitHub integration is detected:

@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orchestrator State",
+  "description": "State schema for L1 Phase Orchestrator agent",
+  "type": "object",
+  "required": ["planId", "planPath", "initialized", "status", "currentPhase"],
+  "properties": {
+    "planId": {
+      "type": "string",
+      "description": "Unique identifier for the phase development plan"
+    },
+    "planPath": {
+      "type": "string",
+      "description": "Path to PROGRESS.json relative to project root"
+    },
+    "initialized": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when orchestration started"
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of last state update"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["initializing", "active", "paused", "completed", "failed"],
+      "description": "Current orchestration status"
+    },
+    "currentPhase": {
+      "type": "string",
+      "description": "ID of the phase currently being executed (e.g., P1, P2)"
+    },
+    "activeAgents": {
+      "type": "array",
+      "description": "Currently running L2/L3 agents",
+      "items": {
+        "type": "object",
+        "required": ["agentId", "taskId", "level", "spawnedAt", "status"],
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "description": "Unique identifier for the spawned agent"
+          },
+          "taskId": {
+            "type": "string",
+            "description": "Task ID being executed (e.g., P1.1)"
+          },
+          "level": {
+            "type": "string",
+            "enum": ["L2", "L3"],
+            "description": "Agent hierarchy level"
+          },
+          "domain": {
+            "type": "string",
+            "enum": ["frontend", "backend", "testing", "deployment", "general"],
+            "description": "Agent specialization domain"
+          },
+          "spawnedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["running", "completed", "failed", "timeout"]
+          },
+          "parentAgentId": {
+            "type": "string",
+            "description": "ID of parent agent (for L3 workers spawned by L2)"
+          }
+        }
+      }
+    },
+    "completedTasks": {
+      "type": "array",
+      "description": "List of completed task IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pendingTasks": {
+      "type": "array",
+      "description": "List of pending task IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "failedTasks": {
+      "type": "array",
+      "description": "Tasks that failed and could not be recovered",
+      "items": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string" },
+          "error": { "type": "string" },
+          "retryCount": { "type": "integer" },
+          "failedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "blockedTasks": {
+      "type": "array",
+      "description": "Tasks blocked waiting for user input or external dependency",
+      "items": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string" },
+          "blocker": { "type": "string" },
+          "blockedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "tokenBudget": {
+      "type": "object",
+      "description": "Token usage tracking for context management",
+      "properties": {
+        "used": {
+          "type": "integer",
+          "description": "Estimated tokens used in current session"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100000,
+          "description": "Maximum token budget before compaction"
+        },
+        "compactionThreshold": {
+          "type": "number",
+          "default": 0.8,
+          "description": "Percentage of limit that triggers compaction warning"
+        },
+        "lastCompaction": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "githubConfig": {
+      "type": "object",
+      "description": "GitHub integration configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "owner": {
+          "type": "string",
+          "description": "Repository owner"
+        },
+        "repo": {
+          "type": "string",
+          "description": "Repository name"
+        },
+        "issueNumber": {
+          "type": "integer",
+          "description": "Linked GitHub issue number"
+        },
+        "lastSyncAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "description": "Inter-agent message queue",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "sender", "timestamp"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["task_assignment", "task_complete", "task_failed", "status_update", "context_request", "shutdown"]
+          },
+          "sender": { "type": "string" },
+          "recipient": { "type": "string" },
+          "correlationId": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object" },
+          "processed": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Orchestration performance metrics",
+      "properties": {
+        "tasksCompleted": { "type": "integer", "default": 0 },
+        "tasksFailed": { "type": "integer", "default": 0 },
+        "tasksBlocked": { "type": "integer", "default": 0 },
+        "totalAgentsSpawned": { "type": "integer", "default": 0 },
+        "l2AgentsSpawned": { "type": "integer", "default": 0 },
+        "l3AgentsSpawned": { "type": "integer", "default": 0 },
+        "averageTaskDuration": { "type": "number", "description": "Average ms per task" },
+        "totalDuration": { "type": "number", "description": "Total orchestration duration in ms" }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "description": "Recovery checkpoints for session continuation",
+      "items": {
+        "type": "object",
+        "properties": {
+          "checkpointId": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "phase": { "type": "string" },
+          "lastCompletedTask": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    }
+  }
+}
