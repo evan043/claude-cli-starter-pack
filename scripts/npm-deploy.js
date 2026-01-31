@@ -95,6 +95,7 @@ async function main() {
   const skipCommit = args.includes('--skip-commit');
   const skipPush = args.includes('--skip-push');
   const dryRun = args.includes('--dry-run');
+  const autoMode = args.includes('--auto') || args.includes('-y');
 
   console.log('\n' + '═'.repeat(60));
   log('  CCASP npm Deploy Script', 'cyan');
@@ -119,10 +120,14 @@ async function main() {
     return;
   }
 
-  const confirm = await prompt(`\nProceed with deployment? (y/N): `);
-  if (confirm.toLowerCase() !== 'y') {
-    log('\nAborted.', 'yellow');
-    process.exit(0);
+  if (!autoMode) {
+    const confirm = await prompt(`\nProceed with deployment? (y/N): `);
+    if (confirm.toLowerCase() !== 'y') {
+      log('\nAborted.', 'yellow');
+      process.exit(0);
+    }
+  } else {
+    log('\n[AUTO MODE] Proceeding without confirmation...', 'cyan');
   }
 
   console.log('\n' + '─'.repeat(60));

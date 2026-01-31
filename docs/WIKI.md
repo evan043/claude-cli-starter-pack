@@ -1,6 +1,6 @@
 # CCASP Wiki - Complete Documentation
 
-**Version 1.8.0** | **For Senior Full-Stack Developers**
+**Version 1.8.3** | **For Senior Full-Stack Developers**
 
 This documentation provides comprehensive technical details for the Claude CLI Advanced Starter Pack (CCASP). It covers architecture, implementation patterns, extension points, and production deployment strategies.
 
@@ -119,6 +119,26 @@ CCASP operates in two distinct phases with clear separation of concerns:
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Dev Mode (v1.8.3+)
+
+For rapid template development and testing:
+
+```bash
+ccasp init --dev
+```
+
+**Dev Mode Features:**
+- Reuses existing `tech-stack.json` (no prompts)
+- Processes all templates in `templates/commands/` and `templates/hooks/`
+- Preserves custom commands (those without matching templates)
+- Regenerates `/menu`, `INDEX.md`, `README.md`
+- Skips all interactive prompts
+
+**Use Cases:**
+- Testing template changes before release
+- Quickly updating all deployed commands
+- CI/CD pipelines for template validation
 
 ### File Structure Deep Dive
 
@@ -1079,6 +1099,7 @@ ccasp validate --path templates/commands/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8.3 | 2026-01-31 | Dev mode (`--dev` flag), npm-deploy auto mode (`--auto` flag) |
 | 1.8.0 | 2026-01-30 | 7 utility scripts, install-scripts command |
 | 1.7.0 | 2026-01-30 | 7 MCP servers (log-monitor, tunnel services) |
 | 1.6.0 | 2026-01-30 | 4 agent patterns library |
@@ -1091,4 +1112,4 @@ ccasp validate --path templates/commands/
 
 ---
 
-*Documentation generated for Claude CLI Advanced Starter Pack v1.8.0*
+*Documentation generated for Claude CLI Advanced Starter Pack v1.8.3*

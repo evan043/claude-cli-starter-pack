@@ -51,6 +51,7 @@ program
   .description('Deploy Claude CLI Advanced Starter Pack to current project')
   .option('--force', 'Overwrite existing commands')
   .option('--no-register', 'Do not register project in global registry')
+  .option('--dev', 'Development mode: reuse existing tech-stack.json, process templates, skip prompts')
   .action(async (options) => {
     await runInit(options);
   });

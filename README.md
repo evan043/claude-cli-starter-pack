@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.8.0  •  Production Ready                          ║
+║                          v1.8.3  •  Production Ready                          ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -65,7 +65,11 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
-## What's New in v1.8.0
+## What's New in v1.8.3
+
+**Latest updates:**
+- **`ccasp init --dev`**: Dev mode for rapid template testing - reuses existing tech-stack.json, processes all templates, preserves custom commands
+- **`npm-deploy.js --auto`**: Auto mode for CI/CD - skips confirmation prompts for automation
 
 **60+ components** across 8 implementation phases:
 
