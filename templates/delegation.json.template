@@ -1,0 +1,205 @@
+{
+  "version": "1.0",
+  "generated": null,
+  "enabled": true,
+  "mode": "suggest",
+  "domains": {
+    "frontend": {
+      "keywords": [
+        "component",
+        "hook",
+        "style",
+        "css",
+        "tailwind",
+        "jsx",
+        "tsx",
+        "ui",
+        "layout",
+        "page",
+        "view",
+        "render",
+        "responsive",
+        "animation"{{#if frontend.framework}},
+        "{{frontend.framework}}"{{/if}}
+      ],
+      "filePatterns": [
+        "src/components/**",
+        "src/pages/**",
+        "src/views/**",
+        "src/hooks/**",
+        "src/layouts/**",
+        "*.tsx",
+        "*.jsx"{{#if (eq frontend.framework "vue")}},
+        "*.vue"{{/if}}{{#if (eq frontend.framework "svelte")}},
+        "*.svelte"{{/if}}
+      ],
+      "priority": 1
+    },
+    "backend": {
+      "keywords": [
+        "api",
+        "endpoint",
+        "route",
+        "middleware",
+        "auth",
+        "authentication",
+        "authorization",
+        "controller",
+        "service",
+        "handler",
+        "request",
+        "response",
+        "server"{{#if backend.framework}},
+        "{{backend.framework}}"{{/if}}
+      ],
+      "filePatterns": [
+        "api/**",
+        "server/**",
+        "backend/**",
+        "routes/**",
+        "controllers/**",
+        "services/**"{{#if (eq backend.language "python")}},
+        "*.py"{{/if}}
+      ],
+      "priority": 1
+    },
+    "state": {
+      "keywords": [
+        "store",
+        "state",
+        "action",
+        "reducer",
+        "slice",
+        "atom",
+        "selector",
+        "dispatch"{{#if frontend.stateManager}},
+        "{{frontend.stateManager}}"{{/if}}
+      ],
+      "filePatterns": [
+        "src/store/**",
+        "src/stores/**",
+        "src/state/**",
+        "**/*.store.ts",
+        "**/*Slice.ts"
+      ],
+      "priority": 2
+    },
+    "database": {
+      "keywords": [
+        "database",
+        "query",
+        "migration",
+        "schema",
+        "model",
+        "table",
+        "column",
+        "index",
+        "relation",
+        "orm"{{#if database.orm}},
+        "{{database.orm}}"{{/if}}{{#if database.primary}},
+        "{{database.primary}}"{{/if}}
+      ],
+      "filePatterns": [
+        "prisma/**",
+        "migrations/**",
+        "models/**",
+        "schema/**",
+        "db/**",
+        "*.sql"
+      ],
+      "priority": 2
+    },
+    "testing": {
+      "keywords": [
+        "test",
+        "e2e",
+        "spec",
+        "fixture",
+        "mock",
+        "stub",
+        "assert",
+        "expect"{{#if testing.e2e.framework}},
+        "{{testing.e2e.framework}}"{{/if}}{{#if testing.unit.framework}},
+        "{{testing.unit.framework}}"{{/if}}
+      ],
+      "filePatterns": [
+        "tests/**",
+        "e2e/**",
+        "__tests__/**",
+        "**/*.test.*",
+        "**/*.spec.*"
+      ],
+      "priority": 3
+    },
+    "deployment": {
+      "keywords": [
+        "deploy",
+        "build",
+        "docker",
+        "ci",
+        "cd",
+        "pipeline",
+        "release",
+        "production"{{#if deployment.backend.platform}},
+        "{{deployment.backend.platform}}"{{/if}}{{#if deployment.frontend.platform}},
+        "{{deployment.frontend.platform}}"{{/if}}
+      ],
+      "filePatterns": [
+        "Dockerfile",
+        "docker-compose.*",
+        "wrangler.toml",
+        "railway.json",
+        ".github/workflows/**",
+        "vercel.json"
+      ],
+      "priority": 3
+    }
+  },
+  "routing": {
+    "agentPatterns": {
+      "frontend": "{framework}-frontend-specialist",
+      "backend": "{framework}-backend-specialist",
+      "state": "{framework}-state-specialist",
+      "database": "{type}-{framework}-specialist",
+      "testing": "{framework}-testing-specialist",
+      "deployment": "{platform}-deployment-specialist"
+    },
+    "fallbacks": {
+      "frontend": "general-frontend-specialist",
+      "backend": "general-backend-specialist",
+      "state": "general-state-specialist",
+      "database": "general-database-specialist",
+      "testing": "general-testing-specialist",
+      "deployment": "general-deployment-specialist"
+    }
+  },
+  "agentOnlyMode": {
+    "enabled": false,
+    "restrictedTools": ["Edit", "Write", "Bash"],
+    "exemptPatterns": [
+      "^git ",
+      "^npm test",
+      "^npm run test",
+      "^npm run lint",
+      "^npm run build",
+      "^pytest",
+      "^npx playwright",
+      "^npx vitest"
+    ]
+  },
+  "techStack": {
+    "frontend": "{{frontend.framework}}",
+    "stateManager": "{{frontend.stateManager}}",
+    "backend": "{{backend.framework}}",
+    "database": "{{database.primary}}",
+    "orm": "{{database.orm}}",
+    "testing": {
+      "e2e": "{{testing.e2e.framework}}",
+      "unit": "{{testing.unit.framework}}"
+    },
+    "deployment": {
+      "backend": "{{deployment.backend.platform}}",
+      "frontend": "{{deployment.frontend.platform}}"
+    }
+  }
+}

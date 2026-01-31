@@ -1,0 +1,161 @@
+{
+  "version": "1.0",
+  "generated": "{{generated}}",
+  "techStack": {
+    "frontend": "{{frontend.framework}}",
+    "stateManager": "{{frontend.stateManager}}",
+    "backend": "{{backend.framework}}",
+    "backendLanguage": "{{backend.language}}",
+    "database": "{{database.primary}}",
+    "orm": "{{database.orm}}",
+    "testing": "{{testing.e2e.framework}}",
+    "unitTesting": "{{testing.unit.framework}}",
+    "deployment": {
+      "frontend": "{{deployment.frontend.platform}}",
+      "backend": "{{deployment.backend.platform}}"
+    }
+  },
+  "agents": [
+    {{#if frontend.framework}}
+    {
+      "name": "frontend-{{frontend.framework}}-specialist",
+      "level": "L2",
+      "domain": "frontend",
+      "framework": "{{frontend.framework}}",
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "triggers": ["component", "hook", "style", "ui"],
+      "filePatterns": ["src/components/**", "src/pages/**", "*.tsx", "*.jsx"],
+      "description": "{{frontend.framework}} component and UI specialist"
+    },
+    {{/if}}
+    {{#if frontend.stateManager}}
+    {
+      "name": "state-{{frontend.stateManager}}-specialist",
+      "level": "L2",
+      "domain": "state",
+      "framework": "{{frontend.stateManager}}",
+      "tools": ["Read", "Edit", "Write", "Grep", "Glob"],
+      "model": "sonnet",
+      "triggers": ["store", "state", "action"],
+      "filePatterns": ["src/store/**", "src/stores/**"],
+      "description": "{{frontend.stateManager}} state management specialist"
+    },
+    {{/if}}
+    {{#if backend.framework}}
+    {
+      "name": "backend-{{backend.framework}}-specialist",
+      "level": "L2",
+      "domain": "backend",
+      "framework": "{{backend.framework}}",
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "triggers": ["api", "endpoint", "route", "service"],
+      "filePatterns": ["backend/**", "api/**", "server/**"],
+      "description": "{{backend.framework}} API and service specialist"
+    },
+    {{/if}}
+    {{#if database.primary}}
+    {
+      "name": "db-{{database.primary}}-specialist",
+      "level": "L2",
+      "domain": "database",
+      "framework": "{{database.primary}}",
+      "tools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "triggers": ["query", "database", "sql"],
+      "filePatterns": ["migrations/**", "sql/**"],
+      "description": "{{database.primary}} database specialist"
+    },
+    {{/if}}
+    {{#if database.orm}}
+    {
+      "name": "orm-{{database.orm}}-specialist",
+      "level": "L2",
+      "domain": "database",
+      "framework": "{{database.orm}}",
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "triggers": ["model", "schema", "migration"],
+      "filePatterns": ["prisma/**", "models/**"],
+      "description": "{{database.orm}} ORM and schema specialist"
+    },
+    {{/if}}
+    {{#if testing.e2e.framework}}
+    {
+      "name": "test-{{testing.e2e.framework}}-specialist",
+      "level": "L2",
+      "domain": "testing",
+      "framework": "{{testing.e2e.framework}}",
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob"],
+      "model": "sonnet",
+      "triggers": ["test", "e2e", "spec"],
+      "filePatterns": ["tests/**", "e2e/**", "*.spec.ts"],
+      "description": "{{testing.e2e.framework}} E2E testing specialist"
+    },
+    {{/if}}
+    {{#if deployment.frontend.platform}}
+    {
+      "name": "deploy-{{deployment.frontend.platform}}-specialist",
+      "level": "L2",
+      "domain": "deployment",
+      "framework": "{{deployment.frontend.platform}}",
+      "tools": ["Read", "Edit", "Bash", "Grep"],
+      "model": "sonnet",
+      "triggers": ["deploy", "build", "release"],
+      "filePatterns": ["wrangler.toml", "vercel.json", "netlify.toml"],
+      "description": "{{deployment.frontend.platform}} deployment specialist"
+    },
+    {{/if}}
+    {
+      "name": "general-purpose",
+      "level": "L2",
+      "domain": "general",
+      "framework": null,
+      "tools": ["Read", "Edit", "Write", "Bash", "Grep", "Glob", "WebSearch"],
+      "model": "sonnet",
+      "triggers": [],
+      "filePatterns": [],
+      "description": "General-purpose implementation agent for tasks not matching a specialist"
+    }
+  ],
+  "delegationRules": {
+    "keywords": {
+      "component": "frontend",
+      "hook": "frontend",
+      "style": "frontend",
+      "css": "frontend",
+      "tailwind": "frontend",
+      "jsx": "frontend",
+      "tsx": "frontend",
+      "api": "backend",
+      "endpoint": "backend",
+      "route": "backend",
+      "middleware": "backend",
+      "auth": "backend",
+      "store": "state",
+      "state": "state",
+      "action": "state",
+      "reducer": "state",
+      "database": "database",
+      "query": "database",
+      "migration": "database",
+      "schema": "database",
+      "model": "database",
+      "test": "testing",
+      "e2e": "testing",
+      "spec": "testing",
+      "deploy": "deployment",
+      "build": "deployment",
+      "docker": "deployment"
+    },
+    "filePatterns": {
+      "frontend": ["src/components/**", "src/pages/**", "src/hooks/**", "*.tsx", "*.jsx", "*.vue", "*.svelte"],
+      "backend": ["api/**", "server/**", "backend/**", "routes/**", "*.py"],
+      "state": ["src/store/**", "src/stores/**", "src/state/**"],
+      "database": ["prisma/**", "migrations/**", "models/**", "schema/**"],
+      "testing": ["tests/**", "e2e/**", "**/*.test.*", "**/*.spec.*"],
+      "deployment": ["Dockerfile", "docker-compose.*", "wrangler.toml", "railway.json", ".github/workflows/**"]
+    }
+  }
+}

@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "1.8.16",
+      "date": "2026-01-31",
+      "summary": "Bug fixes and improvements",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.15",
       "date": "2026-01-31",
       "summary": "refactor: clean up ESLint warnings in postinstall.js",

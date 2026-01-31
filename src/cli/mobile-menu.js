@@ -80,6 +80,7 @@ export async function showMobileMenu() {
     { name: formatMobileItem('T', 'Test Setup'), value: 'test-setup' },
     { name: formatMobileItem('A', 'Agent Creator'), value: 'agent-creator' },
     { name: formatMobileItem('M', 'MCP Explorer'), value: 'explore-mcp' },
+    { name: `${chalk.green('⚡')} ${chalk.bold('Agent-Only + Bypass')}`, value: 'launch-agent-only' },
     new inquirer.Separator(chalk.dim('─'.repeat(34))),
     { name: formatMobileItem('S', 'Settings'), value: 'project-settings' },
     { name: formatMobileItem('?', 'Help'), value: 'help' },

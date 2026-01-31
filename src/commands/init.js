@@ -140,6 +140,15 @@ const OPTIONAL_FEATURES = [
     default: false,
     requiresPostConfig: false,
   },
+  {
+    name: 'autoStackAgents',
+    label: 'Auto Stack-Specific Agents',
+    description: 'Automatically generate specialist agents based on your tech stack (React, FastAPI, Prisma, etc.). Includes delegation hooks for intelligent task routing.',
+    commands: ['generate-agents'],
+    hooks: ['task-classifier', 'agent-delegator', 'delegation-enforcer'],
+    default: true,
+    requiresPostConfig: false,
+  },
 ];
 
 /**
@@ -223,6 +232,12 @@ const AVAILABLE_COMMANDS = [
     name: 'detect-tech-stack',
     description: 'Re-run tech stack detection and update configuration',
     category: 'Analysis',
+    selected: true,
+  },
+  {
+    name: 'generate-agents',
+    description: 'Generate stack-specific agents from detected tech stack',
+    category: 'Claude Code',
     selected: true,
   },
   {
@@ -2643,6 +2658,19 @@ export async function runInit(options = {}) {
       console.log(chalk.green(`  ✓ Registered project in global CCASP registry`));
     } else {
       console.log(chalk.dim(`  ○ Updated project in global CCASP registry`));
+    }
+  }
+
+  // Auto-generate stack-specific agents if feature is enabled
+  if (selectedFeatures.includes('autoStackAgents')) {
+    console.log('');
+    console.log(chalk.bold('Step 8: Generating Stack-Specific Agents\n'));
+    try {
+      const { generateAgents } = await import('./generate-agents.js');
+      await generateAgents({ projectRoot: cwd, auto: true, silent: true });
+    } catch (err) {
+      console.log(chalk.yellow(`  ⚠ Agent generation skipped: ${err.message}`));
+      console.log(chalk.dim('    Run /generate-agents manually after tech stack detection.'));
     }
   }
 
