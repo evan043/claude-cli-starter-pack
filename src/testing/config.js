@@ -220,7 +220,7 @@ export function createTestingConfig(options = {}) {
  */
 export function saveTestingConfig(config) {
   // Load existing tech-stack or create default
-  let techStack = loadTechStackJson() || {
+  const techStack = loadTechStackJson() || {
     version: '2.0.0',
     project: { name: 'unnamed', description: '' },
     frontend: {},

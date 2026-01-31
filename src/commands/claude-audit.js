@@ -34,7 +34,7 @@ const AUDIT_RULES = {
     goodPatterns: [
       { pattern: /IMPORTANT|YOU MUST|CRITICAL|NEVER|ALWAYS/i, message: 'Has emphasis keywords for critical rules' },
       { pattern: /```(bash|sh|shell)/i, message: 'Includes runnable bash commands' },
-      { pattern: /@[\w\/\.-]+\.(md|json|txt)/g, message: 'Uses @import syntax for modularity' },
+      { pattern: /@[\w/.-]+\.(md|json|txt)/g, message: 'Uses @import syntax for modularity' },
     ],
   },
   claudeFolder: {
@@ -594,7 +594,7 @@ function auditSingleClaudeMd(filePath, name, result) {
   }
 
   // Check for import usage
-  const imports = content.match(/@[\w\/\.-]+/g) || [];
+  const imports = content.match(/@[\w/.-]+/g) || [];
   if (imports.length > 0) {
     result.passed.push({
       file: name,

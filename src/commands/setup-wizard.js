@@ -1725,12 +1725,13 @@ async function showAdvancedOptions() {
         await showPriorReleases();
         break;
 
-      case 'remove':
+      case 'remove': {
         const removed = await runRemove();
         if (removed) {
           inSubmenu = false;
         }
         break;
+      }
 
       case 'back':
         inSubmenu = false;

@@ -347,7 +347,7 @@ async function syncWatch(issueNumber, options) {
   console.log(chalk.dim('Press Ctrl+C to stop\n'));
 
   // Display interactive task list
-  let tasks = state.tasks;
+  const tasks = state.tasks;
   let lastStats = getCompletionStats(tasks);
 
   const displayTasks = () => {

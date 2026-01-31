@@ -99,6 +99,7 @@ export async function showProjectSettingsMenu() {
   const bypassEnabled = getBypassPermissionsStatus();
   const bypassStatus = bypassEnabled ? chalk.green('ON') : chalk.red('OFF');
   const bypassLine = `   [P] Bypass All Permissions                             [${bypassStatus}]`;
+  // eslint-disable-next-line no-control-regex
   const bypassPadding = ' '.repeat(79 - bypassLine.replace(/\x1B\[[0-9;]*m/g, '').length - 1);
 
   console.log('');
@@ -718,7 +719,7 @@ export async function showMainMenu() {
       short: 'Setup',
     },
     {
-      name: `${chalk.dim('5)')} ${chalk.bold('List Recent Tasks')}      View issues you\'ve created`,
+      name: `${chalk.dim('5)')} ${chalk.bold('List Recent Tasks')}      View issues you've created`,
       value: 'list',
       short: 'List',
     },
@@ -1081,7 +1082,7 @@ async function showMobileMainMenu() {
   const action = await showMobileMenu();
 
   switch (action) {
-    case 'create':
+    case 'create': {
       const configured = hasValidConfig();
       if (!configured) {
         console.log(chalk.yellow('Setup required first.'));
@@ -1093,6 +1094,7 @@ async function showMobileMainMenu() {
         await runCreate({});
       }
       break;
+    }
 
     case 'decompose':
       if (!hasValidConfig()) {

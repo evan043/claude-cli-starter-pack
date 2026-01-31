@@ -443,7 +443,7 @@ export function detectProjectType(cwd = process.cwd()) {
       if (deps.fastify) stack.frameworks.push('fastify');
       if (deps.jest || deps.vitest) stack.tools.push('testing');
       if (deps.playwright) stack.tools.push('e2e-testing');
-    } catch {}
+    } catch { /* ignore parse errors */ }
   }
 
   // Check for Python

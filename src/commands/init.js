@@ -1520,7 +1520,7 @@ async function runDevMode(options = {}) {
       const outputPath = join(commandsDir, `${cmdName}.md`);
 
       try {
-        let content = readFileSync(templatePath, 'utf8');
+        const content = readFileSync(templatePath, 'utf8');
 
         // Process template with tech-stack values
         const { content: processed, warnings } = replacePlaceholders(content, techStack, {
@@ -1546,7 +1546,7 @@ async function runDevMode(options = {}) {
       const outputPath = join(hooksDir, `${hookName}.js`);
 
       try {
-        let content = readFileSync(templatePath, 'utf8');
+        const content = readFileSync(templatePath, 'utf8');
 
         // Process template with tech-stack values
         const { content: processed } = replacePlaceholders(content, techStack, {
@@ -2280,7 +2280,7 @@ export async function runInit(options = {}) {
   // Track if we should create backups (set outside the if block for use later)
   // Now also considers smart merge decisions
   const createBackups = options.backup || (typeof overwrite !== 'undefined' && commandsToOverwrite.length > 0 && !options.force);
-  let backedUpFiles = [];
+  const backedUpFiles = [];
 
   // Helper to check if a command should be backed up based on smart merge decisions
   const shouldBackupCommand = (cmdName) => {

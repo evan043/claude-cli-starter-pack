@@ -87,7 +87,7 @@ function evaluateCondition(condition, values) {
  */
 function processEachBlocks(content, values) {
   // Match {{#each path}}content{{/each}}
-  const eachRegex = /\{\{#each\s+([^\}]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
+  const eachRegex = /\{\{#each\s+([^}]+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
 
   return content.replace(eachRegex, (match, path, innerContent) => {
     const array = getNestedValue(values, path.trim());
@@ -130,8 +130,8 @@ function processConditionalBlocks(content, values) {
 
     // Match {{#if condition}}...{{else}}...{{/if}} or {{#if condition}}...{{/if}}
     // Non-greedy match for innermost blocks first
-    const ifElseRegex = /\{\{#if\s+([^\}]+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
-    const ifOnlyRegex = /\{\{#if\s+([^\}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    const ifElseRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
+    const ifOnlyRegex = /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
 
     // First handle if-else blocks
     result = result.replace(ifElseRegex, (match, condition, ifContent, elseContent) => {
@@ -186,7 +186,7 @@ export function replacePlaceholders(content, values, options = {}) {
   }
 
   // Step 4: Replace simple {{path.to.value}} placeholders
-  result = result.replace(/\{\{([^#\/][^}]*)\}\}/g, (match, path) => {
+  result = result.replace(/\{\{([^#/][^}]*)\}\}/g, (match, path) => {
     const trimmedPath = path.trim();
 
     // Skip special syntax that wasn't processed

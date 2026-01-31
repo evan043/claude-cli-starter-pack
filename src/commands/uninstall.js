@@ -94,7 +94,7 @@ function findCcaspFiles(projectDir) {
       files.commands = entries
         .filter(f => f.endsWith('.md'))
         .map(f => join(commandsDir, f));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Hooks
@@ -105,7 +105,7 @@ function findCcaspFiles(projectDir) {
       files.hooks = entries
         .filter(f => f.endsWith('.js'))
         .map(f => join(hooksDir, f));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Skills (directories)
@@ -116,7 +116,7 @@ function findCcaspFiles(projectDir) {
       files.skills = entries
         .filter(e => e.isDirectory())
         .map(e => join(skillsDir, e.name));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Config
@@ -125,7 +125,7 @@ function findCcaspFiles(projectDir) {
     try {
       const entries = readdirSync(configDir);
       files.config = entries.map(f => join(configDir, f));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Docs
@@ -142,7 +142,7 @@ function findCcaspFiles(projectDir) {
       files.agents = entries
         .filter(f => f.endsWith('.md'))
         .map(f => join(agentsDir, f));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   return files;
@@ -293,7 +293,7 @@ export async function runUninstall(options = {}) {
       try {
         unlinkSync(cmdPath);
         removedCount++;
-      } catch {}
+      } catch { /* ignore fs errors */ }
     }
   }
 
@@ -304,7 +304,7 @@ export async function runUninstall(options = {}) {
       try {
         unlinkSync(hookPath);
         removedCount++;
-      } catch {}
+      } catch { /* ignore fs errors */ }
     }
   }
 
@@ -313,7 +313,7 @@ export async function runUninstall(options = {}) {
     try {
       removeDir(skillDir);
       removedCount++;
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Remove config files
@@ -321,7 +321,7 @@ export async function runUninstall(options = {}) {
     try {
       unlinkSync(configPath);
       removedCount++;
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Remove agents (except those restored)
@@ -331,7 +331,7 @@ export async function runUninstall(options = {}) {
       try {
         unlinkSync(agentPath);
         removedCount++;
-      } catch {}
+      } catch { /* ignore fs errors */ }
     }
   }
 
@@ -343,7 +343,7 @@ export async function runUninstall(options = {}) {
     try {
       removeDir(backupDir);
       console.log(chalk.green('    ✓ Removed backups directory\n'));
-    } catch {}
+    } catch { /* ignore fs errors */ }
   }
 
   // Step 4: Clean up empty directories
@@ -363,7 +363,7 @@ export async function runUninstall(options = {}) {
         if (entries.length === 0) {
           rmdirSync(dir);
         }
-      } catch {}
+      } catch { /* ignore fs errors */ }
     }
   }
 
@@ -393,7 +393,7 @@ export async function runUninstall(options = {}) {
           console.log(chalk.dim(`    .claude/ directory kept (${remaining.length} items remain)`));
           console.log(chalk.dim('    Use --all to remove entire .claude/ directory\n'));
         }
-      } catch {}
+      } catch { /* ignore fs errors */ }
     }
   }
 

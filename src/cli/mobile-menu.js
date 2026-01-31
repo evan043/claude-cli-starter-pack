@@ -32,6 +32,7 @@ ${chalk.cyan('╚═════════════════════
 function truncate(text, maxLen = 30) {
   if (!text) return '';
   // Strip ANSI codes for length calculation
+  // eslint-disable-next-line no-control-regex
   const plainText = text.replace(/\x1B\[[0-9;]*m/g, '');
   if (plainText.length <= maxLen) return text;
   return text.slice(0, maxLen - 2) + '..';
