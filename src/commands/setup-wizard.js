@@ -1050,22 +1050,23 @@ async function runCustomInstall() {
 
 /**
  * Launch Claude Code CLI with auto-injected command
- * Opens a new terminal window and starts Claude CLI
+ * Opens a new terminal window and starts Claude CLI with the setup command
  */
 async function launchClaudeCLI() {
-  console.log(chalk.cyan('\n🚀 Launching Claude Code CLI...\n'));
+  console.log(chalk.cyan('\n🚀 Launching Claude Code CLI with project setup...\n'));
 
   const platform = process.platform;
   const cwd = process.cwd();
+  const setupCommand = '/project-implementation-for-ccasp';
   let launched = false;
 
   try {
     const { spawn, execSync } = await import('child_process');
 
     if (platform === 'win32') {
-      // Windows: Open new CMD window with claude, keeping it open
-      // Use spawn with detached to let the new window run independently
-      const child = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && claude`], {
+      // Windows: Open new CMD window with claude and inject the setup command
+      // Claude CLI takes prompt as positional argument: claude "prompt"
+      const child = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', `cd /d "${cwd}" && claude "${setupCommand}"`], {
         detached: true,
         stdio: 'ignore',
         shell: true,
@@ -1073,17 +1074,17 @@ async function launchClaudeCLI() {
       child.unref();
       launched = true;
     } else if (platform === 'darwin') {
-      // macOS: Open Terminal app with claude command
-      execSync(`osascript -e 'tell application "Terminal" to do script "cd \\"${cwd}\\" && claude"'`, { stdio: 'pipe' });
+      // macOS: Open Terminal app with claude command and inject setup
+      execSync(`osascript -e 'tell application "Terminal" to do script "cd \\"${cwd}\\" && claude \\"${setupCommand}\\""'`, { stdio: 'pipe' });
       launched = true;
     } else {
-      // Linux: Try common terminals
+      // Linux: Try common terminals with injected command
       try {
-        execSync(`gnome-terminal -- bash -c "cd '${cwd}' && claude; exec bash"`, { stdio: 'pipe' });
+        execSync(`gnome-terminal -- bash -c "cd '${cwd}' && claude '${setupCommand}'; exec bash"`, { stdio: 'pipe' });
         launched = true;
       } catch {
         try {
-          execSync(`xterm -e "cd '${cwd}' && claude"`, { stdio: 'pipe' });
+          execSync(`xterm -e "cd '${cwd}' && claude '${setupCommand}'"`, { stdio: 'pipe' });
           launched = true;
         } catch {
           // Fallback below
@@ -1095,10 +1096,13 @@ async function launchClaudeCLI() {
       console.log(
         boxen(
           chalk.green('✅ Claude CLI Launched!\n\n') +
-            chalk.dim('A new terminal window has opened.\n\n') +
-            chalk.white('Quick start commands:\n') +
-            `  ${chalk.yellow('/menu')} - See all available commands\n` +
-            `  ${chalk.yellow('/project-implementation-for-ccasp')} - Full setup`,
+            chalk.dim('A new terminal window has opened with:\n') +
+            chalk.yellow(`claude "${setupCommand}"\n\n`) +
+            chalk.white('This will automatically run the full project setup:\n') +
+            chalk.dim('  • Tech stack detection\n') +
+            chalk.dim('  • MCP server configuration\n') +
+            chalk.dim('  • GitHub project board setup\n') +
+            chalk.dim('  • Testing framework integration'),
           {
             padding: 1,
             borderStyle: 'round',
