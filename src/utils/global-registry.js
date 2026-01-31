@@ -6,14 +6,20 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import {
+  globalClaudePath,
+  getHomeDir,
+  toForwardSlashes,
+  pathsEqual,
+  getPathSegment
+} from './paths.js';
 
 /**
  * Get the path to the global registry file
  * @returns {string} Path to ~/.claude/ccasp-registry.json
  */
 export function getRegistryPath() {
-  return join(homedir(), '.claude', 'ccasp-registry.json');
+  return globalClaudePath('ccasp-registry.json');
 }
 
 /**
@@ -21,7 +27,7 @@ export function getRegistryPath() {
  * @returns {string} Path to ~/.claude/
  */
 export function getGlobalClaudeDir() {
-  return join(homedir(), '.claude');
+  return join(getHomeDir(), '.claude');
 }
 
 /**
@@ -84,17 +90,14 @@ export function saveRegistry(registry) {
 export function registerProject(projectPath, metadata = {}) {
   const registry = loadRegistry();
 
-  // Normalize path for comparison
-  const normalizedPath = projectPath.replace(/\\/g, '/').replace(/\/$/, '');
-
-  // Check if already registered
+  // Check if already registered (using cross-platform path comparison)
   const existingIndex = registry.projects.findIndex(
-    p => p.path.replace(/\\/g, '/').replace(/\/$/, '') === normalizedPath
+    p => pathsEqual(p.path, projectPath)
   );
 
   const projectEntry = {
     path: projectPath,
-    name: metadata.name || projectPath.split(/[/\\]/).pop(),
+    name: metadata.name || getPathSegment(projectPath),
     registeredAt: new Date().toISOString(),
     lastInitAt: new Date().toISOString(),
     ccaspVersion: metadata.version || 'unknown',
@@ -126,12 +129,9 @@ export function registerProject(projectPath, metadata = {}) {
 export function unregisterProject(projectPath) {
   const registry = loadRegistry();
 
-  // Normalize path for comparison
-  const normalizedPath = projectPath.replace(/\\/g, '/').replace(/\/$/, '');
-
   const initialLength = registry.projects.length;
   registry.projects = registry.projects.filter(
-    p => p.path.replace(/\\/g, '/').replace(/\/$/, '') !== normalizedPath
+    p => !pathsEqual(p.path, projectPath)
   );
 
   if (registry.projects.length < initialLength) {
@@ -166,10 +166,9 @@ export function getRegisteredProjects(options = {}) {
  */
 export function isProjectRegistered(projectPath) {
   const registry = loadRegistry();
-  const normalizedPath = projectPath.replace(/\\/g, '/').replace(/\/$/, '');
 
   return registry.projects.some(
-    p => p.path.replace(/\\/g, '/').replace(/\/$/, '') === normalizedPath
+    p => pathsEqual(p.path, projectPath)
   );
 }
 
