@@ -89,15 +89,50 @@ function getCurrentVersion() {
 
 /**
  * Check npm for latest version
+ * Issue #8: Added npm registry API fallback for Windows compatibility
  */
 function checkLatestVersion() {
+  // Try npm CLI first
   try {
     const result = execSync(`npm view ${PACKAGE_NAME} version`, {
       encoding: 'utf8',
       timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    return result.trim();
+    const version = result.trim();
+    if (version && /^\d+\.\d+\.\d+/.test(version)) {
+      return version;
+    }
+  } catch {
+    // npm CLI failed, try fallback
+  }
+
+  // Fallback: Direct npm registry API call
+  try {
+    const https = require('https');
+    return new Promise((resolve) => {
+      const req = https.get(
+        `https://registry.npmjs.org/${PACKAGE_NAME}/latest`,
+        { timeout: 8000 },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => {
+            try {
+              const pkg = JSON.parse(data);
+              resolve(pkg.version || null);
+            } catch {
+              resolve(null);
+            }
+          });
+        }
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
+    });
   } catch {
     return null;
   }

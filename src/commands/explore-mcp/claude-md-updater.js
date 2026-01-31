@@ -7,8 +7,33 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs';
+import { join, basename } from 'path';
+
+/**
+ * Create a backup of CLAUDE.md before modification
+ * @param {string} filePath - Path to CLAUDE.md
+ * @param {string} cwd - Working directory
+ * @returns {string|null} Backup path or null if failed
+ */
+function backupClaudeMd(filePath, cwd) {
+  if (!existsSync(filePath)) return null;
+
+  const backupDir = join(cwd, '.claude', 'backups');
+  if (!existsSync(backupDir)) {
+    mkdirSync(backupDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const backupPath = join(backupDir, `CLAUDE.md.${timestamp}.bak`);
+
+  try {
+    copyFileSync(filePath, backupPath);
+    return backupPath;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * MCP section marker
@@ -158,6 +183,12 @@ ${mcpSection}
       };
     }
 
+    // Backup existing CLAUDE.md before modification
+    const backupPath = backupClaudeMd(claudeMdPath, cwd);
+    if (backupPath) {
+      spinner.text = 'Backed up CLAUDE.md...';
+    }
+
     // Check if MCP section exists
     const hasStartMarker = content.includes(MCP_SECTION_START);
     const hasEndMarker = content.includes(MCP_SECTION_END);
@@ -193,12 +224,13 @@ ${mcpSection}
     }
 
     writeFileSync(claudeMdPath, content, 'utf8');
-    spinner.succeed('Updated CLAUDE.md with MCP documentation');
+    spinner.succeed(`Updated CLAUDE.md with MCP documentation${backupPath ? ' (backup created)' : ''}`);
 
     return {
       success: true,
       action: hasStartMarker ? 'updated' : 'appended',
       path: claudeMdPath,
+      backupPath: backupPath || null,
     };
   } catch (error) {
     spinner.fail(`Failed to update CLAUDE.md: ${error.message}`);
@@ -225,6 +257,9 @@ export function removeMcpSection(cwd = process.cwd()) {
   const hasEndMarker = content.includes(MCP_SECTION_END);
 
   if (hasStartMarker && hasEndMarker) {
+    // Backup before removal
+    backupClaudeMd(claudeMdPath, cwd);
+
     const regex = new RegExp(
       `\\n?${MCP_SECTION_START}[\\s\\S]*?${MCP_SECTION_END}\\n?`,
       'g'

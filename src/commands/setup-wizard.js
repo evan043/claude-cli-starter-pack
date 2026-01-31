@@ -578,43 +578,60 @@ function showSetupHeader() {
 }
 
 /**
- * Quick setup options - numbered for easy mobile input
+ * Streamlined setup options - 3 core paths for easy mobile input
+ * Issue #8: Simplified from 7 options to reduce scrolling
  */
 const SETUP_OPTIONS = [
   {
-    name: `${chalk.yellow('1.')} Quick Start ${chalk.dim('- Detect stack + init .claude')}`,
-    value: 'quick',
-    short: 'Quick Start',
+    name: `${chalk.green('1.')} Auto Install ${chalk.dim('- Full features + backup (recommended)')}`,
+    value: 'auto',
+    short: 'Auto Install',
   },
   {
-    name: `${chalk.yellow('2.')} Full Setup ${chalk.dim('- All features + customization')}`,
-    value: 'full',
-    short: 'Full Setup',
-  },
-  {
-    name: `${chalk.yellow('3.')} GitHub Setup ${chalk.dim('- Connect project board')}`,
+    name: `${chalk.yellow('2.')} GitHub Setup ${chalk.dim('- Connect project board')}`,
     value: 'github',
     short: 'GitHub',
   },
   {
-    name: `${chalk.yellow('4.')} View Templates ${chalk.dim('- Browse available items')}`,
+    name: `${chalk.dim('3.')} More Options ${chalk.dim('- Templates, releases, remove')}`,
+    value: 'more',
+    short: 'More',
+  },
+  {
+    name: `${chalk.dim('0.')} Exit`,
+    value: 'exit',
+    short: 'Exit',
+  },
+];
+
+/**
+ * Advanced options submenu - accessed via "More Options"
+ */
+const ADVANCED_OPTIONS = [
+  {
+    name: `${chalk.yellow('1.')} Custom Setup ${chalk.dim('- Choose specific features')}`,
+    value: 'custom',
+    short: 'Custom',
+  },
+  {
+    name: `${chalk.yellow('2.')} View Templates ${chalk.dim('- Browse available items')}`,
     value: 'templates',
     short: 'Templates',
   },
   {
-    name: `${chalk.yellow('5.')} Prior Releases ${chalk.dim('- Review & add features from past versions')}`,
+    name: `${chalk.yellow('3.')} Prior Releases ${chalk.dim('- Add features from past versions')}`,
     value: 'releases',
     short: 'Releases',
   },
   {
-    name: `${chalk.yellow('6.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
+    name: `${chalk.yellow('4.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
     value: 'remove',
     short: 'Remove',
   },
   {
-    name: `${chalk.yellow('0.')} Exit`,
-    value: 'exit',
-    short: 'Exit',
+    name: `${chalk.dim('0.')} Back`,
+    value: 'back',
+    short: 'Back',
   },
 ];
 
@@ -1292,7 +1309,7 @@ export async function runSetupWizard(options = {}) {
     console.log(chalk.green('✓ CLAUDE.md exists\n'));
   }
 
-  // Main menu loop
+  // Main menu loop - streamlined 3-path flow (Issue #8)
   let running = true;
   while (running) {
     const { action } = await inquirer.prompt([
@@ -1301,26 +1318,65 @@ export async function runSetupWizard(options = {}) {
         name: 'action',
         message: 'What would you like to do?',
         choices: SETUP_OPTIONS,
-        pageSize: 12,
+        pageSize: 6, // All options visible without scrolling
       },
     ]);
 
     switch (action) {
-      case 'quick':
-        const quickSuccess = await runQuickSetup();
-        if (quickSuccess) running = false;
-        break;
-
-      case 'full':
-        await runInit({ interactive: true });
+      case 'auto':
+        // Auto Install: Full features with mandatory backup (Issue #8 requirement)
+        console.log(chalk.cyan('\n📦 Auto Install Mode - Full features with backup\n'));
+        await runInit({
+          interactive: false,
+          backup: true,  // Mandatory backup
+          force: true,   // Overwrite enabled for testing phase
+          skipPrompts: true,
+          preset: 'full' // All features
+        });
         showRestartReminder();
         running = false;
         break;
 
       case 'github':
         await runGitHubSetup({});
-        // GitHub setup modifies .claude/ config
         showRestartReminder();
+        break;
+
+      case 'more':
+        // Advanced options submenu
+        await showAdvancedOptions();
+        break;
+
+      case 'exit':
+        running = false;
+        console.log(chalk.dim('\nRun `ccasp wizard` anytime to return.\n'));
+        break;
+    }
+  }
+}
+
+/**
+ * Advanced options submenu - Issue #8: Moved less-used options here
+ */
+async function showAdvancedOptions() {
+  let inSubmenu = true;
+
+  while (inSubmenu) {
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'Advanced Options:',
+        choices: ADVANCED_OPTIONS,
+        pageSize: 6,
+      },
+    ]);
+
+    switch (action) {
+      case 'custom':
+        await runInit({ interactive: true });
+        showRestartReminder();
+        inSubmenu = false;
         break;
 
       case 'templates':
@@ -1334,13 +1390,12 @@ export async function runSetupWizard(options = {}) {
       case 'remove':
         const removed = await runRemove();
         if (removed) {
-          running = false; // Exit wizard after removal
+          inSubmenu = false;
         }
         break;
 
-      case 'exit':
-        running = false;
-        console.log(chalk.dim('\nRun `ccasp wizard` anytime to return.\n'));
+      case 'back':
+        inSubmenu = false;
         break;
     }
   }

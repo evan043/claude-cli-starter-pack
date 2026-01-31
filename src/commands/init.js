@@ -220,6 +220,12 @@ const AVAILABLE_COMMANDS = [
     selected: true,
   },
   {
+    name: 'detect-tech-stack',
+    description: 'Re-run tech stack detection and update configuration',
+    category: 'Analysis',
+    selected: true,
+  },
+  {
     name: 'roadmap-sync',
     description: 'Sync roadmaps with GitHub Project Board',
     category: 'GitHub',
@@ -2794,4 +2800,87 @@ npx claude-cli-advanced-starter-pack init --force
 `;
 
   return content;
+}
+
+/**
+ * Verify and fix legacy installations (pre-v1.0.8)
+ * Issue #8: Ensures update-check hook is properly configured
+ *
+ * @param {string} projectDir - Project directory to verify
+ * @returns {Object} Verification result with fixes applied
+ */
+export async function verifyLegacyInstallation(projectDir = process.cwd()) {
+  const fixes = [];
+  const issues = [];
+
+  const claudeDir = join(projectDir, '.claude');
+  const hooksDir = join(claudeDir, 'hooks');
+  const settingsPath = join(claudeDir, 'settings.json');
+  const updateCheckHookPath = join(hooksDir, 'ccasp-update-check.js');
+
+  // Check if this is a CCASP installation
+  if (!existsSync(claudeDir)) {
+    return { isLegacy: false, message: 'No .claude folder found' };
+  }
+
+  // Check 1: Does the update-check hook file exist?
+  if (!existsSync(updateCheckHookPath)) {
+    issues.push('Missing ccasp-update-check.js hook file');
+
+    // Fix: Create the hook file
+    if (!existsSync(hooksDir)) {
+      mkdirSync(hooksDir, { recursive: true });
+    }
+
+    const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
+    if (existsSync(templatePath)) {
+      const hookContent = readFileSync(templatePath, 'utf8');
+      writeFileSync(updateCheckHookPath, hookContent, 'utf8');
+      fixes.push('Created ccasp-update-check.js hook file');
+    }
+  }
+
+  // Check 2: Is the hook registered in settings.json?
+  if (existsSync(settingsPath)) {
+    try {
+      const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+
+      // Check if UserPromptSubmit hook exists with update-check
+      const hasUpdateHook = settings.hooks?.UserPromptSubmit?.some(
+        (h) => h.hooks?.some((hook) => hook.command?.includes('ccasp-update-check'))
+      );
+
+      if (!hasUpdateHook) {
+        issues.push('Update-check hook not registered in settings.json');
+
+        // Fix: Add the hook to settings.json
+        if (!settings.hooks) settings.hooks = {};
+        if (!settings.hooks.UserPromptSubmit) {
+          settings.hooks.UserPromptSubmit = [];
+        }
+
+        settings.hooks.UserPromptSubmit.push({
+          matcher: '',
+          hooks: [{
+            type: 'command',
+            command: 'node .claude/hooks/ccasp-update-check.js',
+          }],
+        });
+
+        writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+        fixes.push('Registered update-check hook in settings.json');
+      }
+    } catch {
+      issues.push('Could not parse settings.json');
+    }
+  }
+
+  return {
+    isLegacy: issues.length > 0,
+    issues,
+    fixes,
+    message: fixes.length > 0
+      ? `Fixed ${fixes.length} legacy installation issue(s)`
+      : 'Installation is up to date',
+  };
 }

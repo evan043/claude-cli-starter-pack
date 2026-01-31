@@ -19,8 +19,9 @@ const PACKAGE_NAME = 'claude-cli-advanced-starter-pack';
 // Cache duration: 1 hour (in milliseconds)
 const CACHE_DURATION = 60 * 60 * 1000;
 
-// Update notification duration: 1 day (in milliseconds)
-const UPDATE_NOTIFICATION_DURATION = 24 * 60 * 60 * 1000;
+// Update notification reminder: Show reminder again after 7 days
+// Issue #8: Changed from 1-day suppression to 7-day reminder
+const UPDATE_NOTIFICATION_REMINDER = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Get the current installed version from package.json
@@ -313,19 +314,52 @@ export function compareVersions(v1, v2) {
 /**
  * Check npm registry for the latest version
  * Returns null if check fails (network error, etc.)
+ * Issue #8: Added npm registry API fallback for Windows compatibility
  */
 export async function checkLatestVersion() {
+  // Try npm CLI first
   try {
-    // Use npm view command to get latest version
     const result = execSync(`npm view ${PACKAGE_NAME} version`, {
       encoding: 'utf8',
-      timeout: 10000, // 10 second timeout
+      timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    return result.trim();
+    const version = result.trim();
+    if (version && /^\d+\.\d+\.\d+/.test(version)) {
+      return version;
+    }
   } catch {
-    // Silently fail - network might be unavailable
+    // npm CLI failed, try fallback
+  }
+
+  // Fallback: Direct npm registry API call (Issue #8 fix)
+  try {
+    const https = await import('https');
+    return new Promise((resolve) => {
+      const req = https.default.get(
+        `https://registry.npmjs.org/${PACKAGE_NAME}/latest`,
+        { timeout: 8000 },
+        (res) => {
+          let data = '';
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => {
+            try {
+              const pkg = JSON.parse(data);
+              resolve(pkg.version || null);
+            } catch {
+              resolve(null);
+            }
+          });
+        }
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => {
+        req.destroy();
+        resolve(null);
+      });
+    });
+  } catch {
     return null;
   }
 }
@@ -436,17 +470,9 @@ export function shouldShowUpdateNotification(state, latestVersion) {
     return false;
   }
 
-  // Check if we have a cached check result with timestamp
-  if (state.lastCheckResult && state.lastCheckTimestamp) {
-    const timeSinceCheck = Date.now() - state.lastCheckTimestamp;
-
-    // If check is more than 1 day old, don't show notification
-    // (user needs to run check again to see new updates)
-    if (timeSinceCheck > UPDATE_NOTIFICATION_DURATION) {
-      return false;
-    }
-  }
-
+  // Issue #8: Always show notification if update is available
+  // The old logic suppressed notifications after 1 day, which was counterproductive
+  // Now we always show if there's an update, regardless of cache age
   return true;
 }
 

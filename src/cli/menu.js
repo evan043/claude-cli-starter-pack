@@ -799,7 +799,7 @@ export async function showMainMenu() {
       name: 'action',
       message: 'Select an option:',
       choices,
-      pageSize: 10,
+      pageSize: 20,
     },
   ]);
 
