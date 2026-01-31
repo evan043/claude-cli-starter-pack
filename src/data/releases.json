@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "1.0.16",
+      "date": "2026-01-30",
+      "summary": "Feature: Bypass All Permissions toggle in Project Settings menu",
+      "highlights": [
+        "Quick toggle for Bypass All Permissions mode from /menu → Project Settings",
+        "Live status display shows current state (ON/OFF)",
+        "Toggles between bypassPermissions and acceptEdits modes",
+        "Updates .claude/settings.json directly"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "bypass-permissions-toggle",
+            "description": "Quick toggle in Project Settings to enable/disable auto-approve mode"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.0.15",
       "date": "2026-01-30",
       "summary": "Feature: Optional npm package installation for features (Happy Coder support)",

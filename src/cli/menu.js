@@ -4,6 +4,8 @@
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { runSetup } from '../commands/setup.js';
 import { runCreate } from '../commands/create.js';
 import { runList } from '../commands/list.js';
@@ -23,6 +25,55 @@ import { showHelp } from '../commands/help.js';
 import { hasValidConfig, getVersion, loadTechStack, saveTechStack } from '../utils.js';
 
 /**
+ * Get bypass permissions status from settings.json
+ */
+function getBypassPermissionsStatus() {
+  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  if (!existsSync(settingsPath)) {
+    return false;
+  }
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    return settings.permissions?.defaultMode === 'bypassPermissions';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Toggle bypass permissions in settings.json
+ */
+function toggleBypassPermissions() {
+  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  let settings = {};
+
+  if (existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
+    } catch {
+      settings = {};
+    }
+  }
+
+  if (!settings.permissions) {
+    settings.permissions = {};
+  }
+
+  const currentMode = settings.permissions.defaultMode;
+  const newMode = currentMode === 'bypassPermissions' ? 'acceptEdits' : 'bypassPermissions';
+  settings.permissions.defaultMode = newMode;
+
+  // Ensure directory exists
+  const dir = dirname(settingsPath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+  return newMode === 'bypassPermissions';
+}
+
+/**
  * ASCII Art Banner
  */
 const BANNER = `
@@ -40,10 +91,21 @@ const BANNER = `
  * Show Project Settings submenu
  */
 export async function showProjectSettingsMenu() {
+  // Get current bypass status for display
+  const bypassEnabled = getBypassPermissionsStatus();
+  const bypassStatus = bypassEnabled ? chalk.green('ON') : chalk.red('OFF');
+  const bypassLine = `   [P] Bypass All Permissions                             [${bypassStatus}]`;
+  const bypassPadding = ' '.repeat(79 - bypassLine.replace(/\x1B\[[0-9;]*m/g, '').length - 1);
+
   console.log('');
   console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.bold('                           PROJECT CONFIGURATION                               ') + chalk.cyan('║'));
   console.log(chalk.cyan('╠═══════════════════════════════════════════════════════════════════════════════╣'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + bypassLine + bypassPadding + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Toggle auto-approve all tool calls (use with caution)               ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('╠───────────────────────────────────────────────────────────────────────────────╣'));
   console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
   console.log(chalk.cyan('║') + '   [1] GitHub Project Board                                                    ' + chalk.cyan('║'));
   console.log(chalk.cyan('║') + chalk.dim('       └─ Connect to GitHub Projects v2 for issue tracking                     ') + chalk.cyan('║'));
@@ -71,6 +133,8 @@ export async function showProjectSettingsMenu() {
       name: 'settingsAction',
       message: 'Select a configuration area:',
       choices: [
+        { name: `P. Bypass All Permissions [${bypassEnabled ? 'ON' : 'OFF'}]`, value: 'bypass' },
+        new inquirer.Separator(),
         { name: '1. GitHub Project Board', value: 'github' },
         { name: '2. Deployment Platforms', value: 'deployment' },
         { name: '3. Tunnel Services', value: 'tunnel' },
@@ -83,6 +147,22 @@ export async function showProjectSettingsMenu() {
   ]);
 
   if (settingsAction === 'back') {
+    return;
+  }
+
+  // Handle bypass toggle
+  if (settingsAction === 'bypass') {
+    const newState = toggleBypassPermissions();
+    console.log('');
+    if (newState) {
+      console.log(chalk.green('  ✓ Bypass All Permissions: ON'));
+      console.log(chalk.yellow('    All tool calls will be auto-approved'));
+    } else {
+      console.log(chalk.green('  ✓ Bypass All Permissions: OFF'));
+      console.log(chalk.dim('    Using Accept Edits mode (prompts for Edit/Write/Bash)'));
+    }
+    console.log('');
+    await showProjectSettingsMenu();
     return;
   }
 
