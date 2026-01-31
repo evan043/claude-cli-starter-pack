@@ -289,18 +289,50 @@ options:
 **Question 2: SKIP** (E2E not configured - skip this question)
 {{/if}}
 
-**Question 3: GitHub Integration**
+---
+
+### Step 4b: MANDATORY Workflow Questions (ALWAYS ASK)
+
+**CRITICAL**: After presenting findings, you MUST ask these 4 questions using AskUserQuestion.
+Users can answer with combinations like: `1, 2` or `1 & 3` or `1,2,4` or `all` or `none`.
+
+**Parse combination answers**: If user responds with numbers (e.g., "1, 2" or "1 & 3 & 4"), enable ALL selected options.
+
 ```
-header: "GitHub"
-question: "Would you like to create a tracked GitHub issue for this task list?"
+header: "Workflow Options"
+question: "Select workflow options (combine with commas: 1,2 or 1 & 3):\n\n1. Create GitHub Issue on remote repo\n2. Add issue to Project Board\n3. Create new branch before implementing\n4. Create new git worktree\n\nWhich options? (e.g., '1,2' or 'all' or 'none')"
 options:
-  - label: "Yes - Create GitHub issue (Recommended)"
-    description: "Creates issue with codebase analysis, adds to project board, auto-updates progress"
-  - label: "No - Local task list only"
-    description: "Just use TodoWrite without GitHub tracking"
+  - label: "1 - GitHub Issue only"
+    description: "Create tracked issue with codebase analysis"
+  - label: "1, 2 - Issue + Project Board (Recommended)"
+    description: "Create issue AND add to project board"
+  - label: "1, 2, 3 - Issue + Board + Branch"
+    description: "Full workflow: issue, board, and new branch"
+  - label: "All (1, 2, 3, 4)"
+    description: "Everything: issue, board, branch, and worktree"
+  - label: "None - Local only"
+    description: "Skip all GitHub integration, just local TodoWrite"
 ```
 
-**Question 4: Confirm Plan** (only if plan needs adjustment)
+**Parse user's selection** and store flags:
+- `CREATE_GITHUB_ISSUE`: true if "1" selected
+- `ADD_TO_PROJECT_BOARD`: true if "2" selected
+- `CREATE_NEW_BRANCH`: true if "3" selected
+- `CREATE_WORKTREE`: true if "4" selected
+
+**Combination Parsing Rules**:
+| User Input | Parsed Options |
+|------------|----------------|
+| `1` | Issue only |
+| `1, 2` or `1,2` or `1 & 2` | Issue + Board |
+| `1,2,3` or `1, 2, 3` | Issue + Board + Branch |
+| `1 & 2 & 4` | Issue + Board + Worktree |
+| `all` or `1,2,3,4` | All options |
+| `none` or `0` | No GitHub integration |
+
+---
+
+**Question 4: Confirm Plan**
 ```
 header: "Plan"
 question: "Does this approach look correct, or should I adjust?"
@@ -408,13 +440,81 @@ The user should manually verify changes work before committing.
 
 ---
 
-### Step 6: Create GitHub Issue (If Selected)
+### Step 6: Execute Workflow Options (Based on Step 4b Selection)
 
-If user selected GitHub integration:
+Execute the workflow options selected by the user in Step 4b. Process in this order:
 
-#### Step 6a: Preview Issue Before Creation
+---
 
-**Present issue preview to user** before creating:
+#### Step 6a: Create New Branch (if CREATE_NEW_BRANCH = true)
+
+**Before any GitHub operations, create the working branch:**
+
+```bash
+# Generate branch name from task description
+# Format: feature/[short-description] or fix/[short-description]
+
+gh api repos/{owner}/{repo} --jq '.default_branch' # Get default branch
+git checkout -b [branch-name]
+git push -u origin [branch-name]
+```
+
+**Display confirmation:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ New Branch Created                                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Branch: [branch-name]                                        ║
+║  Based on: [default-branch]                                   ║
+║  Pushed to: origin/[branch-name]                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+#### Step 6b: Create Git Worktree (if CREATE_WORKTREE = true)
+
+**Create isolated worktree for parallel development:**
+
+```bash
+# Create worktree directory
+git worktree add ../[project-name]-[branch-name] [branch-name]
+
+# Display path to worktree
+```
+
+**Display confirmation:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ Git Worktree Created                                      ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Location: ../[project-name]-[branch-name]                    ║
+║  Branch: [branch-name]                                        ║
+║                                                               ║
+║  To work in worktree:                                         ║
+║    cd ../[project-name]-[branch-name]                         ║
+║                                                               ║
+║  To remove when done:                                         ║
+║    git worktree remove ../[project-name]-[branch-name]        ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Ask user:**
+```
+header: "Worktree"
+question: "Worktree created. Work in worktree or current directory?"
+options:
+  - label: "Continue in current directory"
+    description: "Stay here, worktree is for manual use"
+  - label: "Switch to worktree"
+    description: "I'll restart Claude Code in the worktree directory"
+```
+
+---
+
+#### Step 6c: Create GitHub Issue (if CREATE_GITHUB_ISSUE = true)
+
+**Present issue preview:**
 
 ```markdown
 ## GitHub Issue Preview
@@ -423,6 +523,7 @@ If user selected GitHub integration:
 **Priority:** P2-Medium (or determined from analysis)
 **Labels:** [Determined from exploration - frontend, backend, feature, bug, etc.]
 **Stack:** [Frontend only | Backend only | Both]
+**Branch:** [branch-name if created, else "will create on first commit"]
 
 **Description Preview:**
 > [First 200 characters of the analysis from Step 3...]
@@ -433,95 +534,109 @@ If user selected GitHub integration:
 - [ ] ...
 ```
 
-**Ask for confirmation using AskUserQuestion:**
-```
-header: "Create GitHub Issue?"
-question: "Ready to create this GitHub issue? Review the preview above."
-options:
-  - label: "Yes - Create Issue"
-    description: "Create the issue and enable auto-progress tracking"
-  - label: "Modify Details"
-    description: "I want to change the title, priority, or labels"
-  - label: "Skip GitHub"
-    description: "Don't create issue, use local TodoWrite only"
+**Create the issue:**
+```bash
+gh issue create \
+  --title "[Task description]" \
+  --body "$(cat <<'EOF'
+## Description
+
+[User's original prompt]
+
+## Codebase Analysis
+
+[Include findings from Step 3 exploration agents]
+
+## Task Checklist
+
+[Mirror the TodoWrite tasks as checkboxes]
+- [ ] Task 1: ...
+- [ ] Task 2: ...
+
+---
+Generated by `/create-task-list`
+EOF
+)" \
+  --label "[labels]"
 ```
 
-**Handle user response:**
-- **"Yes - Create Issue"**: Proceed to create the issue (Step 6b)
-- **"Modify Details"**: Ask which fields to change, then show preview again
-- **"Skip GitHub"**: Skip to Step 7, note that GitHub tracking is disabled
+**Store issue number:**
+```json
+// Write to .claude/task-lists/session-{timestamp}.json
+{
+  "github_issue": {
+    "number": [ISSUE_NUM],
+    "url": "[ISSUE_URL]",
+    "created_at": "[ISO timestamp]"
+  },
+  "branch": "[branch-name]",
+  "worktree": "[worktree-path or null]"
+}
+```
 
 ---
 
-#### Step 6b: Create the Issue
+#### Step 6d: Add to Project Board (if ADD_TO_PROJECT_BOARD = true)
 
-1. **Create comprehensive issue** using `/github-create-task`:
-   ```bash
-   /github-create-task --batch-mode
+**Add the created issue to the configured project board:**
 
-   Title: [Task description from user prompt]
-   Priority: P2-Medium
-   Labels: [Determined from exploration - frontend, backend, feature, bug, etc.]
-   QA: [Required if P0/P1, else Not Required]
-   Stack: [Frontend only|Backend only|Both]
+```bash
+# Get project board number from tech-stack.json or .gtaskrc
+# {{versionControl.projectBoard.number}}
 
-   ## Description
+gh project item-add [PROJECT_NUMBER] \
+  --owner [OWNER] \
+  --url [ISSUE_URL]
+```
 
-   [User's original prompt]
-
-   ## Codebase Analysis
-
-   [Include findings from Step 3 exploration agents]
-
-   ## Task Checklist
-
-   [Mirror the TodoWrite tasks as checkboxes]
-   - [ ] Task 1: ...
-   - [ ] Task 2: ...
-   ```
-
-2. **Store issue number** for progress tracking:
-   ```json
-   // Write to .claude/task-lists/session-{timestamp}.json
-   {
-     "github_issue": {
-       "number": [ISSUE_NUM],
-       "url": "[ISSUE_URL]",
-       "created_at": "[ISO timestamp]"
-     }
-   }
-   ```
-
-3. **Install progress hook** (auto-updates GitHub issue when tasks complete):
-   - The hook watches for TodoWrite calls
-   - When a task is marked `completed`, it updates the GitHub issue:
-     - Checks off the corresponding checkbox
-     - Adds a progress comment if significant milestone
-   - See `.claude/hooks/tools/github-progress-hook.js`
-
-#### Step 6c: Post-Creation Confirmation
-
-After the issue is created, **display confirmation and ask how to proceed**:
-
-```markdown
+**Display confirmation:**
+```
 ╔═══════════════════════════════════════════════════════════════╗
-║  ✅ GitHub Issue Created Successfully                         ║
+║  ✅ Added to Project Board                                    ║
 ╠═══════════════════════════════════════════════════════════════╣
-║                                                               ║
 ║  Issue: #[ISSUE_NUMBER]                                       ║
-║  URL: https://github.com/[owner]/[repo]/issues/[number]       ║
-║                                                               ║
-║  Auto-progress tracking enabled:                              ║
-║  • Tasks will auto-update issue as they complete              ║
-║  • Checkboxes will be checked off automatically               ║
-║                                                               ║
+║  Board: [PROJECT_NAME] (#[PROJECT_NUMBER])                    ║
+║  Status: [Default column - usually "To Do" or "Backlog"]      ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**Ask user how to proceed using AskUserQuestion:**
+---
+
+#### Step 6e: Summary of Workflow Actions
+
+**Display summary of all completed workflow actions:**
+
 ```
-header: "Issue Created"
-question: "GitHub issue #[NUMBER] created. What would you like to do?"
+╔═══════════════════════════════════════════════════════════════╗
+║  📋 Workflow Setup Complete                                   ║
+╠═══════════════════════════════════════════════════════════════╣
+{{#if CREATE_NEW_BRANCH}}
+║  ✅ Branch: [branch-name]                                     ║
+{{/if}}
+{{#if CREATE_WORKTREE}}
+║  ✅ Worktree: ../[worktree-path]                              ║
+{{/if}}
+{{#if CREATE_GITHUB_ISSUE}}
+║  ✅ Issue: #[ISSUE_NUMBER] - [title]                          ║
+║     URL: [ISSUE_URL]                                          ║
+{{/if}}
+{{#if ADD_TO_PROJECT_BOARD}}
+║  ✅ Project Board: Added to [PROJECT_NAME]                    ║
+{{/if}}
+{{#unless CREATE_GITHUB_ISSUE}}
+{{#unless CREATE_NEW_BRANCH}}
+{{#unless CREATE_WORKTREE}}
+║  ℹ️  Local task list only (no GitHub integration)             ║
+{{/unless}}
+{{/unless}}
+{{/unless}}
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Ask user how to proceed:**
+```
+header: "Workflow Ready"
+question: "Workflow setup complete. What would you like to do?"
 options:
   - label: "Continue to Task Execution"
     description: "Proceed with creating and executing the task list"
@@ -580,7 +695,12 @@ const config = {
    - To enable: run `ccasp test-setup`
 {{/if}}
    - Execution Strategy: [Sequential / Grouped / All at once]
-   - GitHub Issue: [#123 (if created) | Not tracked]
+
+   **Workflow Setup:**
+   - GitHub Issue: [#123 | Not created]
+   - Project Board: [Added to Board #X | Not added]
+   - Branch: [feature/task-name | Using current branch]
+   - Worktree: [../project-branch | Not created]
    ```
 
 #### Step 8b: Final Confirmation Before Execution
