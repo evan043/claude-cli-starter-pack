@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.8.3  •  Production Ready                          ║
+║                          v1.8.22  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -18,7 +18,7 @@
 [![Node.js 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A professional-grade CLI toolkit for Claude Code CLI — 60+ components including agents, hooks, skills, MCP servers, phased development, and GitHub integration.**
+**A professional-grade CLI toolkit for Claude Code CLI — 90+ components including agents, hooks, skills, MCP servers, refactoring system, project scaffolding, and GitHub integration.**
 
 [Getting Started](#quick-start) • [Documentation](./docs/WIKI.md) • [API Reference](#api-reference) • [Contributing](#contributing)
 
@@ -29,8 +29,11 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [What's New in v1.8.0](#whats-new-in-v180)
+- [What's New in v1.8.22](#whats-new-in-v1822)
 - [Key Features](#key-features)
+- [Refactoring System](#refactoring-system)
+- [Project Scaffolding](#project-scaffolding)
+- [Auto-Generated Agents](#auto-generated-agents)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Installation Options](#installation-options)
@@ -65,23 +68,42 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
-## What's New in v1.8.3
+## What's New in v1.8.22
 
-**Latest updates:**
-- **`ccasp init --dev`**: Dev mode for rapid template testing - reuses existing tech-stack.json, processes all templates, preserves custom commands
-- **`npm-deploy.js --auto`**: Auto mode for CI/CD - skips confirmation prompts for automation
+**Major additions in v1.8.x:**
 
-**60+ components** across 8 implementation phases:
+### Refactoring System (v1.8.19-1.8.22)
+- **`/ralph`**: Ralph Loop - continuous test-fix cycles until all tests pass
+- **`/refactor-workflow`**: Guided refactoring with branch, task list, GitHub issue, and specialist agent
+- **`/refactor-analyze`**: Deep complexity analysis and code smell detection
+- **`/golden-master`**: Characterization tests before refactoring
+- **`/project-explorer`**: Fresh project scaffolding wizard for empty directories
+- **4 new hooks**: `ralph-loop-enforcer`, `refactor-verify`, `refactor-audit`, `refactor-transaction`
+- **2 new skills**: `refactor-react`, `refactor-fastapi`
+
+### Auto-Generated Agents (v1.8.16-1.8.18)
+- **Stack-specific agents**: Auto-generate L1/L2/L3 agents from detected tech stack
+- **18 agent templates**: React, Vue, FastAPI, Express, Prisma, Playwright, and more
+- **Delegation hooks**: `task-classifier`, `agent-delegator`, `delegation-enforcer`
+- **Agent-only mode**: Enforce agent usage for complex tasks
+
+### Previous Features
+- **`ccasp init --dev`**: Dev mode for rapid template testing
+- **Mobile-optimized menus**: Single-char inputs for Happy.Engineering
+
+**90+ components** across 10 implementation phases:
 
 | Phase | Version | Components |
 |-------|---------|------------|
-| Phase 1-2 | v1.1-1.2 | **12 Hook Templates** — token management, session tracking, deployment automation |
-| Phase 3 | v1.3 | **3 Skill Templates** — agent-creator, hook-creator, rag-agent-creator |
-| Phase 4 | v1.4 | **5 Command Templates** — refactoring tools, smoke test generation |
-| Phase 5 | v1.5 | **5 Documentation Templates** — architecture constitution, gotchas, checklists |
-| Phase 6 | v1.6 | **4 Agent Patterns** — L1→L2 orchestration, multi-phase, query pipeline |
+| Phase 1-2 | v1.1-1.2 | **26 Hook Templates** — token, session, deployment, refactoring |
+| Phase 3 | v1.3 | **5 Skill Templates** — agent-creator, hook-creator, refactor-react, refactor-fastapi |
+| Phase 4 | v1.4 | **15 Command Templates** — refactoring, testing, scaffolding |
+| Phase 5 | v1.5 | **5 Documentation Templates** — architecture, gotchas, checklists |
+| Phase 6 | v1.6 | **5 Agent Patterns** — L1→L2, multi-phase, query pipeline, Ralph Loop |
 | Phase 7 | v1.7 | **7 MCP Servers** — log-monitor, browser-monitor, tunnel services |
-| Phase 8 | v1.8 | **7 Utility Scripts** — deployment validation, roadmap scanning, security audit |
+| Phase 8 | v1.8 | **7 Utility Scripts** — deployment validation, roadmap scanning |
+| Phase 9 | v1.8.16 | **18 Agent Templates** — framework-specific specialists |
+| Phase 10 | v1.8.19 | **Refactoring System** — 5 commands, 4 hooks, 2 skills |
 
 ---
 
@@ -92,34 +114,70 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Feature | Description |
 |---------|-------------|
 | **L1/L2/L3 Agent Hierarchy** | Orchestrators, specialists, and workers with configurable model selection |
-| **12 Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
-| **3 RAG-Enhanced Skills** | Domain-specific knowledge packages with context, templates, and workflows |
+| **26 Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
+| **5 RAG-Enhanced Skills** | Domain-specific knowledge packages with context, templates, and workflows |
+| **Refactoring System** | Ralph Loop, Golden Master, complexity analysis, atomic transactions |
+| **Project Scaffolding** | Fresh project wizard with 6+ stack templates |
+| **Auto-Generated Agents** | 18 framework-specific agents from tech stack detection |
 | **Phased Development** | 95%+ success rate planning with PROGRESS.json state tracking |
 | **GitHub Integration** | Project Board sync, issue creation with codebase analysis |
 | **7 MCP Servers** | Auto-recommend and configure MCP servers for your stack |
-| **4 Agent Patterns** | Reusable orchestration patterns for complex multi-agent tasks |
+| **5 Agent Patterns** | Reusable orchestration patterns including Ralph Loop |
 | **7 Utility Scripts** | Deployment validation, security audits, log analysis |
 | **Template Engine** | Handlebars-style placeholders with conditionals and loops |
 | **Tech Stack Detection** | Pattern-based detection of 40+ frameworks and tools |
 
-### Hook Templates (12 Total)
+### Hook Templates (26 Total)
 
+#### Token & Session Hooks
 | Hook | Purpose | Portability |
 |------|---------|-------------|
 | `tool-output-cacher` | Cache >2KB outputs, save ~500 tokens | 100% |
 | `token-budget-loader` | Pre-calculate daily budget | 100% |
 | `token-usage-monitor` | Auto-respawn at 90% threshold | 100% |
 | `session-id-generator` | UUID sessions with PID registry | 100% |
-| `autonomous-decision-logger` | JSONL audit trail | 95% |
-| `git-commit-tracker` | Update PROGRESS.json | 90% |
-| `branch-merge-checker` | Validate main sync before deploy | 95% |
-| `phase-validation-gates` | 5-gate validation | 90% |
-| `issue-completion-detector` | Auto-trigger deployment | 85% |
+| `context-guardian` | Monitor context window usage | 100% |
 | `context-injector` | Inject prior session context | 85% |
+
+#### Deployment & Git Hooks
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `branch-merge-checker` | Validate main sync before deploy | 95% |
+| `deployment-orchestrator` | Coordinate multi-platform deploys | 90% |
+| `git-commit-tracker` | Update PROGRESS.json | 90% |
+| `issue-completion-detector` | Auto-trigger deployment | 85% |
+| `github-progress-hook` | Sync GitHub Project Board | 90% |
+
+#### Refactoring Hooks (NEW)
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `ralph-loop-enforcer` | Continuous test-fix cycle management | 95% |
+| `refactor-verify` | Auto-verify changes, run tests, check golden master | 90% |
+| `refactor-audit` | Flag files >500 lines, suggest refactoring | 90% |
+| `refactor-transaction` | Atomic refactoring with savepoints/rollback | 85% |
+
+#### Agent Delegation Hooks (NEW)
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `task-classifier` | Classify tasks by complexity/domain | 95% |
+| `agent-delegator` | Route tasks to appropriate agents | 90% |
+| `delegation-enforcer` | Enforce agent-only mode for complex tasks | 90% |
+
+#### Phase & Validation Hooks
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `phase-validation-gates` | 5-gate validation | 90% |
+| `phase-dev-enforcer` | Enforce phased development rules | 90% |
+| `autonomous-decision-logger` | JSONL audit trail | 95% |
+
+#### Happy.Engineering Hooks
+| Hook | Purpose | Portability |
+|------|---------|-------------|
 | `happy-title-generator` | Auto-generate session titles | 100% |
 | `happy-mode-detector` | Detect Happy daemon env | 100% |
+| `happy-checkpoint-manager` | Manage session checkpoints | 95% |
 
-### Agent Patterns (4 Patterns)
+### Agent Patterns (5 Patterns)
 
 | Pattern | Use Case | Complexity |
 |---------|----------|------------|
@@ -127,6 +185,17 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | [L1→L2 Orchestration](./templates/patterns/l1-l2-orchestration.md) | Master-worker parallel tasks | Medium |
 | [Multi-Phase Orchestration](./templates/patterns/multi-phase-orchestration.md) | Sequential phases with parallel tasks | High |
 | [5-Point Integration Validation](./templates/patterns/README.md) | EXIST→INIT→REGISTER→INVOKE→PROPAGATE | High |
+| **Ralph Loop** (NEW) | Continuous test-fix cycles until success | Medium |
+
+### Skill Templates (5 Skills)
+
+| Skill | Purpose | Domain |
+|-------|---------|--------|
+| `agent-creator` | Create L1/L2/L3 agents with best practices | Claude Code |
+| `hook-creator` | Create enforcement hooks with proper schema | Claude Code |
+| `rag-agent-creator` | Create RAG-enhanced agents with knowledge bases | Claude Code |
+| `refactor-react` (NEW) | React refactoring patterns: Extract Hook, Split Component, Memoization | Frontend |
+| `refactor-fastapi` (NEW) | FastAPI patterns: Extract Router, DI, Repository | Backend |
 
 ### Utility Scripts (7 Scripts)
 
@@ -146,7 +215,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CCASP ARCHITECTURE (v1.8.0)                              │
+│                    CCASP ARCHITECTURE (v1.8.22)                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  PHASE 1: TERMINAL (No AI)                                                   │
@@ -154,16 +223,15 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 │                                                                              │
 │  npm install ──► postinstall ──► ccasp wizard                                │
 │                                                                              │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐                     │
-│  │  Tech Stack  │──►│   Template   │──►│   Feature    │                     │
-│  │  Detection   │   │   Engine     │   │  Selection   │                     │
-│  │ (768 lines)  │   │ (398 lines)  │   │ (1386 lines) │                     │
-│  └──────────────┘   └──────────────┘   └──────────────┘                     │
-│         │                  │                  │                              │
-│         ▼                  ▼                  ▼                              │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐  │
+│  │  Tech Stack  │──►│   Template   │──►│   Feature    │──►│    Agent     │  │
+│  │  Detection   │   │   Engine     │   │  Selection   │   │  Generation  │  │
+│  └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘  │
+│         │                  │                  │                  │           │
+│         ▼                  ▼                  ▼                  ▼           │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
 │  │                    YOUR PROJECT (.claude/)                        │       │
-│  │  commands/ │ agents/ │ skills/ │ hooks/ │ scripts/ │ docs/       │       │
+│  │  commands/ │ config/agents.json │ skills/ │ hooks/ │ scripts/    │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                              │
 │  PHASE 2: CLAUDE CODE CLI (AI-Powered)                                       │
@@ -172,12 +240,23 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 │  ┌──────────────────────────────────────────────────────────────────┐       │
 │  │                     RESTART REQUIRED                              │       │
 │  │                            ↓                                      │       │
-│  │  /menu │ /deploy-full │ /github-update │ /phase-track │ ...      │       │
+│  │  /menu │ /ralph │ /refactor-workflow │ /project-explorer │ ...   │       │
 │  │                                                                   │       │
-│  │  Agents: L1 Orchestrators ──► L2 Specialists ──► L3 Workers      │       │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │       │
+│  │  │ REFACTORING SYSTEM                                          │ │       │
+│  │  │ /ralph → ralph-loop-enforcer → test → fix → repeat          │ │       │
+│  │  │ /golden-master → characterization tests → verify            │ │       │
+│  │  │ refactor-transaction → savepoints → rollback                │ │       │
+│  │  └─────────────────────────────────────────────────────────────┘ │       │
+│  │                                                                   │       │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │       │
+│  │  │ AGENT DELEGATION                                            │ │       │
+│  │  │ task-classifier → agent-delegator → specialist agent        │ │       │
+│  │  │ L1 Orchestrator ──► L2 Specialist ──► L3 Worker             │ │       │
+│  │  └─────────────────────────────────────────────────────────────┘ │       │
+│  │                                                                   │       │
 │  │  Hooks: PreToolUse | PostToolUse | UserPromptSubmit              │       │
-│  │  Skills: RAG context + templates + workflows                      │       │
-│  │  Patterns: Query Pipeline | L1→L2 | Multi-Phase                  │       │
+│  │  Skills: refactor-react | refactor-fastapi | agent-creator       │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -325,10 +404,27 @@ claude-cli-advanced-starter-pack # Full name
 | `/github-task-start` | GitHub Integration | Start/complete GitHub tasks |
 | `/phase-track` | Phased Development | Track progress on plans |
 | `/deploy-full` | Deployment Automation | Full-stack deployment |
-| `/refactor-check` | Refactoring Tools | Pre-commit quality gate |
-| `/refactor-cleanup` | Refactoring Tools | Auto-fix lint, format, imports |
 | `/create-smoke-test` | Testing | Auto-generate Playwright tests |
 | `/ask-claude` | Discovery | Natural language command search |
+| `/generate-agents` | Auto Stack Agents | Generate agents from tech stack |
+
+#### Refactoring Commands (NEW in v1.8.19+)
+
+| Command | Description |
+|---------|-------------|
+| `/ralph` | Ralph Loop - continuous test-fix cycles until pass |
+| `/refactor-workflow` | Guided 8-step refactoring with branch, tasks, PR |
+| `/refactor-analyze` | Deep complexity analysis and code smell detection |
+| `/golden-master` | Generate characterization tests before refactoring |
+| `/refactor-check` | Fast pre-commit gate: lint + type-check + affected tests |
+| `/refactor-cleanup` | Daily maintenance: auto-fix, format, remove unused |
+| `/refactor-prep` | Pre-refactoring safety checklist |
+
+#### Project Scaffolding Commands (NEW in v1.8.22+)
+
+| Command | Description |
+|---------|-------------|
+| `/project-explorer` | Interactive wizard for scaffolding fresh projects |
 
 ---
 
@@ -418,6 +514,143 @@ const result = await executePhases(phases);
 ```
 
 See [templates/patterns/](./templates/patterns/) for complete documentation.
+
+---
+
+## Refactoring System
+
+CCASP v1.8.19+ includes a comprehensive refactoring system designed for **98%+ success rate**:
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/ralph` | **Ralph Loop** - Continuous test-fix cycles until all tests pass (max 10 iterations) |
+| `/refactor-workflow` | Guided 8-step workflow: analyze → branch → task list → GitHub issue → agent → execute → test → PR |
+| `/refactor-analyze` | Deep complexity analysis: cyclomatic, cognitive, coupling, code smells |
+| `/golden-master` | Generate characterization tests capturing actual behavior before refactoring |
+| `/refactor-check` | Fast pre-commit gate: lint + type-check + affected tests only |
+| `/refactor-cleanup` | Daily maintenance: auto-fix lint, remove unused imports, format code |
+| `/refactor-prep` | Pre-refactoring safety checklist |
+
+### Ralph Loop Pattern
+
+Named after Ralph Wiggum ("I'm helping!"), this pattern runs tests continuously and fixes failures:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       RALPH LOOP                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. Run tests ──► 2. Parse failures ──► 3. Fix code         │
+│       ↑                                      │               │
+│       └──────────────────────────────────────┘               │
+│                                                              │
+│  Stops when: All tests pass OR max iterations (10)          │
+│              OR same failure repeated 3 times                │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Refactoring Hooks
+
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `ralph-loop-enforcer` | PostToolUse | Monitors test execution, tracks iterations |
+| `refactor-verify` | PostToolUse | Auto-verify changes after Edit/Write, run golden master |
+| `refactor-transaction` | Pre+PostToolUse | Creates savepoints, enables rollback |
+| `refactor-audit` | PostToolUse | Flags files >500 lines after task completion |
+
+### Golden Master Pattern
+
+Capture current behavior as "characterization tests" before refactoring:
+
+```bash
+/golden-master src/utils/calculateTotal.ts
+# Creates .claude/golden-master/calculateTotal.master.json
+# Generates test inputs: edge cases, boundary values, typical cases
+# Captures actual outputs (not expected - ACTUAL behavior)
+
+# After refactoring, verify behavior unchanged:
+/golden-master src/utils/calculateTotal.ts --verify
+```
+
+---
+
+## Project Scaffolding
+
+For fresh/empty directories, CCASP provides `/project-explorer` - an interactive scaffolding wizard:
+
+### Supported Project Types
+
+| Type | Frameworks | Output |
+|------|------------|--------|
+| **Web App** | React+Vite, Vue+Vite, Svelte+SvelteKit | package.json, tsconfig, src/App.tsx |
+| **API** | FastAPI, Express, NestJS, Flask | main.py/index.ts, routers/, services/ |
+| **CLI** | Commander.js, Click/Typer, Clap | bin/cli.js, commands/ |
+| **Full-Stack** | Turborepo + React + Express/FastAPI | packages/web/, packages/api/ |
+| **Desktop** | Tauri, Electron | Cargo.toml, src-tauri/, src/ |
+
+### Workflow
+
+```
+ccasp wizard (in empty directory)
+       ↓
+"No codebase detected - scaffold new project?"
+       ↓ [Yes]
+/project-explorer triggers
+       ↓
+Interview: name, type, language, framework, database, features
+       ↓
+Generate: skeleton files, config, dependencies
+       ↓
+Install: npm install / pip install
+       ↓
+Deploy: CCASP commands to .claude/
+       ↓
+"Project scaffolded! Run /create-task-list to continue"
+```
+
+---
+
+## Auto-Generated Agents
+
+CCASP v1.8.16+ auto-generates specialist agents from your detected tech stack:
+
+### Available Agent Templates (18)
+
+| Category | Agents |
+|----------|--------|
+| **Frontend** | React, Vue, Angular, Svelte, Next.js |
+| **Backend** | FastAPI, Express, NestJS, Django |
+| **Database** | PostgreSQL, Prisma |
+| **State** | Redux, Zustand, Pinia |
+| **Deployment** | Railway, Cloudflare |
+| **Testing** | Playwright, Vitest |
+
+### How It Works
+
+```bash
+# During init, after tech stack detection:
+ccasp init
+# Detected: React, FastAPI, PostgreSQL, Playwright
+
+# Auto-generates agents in .claude/config/agents.json:
+{
+  "frontend-react-specialist": { "model": "sonnet", "expertise": ["hooks", "components"] },
+  "backend-fastapi-specialist": { "model": "sonnet", "expertise": ["routers", "pydantic"] },
+  "database-postgresql-specialist": { "model": "sonnet", "expertise": ["migrations", "queries"] },
+  "testing-playwright-specialist": { "model": "sonnet", "expertise": ["e2e", "selectors"] }
+}
+```
+
+### Delegation Hooks
+
+| Hook | Purpose |
+|------|---------|
+| `task-classifier` | Classifies incoming tasks by domain (frontend/backend/testing) |
+| `agent-delegator` | Routes classified tasks to appropriate specialist agent |
+| `delegation-enforcer` | Enforces agent-only mode for complex multi-step tasks |
 
 ---
 
@@ -765,18 +998,31 @@ npm test
 
 ```
 src/
-├── commands/           # 25 command implementations
-├── cli/               # Interactive menu system
+├── commands/           # 30+ command implementations
+├── cli/               # Interactive menu system (desktop + mobile)
 ├── github/            # GitHub API wrapper
-├── agents/            # Agent template generators
-├── utils/             # Template engine, validators
+├── agents/            # Agent generator, registry, stack-mapping
+│   ├── generator.js   # Auto-generate agents from tech stack
+│   ├── registry.js    # Agent registry management
+│   ├── schema.js      # Agent schema definitions
+│   └── stack-mapping.js # Tech stack → agent mapping
+├── hooks/             # Hook configuration
+├── panel/             # Control panel system
+├── utils/             # Template engine, validators, paths
 └── index.js           # Main exports
 
 templates/
-├── commands/          # Slash command templates (18)
-├── hooks/             # Hook templates (12)
-├── skills/            # Skill templates (3)
-├── patterns/          # Agent patterns (4)
+├── commands/          # Slash command templates (30+)
+├── hooks/             # Hook templates (26)
+├── skills/            # Skill templates (5)
+├── agents/            # Agent templates (18 framework-specific)
+│   ├── frontend/      # React, Vue, Angular, Svelte, Next.js
+│   ├── backend/       # FastAPI, Express, NestJS, Django
+│   ├── database/      # PostgreSQL, Prisma
+│   ├── state/         # Redux, Zustand, Pinia
+│   ├── deployment/    # Railway, Cloudflare
+│   └── testing/       # Playwright, Vitest
+├── patterns/          # Agent patterns (5)
 ├── scripts/           # Utility scripts (7)
 └── docs/              # Doc templates (5)
 ```
