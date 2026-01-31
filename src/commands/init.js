@@ -171,7 +171,7 @@ const AVAILABLE_COMMANDS = [
     selected: true,
   },
   {
-    name: 'menu-git-issues',
+    name: 'menu-issues-list',
     description: 'Mobile-friendly menu of open GitHub issues',
     category: 'GitHub',
     selected: true,

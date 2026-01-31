@@ -210,7 +210,7 @@ gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
 
 ## RELATED COMMANDS
 
-- `/menu-git-issues` - Browse all open issues with menu
+- `/menu-issues-list` - Browse all open issues with menu
 - `/create-task-list` - Create task list from any prompt
 - `/github-task-start` - Start working on issue (simpler flow)
 - `/github-update` - Sync with project board

@@ -8,7 +8,7 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /menu-git-issues - Quick Issues View
+# /menu-issues-list - Quick Issues View
 
 **Mobile-friendly list of open GitHub issues with single-character selection.**
 
@@ -282,6 +282,7 @@ gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
 
 ## RELATED COMMANDS
 
+- `/run-git-issue` - Start issue by number directly
 - `/create-task-list` - Create task list from issue
 - `/github-task-start` - Start working on issue
 - `/github-update` - Sync with project board
