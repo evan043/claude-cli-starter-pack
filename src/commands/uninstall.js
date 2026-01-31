@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import { existsSync, readFileSync, readdirSync, unlinkSync, rmdirSync, copyFileSync, statSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { createInterface } from 'readline';
+import { unregisterProject } from '../utils/global-registry.js';
 
 /**
  * Prompt user for confirmation
@@ -396,8 +397,14 @@ export async function runUninstall(options = {}) {
     }
   }
 
+  // Remove from global registry
+  const wasRegistered = unregisterProject(projectDir);
+  if (wasRegistered) {
+    console.log(chalk.green('  ✓ Removed from global CCASP registry'));
+  }
+
   // Done
-  console.log(chalk.green.bold('  ✓ CCASP uninstalled successfully!\n'));
+  console.log(chalk.green.bold('\n  ✓ CCASP uninstalled successfully!\n'));
 
   if (backups.size > 0) {
     console.log(chalk.dim('  Your backed-up files have been restored.'));

@@ -28,6 +28,7 @@ import {
   generateMergeExplanation,
   formatMergeOptions,
 } from '../utils/smart-merge.js';
+import { registerProject } from '../utils/global-registry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -2415,6 +2416,20 @@ export async function runInit(options = {}) {
 
   writeFileSync(ccaspStatePath, JSON.stringify(ccaspState, null, 2), 'utf8');
   console.log(chalk.green(`  ✓ Updated ccasp-state.json (v${currentVersion})`));
+
+  // Register project in global registry (unless --no-register flag is set)
+  if (!options.noRegister) {
+    const isNewProject = registerProject(cwd, {
+      name: projectName,
+      version: currentVersion,
+      features: selectedFeatures
+    });
+    if (isNewProject) {
+      console.log(chalk.green(`  ✓ Registered project in global CCASP registry`));
+    } else {
+      console.log(chalk.dim(`  ○ Updated project in global CCASP registry`));
+    }
+  }
 
   // Show next steps
   console.log(chalk.bold('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));

@@ -36,6 +36,8 @@ import { runInstallScripts } from '../src/commands/install-scripts.js';
 import { runPanel, launchPanel } from '../src/commands/panel.js';
 import { runInstallPanelHook } from '../src/commands/install-panel-hook.js';
 import { runUninstall } from '../src/commands/uninstall.js';
+import { runGlobalUninstall } from '../src/commands/global-uninstall.js';
+import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -48,6 +50,7 @@ program
   .command('init')
   .description('Deploy Claude CLI Advanced Starter Pack to current project')
   .option('--force', 'Overwrite existing commands')
+  .option('--no-register', 'Do not register project in global registry')
   .action(async (options) => {
     await runInit(options);
   });
@@ -60,6 +63,26 @@ program
   .option('--all', 'Remove entire .claude/ directory')
   .action(async (options) => {
     await runUninstall(options);
+  });
+
+// Global uninstall command - remove CCASP from ALL projects
+program
+  .command('global-uninstall')
+  .description('Remove CCASP from all registered projects and clear global config')
+  .option('--force', 'Skip confirmation prompts')
+  .option('--all', 'Remove entire .claude/ directory from each project')
+  .action(async (options) => {
+    await runGlobalUninstall(options);
+  });
+
+// Global reinstall command - reinstall CCASP across all projects
+program
+  .command('global-reinstall')
+  .description('Reinstall CCASP globally (use --projects to reinstall in all projects)')
+  .option('--force', 'Skip confirmation prompts')
+  .option('--projects', 'Reinstall CCASP in all registered projects')
+  .action(async (options) => {
+    await runGlobalReinstall(options);
   });
 
 // Interactive menu (default when no command)
