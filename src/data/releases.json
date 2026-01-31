@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "1.8.13",
+      "date": "2026-01-31",
+      "summary": "Feature: add ESLint v9 configuration and fix all lint errors",
+      "highlights": [
+        "add ESLint v9 configuration and fix all lint errors"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.12",
       "date": "2026-01-31",
       "summary": "Fix: use PowerShell for reliable Windows CLI launch",
