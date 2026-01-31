@@ -1,6 +1,47 @@
 {
   "releases": [
     {
+      "version": "1.3.0",
+      "date": "2026-01-30",
+      "summary": "Feature: Phase 3 of 85 Recommendations - Skills Infrastructure",
+      "highlights": [
+        "Added agent-creator skill template - Best practices for Claude Code agent creation",
+        "Added hook-creator skill template - Hook configuration and implementation patterns",
+        "Added rag-agent-creator skill template - RAG-enhanced knowledge base design",
+        "New 'skillTemplates' optional feature in init.js - Auto-deploys skill templates",
+        "New install-skill CLI command - Install skills post-init",
+        "Skills deployed via ccasp init with recursive directory copy",
+        "Tech-stack.json now tracks deployed skills"
+      ],
+      "newFeatures": {
+        "commands": [
+          {
+            "name": "install-skill",
+            "description": "Install skills to your project after initial setup"
+          }
+        ],
+        "agents": [],
+        "skills": [
+          {
+            "name": "agent-creator",
+            "description": "Create Claude Code agents with proper Task tool configuration"
+          },
+          {
+            "name": "hook-creator",
+            "description": "Create enforcement hooks with JSON schema and event handling"
+          },
+          {
+            "name": "rag-agent-creator",
+            "description": "Create RAG-enhanced agents with structured knowledge bases"
+          }
+        ],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.2.0",
       "date": "2026-01-30",
       "summary": "Feature: Phase 2 of 85 Recommendations - 7 Advanced Hook Templates",

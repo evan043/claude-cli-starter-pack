@@ -1,0 +1,18 @@
+{
+  "name": "hook-creator",
+  "version": "1.0.0",
+  "description": "Create Claude Code CLI hooks following best practices",
+  "category": "development",
+  "portability": 100,
+  "features": [
+    "JSON schema configuration",
+    "Event type handling",
+    "Matcher patterns",
+    "Error handling templates"
+  ],
+  "entryPoint": "skill.md",
+  "context": [],
+  "workflows": [],
+  "requiredTools": ["Read", "Write", "Edit"],
+  "suggestedModel": "sonnet"
+}

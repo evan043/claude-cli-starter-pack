@@ -31,6 +31,7 @@ import { runRoadmap } from '../src/commands/roadmap.js';
 import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
 import { runSetupWizard } from '../src/commands/setup-wizard.js';
+import { installSkillCommand, listSkills } from '../src/commands/install-skill.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -276,6 +277,19 @@ program
   .description('Interactive setup wizard (vibe-code friendly, mobile-ready)')
   .action(async () => {
     await runSetupWizard();
+  });
+
+// Install skill
+program
+  .command('install-skill')
+  .description('Install skills to your project')
+  .option('--list', 'List available skills')
+  .action(async (options) => {
+    if (options.list) {
+      listSkills();
+    } else {
+      await installSkillCommand(options);
+    }
   });
 
 // Parse and run

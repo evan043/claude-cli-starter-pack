@@ -110,6 +110,16 @@ const OPTIONAL_FEATURES = [
     default: false,
     requiresPostConfig: false,
   },
+  {
+    name: 'skillTemplates',
+    label: 'Skill Creator Templates',
+    description: 'Pre-built skills for agent creation, hook creation, and RAG-enhanced agent building. Provides best-practice templates for extending Claude Code.',
+    commands: [],
+    hooks: [],
+    skills: ['agent-creator', 'hook-creator', 'rag-agent-creator'],
+    default: true,
+    requiresPostConfig: false,
+  },
 ];
 
 /**
@@ -1837,12 +1847,14 @@ export async function runInit(options = {}) {
   const enabledFeatures = OPTIONAL_FEATURES.filter((f) => selectedFeatures.includes(f.name));
   const featuresRequiringConfig = enabledFeatures.filter((f) => f.requiresPostConfig);
 
-  // Collect feature-specific commands and hooks to deploy
+  // Collect feature-specific commands, hooks, and skills to deploy
   const featureCommands = [];
   const featureHooks = [];
+  const featureSkills = [];
   for (const feature of enabledFeatures) {
     featureCommands.push(...feature.commands);
-    featureHooks.push(...feature.hooks);
+    featureHooks.push(...(feature.hooks || []));
+    featureSkills.push(...(feature.skills || []));
   }
 
   if (featureCommands.length > 0) {
@@ -1854,6 +1866,11 @@ export async function runInit(options = {}) {
   if (featureHooks.length > 0) {
     console.log(chalk.green(`  ✓ Selected features will add ${featureHooks.length} hook(s):`));
     console.log(chalk.dim(`    ${featureHooks.join(', ')}`));
+  }
+
+  if (featureSkills.length > 0) {
+    console.log(chalk.green(`  ✓ Selected features will add ${featureSkills.length} skill(s):`));
+    console.log(chalk.dim(`    ${featureSkills.join(', ')}`));
   }
 
   if (featuresRequiringConfig.length > 0) {
@@ -2300,6 +2317,47 @@ export async function runInit(options = {}) {
     }
   }
 
+  // Step 6c: Deploy feature skills
+  const deployedSkills = [];
+  const failedSkills = [];
+
+  if (featureSkills.length > 0) {
+    console.log(chalk.bold('\nStep 6c: Deploying feature skills\n'));
+
+    for (const skillName of featureSkills) {
+      try {
+        const skillPath = join(skillsDir, skillName);
+
+        // Skip if already exists
+        if (existsSync(skillPath)) {
+          console.log(chalk.blue(`  ○ skills/${skillName}/ exists (preserved)`));
+          continue;
+        }
+
+        // Try to load from templates/skills/ folder
+        const templatePath = join(__dirname, '..', '..', 'templates', 'skills', skillName);
+        if (existsSync(templatePath)) {
+          // Create skill directory and copy recursively
+          mkdirSync(skillPath, { recursive: true });
+          const { cpSync } = await import('fs');
+          cpSync(templatePath, skillPath, { recursive: true });
+          deployedSkills.push(skillName);
+          console.log(chalk.green(`  ✓ Created skills/${skillName}/`));
+        } else {
+          failedSkills.push({ name: skillName, error: 'No template found' });
+          console.log(chalk.yellow(`  ⚠ Skipped skills/${skillName}/ (no template)`));
+        }
+      } catch (error) {
+        failedSkills.push({ name: skillName, error: error.message });
+        console.log(chalk.red(`  ✗ Failed: skills/${skillName}/ - ${error.message}`));
+      }
+    }
+
+    if (deployedSkills.length > 0) {
+      console.log(chalk.green(`\n  ✓ Deployed ${deployedSkills.length} feature skill(s)`));
+    }
+  }
+
   // Step 7: Generate INDEX.md
   const indexPath = join(commandsDir, 'INDEX.md');
   const indexContent = generateIndexFile(installed, projectName);
@@ -2433,6 +2491,8 @@ export async function runInit(options = {}) {
       featureCommands: featureCommands.filter(c => installed.includes(c)),
       hooks: deployedHooks,
       featureHooks: featureHooks,
+      skills: deployedSkills,
+      featureSkills: featureSkills,
       enabledFeatures: selectedFeatures,
       timestamp: new Date().toISOString(),
     },

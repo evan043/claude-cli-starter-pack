@@ -1,0 +1,18 @@
+{
+  "name": "rag-agent-creator",
+  "version": "1.0.0",
+  "description": "Create RAG-enhanced Claude Code agents with knowledge bases",
+  "category": "development",
+  "portability": 100,
+  "features": [
+    "Knowledge base design",
+    "Retrieval strategies",
+    "Context organization",
+    "Protocol-based workflows"
+  ],
+  "entryPoint": "skill.md",
+  "context": [],
+  "workflows": [],
+  "requiredTools": ["Read", "Write", "Glob", "Grep"],
+  "suggestedModel": "sonnet"
+}
