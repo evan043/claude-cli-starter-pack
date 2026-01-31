@@ -28,6 +28,7 @@ import {
   dismissUpdateNotification,
   getCurrentVersion,
 } from '../utils/version-check.js';
+import { pickDirectory, changeDirectory } from '../utils/directory-picker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1445,9 +1446,35 @@ async function checkAndShowUpdateBanner() {
 
 /**
  * Main setup wizard - entry point
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.fromPostinstall - Whether launched from postinstall (enables directory selection)
  */
 export async function runSetupWizard(options = {}) {
   showSetupHeader();
+
+  // If launched from postinstall, offer directory selection first (Issue #15)
+  if (options.fromPostinstall) {
+    const dirResult = await pickDirectory({
+      currentDir: process.cwd(),
+      showCurrent: true,
+    });
+
+    if (!dirResult) {
+      console.log(chalk.dim('\nSetup cancelled. Run "ccasp wizard" anytime to continue.\n'));
+      return;
+    }
+
+    // Change to selected directory if different
+    if (dirResult.changed) {
+      const success = changeDirectory(dirResult.path);
+      if (!success) {
+        console.log(chalk.red('\nFailed to change directory. Exiting setup.\n'));
+        return;
+      }
+    } else {
+      console.log(chalk.green(`\n✓ Using current directory: ${chalk.cyan(dirResult.path)}\n`));
+    }
+  }
 
   // Check for updates in background (non-blocking display)
   await checkAndShowUpdateBanner();

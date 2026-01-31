@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "1.8.8",
+      "date": "2026-01-31",
+      "summary": "Feature: add issue audit checkpoint to npm-deploy",
+      "highlights": [
+        "add issue audit checkpoint to npm-deploy",
+        "add automatic release notes generation to npm-deploy"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.6",
       "date": "2026-01-31",
       "summary": "Release notes pending",
