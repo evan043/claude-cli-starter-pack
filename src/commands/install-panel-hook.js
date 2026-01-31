@@ -66,24 +66,34 @@ export async function runInstallPanelHook(options = {}) {
     }
   }
 
-  // Ensure hooks array exists
+  // Ensure hooks object exists (new v2.x format)
   if (!settings.hooks) {
-    settings.hooks = [];
+    settings.hooks = {};
   }
 
-  // Check if hook already registered
-  const hookConfig = {
-    event: 'UserPromptSubmit',
-    command: `node ${hookPath}`
-  };
+  // Ensure UserPromptSubmit array exists
+  if (!settings.hooks.UserPromptSubmit) {
+    settings.hooks.UserPromptSubmit = [];
+  }
 
-  const existingHook = settings.hooks.find(h =>
-    h.event === 'UserPromptSubmit' &&
-    h.command?.includes('panel-queue-reader')
+  // Check if hook already registered (new v2.x format)
+  const existingHook = settings.hooks.UserPromptSubmit.find(h =>
+    h.hooks?.some(hook => hook.command?.includes('panel-queue-reader'))
   );
 
   if (!existingHook) {
-    settings.hooks.push(hookConfig);
+    // New Claude Code v2.x hooks format
+    const hookConfig = {
+      matcher: '',  // Empty string = match all (NOT empty object!)
+      hooks: [
+        {
+          type: 'command',
+          command: `node ${hookPath}`
+        }
+      ]
+    };
+
+    settings.hooks.UserPromptSubmit.push(hookConfig);
 
     // Ensure settings directory exists
     const settingsDir = dirname(settingsPath);
