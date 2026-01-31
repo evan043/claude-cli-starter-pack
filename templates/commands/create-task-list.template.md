@@ -874,6 +874,79 @@ After all tasks are complete, display a summary:
 
 ---
 
+## CLOSE ISSUE PROMPT (When Working From GitHub Issue)
+
+**CRITICAL: If this task list was created for a GitHub issue, ALWAYS offer to close the issue after ALL TodoWrite tasks are marked complete AND a commit is created.**
+
+This step triggers when:
+1. The task list originated from a GitHub issue (via `/create-task-list for issue #N` or `/menu-issues-list`)
+2. All tasks in TodoWrite are marked `completed`
+3. A git commit has been made with changes
+
+Display completion summary:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ All Tasks Completed                                       ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Issue: #[NUMBER] - [TITLE]                                   ║
+║  Commit: [SHORT_SHA] - [COMMIT_MSG_FIRST_LINE]                ║
+║  Tasks: [X] completed                                         ║
+║                                                               ║
+╠═══════════════════════════════════════════════════════════════╣
+║  [C] Close issue with comment                                 ║
+║  [P] Push to origin + close issue                             ║
+║  [K] Keep issue open                                          ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+Then ask:
+
+```
+header: "Issue"
+question: "All tasks complete. Close issue #[NUMBER]?"
+options:
+  - label: "C - Close with comment"
+    description: "Add completion summary and close"
+  - label: "P - Push + Close"
+    description: "Push commit to origin, then close"
+  - label: "K - Keep open"
+    description: "Leave issue open for follow-up"
+```
+
+**Handle Close Actions:**
+
+**C (Close with comment):**
+```bash
+gh issue close [NUMBER] --comment "All tasks completed in commit [SHA].
+
+## Completed Tasks
+- ✅ Task 1
+- ✅ Task 2
+...
+
+Ready for release."
+```
+
+**P (Push + Close):**
+```bash
+git push origin HEAD
+gh issue close [NUMBER] --comment "All tasks completed and pushed in commit [SHA].
+
+## Completed Tasks
+- ✅ Task 1
+- ✅ Task 2
+...
+
+Ready for release."
+```
+
+**K (Keep open):**
+Display: "Issue #[NUMBER] kept open for follow-up."
+
+---
+
 ## ERROR HANDLING
 
 | Situation | Action |

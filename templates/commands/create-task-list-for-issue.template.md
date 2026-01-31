@@ -197,6 +197,78 @@ gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
 
 ---
 
+### Step 7: After Task Completion - Close Issue Prompt
+
+**CRITICAL: After ALL TodoWrite tasks are marked complete AND a commit is created, ALWAYS offer to close the issue.**
+
+This step triggers when:
+1. All tasks in TodoWrite are marked `completed`
+2. A git commit has been made with changes
+
+Display completion summary:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ All Tasks Completed                                       ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Issue: #[NUMBER] - [TITLE]                                   ║
+║  Commit: [SHORT_SHA] - [COMMIT_MSG_FIRST_LINE]                ║
+║  Tasks: [X] completed                                         ║
+║                                                               ║
+╠═══════════════════════════════════════════════════════════════╣
+║  [C] Close issue with comment                                 ║
+║  [P] Push to origin + close issue                             ║
+║  [K] Keep issue open                                          ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+Then ask:
+
+```
+header: "Issue"
+question: "All tasks complete. Close issue #[NUMBER]?"
+options:
+  - label: "C - Close with comment"
+    description: "Add completion summary and close"
+  - label: "P - Push + Close"
+    description: "Push commit to origin, then close"
+  - label: "K - Keep open"
+    description: "Leave issue open for follow-up"
+```
+
+**Handle Close Actions:**
+
+**C (Close with comment):**
+```bash
+gh issue close [NUMBER] --comment "All tasks completed in commit [SHA].
+
+## Completed Tasks
+- ✅ Task 1
+- ✅ Task 2
+...
+
+Ready for release."
+```
+
+**P (Push + Close):**
+```bash
+git push origin HEAD
+gh issue close [NUMBER] --comment "All tasks completed and pushed in commit [SHA].
+
+## Completed Tasks
+- ✅ Task 1
+- ✅ Task 2
+...
+
+Ready for release."
+```
+
+**K (Keep open):**
+Display: "Issue #[NUMBER] kept open for follow-up."
+
+---
+
 ## ERROR HANDLING
 
 | Error | Action |
