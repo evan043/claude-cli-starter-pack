@@ -1,6 +1,10 @@
 # Claude CLI Advanced Starter Pack - Complete Overview
 
-**A platform-agnostic toolkit for supercharging Claude Code CLI with agents, hooks, skills, testing, and GitHub integration.**
+**Version 1.8.0** | **60+ Components** | **Production Ready**
+
+**A platform-agnostic toolkit for supercharging Claude Code CLI with 12 hooks, 4 agent patterns, 7 MCP servers, 7 utility scripts, and GitHub integration.**
+
+> **New in v1.8.0**: Complete 85-recommendations roadmap with utility scripts, agent patterns library, enhanced MCP discovery, and comprehensive documentation templates.
 
 ---
 

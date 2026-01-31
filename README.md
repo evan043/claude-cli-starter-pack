@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.0.12  •  Production Ready                         ║
+║                          v1.8.0  •  Production Ready                          ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -18,9 +18,9 @@
 [![Node.js 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A professional-grade CLI toolkit for Claude Code CLI — agents, hooks, skills, MCP servers, phased development, and GitHub integration.**
+**A professional-grade CLI toolkit for Claude Code CLI — 60+ components including agents, hooks, skills, MCP servers, phased development, and GitHub integration.**
 
-[Getting Started](#quick-start) • [Documentation](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki) • [API Reference](#api-reference) • [Contributing](#contributing)
+[Getting Started](#quick-start) • [Documentation](./docs/WIKI.md) • [API Reference](#api-reference) • [Contributing](#contributing)
 
 </div>
 
@@ -29,11 +29,15 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [What's New in v1.8.0](#whats-new-in-v180)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
 - [Installation Options](#installation-options)
 - [Commands Reference](#commands-reference)
+- [Hook Templates](#hook-templates)
+- [Agent Patterns](#agent-patterns)
+- [Utility Scripts](#utility-scripts)
 - [Configuration](#configuration)
 - [Template Engine](#template-engine)
 - [API Reference](#api-reference)
@@ -61,6 +65,22 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
+## What's New in v1.8.0
+
+**60+ components** across 8 implementation phases:
+
+| Phase | Version | Components |
+|-------|---------|------------|
+| Phase 1-2 | v1.1-1.2 | **12 Hook Templates** — token management, session tracking, deployment automation |
+| Phase 3 | v1.3 | **3 Skill Templates** — agent-creator, hook-creator, rag-agent-creator |
+| Phase 4 | v1.4 | **5 Command Templates** — refactoring tools, smoke test generation |
+| Phase 5 | v1.5 | **5 Documentation Templates** — architecture constitution, gotchas, checklists |
+| Phase 6 | v1.6 | **4 Agent Patterns** — L1→L2 orchestration, multi-phase, query pipeline |
+| Phase 7 | v1.7 | **7 MCP Servers** — log-monitor, browser-monitor, tunnel services |
+| Phase 8 | v1.8 | **7 Utility Scripts** — deployment validation, roadmap scanning, security audit |
+
+---
+
 ## Key Features
 
 ### Core Capabilities
@@ -68,22 +88,53 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Feature | Description |
 |---------|-------------|
 | **L1/L2/L3 Agent Hierarchy** | Orchestrators, specialists, and workers with configurable model selection |
-| **Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
-| **RAG-Enhanced Skills** | Domain-specific knowledge packages with context, templates, and workflows |
+| **12 Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
+| **3 RAG-Enhanced Skills** | Domain-specific knowledge packages with context, templates, and workflows |
 | **Phased Development** | 95%+ success rate planning with PROGRESS.json state tracking |
 | **GitHub Integration** | Project Board sync, issue creation with codebase analysis |
-| **MCP Server Discovery** | Auto-recommend and configure MCP servers for your stack |
+| **7 MCP Servers** | Auto-recommend and configure MCP servers for your stack |
+| **4 Agent Patterns** | Reusable orchestration patterns for complex multi-agent tasks |
+| **7 Utility Scripts** | Deployment validation, security audits, log analysis |
 | **Template Engine** | Handlebars-style placeholders with conditionals and loops |
 | **Tech Stack Detection** | Pattern-based detection of 40+ frameworks and tools |
 
-### Optional Feature Modules
+### Hook Templates (12 Total)
 
-| Module | Commands | Purpose |
+| Hook | Purpose | Portability |
+|------|---------|-------------|
+| `tool-output-cacher` | Cache >2KB outputs, save ~500 tokens | 100% |
+| `token-budget-loader` | Pre-calculate daily budget | 100% |
+| `token-usage-monitor` | Auto-respawn at 90% threshold | 100% |
+| `session-id-generator` | UUID sessions with PID registry | 100% |
+| `autonomous-decision-logger` | JSONL audit trail | 95% |
+| `git-commit-tracker` | Update PROGRESS.json | 90% |
+| `branch-merge-checker` | Validate main sync before deploy | 95% |
+| `phase-validation-gates` | 5-gate validation | 90% |
+| `issue-completion-detector` | Auto-trigger deployment | 85% |
+| `context-injector` | Inject prior session context | 85% |
+| `happy-title-generator` | Auto-generate session titles | 100% |
+| `happy-mode-detector` | Detect Happy daemon env | 100% |
+
+### Agent Patterns (4 Patterns)
+
+| Pattern | Use Case | Complexity |
+|---------|----------|------------|
+| [Two-Tier Query Pipeline](./templates/patterns/two-tier-query-pipeline.md) | Intent classification + execution | Medium |
+| [L1→L2 Orchestration](./templates/patterns/l1-l2-orchestration.md) | Master-worker parallel tasks | Medium |
+| [Multi-Phase Orchestration](./templates/patterns/multi-phase-orchestration.md) | Sequential phases with parallel tasks | High |
+| [5-Point Integration Validation](./templates/patterns/README.md) | EXIST→INIT→REGISTER→INVOKE→PROPAGATE | High |
+
+### Utility Scripts (7 Scripts)
+
+| Script | Language | Purpose |
 |--------|----------|---------|
-| **Token Management** | `/context-audit` | Track API usage with thresholds |
-| **Deployment Automation** | `/deploy-full` | Full-stack Railway/Cloudflare/Vercel |
-| **Tunnel Services** | `/tunnel-start`, `/tunnel-stop` | ngrok, localtunnel, cloudflare-tunnel |
-| **Happy Mode** | `/happy-start` | Mobile app integration |
+| `validate-deployment.js` | Node.js | Pre-deployment env validation (Railway/CF/Vercel) |
+| `poll-deployment-status.js` | Node.js | Poll until deployment complete |
+| `roadmap-scanner.js` | Node.js | Multi-roadmap progress dashboard |
+| `analyze-delegation-log.js` | Node.js | Model usage and token analysis |
+| `autonomous-decision-logger.js` | Node.js | JSONL audit trail for agents |
+| `phase-validation-gates.js` | Node.js | 5-gate validation system |
+| `git-history-analyzer.py` | Python | Security audit for secrets in git |
 
 ---
 
@@ -91,7 +142,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CCASP ARCHITECTURE                                        │
+│                    CCASP ARCHITECTURE (v1.8.0)                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  PHASE 1: TERMINAL (No AI)                                                   │
@@ -108,7 +159,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 │         ▼                  ▼                  ▼                              │
 │  ┌──────────────────────────────────────────────────────────────────┐       │
 │  │                    YOUR PROJECT (.claude/)                        │       │
-│  │  commands/ │ agents/ │ skills/ │ hooks/ │ docs/ │ settings.json  │       │
+│  │  commands/ │ agents/ │ skills/ │ hooks/ │ scripts/ │ docs/       │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                              │
 │  PHASE 2: CLAUDE CODE CLI (AI-Powered)                                       │
@@ -122,6 +173,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 │  │  Agents: L1 Orchestrators ──► L2 Specialists ──► L3 Workers      │       │
 │  │  Hooks: PreToolUse | PostToolUse | UserPromptSubmit              │       │
 │  │  Skills: RAG context + templates + workflows                      │       │
+│  │  Patterns: Query Pipeline | L1→L2 | Multi-Phase                  │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -137,17 +189,18 @@ After running `ccasp init`, your project gets:
 │   ├── menu.md           # Interactive menu
 │   ├── ccasp-setup.md    # Setup wizard
 │   ├── deploy-full.md    # Deployment command
-│   └── ...               # 20+ commands based on feature selection
+│   └── ...               # 25+ commands based on feature selection
 ├── agents/               # L1/L2/L3 agent definitions
 ├── skills/               # RAG-enhanced skill packages
 │   └── skill-name/
 │       ├── skill.md      # Definition
 │       ├── context/      # Knowledge base
 │       └── workflows/    # Procedures
-├── hooks/                # Enforcement hooks
+├── hooks/                # Enforcement hooks (12 templates available)
 │   ├── pre-tool-use/
 │   ├── post-tool-use/
 │   └── user-prompt-submit/
+├── scripts/              # Utility scripts (7 available via install-scripts)
 ├── docs/                 # Generated documentation
 ├── phase-dev/            # Phased development projects
 ├── settings.json         # Hook configuration
@@ -173,23 +226,17 @@ claude .
 /menu
 ```
 
-### Post-Install Welcome
+### Post-Install Commands
 
-```
-🚀 Claude CLI Advanced Starter Pack
+```bash
+# Install additional skills after init
+ccasp install-skill
 
-✓ Installation complete!
+# Install utility scripts
+ccasp install-scripts
 
-Quick Setup Options:
-
-1. Run vibe-friendly setup wizard:
-   $ ccasp wizard
-
-2. Quick init (auto-detect + deploy):
-   $ ccasp init
-
-3. Full interactive menu:
-   $ ccasp
+# Explore MCP servers for your stack
+ccasp explore-mcp --recommend
 ```
 
 ---
@@ -237,18 +284,17 @@ claude-cli-advanced-starter-pack # Full name
 |---------|-------------|-------------|
 | `ccasp wizard` | Vibe-friendly setup wizard | Single-char navigation |
 | `ccasp init` | Deploy commands to project | `--force`, `--minimal` |
-| `ccasp detect-stack` | Auto-detect tech stack | `--verbose` |
+| `ccasp detect-stack` | Auto-detect tech stack | `--verbose`, `--json` |
 | `ccasp create-agent` | Create L1/L2/L3 agents | Interactive wizard |
 | `ccasp create-hook` | Create enforcement hooks | Interactive wizard |
 | `ccasp create-skill` | Create RAG skill packages | Interactive wizard |
 | `ccasp create-command` | Create slash commands | Interactive wizard |
 | `ccasp create-phase-dev` | Create phased dev plan | `--scale S/M/L`, `--autonomous` |
 | `ccasp explore-mcp` | MCP server discovery | `--recommend`, `--testing` |
+| `ccasp install-skill` | Install skill packages | `--list` |
+| `ccasp install-scripts` | Install utility scripts | `--list` |
 | `ccasp claude-audit` | Audit CLAUDE.md | Enhancement suggestions |
-| `ccasp validate` | Validate template agnosticism | `--path`, `--fix` |
 | `ccasp roadmap` | Sync roadmaps with GitHub | `import`, `sync`, `status` |
-| `ccasp sync` | Sync tasks with GitHub | `pull`, `push`, `watch` |
-| `ccasp list` | List recent GitHub issues | `--mine`, `--status` |
 
 ### Slash Commands (Inside Claude Code CLI — AI-Powered)
 
@@ -275,10 +321,133 @@ claude-cli-advanced-starter-pack # Full name
 | `/github-task-start` | GitHub Integration | Start/complete GitHub tasks |
 | `/phase-track` | Phased Development | Track progress on plans |
 | `/deploy-full` | Deployment Automation | Full-stack deployment |
-| `/tunnel-start` | Tunnel Services | Start ngrok/localtunnel |
-| `/tunnel-stop` | Tunnel Services | Stop active tunnel |
-| `/context-audit` | Token Management | Audit token usage |
-| `/happy-start` | Happy Mode | Start mobile integration |
+| `/refactor-check` | Refactoring Tools | Pre-commit quality gate |
+| `/refactor-cleanup` | Refactoring Tools | Auto-fix lint, format, imports |
+| `/create-smoke-test` | Testing | Auto-generate Playwright tests |
+| `/ask-claude` | Discovery | Natural language command search |
+
+---
+
+## Hook Templates
+
+CCASP includes 12 production-ready hook templates:
+
+### Token & Session Management
+
+```javascript
+// token-usage-monitor: Auto-respawn at 90% threshold
+{
+  event: "PostToolUse",
+  trigger: async (context) => {
+    const usage = context.tokenUsage;
+    if (usage.percentage > 90) {
+      await respawnSession();
+    }
+  }
+}
+```
+
+### Deployment Automation
+
+```javascript
+// branch-merge-checker: Block deploy on diverged branches
+{
+  event: "PreToolUse",
+  tools: ["mcp__railway-mcp-server__deployment_trigger"],
+  check: async () => {
+    const { stdout } = await exec('git status -sb');
+    if (stdout.includes('ahead') || stdout.includes('behind')) {
+      return { allow: false, reason: "Branch not synced with main" };
+    }
+  }
+}
+```
+
+### Installing Hooks
+
+```bash
+# Via init wizard
+ccasp init  # Select 'advancedHooks' feature
+
+# Manually copy templates
+cp templates/hooks/*.template.js .claude/hooks/
+```
+
+---
+
+## Agent Patterns
+
+### L1→L2 Orchestration
+
+For tasks requiring parallel specialist agents:
+
+```
+                    ┌─────────────────────┐
+                    │   L1 Orchestrator   │
+                    │   - Decompose task  │
+                    │   - Dispatch L2s    │
+                    │   - Aggregate       │
+                    └─────────────────────┘
+                             ↓
+        ┌────────────────────┼────────────────────┐
+        ↓                    ↓                    ↓
+┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+│ L2 Specialist │    │ L2 Specialist │    │ L2 Specialist │
+│   (Search)    │    │   (Analyze)   │    │   (Document)  │
+└───────────────┘    └───────────────┘    └───────────────┘
+```
+
+### Multi-Phase Orchestration
+
+For complex projects with sequential phases:
+
+```typescript
+const phases: Phase[] = [
+  { id: 'discovery', parallel: true, tasks: [...] },
+  { id: 'planning', parallel: false, tasks: [...] },
+  { id: 'implementation', parallel: true, tasks: [...] },
+  { id: 'testing', parallel: false, tasks: [...] }
+];
+
+// Execute with validation gates between phases
+const result = await executePhases(phases);
+```
+
+See [templates/patterns/](./templates/patterns/) for complete documentation.
+
+---
+
+## Utility Scripts
+
+### Installation
+
+```bash
+ccasp install-scripts
+# Interactive selection of 7 scripts
+```
+
+### Usage Examples
+
+```bash
+# Pre-deployment validation
+node .claude/scripts/validate-deployment.js --platform railway
+
+# Poll deployment status
+node .claude/scripts/poll-deployment-status.js \
+  --platform railway \
+  --deployment-id abc123 \
+  --timeout 300
+
+# Scan roadmaps for progress
+node .claude/scripts/roadmap-scanner.js --output json
+
+# Analyze Claude delegation logs
+node .claude/scripts/analyze-delegation-log.js \
+  ~/.claude/logs/delegation.jsonl --cost-estimate
+
+# Security audit git history
+python .claude/scripts/git-history-analyzer.py --patterns "password|secret"
+```
 
 ---
 
@@ -321,47 +490,34 @@ Auto-generated during init with detected and configured values:
   "deployment": {
     "frontend": {
       "platform": "cloudflare",
-      "projectName": "my-app",
-      "productionUrl": "https://my-app.pages.dev"
+      "projectName": "my-app"
     },
     "backend": {
       "platform": "railway",
-      "projectId": "{{DEPLOY_BACKEND_PROJECT_ID}}",
-      "serviceId": "{{DEPLOY_BACKEND_SERVICE_ID}}",
-      "environmentId": "{{DEPLOY_BACKEND_ENVIRONMENT_ID}}"
-    }
-  },
-  "versionControl": {
-    "provider": "github",
-    "owner": "username",
-    "repo": "repo-name",
-    "defaultBranch": "main",
-    "projectBoard": {
-      "number": 3
+      "projectId": "{{DEPLOY_BACKEND_PROJECT_ID}}"
     }
   },
   "features": {
     "githubIntegration": true,
     "phasedDevelopment": true,
-    "tokenManagement": false,
-    "deploymentAutomation": true,
-    "tunnelServices": false,
-    "happyMode": false
+    "advancedHooks": true,
+    "refactoring": true,
+    "skillTemplates": true
   }
 }
 ```
 
 ### settings.json
 
-Configure hooks and behavior:
+Configure hooks and agent behavior:
 
 ```json
 {
   "hooks": {
     "enabled": true,
-    "preToolUse": ["file-guard", "token-guardian"],
-    "postToolUse": ["test-enforcer", "github-progress"],
-    "userPromptSubmit": ["context-loader"]
+    "preToolUse": ["file-guard", "token-guardian", "branch-merge-checker"],
+    "postToolUse": ["test-enforcer", "github-progress", "autonomous-decision-logger"],
+    "userPromptSubmit": ["context-loader", "session-id-generator"]
   },
   "agents": {
     "defaultModel": "sonnet",
@@ -374,7 +530,7 @@ Configure hooks and behavior:
 
 ## Template Engine
 
-CCASP uses a Handlebars-style template engine (398 lines) for platform-agnostic configuration.
+CCASP uses a Handlebars-style template engine for platform-agnostic configuration.
 
 ### Supported Syntax
 
@@ -440,10 +596,8 @@ import {
   // GitHub Integration
   isAuthenticated,
   getCurrentUser,
-  listRepos,
   createIssue,
   addIssueToProject,
-  listProjectFields,
 
   // Codebase Analysis
   searchFiles,
@@ -451,10 +605,9 @@ import {
   findDefinitions,
   analyzeForIssue,
 
-  // Templates
-  ENHANCEMENT_TEMPLATES,
-  generateClaudeCommand,
-  generateIssueBody,
+  // Scripts & Skills
+  runInstallScripts,
+  installSkillCommand,
 } from 'claude-cli-advanced-starter-pack';
 ```
 
@@ -470,7 +623,7 @@ console.log(techStack.frontend.framework); // "react"
 console.log(techStack.backend.framework);  // "fastapi"
 ```
 
-#### `replacePlaceholders(content: string, values: object, options?: object): { content: string, warnings: string[] }`
+#### `replacePlaceholders(content: string, values: object, options?: object)`
 
 Process templates with values:
 
@@ -478,31 +631,6 @@ Process templates with values:
 const template = '{{project.name}} uses {{frontend.framework}}';
 const { content, warnings } = replacePlaceholders(template, techStack);
 // content: "my-app uses react"
-```
-
-Options:
-- `preserveUnknown`: Keep unresolved placeholders (default: false)
-- `warnOnMissing`: Log warnings for missing values (default: true)
-- `processConditionals`: Enable conditional processing (default: true)
-
-#### `processFile(filePath: string, values: object, options?: object): Promise<{ content: string, warnings: string[] }>`
-
-Process a template file:
-
-```javascript
-const result = await processFile('./template.md', techStack);
-```
-
-#### `processDirectory(dirPath: string, values: object, options?: object): Promise<void>`
-
-Process all templates in a directory:
-
-```javascript
-await processDirectory('./templates', techStack, {
-  extensions: ['.md', '.json', '.js'],
-  exclude: ['node_modules'],
-  recursive: true
-});
 ```
 
 ---
@@ -525,9 +653,6 @@ CCASP detects 40+ frameworks and tools by reading project files (**no AI require
 | `.git/config` | Repository URL |
 | `railway.json` | Railway deployment |
 | `wrangler.toml` | Cloudflare config |
-| `vercel.json` | Vercel config |
-| `Dockerfile` | Container setup |
-| Directory structure | Project type (monorepo, fullstack, etc.) |
 
 ### Detected Categories
 
@@ -537,7 +662,6 @@ CCASP detects 40+ frameworks and tools by reading project files (**no AI require
 - **ORM**: Prisma, TypeORM, SQLAlchemy, Drizzle
 - **Testing**: Jest, Vitest, Mocha, pytest, Playwright, Cypress
 - **Deployment**: Railway, Vercel, Netlify, Cloudflare, Heroku, AWS
-- **Build Tools**: Vite, Webpack, esbuild, Turbopack
 
 ---
 
@@ -549,7 +673,7 @@ During setup, choose a preset for quick configuration:
 |--------|--------|-------------------|
 | **A** | Minimal | `/menu`, `/ccasp-setup` only |
 | **B** | Standard | + GitHub Integration + Phased Development |
-| **C** | Full | + Deployment + Tunnels + Token Management |
+| **C** | Full | + Deployment + Hooks + Refactoring + Scripts |
 | **D** | Custom | Pick individual features |
 
 ---
@@ -564,36 +688,18 @@ ccasp explore-mcp --recommend  # Auto-recommend based on codebase
 ccasp explore-mcp --testing    # Quick install Playwright + Puppeteer
 ```
 
-### Supported MCP Servers
+### Supported MCP Servers (v1.7.0+)
 
 | Category | Servers |
 |----------|---------|
-| **Testing** | Playwright, Puppeteer, Browser Monitor |
-| **Deployment** | Railway, Cloudflare, Vercel |
+| **Testing** | Playwright, Puppeteer, Browser Monitor, Skyvern |
+| **Deployment** | Railway, Cloudflare, Vercel, DigitalOcean |
+| **Debugging** | Log Monitor, Browser Monitor |
+| **Tunnel** | ngrok, Cloudflare Tunnel, LocalTunnel |
 | **Version Control** | GitHub, GitLab |
-| **Database** | PostgreSQL, SQLite, Redis |
-| **Communication** | Slack, Discord, Email |
-| **Utilities** | Filesystem, Fetch, Memory |
-
-### MCP Configuration Generated
-
-```json
-{
-  "mcpServers": {
-    "railway": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-railway"],
-      "env": {
-        "RAILWAY_API_TOKEN": "your-token"
-      }
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-playwright"]
-    }
-  }
-}
-```
+| **Database** | PostgreSQL, SQLite, Supabase, Redis |
+| **Communication** | Slack, Discord, Resend Email |
+| **Utilities** | Filesystem, Fetch, Memory (ChromaDB) |
 
 ---
 
@@ -630,11 +736,10 @@ gh auth status
 
 ```bash
 ccasp detect-stack --verbose    # See all detected values
-ccasp validate --path templates # Check template agnosticism
+ccasp install-scripts --list    # List available scripts
+ccasp install-skill --list      # List available skills
 ccasp claude-audit              # Audit CLAUDE.md quality
 ```
-
-For detailed troubleshooting, see the [Troubleshooting Wiki](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki/Troubleshooting).
 
 ---
 
@@ -656,7 +761,7 @@ npm test
 
 ```
 src/
-├── commands/           # 23 command implementations
+├── commands/           # 25 command implementations
 ├── cli/               # Interactive menu system
 ├── github/            # GitHub API wrapper
 ├── agents/            # Agent template generators
@@ -664,8 +769,12 @@ src/
 └── index.js           # Main exports
 
 templates/
-├── commands/          # Slash command templates
-└── hooks/             # Hook templates
+├── commands/          # Slash command templates (18)
+├── hooks/             # Hook templates (12)
+├── skills/            # Skill templates (3)
+├── patterns/          # Agent patterns (4)
+├── scripts/           # Utility scripts (7)
+└── docs/              # Doc templates (5)
 ```
 
 ---
@@ -680,6 +789,6 @@ MIT © [evan043](https://github.com/evan043)
 
 **Made for Claude Code CLI** — Supercharge your AI-assisted development workflow.
 
-[Documentation](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki) • [Issues](https://github.com/evan043/claude-cli-advanced-starter-pack/issues) • [npm](https://www.npmjs.com/package/claude-cli-advanced-starter-pack)
+[Documentation](./docs/WIKI.md) • [Issues](https://github.com/evan043/claude-cli-advanced-starter-pack/issues) • [npm](https://www.npmjs.com/package/claude-cli-advanced-starter-pack)
 
 </div>
