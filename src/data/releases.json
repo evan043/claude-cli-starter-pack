@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "1.5.0",
+      "date": "2026-01-30",
+      "summary": "Feature: Phase 5 of 85 Recommendations - Documentation Templates",
+      "highlights": [
+        "Added AI_ARCHITECTURE_CONSTITUTION.template.md - Non-negotiable project rules",
+        "Added PROGRESS_JSON_TEMPLATE.json - Phased development state tracking",
+        "Added DETAILED_GOTCHAS.template.md - Problem-solution patterns",
+        "Added background-agent.template.md - Production orchestration patterns",
+        "Added PHASE-DEV-CHECKLIST.template.md - L1/L2/L3 validation gates"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "templates/docs/",
+            "description": "Documentation templates directory with 5 essential documents"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.4.0",
       "date": "2026-01-30",
       "summary": "Feature: Phase 4 of 85 Recommendations - Additional Commands",

@@ -348,7 +348,7 @@ Use `/phase-track` to monitor implementation progress once the roadmap is accept
 | Phase 2 | ✅ | Complete - v1.2.0 |
 | Phase 3 | ✅ | Complete - v1.3.0 (3 skills) |
 | Phase 4 | ✅ | Complete - v1.4.0 (5 commands) |
-| Phase 5 | ⬜ | |
+| Phase 5 | ✅ | Complete - v1.5.0 (5 docs) |
 | Phase 6 | ⬜ | |
 | Phase 7 | ⬜ | |
 | Phase 8 | ⬜ | |

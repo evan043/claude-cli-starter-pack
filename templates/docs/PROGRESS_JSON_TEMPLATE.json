@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "PROGRESS.json template for phased development tracking",
+  "version": "1.0.0",
+  "project_slug": "{{project.slug}}",
+  "project_name": "{{project.name}}",
+  "created_at": "{{date}}",
+  "last_updated": "{{date}}",
+  "current_phase": 1,
+  "overall_progress": {
+    "total_phases": 3,
+    "completed_phases": 0,
+    "total_tasks": 15,
+    "completed_tasks": 0,
+    "success_rate": 0.0
+  },
+  "phases": [
+    {
+      "phase_number": 1,
+      "title": "Foundation",
+      "status": "not_started",
+      "started_at": null,
+      "completed_at": null,
+      "tasks": [
+        {
+          "id": "P1-T1",
+          "title": "Task 1 description",
+          "status": "pending",
+          "priority": "high",
+          "estimated_tokens": 5000,
+          "actual_tokens": null,
+          "dependencies": [],
+          "files_to_modify": [],
+          "acceptance_criteria": [
+            "Criterion 1",
+            "Criterion 2"
+          ],
+          "notes": ""
+        },
+        {
+          "id": "P1-T2",
+          "title": "Task 2 description",
+          "status": "pending",
+          "priority": "medium",
+          "estimated_tokens": 3000,
+          "actual_tokens": null,
+          "dependencies": ["P1-T1"],
+          "files_to_modify": [],
+          "acceptance_criteria": [
+            "Criterion 1"
+          ],
+          "notes": ""
+        }
+      ],
+      "validation_gates": {
+        "tasks_complete": false,
+        "files_created": false,
+        "tests_passing": false,
+        "no_errors": false,
+        "token_budget": false
+      },
+      "expected_output_files": [],
+      "token_budget": 25000,
+      "require_tests": false
+    },
+    {
+      "phase_number": 2,
+      "title": "Implementation",
+      "status": "not_started",
+      "started_at": null,
+      "completed_at": null,
+      "tasks": [],
+      "validation_gates": {
+        "tasks_complete": false,
+        "files_created": false,
+        "tests_passing": false,
+        "no_errors": false,
+        "token_budget": false
+      },
+      "expected_output_files": [],
+      "token_budget": 50000,
+      "require_tests": true
+    },
+    {
+      "phase_number": 3,
+      "title": "Polish & Deploy",
+      "status": "not_started",
+      "started_at": null,
+      "completed_at": null,
+      "tasks": [],
+      "validation_gates": {
+        "tasks_complete": false,
+        "files_created": false,
+        "tests_passing": false,
+        "no_errors": false,
+        "token_budget": false
+      },
+      "expected_output_files": [],
+      "token_budget": 25000,
+      "require_tests": true
+    }
+  ],
+  "git_tracking": {
+    "pre_start_commit": null,
+    "phase_commits": [],
+    "current_stable_commit": null
+  },
+  "checkpoints": [],
+  "blockers": [],
+  "metadata": {
+    "scale": "M",
+    "estimated_total_tokens": 100000,
+    "actual_total_tokens": 0,
+    "success_target": 0.95,
+    "auto_chain_enabled": false
+  }
+}
