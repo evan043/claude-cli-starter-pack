@@ -42,6 +42,7 @@ export function generateProgressJson(config) {
     architecture = {},
     enhancements = [],
     agentRegistry = null,
+    ralphLoop = null,
   } = config;
 
   const timestamp = new Date().toISOString();
@@ -105,6 +106,18 @@ export function generateProgressJson(config) {
             }, {}),
           }
         : { available: false },
+      testing_config: {
+        ralph_loop: ralphLoop || {
+          enabled: !!architecture.testing?.e2e,
+          testCommand: architecture.testing?.e2eCommand || architecture.testing?.unitCommand || 'npm test',
+          maxIterations: 10,
+          autoStart: false,
+        },
+        e2e_framework: architecture.testing?.e2e || null,
+        unit_framework: architecture.testing?.unit || architecture.testing?.framework || null,
+        testingAgentAvailable: agentRegistry?.agents?.some((a) => a.domain === 'testing') || false,
+        testingAgentName: agentRegistry?.agents?.find((a) => a.domain === 'testing')?.name || null,
+      },
       phases: phases.map((phase, idx) => ({
         id: idx + 1,
         name: phase.name,

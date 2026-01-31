@@ -138,6 +138,61 @@ Deploy the assigned agent when executing phase tasks for domain-specific experti
 {{#if agents.deployment}}| Deployment phases | {{agents.deployment.name}} | deployment |{{/if}}
 {{/if}}
 
+## Ralph Loop Integration
+
+For testing phases or when validation tests fail, use Ralph Loop for continuous test-fix cycles:
+
+### When to Use Ralph Loop
+
+- After completing implementation phases
+- When phase validation tests fail
+- During "Testing & Validation" phases
+- Before marking a phase as complete
+
+### Recommended Workflow
+
+```
+1. Complete implementation tasks in phase
+2. Run phase validation tests
+3. If tests fail → /ralph to start continuous loop
+4. Ralph fixes failures automatically
+5. When all pass → Mark phase complete
+```
+
+### Testing Configuration
+
+```json
+// From PROGRESS.json
+{
+  "testing_config": {
+    "ralph_loop": {
+      "enabled": true,
+      "testCommand": "npm test",
+      "maxIterations": 10,
+      "autoStart": false
+    },
+    "e2e_framework": "playwright",
+    "testingAgentAvailable": true,
+    "testingAgentName": "testing-playwright-specialist"
+  }
+}
+```
+
+### Ralph Loop Commands
+
+| Command | Description |
+|---------|-------------|
+| `/ralph` | Auto-detect tests, start loop |
+| `/ralph npm test` | Use specific test command |
+| `/ralph --max 15` | Increase iteration limit |
+| `/ralph --stop` | Stop current loop |
+
+{{#if testing.e2e.framework}}
+**E2E Testing**: Use `/ralph --playwright` for {{testing.e2e.framework}} tests
+{{/if}}
+
+> 💡 **Tip**: Enable Ralph Loop auto-start in PROGRESS.json to automatically begin test-fix cycles after each phase.
+
 ## Instructions for Claude
 
 When this command is invoked:

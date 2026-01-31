@@ -1,0 +1,15 @@
+{
+  "name": "refactor-react",
+  "description": "React-specific refactoring patterns and best practices",
+  "version": "1.0.0",
+  "author": "CCASP",
+  "tags": ["refactoring", "react", "frontend", "typescript"],
+  "activation": {
+    "keywords": ["refactor react", "split component", "extract hook", "memoize"],
+    "filePatterns": ["*.tsx", "*.jsx", "**/components/**", "**/hooks/**"]
+  },
+  "context": {
+    "files": ["skill.md", "patterns/*.md"],
+    "priority": "high"
+  }
+}

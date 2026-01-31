@@ -1,0 +1,15 @@
+{
+  "name": "refactor-fastapi",
+  "description": "FastAPI/Python-specific refactoring patterns and best practices",
+  "version": "1.0.0",
+  "author": "CCASP",
+  "tags": ["refactoring", "fastapi", "python", "backend"],
+  "activation": {
+    "keywords": ["refactor fastapi", "extract router", "dependency injection", "repository pattern"],
+    "filePatterns": ["*.py", "**/routers/**", "**/services/**", "**/repositories/**"]
+  },
+  "context": {
+    "files": ["skill.md", "patterns/*.md"],
+    "priority": "high"
+  }
+}

@@ -402,6 +402,26 @@ options:
   - label: "Minimal Testing"
     description: "Only test at the end of all tasks"
 ```
+
+{{#if agents.testing}}
+**Testing Agent Auto-Recommendation**:
+When Ralph Loop is selected, automatically recommend deploying the testing specialist agent:
+
+> 🤖 **Recommended Agent**: `{{agents.testing.name}}`
+>
+> This testing specialist can help with:
+> - Complex test debugging
+> - Fixture and mock design
+> - E2E test optimization
+> - Cross-browser issue resolution
+>
+> Deploy with: `Task tool → subagent_type={{agents.testing.name}}`
+
+If test failures persist after 3 Ralph Loop iterations, automatically suggest:
+```
+"Ralph Loop is struggling. Would you like to deploy the testing specialist {{agents.testing.name}} for deeper analysis?"
+```
+{{/if}}
 {{else}}
 **Question 1: Testing Approach** (testing not configured - simplified options)
 ```
