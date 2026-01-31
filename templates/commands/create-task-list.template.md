@@ -163,6 +163,46 @@ These rules govern:
 
 ---
 
+### Step 0c: Load Agent Registry (Smart Delegation)
+
+**Check for registered specialist agents** in `.claude/config/agents.json`:
+
+{{#if agents.available}}
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  🤖 Agent Registry: {{agents.count}} agents available          ║
+╠═══════════════════════════════════════════════════════════════╣
+{{#if agents.frontend}}║  ✅ Frontend: {{agents.frontend.name}}                        ║{{/if}}
+{{#if agents.backend}}║  ✅ Backend: {{agents.backend.name}}                          ║{{/if}}
+{{#if agents.state}}║  ✅ State: {{agents.state.name}}                              ║{{/if}}
+{{#if agents.database}}║  ✅ Database: {{agents.database.name}}                        ║{{/if}}
+{{#if agents.testing}}║  ✅ Testing: {{agents.testing.name}}                          ║{{/if}}
+{{#if agents.deployment}}║  ✅ Deployment: {{agents.deployment.name}}                    ║{{/if}}
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Agent-aware exploration enabled**: Tasks will be routed to specialist agents based on domain.
+{{else}}
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ℹ️  Agent Registry: Not configured                            ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Using default exploration agents (subagent_type="Explore")   ║
+║                                                               ║
+║  To enable specialist agents:                                 ║
+║    ccasp generate-agents                                      ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+{{/if}}
+
+**Store agent context** for use in later steps:
+- `AGENTS_AVAILABLE`: {{#if agents.available}}true{{else}}false{{/if}}
+- `AGENT_COUNT`: {{agents.count}}
+
+---
+
 ### Step 1: Capture User Prompt & Parse Flags
 
 ```
@@ -231,6 +271,43 @@ Evaluate the prompt for:
 
 Deploy **parallel exploration agents** to understand the issue:
 
+{{#if agents.available}}
+**🤖 Agent-Aware Exploration** (using registered specialists):
+
+```
+Deploy in SINGLE message (parallel execution):
+
+Task 1: Use BEST MATCHING AGENT from registry
+  - Analyze prompt keywords: component, api, test, deploy, etc.
+  - Match against agents.delegationRules.keywords
+  - If frontend keywords → Deploy {{#if agents.frontend}}{{agents.frontend.name}}{{else}}subagent_type="Explore"{{/if}}
+  - If backend keywords → Deploy {{#if agents.backend}}{{agents.backend.name}}{{else}}subagent_type="Explore"{{/if}}
+  - If testing keywords → Deploy {{#if agents.testing}}{{agents.testing.name}}{{else}}subagent_type="Explore"{{/if}}
+  prompt: "As the specialist for this domain, analyze: $ARGUMENTS"
+  description: "Domain-specific exploration"
+
+Task 2: subagent_type="Explore" (general context)
+  prompt: "Search for error patterns, tests, and documentation related to: $ARGUMENTS"
+  description: "Find tests and docs"
+
+Task 3 (if multi-domain): Deploy SECONDARY domain agent
+  - If task spans frontend+backend → deploy both specialists
+  prompt: "Analyze cross-domain dependencies for: $ARGUMENTS"
+  description: "Cross-domain analysis"
+```
+
+**Agent Selection Logic**:
+| Keyword Match | Recommended Agent |
+|---------------|-------------------|
+{{#if agents.frontend}}| component, hook, style, jsx, tsx | {{agents.frontend.name}} |{{/if}}
+{{#if agents.backend}}| api, endpoint, route, auth | {{agents.backend.name}} |{{/if}}
+{{#if agents.database}}| database, query, migration, model | {{agents.database.name}} |{{/if}}
+{{#if agents.testing}}| test, e2e, spec, fixture | {{agents.testing.name}} |{{/if}}
+{{#if agents.deployment}}| deploy, build, docker, ci | {{agents.deployment.name}} |{{/if}}
+
+{{else}}
+**Default Exploration** (no agent registry):
+
 ```
 Deploy in SINGLE message (parallel execution):
 
@@ -249,6 +326,7 @@ Task 3 (if backend-related): subagent_type="Explore"
   prompt: "Find API endpoints, database models, and service files related to: $ARGUMENTS"
   description: "Explore backend architecture"
 ```
+{{/if}}
 
 **Wait for all agents to complete**, then proceed to Step 4.
 
@@ -272,6 +350,14 @@ Task 3 (if backend-related): subagent_type="Explore"
    - Can you provide any error messages or screenshots?
 
 3. **After user provides clarity**, proceed to Step 3a with updated context.
+
+{{#if agents.available}}
+4. **Agent Recommendation** (after clarification):
+   Based on user's answers, recommend the most appropriate specialist agent:
+   - Web UI mentioned → Recommend {{#if agents.frontend}}{{agents.frontend.name}}{{else}}frontend specialist{{/if}}
+   - Backend/API mentioned → Recommend {{#if agents.backend}}{{agents.backend.name}}{{else}}backend specialist{{/if}}
+   - Database mentioned → Recommend {{#if agents.database}}{{agents.database.name}}{{else}}database specialist{{/if}}
+{{/if}}
 
 ---
 

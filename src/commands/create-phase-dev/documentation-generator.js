@@ -12,7 +12,7 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import {
   generateProgressJson,
@@ -28,6 +28,24 @@ import {
 } from '../../agents/phase-dev-templates.js';
 
 /**
+ * Load agent registry if available
+ * @param {string} projectRoot - Project root
+ * @returns {object|null} Agent registry or null
+ */
+function loadAgentRegistry(projectRoot = process.cwd()) {
+  const registryPath = join(projectRoot, '.claude', 'config', 'agents.json');
+  if (!existsSync(registryPath)) {
+    return null;
+  }
+  try {
+    const content = readFileSync(registryPath, 'utf8');
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generate all documentation for a phased development plan
  *
  * @param {Object} config - Project configuration
@@ -40,6 +58,12 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
 
   const { projectSlug } = config;
   const cwd = process.cwd();
+
+  // Load agent registry if available
+  const agentRegistry = loadAgentRegistry(cwd);
+  if (agentRegistry) {
+    spinner.text = 'Agent registry found - enabling agent assignments...';
+  }
 
   // Define output directories
   const docsDir = join(cwd, '.claude', 'docs', projectSlug);
@@ -55,12 +79,13 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
   });
 
   try {
-    // 1. Generate PROGRESS.json
+    // 1. Generate PROGRESS.json (with agent assignments if registry available)
     spinner.text = 'Creating PROGRESS.json...';
     const progressPath = join(docsDir, 'PROGRESS.json');
     const progressContent = generateProgressJson({
       ...config,
       enhancements,
+      agentRegistry,
     });
     writeFileSync(progressPath, progressContent, 'utf8');
     results.files.push({ name: 'PROGRESS.json', path: progressPath });

@@ -663,6 +663,7 @@ const FEATURE_CATEGORIES = [
   {
     name: 'AGENTS',
     features: [
+      { name: 'Auto Stack Agents + Delegation', value: 'autoStackAgents', checked: true, short: 'Smart agent routing' },
       { name: 'Example Agent', value: 'exampleAgent', checked: true, short: 'Example agent template' },
       { name: 'Create Agent Command', value: 'createAgent', checked: true, short: 'Agent creator' },
     ],
@@ -732,6 +733,7 @@ function mapFeaturesToInit(selectedFeatures) {
     mcpExplorer: null, // Always included in base
     analysis: null, // Always included in base
     // Agents
+    autoStackAgents: 'autoStackAgents', // Agent generation + delegation hooks
     exampleAgent: null, // Handled by init
     createAgent: null, // Always included
     // Hooks

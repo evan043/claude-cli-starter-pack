@@ -20,6 +20,7 @@ export function generateIssueBody(data) {
     testScenarios = [],
     priority,
     labels = [],
+    agentRecommendation = null,
   } = data;
 
   const sections = [];
@@ -67,6 +68,11 @@ export function generateIssueBody(data) {
   // Testing
   if (testScenarios.length > 0) {
     sections.push(generateTestingSection(testScenarios));
+  }
+
+  // Agent Recommendation
+  if (agentRecommendation) {
+    sections.push(generateAgentRecommendationSection(agentRecommendation));
   }
 
   // Metadata footer
@@ -211,6 +217,37 @@ function generateTestingSection(scenarios) {
 }
 
 /**
+ * Generate agent recommendation section
+ */
+function generateAgentRecommendationSection(recommendation) {
+  const parts = ['## 🤖 Recommended Agent'];
+
+  if (recommendation.name) {
+    parts.push(`\n**Agent**: \`${recommendation.name}\``);
+  }
+  if (recommendation.domain) {
+    parts.push(`**Domain**: ${recommendation.domain}`);
+  }
+  if (recommendation.confidence) {
+    parts.push(`**Confidence**: ${recommendation.confidence}%`);
+  }
+  if (recommendation.reason) {
+    parts.push(`\n**Reasoning**: ${recommendation.reason}`);
+  }
+  if (recommendation.matchedKeywords?.length > 0) {
+    parts.push(`**Matched Keywords**: ${recommendation.matchedKeywords.join(', ')}`);
+  }
+  if (recommendation.matchedFiles?.length > 0) {
+    parts.push(`**Matched Files**: ${recommendation.matchedFiles.slice(0, 5).map(f => `\`${f}\``).join(', ')}`);
+  }
+
+  parts.push('\n> 💡 When starting this task, deploy the recommended agent for domain-specific expertise.');
+  parts.push('> Run `ccasp generate-agents` if agents are not yet configured.');
+
+  return parts.join('\n');
+}
+
+/**
  * Get language name for syntax highlighting
  */
 function getLanguageForExt(ext) {
@@ -248,6 +285,100 @@ export function generateSimpleIssueBody(data) {
   body += '\n\n---\n*Created by GitHub Task Kit*';
 
   return body;
+}
+
+/**
+ * Get agent recommendation from registry based on issue details
+ * @param {object} registry - Agent registry from agents.json
+ * @param {string} description - Issue description
+ * @param {string[]} labels - Issue labels
+ * @param {string[]} files - Affected files
+ * @returns {object|null} Agent recommendation or null
+ */
+export function getAgentRecommendation(registry, description, labels = [], files = []) {
+  if (!registry || !registry.agents || registry.agents.length === 0) {
+    return null;
+  }
+
+  const descLower = description.toLowerCase();
+  const labelStr = labels.join(' ').toLowerCase();
+  const combined = descLower + ' ' + labelStr;
+
+  const domainScores = {};
+  const matchedKeywords = [];
+
+  // Score based on keywords
+  const keywords = registry.delegationRules?.keywords || {};
+  for (const [keyword, domain] of Object.entries(keywords)) {
+    if (combined.includes(keyword.toLowerCase())) {
+      domainScores[domain] = (domainScores[domain] || 0) + 1;
+      matchedKeywords.push(keyword);
+    }
+  }
+
+  // Score based on file patterns
+  const matchedFiles = [];
+  const filePatterns = registry.delegationRules?.filePatterns || {};
+  for (const [domain, patterns] of Object.entries(filePatterns)) {
+    for (const file of files) {
+      for (const pattern of patterns) {
+        if (file.match(new RegExp(pattern.replace(/\*/g, '.*')))) {
+          domainScores[domain] = (domainScores[domain] || 0) + 2;
+          matchedFiles.push(file);
+        }
+      }
+    }
+  }
+
+  // Score based on labels
+  const labelDomains = {
+    frontend: 'frontend',
+    ui: 'frontend',
+    backend: 'backend',
+    api: 'backend',
+    database: 'database',
+    db: 'database',
+    testing: 'testing',
+    test: 'testing',
+    deploy: 'deployment',
+    ci: 'deployment',
+  };
+
+  for (const label of labels) {
+    const labelLower = label.toLowerCase();
+    if (labelDomains[labelLower]) {
+      domainScores[labelDomains[labelLower]] = (domainScores[labelDomains[labelLower]] || 0) + 3;
+    }
+  }
+
+  // Find best domain
+  let bestDomain = null;
+  let bestScore = 0;
+  for (const [domain, score] of Object.entries(domainScores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestDomain = domain;
+    }
+  }
+
+  if (!bestDomain) {
+    return null;
+  }
+
+  const agent = registry.agents.find((a) => a.domain === bestDomain);
+  if (!agent) {
+    return null;
+  }
+
+  return {
+    name: agent.name,
+    domain: agent.domain,
+    framework: agent.framework,
+    confidence: Math.min(100, bestScore * 15),
+    reason: `Matched ${bestDomain} domain based on issue content`,
+    matchedKeywords: [...new Set(matchedKeywords)],
+    matchedFiles: [...new Set(matchedFiles)],
+  };
 }
 
 /**

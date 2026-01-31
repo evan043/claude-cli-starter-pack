@@ -36,11 +36,20 @@ dir /s /b .claude\docs\PROGRESS.json
   "projectName": "Feature X",
   "scale": "M",
   "targetSuccess": 0.95,
+  "agent_assignments": {
+    "available": true,
+    "count": 5,
+    "byDomain": {
+      "frontend": "frontend-react-specialist",
+      "backend": "backend-fastapi-specialist"
+    }
+  },
   "phases": [
     {
       "id": 1,
       "name": "Setup & Foundation",
       "status": "completed",
+      "assignedAgent": "backend-fastapi-specialist",
       "tasks": [
         { "id": "1.1", "description": "Create database schema", "completed": true },
         { "id": "1.2", "description": "Set up API endpoints", "completed": true }
@@ -51,6 +60,7 @@ dir /s /b .claude\docs\PROGRESS.json
       "id": 2,
       "name": "Core Implementation",
       "status": "in_progress",
+      "assignedAgent": "frontend-react-specialist",
       "tasks": [
         { "id": "2.1", "description": "Implement business logic", "completed": true },
         { "id": "2.2", "description": "Add validation", "completed": false }
@@ -102,15 +112,31 @@ Generates a markdown progress report.
 Project: Feature X (M scale, 95% target)
 ════════════════════════════════════════
 
-Phase 1: Setup & Foundation     ████████████████████ 100% ✓
-Phase 2: Core Implementation    ████████████░░░░░░░░  60%
-Phase 3: Testing & Validation   ░░░░░░░░░░░░░░░░░░░░   0%
+Phase 1: Setup & Foundation     ████████████████████ 100% ✓  🤖 backend-fastapi-specialist
+Phase 2: Core Implementation    ████████████░░░░░░░░  60%    🤖 frontend-react-specialist
+Phase 3: Testing & Validation   ░░░░░░░░░░░░░░░░░░░░   0%    🤖 testing-playwright-specialist
 Phase 4: Documentation          ░░░░░░░░░░░░░░░░░░░░   0%
 
 Overall: ████████░░░░░░░░░░░░  40% (4/10 tasks)
 
 Current Task: 2.2 - Add validation
+Assigned Agent: frontend-react-specialist
 ```
+
+{{#if agents.available}}
+## Agent Assignments
+
+When agent registry is available, each phase shows its assigned specialist agent.
+Deploy the assigned agent when executing phase tasks for domain-specific expertise.
+
+| Phase | Assigned Agent | Domain |
+|-------|---------------|--------|
+{{#if agents.frontend}}| Frontend phases | {{agents.frontend.name}} | frontend |{{/if}}
+{{#if agents.backend}}| Backend phases | {{agents.backend.name}} | backend |{{/if}}
+{{#if agents.database}}| Database phases | {{agents.database.name}} | database |{{/if}}
+{{#if agents.testing}}| Testing phases | {{agents.testing.name}} | testing |{{/if}}
+{{#if agents.deployment}}| Deployment phases | {{agents.deployment.name}} | deployment |{{/if}}
+{{/if}}
 
 ## Instructions for Claude
 

@@ -41,9 +41,35 @@ export function generateProgressJson(config) {
     phases,
     architecture = {},
     enhancements = [],
+    agentRegistry = null,
   } = config;
 
   const timestamp = new Date().toISOString();
+
+  // Helper to determine recommended agent for a phase based on its focus
+  const getRecommendedAgent = (phase) => {
+    if (!agentRegistry || !agentRegistry.agents) return null;
+
+    const phaseLower = (phase.name + ' ' + phase.description).toLowerCase();
+
+    // Match phase to domain
+    if (phaseLower.match(/frontend|ui|component|react|vue|style|css/)) {
+      return agentRegistry.agents.find((a) => a.domain === 'frontend')?.name || null;
+    }
+    if (phaseLower.match(/backend|api|endpoint|server|route|auth/)) {
+      return agentRegistry.agents.find((a) => a.domain === 'backend')?.name || null;
+    }
+    if (phaseLower.match(/database|schema|migration|model|query/)) {
+      return agentRegistry.agents.find((a) => a.domain === 'database')?.name || null;
+    }
+    if (phaseLower.match(/test|e2e|spec|coverage/)) {
+      return agentRegistry.agents.find((a) => a.domain === 'testing')?.name || null;
+    }
+    if (phaseLower.match(/deploy|ci|cd|docker|build/)) {
+      return agentRegistry.agents.find((a) => a.domain === 'deployment')?.name || null;
+    }
+    return null;
+  };
 
   return JSON.stringify(
     {
@@ -56,10 +82,11 @@ export function generateProgressJson(config) {
         lastUpdated: timestamp,
       },
       metadata: {
-        version: '2.0',
+        version: '2.1',
         generator: 'gtask create-phase-dev',
         successProbability: 0.95,
         enhancements,
+        agentsAvailable: !!agentRegistry,
       },
       tech_stack: {
         frontend: architecture.frontend || null,
@@ -68,12 +95,23 @@ export function generateProgressJson(config) {
         deployment: architecture.deployment || null,
         auto_detected: architecture.autoDetected || false,
       },
+      agent_assignments: agentRegistry
+        ? {
+            available: true,
+            count: agentRegistry.agents?.length || 0,
+            byDomain: agentRegistry.agents?.reduce((acc, a) => {
+              acc[a.domain] = a.name;
+              return acc;
+            }, {}),
+          }
+        : { available: false },
       phases: phases.map((phase, idx) => ({
         id: idx + 1,
         name: phase.name,
         description: phase.description,
         status: idx === 0 ? 'not_started' : 'blocked',
         prerequisites: phase.prerequisites || [],
+        assignedAgent: getRecommendedAgent(phase),
         tasks: phase.tasks.map((task, taskIdx) => ({
           id: `${idx + 1}.${taskIdx + 1}`,
           title: task.title,
