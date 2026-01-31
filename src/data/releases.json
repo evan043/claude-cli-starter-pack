@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "1.8.6",
+      "date": "2026-01-31",
+      "summary": "Release notes pending",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.5",
       "date": "2026-01-31",
       "summary": "Release notes pending",
