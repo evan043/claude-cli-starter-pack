@@ -32,6 +32,7 @@ import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
 import { runSetupWizard } from '../src/commands/setup-wizard.js';
 import { installSkillCommand, listSkills } from '../src/commands/install-skill.js';
+import { runInstallScripts } from '../src/commands/install-scripts.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -290,6 +291,15 @@ program
     } else {
       await installSkillCommand(options);
     }
+  });
+
+// Install scripts
+program
+  .command('install-scripts')
+  .description('Install utility scripts to .claude/scripts/')
+  .option('--list', 'List available scripts')
+  .action(async (options) => {
+    await runInstallScripts(options);
   });
 
 // Parse and run
