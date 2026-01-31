@@ -8,6 +8,8 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
+import fs from 'fs';
+import path from 'path';
 import { showHeader } from '../cli/menu.js';
 import { analyzeCodebase, generateStackSummary, displayAnalysisResults } from './create-phase-dev/codebase-analyzer.js';
 import {
@@ -15,9 +17,11 @@ import {
   getMcpsByCategory,
   getRecommendedMcps,
   getTestingMcps,
+  getCoreTestingMcps,
   searchMcps,
   getMcpById,
   getCategories,
+  mergeMcpResults,
 } from './explore-mcp/mcp-registry.js';
 import {
   installMcp,
@@ -27,6 +31,7 @@ import {
   removeMcp,
 } from './explore-mcp/mcp-installer.js';
 import { updateClaudeMd, removeMcpSection } from './explore-mcp/claude-md-updater.js';
+import { loadCachedDiscovery, saveCachedDiscovery } from './explore-mcp/mcp-cache.js';
 
 /**
  * Run the explore-mcp command
@@ -73,25 +78,30 @@ export async function showExploreMcpMenu() {
           value: 'testing',
           short: 'Testing',
         },
+        {
+          name: `${chalk.magenta('3)')} Discover New MCPs         Web search for stack-specific MCPs`,
+          value: 'discover',
+          short: 'Discover',
+        },
         new inquirer.Separator(),
         {
-          name: `${chalk.blue('3)')} Browse by Category       View all available MCPs`,
+          name: `${chalk.blue('4)')} Browse by Category       View all available MCPs`,
           value: 'browse',
           short: 'Browse',
         },
         {
-          name: `${chalk.blue('4)')} Search MCPs              Find specific servers`,
+          name: `${chalk.blue('5)')} Search MCPs              Find specific servers`,
           value: 'search',
           short: 'Search',
         },
         new inquirer.Separator(),
         {
-          name: `${chalk.dim('5)')} View Installed (${installedCount})       Manage existing MCPs`,
+          name: `${chalk.dim('6)')} View Installed (${installedCount})       Manage existing MCPs`,
           value: 'installed',
           short: 'Installed',
         },
         {
-          name: `${chalk.dim('6)')} Update CLAUDE.md         Regenerate MCP documentation`,
+          name: `${chalk.dim('7)')} Update CLAUDE.md         Regenerate MCP documentation`,
           value: 'update-docs',
           short: 'Update Docs',
         },
@@ -111,6 +121,9 @@ export async function showExploreMcpMenu() {
       break;
     case 'testing':
       await runTestingFlow({});
+      break;
+    case 'discover':
+      await runDiscoverFlow();
       break;
     case 'browse':
       await runBrowseFlow();
@@ -135,17 +148,110 @@ export async function showExploreMcpMenu() {
 }
 
 /**
- * Smart recommendations flow
+ * Check for tech-stack.json and load it if available
+ * @returns {Object|null} Tech stack config or null
+ */
+function loadTechStackJson() {
+  const possiblePaths = [
+    path.join(process.cwd(), '.claude', 'config', 'tech-stack.json'),
+    path.join(process.cwd(), '.claude', 'tech-stack.json'),
+    path.join(process.cwd(), 'tech-stack.json'),
+  ];
+
+  for (const techStackPath of possiblePaths) {
+    if (fs.existsSync(techStackPath)) {
+      try {
+        const content = fs.readFileSync(techStackPath, 'utf-8');
+        return JSON.parse(content);
+      } catch {
+        // Continue to next path
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Display tech stack status and prompt for detection if missing
+ * @returns {Object} Analysis result from tech stack or fresh detection
+ */
+async function ensureTechStackAnalysis() {
+  const techStack = loadTechStackJson();
+
+  if (techStack) {
+    console.log(chalk.green('✓ Found tech-stack.json'));
+    console.log(chalk.dim(`  Project: ${techStack.project?.name || 'Unknown'}`));
+
+    // Check if tech stack has useful detection data
+    if (techStack.detectedStack || techStack.frontend || techStack.backend) {
+      console.log(chalk.dim('  Using cached tech stack analysis\n'));
+      return { techStack, fromCache: true };
+    }
+  }
+
+  // No tech stack found or incomplete - offer to run detection
+  console.log(chalk.yellow('\n⚠️  Tech stack not detected yet'));
+
+  const { runDetection } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'runDetection',
+      message: 'Run tech stack detection for better MCP recommendations?',
+      default: true,
+    },
+  ]);
+
+  if (runDetection) {
+    console.log(chalk.cyan.bold('\n🔍 Analyzing Codebase...\n'));
+    const analysis = await analyzeCodebase(process.cwd());
+    displayAnalysisResults(analysis);
+    return { analysis, fromCache: false };
+  }
+
+  return { analysis: null, fromCache: false };
+}
+
+/**
+ * Smart recommendations flow with tech stack check
  */
 async function runRecommendedFlow(options) {
-  console.log(chalk.cyan.bold('\n🔍 Analyzing Codebase...\n'));
+  // Step 1: Check for tech-stack.json first
+  const { techStack, analysis: freshAnalysis, fromCache } = await ensureTechStackAnalysis();
 
-  // Analyze codebase
-  const analysis = await analyzeCodebase(process.cwd());
-  displayAnalysisResults(analysis);
+  // Use fresh analysis or run new one
+  let analysis;
+  if (freshAnalysis) {
+    analysis = freshAnalysis;
+  } else if (fromCache && techStack) {
+    // Convert tech-stack.json format to analysis format if needed
+    console.log(chalk.cyan.bold('\n🔍 Analyzing Codebase...\n'));
+    analysis = await analyzeCodebase(process.cwd());
+    displayAnalysisResults(analysis);
+  } else {
+    // No tech stack, no detection - use basic analysis
+    console.log(chalk.cyan.bold('\n🔍 Analyzing Codebase...\n'));
+    analysis = await analyzeCodebase(process.cwd());
+    displayAnalysisResults(analysis);
+  }
 
-  // Get recommendations
-  const recommendations = getRecommendedMcps(analysis);
+  // Step 2: Check for cached dynamic discovery
+  const cachedDiscovery = loadCachedDiscovery();
+  let dynamicMcps = [];
+
+  if (cachedDiscovery && cachedDiscovery.mcps && cachedDiscovery.mcps.length > 0) {
+    console.log(chalk.dim(`\nUsing cached MCP discoveries (${cachedDiscovery.mcps.length} found)`));
+    dynamicMcps = cachedDiscovery.mcps;
+  }
+
+  // Step 3: Get static recommendations based on analysis
+  const staticRecommendations = getRecommendedMcps(analysis);
+
+  // Step 4: Always include core testing MCPs
+  const coreTestingMcps = getCoreTestingMcps();
+
+  // Step 5: Merge all sources (static + dynamic + core testing)
+  const recommendations = mergeMcpResults(staticRecommendations, dynamicMcps, coreTestingMcps);
+
   const installed = getInstalledMcps();
 
   console.log(chalk.cyan.bold('\n📋 Recommended MCP Servers\n'));
@@ -156,14 +262,22 @@ async function runRecommendedFlow(options) {
     return;
   }
 
-  // Show recommendations with install status
+  // Show recommendations with install status and source indicator
   const choices = recommendations.slice(0, 10).map((mcp, i) => {
     const isInstalled = installed.includes(mcp.id);
     const status = isInstalled ? chalk.green(' [installed]') : '';
     const score = chalk.dim(` (score: ${mcp.score})`);
 
+    // Source indicator
+    let sourceTag = '';
+    if (mcp.source === 'dynamic') {
+      sourceTag = chalk.magenta(' [web]');
+    } else if (mcp.source === 'core-testing') {
+      sourceTag = chalk.blue(' [core]');
+    }
+
     return {
-      name: `${chalk.cyan(`${i + 1})`)} ${mcp.name}${status}${score}\n      ${chalk.dim(mcp.description)}`,
+      name: `${chalk.cyan(`${i + 1})`)} ${mcp.name}${sourceTag}${status}${score}\n      ${chalk.dim(mcp.description)}`,
       value: mcp.id,
       short: mcp.name,
       disabled: isInstalled ? 'Already installed' : false,
@@ -598,6 +712,99 @@ function displayInstallResults(results) {
     console.log(chalk.dim('  - CLAUDE.md'));
     console.log(chalk.yellow('\n⚠️  Restart Claude Code for changes to take effect.'));
   }
+}
+
+/**
+ * Dynamic MCP discovery flow using web search
+ * This generates instructions for Claude Code to perform web searches
+ */
+async function runDiscoverFlow() {
+  console.log(chalk.magenta.bold('\n🔎 Dynamic MCP Discovery\n'));
+  console.log(chalk.dim('This feature uses web search to find MCPs relevant to your tech stack.'));
+  console.log(chalk.dim('It requires Claude Code CLI to execute the search.\n'));
+
+  // First check/run tech stack detection
+  const { analysis } = await ensureTechStackAnalysis();
+
+  if (!analysis) {
+    console.log(chalk.yellow('\nTech stack analysis required for discovery.'));
+    return;
+  }
+
+  // Build search keywords from analysis
+  const keywords = [];
+  if (analysis.frontend?.framework) keywords.push(analysis.frontend.framework);
+  if (analysis.backend?.framework) keywords.push(analysis.backend.framework);
+  if (analysis.database?.type) keywords.push(analysis.database.type);
+  if (analysis.deployment?.platform) keywords.push(analysis.deployment.platform);
+
+  if (keywords.length === 0) {
+    console.log(chalk.yellow('\nNo specific frameworks detected. Using generic search.\n'));
+    keywords.push('general');
+  }
+
+  console.log(chalk.cyan('Detected stack keywords:'), keywords.join(', '));
+
+  // Display instructions for Claude Code
+  console.log(chalk.cyan.bold('\n📋 Discovery Instructions\n'));
+  console.log(chalk.white('To discover new MCPs, ask Claude Code to run this search:'));
+  console.log('');
+  console.log(chalk.dim('─'.repeat(60)));
+  console.log(chalk.yellow(`
+Use WebSearch to find MCP servers for: ${keywords.join(', ')}
+
+Search queries to run:
+${keywords.map((k) => `  - "MCP server ${k} Claude"`).join('\n')}
+  - "@modelcontextprotocol npm packages"
+  - "Claude MCP server list ${new Date().getFullYear()}"
+
+For each MCP found, extract:
+  - name: Display name
+  - npmPackage: npm package name (e.g., @playwright/mcp)
+  - description: What it does
+  - tools: List of available tools
+
+Save results using /explore-mcp --save-discovery
+`));
+  console.log(chalk.dim('─'.repeat(60)));
+  console.log('');
+
+  // Offer to save placeholder for manual discovery
+  const { savePrompt } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'savePrompt',
+      message: 'Copy these instructions to clipboard? (requires xclip/pbcopy)',
+      default: false,
+    },
+  ]);
+
+  if (savePrompt) {
+    const instructions = `Use WebSearch to find MCP servers for: ${keywords.join(', ')}
+
+Search queries:
+${keywords.map((k) => `- "MCP server ${k} Claude"`).join('\n')}
+- "@modelcontextprotocol npm packages"
+
+For each MCP found, provide: name, npmPackage, description, tools list.`;
+
+    try {
+      const { execSync } = await import('child_process');
+      const platform = process.platform;
+      if (platform === 'darwin') {
+        execSync(`echo "${instructions}" | pbcopy`);
+      } else if (platform === 'linux') {
+        execSync(`echo "${instructions}" | xclip -selection clipboard`);
+      } else if (platform === 'win32') {
+        execSync(`echo ${instructions.replace(/\n/g, '& echo.')} | clip`, { shell: true });
+      }
+      console.log(chalk.green('\n✓ Instructions copied to clipboard'));
+    } catch {
+      console.log(chalk.yellow('\nCould not copy to clipboard. Please copy manually.'));
+    }
+  }
+
+  console.log(chalk.dim('\nTip: Run "/explore-mcp" in Claude Code CLI to use discovered MCPs.\n'));
 }
 
 /**

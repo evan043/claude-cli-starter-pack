@@ -535,3 +535,111 @@ export function getCategories() {
     count: MCP_REGISTRY[key].length,
   }));
 }
+
+/**
+ * Core Testing MCPs - Always offered regardless of tech stack
+ * These are the baseline testing tools that every project can benefit from.
+ */
+export const CORE_TESTING_MCPS = [
+  'playwright',      // Primary browser automation
+  'puppeteer',       // Alternative browser automation
+  'log-monitor',     // Backend log monitoring
+  'browser-monitor', // Browser with network/console monitoring
+];
+
+/**
+ * Get core testing MCPs that should always be offered
+ * @returns {Array} Core testing MCP objects with source tag
+ */
+export function getCoreTestingMcps() {
+  const allMcps = getAllMcps();
+  return CORE_TESTING_MCPS
+    .map((id) => {
+      const mcp = allMcps.find((m) => m.id === id);
+      if (mcp) {
+        return {
+          ...mcp,
+          source: 'core-testing',
+          score: 50, // High base score for core testing
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Merge MCP results from multiple sources with de-duplication
+ *
+ * Priority order:
+ * 1. Core testing MCPs (always first)
+ * 2. Dynamic web discoveries
+ * 3. Static recommendations
+ *
+ * @param {Array} staticMcps - MCPs from static registry recommendations
+ * @param {Array} dynamicMcps - MCPs discovered via web search
+ * @param {Array} coreTestingMcps - Core testing MCPs to always include
+ * @returns {Array} Merged and de-duplicated MCPs sorted by score
+ */
+export function mergeMcpResults(staticMcps = [], dynamicMcps = [], coreTestingMcps = []) {
+  const seen = new Set();
+  const merged = [];
+
+  // Helper to add MCPs while tracking duplicates
+  const addMcps = (mcps, defaultSource) => {
+    for (const mcp of mcps) {
+      // Create unique key from id or npmPackage
+      const key = mcp.id || mcp.npmPackage || mcp.name?.toLowerCase().replace(/\s+/g, '-');
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push({
+          ...mcp,
+          source: mcp.source || defaultSource,
+          score: mcp.score || 0,
+        });
+      }
+    }
+  };
+
+  // Add in priority order
+  addMcps(coreTestingMcps, 'core-testing');
+  addMcps(dynamicMcps, 'dynamic');
+  addMcps(staticMcps, 'static');
+
+  // Sort by score descending
+  return merged.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Validate and normalize a dynamically discovered MCP
+ * @param {Object} rawMcp - Raw MCP data from web discovery
+ * @returns {Object|null} Normalized MCP object or null if invalid
+ */
+export function normalizeDiscoveredMcp(rawMcp) {
+  // Required fields
+  if (!rawMcp.name && !rawMcp.npmPackage) {
+    return null;
+  }
+
+  // Generate ID from name or package
+  const id = rawMcp.id ||
+    rawMcp.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ||
+    rawMcp.npmPackage?.split('/').pop()?.replace('@', '').replace(/[^a-z0-9]+/g, '-');
+
+  return {
+    id,
+    name: rawMcp.name || rawMcp.npmPackage,
+    description: rawMcp.description || 'Discovered via web search',
+    npmPackage: rawMcp.npmPackage || null,
+    command: rawMcp.command || null,
+    category: rawMcp.category || 'discovered',
+    requiredEnv: rawMcp.requiredEnv || {},
+    optionalEnv: rawMcp.optionalEnv || {},
+    relevantFor: rawMcp.relevantFor || [],
+    recommended: false,
+    tools: rawMcp.tools || [],
+    source: 'dynamic',
+    discoveredAt: rawMcp.discoveredAt || new Date().toISOString(),
+  };
+}
