@@ -20,11 +20,13 @@ import { runCreatePhaseDev, showPhasDevMainMenu } from '../commands/create-phase
 import { runExploreMcp, showExploreMcpMenu } from '../commands/explore-mcp.js';
 import { runClaudeAudit, showClaudeAuditMenu } from '../commands/claude-audit.js';
 import { runRoadmap, showRoadmapMenu } from '../commands/roadmap.js';
-import { launchPanel } from '../commands/panel.js';
+import { launchPanel, launchPanelInline } from '../commands/panel.js';
 import { hasTestingConfig } from '../testing/config.js';
 import { showHelp } from '../commands/help.js';
 import { hasValidConfig, getVersion, loadTechStack, saveTechStack } from '../utils.js';
 import { performVersionCheck, formatUpdateBanner } from '../utils/version-check.js';
+import { isHappyMode, shouldUseMobileUI } from '../utils/happy-detect.js';
+import { showMobileMenu, showMobilePanel, showMobileSettings, mobileReturnPrompt } from './mobile-menu.js';
 
 /**
  * Get bypass permissions status from settings.json
@@ -655,8 +657,15 @@ async function configureHappy(techStack) {
 
 /**
  * Show main interactive menu
+ * Automatically detects Happy CLI and switches to mobile-optimized UI
  */
 export async function showMainMenu() {
+  // Check if we should use mobile UI (Happy CLI detected or happyMode.enabled)
+  const techStack = loadTechStack();
+  if (shouldUseMobileUI(techStack)) {
+    return showMobileMainMenu();
+  }
+
   console.clear();
   console.log(chalk.cyan(BANNER));
   console.log('');
@@ -1062,4 +1071,165 @@ export function showWarning(message) {
  */
 export function showInfo(message) {
   console.log(chalk.blue(`ℹ ${message}`));
+}
+
+/**
+ * Mobile-optimized main menu handler
+ * Routes actions from the mobile menu to their handlers
+ */
+async function showMobileMainMenu() {
+  const action = await showMobileMenu();
+
+  switch (action) {
+    case 'create':
+      const configured = hasValidConfig();
+      if (!configured) {
+        console.log(chalk.yellow('Setup required first.'));
+        const { proceed } = await inquirer.prompt([
+          { type: 'confirm', name: 'proceed', message: 'Run setup?', default: true }
+        ]);
+        if (proceed) await runSetup({});
+      } else {
+        await runCreate({});
+      }
+      break;
+
+    case 'decompose':
+      if (!hasValidConfig()) {
+        console.log(chalk.yellow('Setup required first.'));
+      } else {
+        await runDecompose({});
+      }
+      break;
+
+    case 'sync':
+      if (!hasValidConfig()) {
+        console.log(chalk.yellow('Setup required first.'));
+      } else {
+        await runSync({ subcommand: 'status' });
+      }
+      break;
+
+    case 'setup':
+      await runSetup({});
+      break;
+
+    case 'list':
+      if (!hasValidConfig()) {
+        console.log(chalk.yellow('Setup required first.'));
+      } else {
+        await runList({});
+      }
+      break;
+
+    case 'install':
+      await runInstall({});
+      break;
+
+    case 'panel-inline':
+      // Show panel inline instead of launching new window
+      await showMobilePanelLoop();
+      break;
+
+    case 'test-setup':
+      await runTestSetup({});
+      break;
+
+    case 'agent-creator':
+      await runCreateAgent({});
+      break;
+
+    case 'explore-mcp':
+      await showExploreMcpMenu();
+      break;
+
+    case 'project-settings':
+      await showMobileSettingsLoop();
+      break;
+
+    case 'help':
+      showHelp();
+      break;
+
+    case 'exit':
+      console.log(chalk.dim('Goodbye!'));
+      process.exit(0);
+  }
+
+  // Return to menu unless exiting
+  if (action !== 'exit') {
+    const back = await mobileReturnPrompt();
+    if (back) {
+      await showMobileMainMenu();
+    } else {
+      console.log(chalk.dim('Goodbye!'));
+      process.exit(0);
+    }
+  }
+}
+
+/**
+ * Mobile panel loop - inline panel without new window
+ */
+async function showMobilePanelLoop() {
+  while (true) {
+    const action = await showMobilePanel();
+
+    if (action === 'back') {
+      return;
+    }
+
+    // Copy command to clipboard and show instructions
+    console.log('');
+    console.log(chalk.cyan(`Command: ${action}`));
+    console.log(chalk.dim('Paste in Claude Code'));
+    console.log('');
+
+    // Try to copy to clipboard
+    try {
+      const { copyToClipboard } = await import('../panel/queue.js');
+      if (copyToClipboard(action)) {
+        console.log(chalk.green('✓ Copied to clipboard'));
+      }
+    } catch {
+      // Clipboard not available
+    }
+
+    await inquirer.prompt([
+      { type: 'input', name: 'continue', message: 'Enter to continue...' }
+    ]);
+  }
+}
+
+/**
+ * Mobile settings loop
+ */
+async function showMobileSettingsLoop() {
+  while (true) {
+    const action = await showMobileSettings();
+
+    if (action === 'back') {
+      return;
+    }
+
+    const techStack = loadTechStack();
+
+    switch (action) {
+      case 'github':
+        await configureGitHub(techStack);
+        break;
+      case 'deployment':
+        await configureDeployment(techStack);
+        break;
+      case 'tunnel':
+        await configureTunnel(techStack);
+        break;
+      case 'token':
+        await configureToken(techStack);
+        break;
+      case 'happy':
+        await configureHappy(techStack);
+        break;
+    }
+  }
 }
