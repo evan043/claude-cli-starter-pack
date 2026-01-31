@@ -177,6 +177,15 @@ const OPTIONAL_FEATURES = [
     default: true,
     requiresPostConfig: false,
   },
+  {
+    name: 'roadmapSystem',
+    label: 'Roadmap Management System',
+    description: 'Multi-phase roadmap creation with automatic GitHub issue hierarchy (epic → child issues), complexity detection that recommends roadmaps for large plans, state tracking between PROGRESS.json and ROADMAP.json, automatic phase advancement, and auto-generated documentation.',
+    commands: ['create-roadmap', 'roadmap-status'],
+    hooks: ['complexity-analyzer', 'roadmap-state-tracker', 'documentation-generator'],
+    default: true,
+    requiresPostConfig: false,
+  },
 ];
 
 /**
