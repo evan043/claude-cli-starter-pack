@@ -4,6 +4,8 @@
  *
  * Automated npm deployment script for CCASP
  * Usage: node scripts/npm-deploy.js [patch|minor|major] [--skip-tests] [--skip-commit]
+ *
+ * Now includes automatic release notes generation from git commits
  */
 
 import { execSync } from 'child_process';
@@ -88,6 +90,184 @@ async function prompt(question) {
   });
 }
 
+/**
+ * Get the last release tag from git
+ */
+function getLastReleaseTag() {
+  try {
+    const tags = execSilent('git tag --sort=-v:refname');
+    if (!tags) return null;
+    const tagList = tags.split('\n').filter(t => t.startsWith('v'));
+    return tagList[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get commits since the last release tag
+ */
+function getCommitsSinceLastRelease() {
+  const lastTag = getLastReleaseTag();
+  let commits = [];
+
+  try {
+    let cmd;
+    if (lastTag) {
+      cmd = `git log ${lastTag}..HEAD --oneline --no-decorate`;
+    } else {
+      // No tags yet, get last 10 commits
+      cmd = 'git log -10 --oneline --no-decorate';
+    }
+
+    const output = execSilent(cmd);
+    if (output) {
+      commits = output.split('\n').filter(Boolean).map(line => {
+        const match = line.match(/^([a-f0-9]+)\s+(.+)$/);
+        if (match) {
+          return { hash: match[1], message: match[2] };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+  } catch {
+    // Silently fail
+  }
+
+  return commits;
+}
+
+/**
+ * Parse commit messages to extract release notes info
+ */
+function parseCommitsForReleaseNotes(commits) {
+  const features = [];
+  const fixes = [];
+  const other = [];
+
+  for (const commit of commits) {
+    const msg = commit.message.toLowerCase();
+
+    // Skip release commits themselves
+    if (msg.includes('release v') || msg.includes('chore: release')) {
+      continue;
+    }
+
+    // Categorize based on conventional commits
+    if (msg.startsWith('feat:') || msg.startsWith('feat(')) {
+      features.push(commit.message.replace(/^feat(\([^)]+\))?:\s*/i, ''));
+    } else if (msg.startsWith('fix:') || msg.startsWith('fix(')) {
+      fixes.push(commit.message.replace(/^fix(\([^)]+\))?:\s*/i, ''));
+    } else if (!msg.startsWith('chore:') && !msg.startsWith('docs:')) {
+      other.push(commit.message);
+    }
+  }
+
+  return { features, fixes, other };
+}
+
+/**
+ * Generate release summary from parsed commits
+ */
+function generateReleaseSummary(parsed, bumpType) {
+  const parts = [];
+
+  if (parsed.features.length > 0) {
+    parts.push(`Feature: ${parsed.features[0]}`);
+  } else if (parsed.fixes.length > 0) {
+    parts.push(`Fix: ${parsed.fixes[0]}`);
+  } else if (parsed.other.length > 0) {
+    parts.push(parsed.other[0]);
+  }
+
+  if (parts.length === 0) {
+    switch (bumpType) {
+      case 'major':
+        return 'Major release';
+      case 'minor':
+        return 'New features and improvements';
+      default:
+        return 'Bug fixes and improvements';
+    }
+  }
+
+  return parts[0];
+}
+
+/**
+ * Generate highlights from parsed commits
+ */
+function generateHighlights(parsed) {
+  const highlights = [];
+
+  // Add features as highlights
+  for (const feat of parsed.features.slice(0, 5)) {
+    highlights.push(feat);
+  }
+
+  // Add fixes if we have room
+  for (const fix of parsed.fixes.slice(0, 3)) {
+    if (highlights.length < 7) {
+      highlights.push(`Fixed: ${fix}`);
+    }
+  }
+
+  return highlights;
+}
+
+/**
+ * Prompt for release notes with commit context
+ */
+async function promptForReleaseNotes(commits, bumpType, autoMode) {
+  const parsed = parseCommitsForReleaseNotes(commits);
+  const autoSummary = generateReleaseSummary(parsed, bumpType);
+  const autoHighlights = generateHighlights(parsed);
+
+  // Show commits since last release
+  if (commits.length > 0) {
+    console.log('\n' + '─'.repeat(60));
+    log('\n📋 Commits since last release:', 'cyan');
+    for (const commit of commits.slice(0, 10)) {
+      log(`  • ${commit.message}`, 'dim');
+    }
+    if (commits.length > 10) {
+      log(`  ... and ${commits.length - 10} more`, 'dim');
+    }
+  }
+
+  // Auto mode: use generated notes
+  if (autoMode) {
+    log('\n[AUTO MODE] Using auto-generated release notes', 'cyan');
+    return {
+      summary: autoSummary,
+      highlights: autoHighlights,
+    };
+  }
+
+  // Interactive mode: allow editing
+  console.log('\n' + '─'.repeat(60));
+  log('\n📝 Release Notes', 'cyan');
+  log(`Auto-generated summary: ${autoSummary}`, 'dim');
+
+  const customSummary = await prompt(`\nRelease summary (Enter to accept auto-generated): `);
+  const summary = customSummary || autoSummary;
+
+  // Show auto-generated highlights
+  if (autoHighlights.length > 0) {
+    log('\nAuto-generated highlights:', 'dim');
+    autoHighlights.forEach((h, i) => log(`  ${i + 1}. ${h}`, 'dim'));
+  }
+
+  const customHighlights = await prompt(`\nAdd custom highlights? (comma-separated, or Enter to use auto): `);
+
+  let highlights = autoHighlights;
+  if (customHighlights) {
+    highlights = customHighlights.split(',').map(h => h.trim()).filter(Boolean);
+  }
+
+  return { summary, highlights };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const bumpType = args.find(a => ['patch', 'minor', 'major'].includes(a)) || 'patch';
@@ -132,36 +312,54 @@ async function main() {
 
   console.log('\n' + '─'.repeat(60));
 
+  // 1b. Get commits for release notes generation
+  const commits = getCommitsSinceLastRelease();
+  const releaseNotes = await promptForReleaseNotes(commits, bumpType, autoMode);
+
+  console.log('\n' + '─'.repeat(60));
+
   // 2. Update version in package.json
-  log('\n[1/6] Updating package.json...', 'cyan');
+  log('\n[1/7] Updating package.json...', 'cyan');
   packageJson.version = newVersion;
   writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n', 'utf8');
   log(`  ✓ Updated to v${newVersion}`, 'green');
 
-  // 3. Update releases.json with new version entry
-  log('\n[2/6] Updating releases.json...', 'cyan');
+  // 3. Update releases.json with new version entry and release notes
+  log('\n[2/7] Updating releases.json with release notes...', 'cyan');
   const releasesPath = join(ROOT, 'src', 'data', 'releases.json');
   try {
     const releasesData = JSON.parse(readFileSync(releasesPath, 'utf8'));
     const today = new Date().toISOString().split('T')[0];
 
     // Check if version already exists
-    const existingRelease = releasesData.releases.find(r => r.version === newVersion);
-    if (!existingRelease) {
+    const existingIndex = releasesData.releases.findIndex(r => r.version === newVersion);
+    const releaseEntry = {
+      version: newVersion,
+      date: today,
+      summary: releaseNotes.summary,
+      highlights: releaseNotes.highlights,
+      newFeatures: { commands: [], agents: [], skills: [], hooks: [], other: [] },
+      breaking: [],
+      deprecated: [],
+    };
+
+    if (existingIndex === -1) {
       // Add new release at the beginning
-      releasesData.releases.unshift({
-        version: newVersion,
-        date: today,
-        summary: 'Release notes pending',
-        highlights: [],
-        newFeatures: { commands: [], agents: [], skills: [], hooks: [], other: [] },
-        breaking: [],
-        deprecated: [],
-      });
-      writeFileSync(releasesPath, JSON.stringify(releasesData, null, 2) + '\n', 'utf8');
+      releasesData.releases.unshift(releaseEntry);
       log(`  ✓ Added v${newVersion} to releases.json`, 'green');
     } else {
-      log(`  ○ v${newVersion} already in releases.json`, 'dim');
+      // Update existing entry with release notes
+      releasesData.releases[existingIndex] = {
+        ...releasesData.releases[existingIndex],
+        ...releaseEntry,
+      };
+      log(`  ✓ Updated v${newVersion} in releases.json`, 'green');
+    }
+
+    writeFileSync(releasesPath, JSON.stringify(releasesData, null, 2) + '\n', 'utf8');
+    log(`  Summary: ${releaseNotes.summary}`, 'dim');
+    if (releaseNotes.highlights.length > 0) {
+      log(`  Highlights: ${releaseNotes.highlights.length} items`, 'dim');
     }
   } catch (e) {
     log(`  ⚠ Could not update releases.json: ${e.message}`, 'yellow');
@@ -169,7 +367,7 @@ async function main() {
 
   // 4. Run tests
   if (!skipTests) {
-    log('\n[3/6] Running tests...', 'cyan');
+    log('\n[3/7] Running tests...', 'cyan');
     try {
       exec('npm test');
       log('  ✓ Tests passed', 'green');
@@ -181,30 +379,58 @@ async function main() {
       process.exit(1);
     }
   } else {
-    log('\n[3/6] Skipping tests...', 'yellow');
+    log('\n[3/7] Skipping tests...', 'yellow');
   }
 
   // 5. Git commit and push
   if (!skipCommit) {
-    log('\n[4/6] Committing changes...', 'cyan');
+    log('\n[4/7] Committing changes...', 'cyan');
     exec('git add -A');
     exec(`git commit -m "chore: release v${newVersion}"`);
     log('  ✓ Committed', 'green');
 
     if (!skipPush) {
-      log('\n[5/6] Pushing to remote...', 'cyan');
+      log('\n[5/7] Pushing to remote...', 'cyan');
       exec('git push origin master');
       log('  ✓ Pushed', 'green');
     } else {
-      log('\n[5/6] Skipping push...', 'yellow');
+      log('\n[5/7] Skipping push...', 'yellow');
     }
   } else {
-    log('\n[4/6] Skipping commit...', 'yellow');
-    log('\n[5/6] Skipping push...', 'yellow');
+    log('\n[4/7] Skipping commit...', 'yellow');
+    log('\n[5/7] Skipping push...', 'yellow');
   }
 
-  // 6. Publish to npm
-  log('\n[6/6] Publishing to npm...', 'cyan');
+  // 6. Create GitHub release with release notes
+  if (!skipCommit && !skipPush) {
+    log('\n[6/7] Creating GitHub release...', 'cyan');
+    try {
+      const tagName = `v${newVersion}`;
+      const releaseBody = `## ${releaseNotes.summary}
+
+${releaseNotes.highlights.length > 0 ? '### Highlights\n' + releaseNotes.highlights.map(h => `- ${h}`).join('\n') : ''}
+
+**Full Changelog**: https://github.com/evan043/claude-cli-advanced-starter-pack/compare/${getLastReleaseTag() || 'v1.0.0'}...${tagName}
+`.trim();
+
+      // Create tag
+      exec(`git tag -a ${tagName} -m "${releaseNotes.summary}"`, { ignoreError: true });
+      exec(`git push origin ${tagName}`, { ignoreError: true });
+
+      // Create GitHub release using gh CLI
+      const escapedBody = releaseBody.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      exec(`gh release create ${tagName} --title "${tagName}" --notes "${escapedBody}"`, { ignoreError: true });
+      log(`  ✓ Created GitHub release ${tagName}`, 'green');
+    } catch (error) {
+      log(`  ⚠ Could not create GitHub release: ${error.message}`, 'yellow');
+      log('  Create manually at: https://github.com/evan043/claude-cli-advanced-starter-pack/releases/new', 'dim');
+    }
+  } else {
+    log('\n[6/7] Skipping GitHub release (commit/push skipped)...', 'yellow');
+  }
+
+  // 7. Publish to npm
+  log('\n[7/7] Publishing to npm...', 'cyan');
   try {
     exec('npm publish');
     log(`  ✓ Published v${newVersion} to npm`, 'green');
