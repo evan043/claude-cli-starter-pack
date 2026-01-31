@@ -35,6 +35,7 @@ import { installSkillCommand, listSkills } from '../src/commands/install-skill.j
 import { runInstallScripts } from '../src/commands/install-scripts.js';
 import { runPanel, launchPanel } from '../src/commands/panel.js';
 import { runInstallPanelHook } from '../src/commands/install-panel-hook.js';
+import { runUninstall } from '../src/commands/uninstall.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -49,6 +50,16 @@ program
   .option('--force', 'Overwrite existing commands')
   .action(async (options) => {
     await runInit(options);
+  });
+
+// Uninstall command - remove CCASP from project
+program
+  .command('uninstall')
+  .description('Remove CCASP from current project and restore backups')
+  .option('--force', 'Skip confirmation prompts')
+  .option('--all', 'Remove entire .claude/ directory')
+  .action(async (options) => {
+    await runUninstall(options);
   });
 
 // Interactive menu (default when no command)
