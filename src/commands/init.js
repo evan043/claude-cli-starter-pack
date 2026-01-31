@@ -171,6 +171,12 @@ const AVAILABLE_COMMANDS = [
     selected: true,
   },
   {
+    name: 'issues-menu',
+    description: 'Mobile-friendly menu of open GitHub issues',
+    category: 'GitHub',
+    selected: true,
+  },
+  {
     name: 'phase-dev-plan',
     description: 'Create phased development plans (95%+ success rate)',
     category: 'Planning',
