@@ -167,18 +167,41 @@ options:
 
 ### Step 5: Handle "Start Working" Based on Format
 
+**BOTH PATHS END WITH**: Creating a Claude CLI task list via TodoWrite and beginning implementation.
+
+---
+
 **For PROPERLY FORMATTED issues (S action):**
 
 1. Extract the task checklist from the issue body
 2. Parse tasks from `## Acceptance Criteria` or `## Task Checklist` section
-3. Create TodoWrite entries from the checklist items
-4. Begin implementing tasks in order
-5. As each task completes, optionally update issue with progress comment
+3. **CREATE CLAUDE CLI TASK LIST** using TodoWrite:
+   ```
+   TodoWrite([
+     { content: "Task 1 from issue", status: "pending", activeForm: "Working on task 1" },
+     { content: "Task 2 from issue", status: "pending", activeForm: "Working on task 2" },
+     ...
+   ])
+   ```
+4. Display task list confirmation:
+   ```
+   ╔═══════════════════════════════════════════════════════════════╗
+   ║  📋 Task List Created from Issue #[NUMBER]                    ║
+   ╠═══════════════════════════════════════════════════════════════╣
+   ║  Tasks loaded: [N] items                                      ║
+   ║  Source: GitHub issue task checklist                          ║
+   ╚═══════════════════════════════════════════════════════════════╝
+   ```
+5. Begin implementing tasks in order (mark in_progress → completed)
+6. As each task completes, optionally update issue checkbox via `gh issue edit`
+
+---
 
 **For NOT PROPERLY FORMATTED issues (S action):**
 
 1. Run `/create-task-list for issue #[NUMBER]`
-2. After task list is generated, ask:
+   - This explores codebase and generates task list via TodoWrite
+2. After `/create-task-list` completes, ask:
 
 ```
 header: "Update"
@@ -190,7 +213,7 @@ options:
     description: "Keep issue as-is, start work"
 ```
 
-3. If user selects Y:
+3. If user selects Y, update the issue:
    ```bash
    # Append task checklist to issue body
    gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
@@ -201,8 +224,17 @@ options:
    - [ ] Task 2
    ..."
    ```
-
-4. Begin implementing generated task list
+4. Display confirmation:
+   ```
+   ╔═══════════════════════════════════════════════════════════════╗
+   ║  📋 Task List Created for Issue #[NUMBER]                     ║
+   ╠═══════════════════════════════════════════════════════════════╣
+   ║  Tasks generated: [N] items                                   ║
+   ║  Source: /create-task-list exploration                        ║
+   ║  Issue updated: [Yes/No]                                      ║
+   ╚═══════════════════════════════════════════════════════════════╝
+   ```
+5. Begin implementing TodoWrite task list (already created by `/create-task-list`)
 
 **Other Actions:**
 - **V (View)**: Run `gh issue view [NUMBER]` and display full body
