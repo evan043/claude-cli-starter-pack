@@ -177,7 +177,7 @@ const AVAILABLE_COMMANDS = [
     selected: true,
   },
   {
-    name: 'run-git-issue',
+    name: 'create-task-list-for-issue',
     description: 'Start working on a GitHub issue by number',
     category: 'GitHub',
     selected: true,

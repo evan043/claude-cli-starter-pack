@@ -282,7 +282,7 @@ gh issue edit [NUMBER] --body "$(gh issue view [NUMBER] --json body -q .body)
 
 ## RELATED COMMANDS
 
-- `/run-git-issue` - Start issue by number directly
+- `/create-task-list-for-issue` - Start issue by number directly
 - `/create-task-list` - Create task list from issue
 - `/github-task-start` - Start working on issue
 - `/github-update` - Sync with project board

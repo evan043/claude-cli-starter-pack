@@ -10,7 +10,7 @@ allowed-tools:
   - Task
 ---
 
-# /run-git-issue - Quick Issue Start
+# /create-task-list-for-issue - Quick Issue Start
 
 **Start working on a GitHub issue by number. Confirms details, then runs full `/create-task-list` workflow.**
 
@@ -19,9 +19,9 @@ allowed-tools:
 ## USAGE
 
 ```bash
-/run-git-issue 123
-/run-git-issue #45
-/run-git-issue 7
+/create-task-list-for-issue 123
+/create-task-list-for-issue #45
+/create-task-list-for-issue 7
 ```
 
 ---
