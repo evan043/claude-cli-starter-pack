@@ -15,10 +15,110 @@ An intelligent merge assistant that handles all PR scenarios safely, with clear 
 ## Usage
 
 ```
-/pr-merge                    # Merge PR for current branch
-/pr-merge 42                 # Merge PR #42
+/pr-merge                    # Show menu of all open PRs
+/pr-merge 42                 # Merge PR #42 directly
 /pr-merge --dry-run          # Preview only, no changes
 ```
+
+---
+
+## PHASE 0: OPEN PR MENU (Default when no args)
+
+**When `/pr-merge` is called without arguments or a PR number, show an interactive menu of all open PRs.**
+
+**Step 0.1: Fetch all open PRs with details**
+
+```bash
+gh pr list --repo {{versionControl.owner}}/{{versionControl.repo}} --state open --json number,title,body,createdAt,author,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,additions,deletions,changedFiles --limit 20
+```
+
+**Step 0.2: Display the PR selection menu**
+
+Format each PR as a stacked card (mobile-friendly, no word wrapping):
+
+| Field | Content |
+|-------|---------|
+| **Header** | Selection #, PR number, Date (MM/DD) |
+| **Author** | @username |
+| **Description** | 15-20 word summary (multi-line ok) |
+| **Status** | Ready/Draft/Conflicts/Behind |
+| **Issues** | 3-5 word bullet points per issue |
+
+**Card format (stacked rows, max 40 chars wide):**
+
+```
+📋 Open Pull Requests
+
+┌────────────────────────────────────┐
+│ [1] #42                     01/15  │
+│ @johndoe                           │
+├────────────────────────────────────┤
+│ Add JWT auth flow with             │
+│ refresh tokens for secure          │
+│ API access and session mgmt        │
+├────────────────────────────────────┤
+│ Status: Ready                      │
+│ • CI passing                       │
+│ • 2 approvals                      │
+│ • Ready to merge                   │
+└────────────────────────────────────┘
+
+┌────────────────────────────────────┐
+│ [2] #38                     01/12  │
+│ @janesmith                         │
+├────────────────────────────────────┤
+│ Fix memory leak in cache           │
+│ manager causing high CPU           │
+│ usage on large datasets            │
+├────────────────────────────────────┤
+│ Status: Behind                     │
+│ • Update branch                    │
+│ • Pending review                   │
+└────────────────────────────────────┘
+
+┌────────────────────────────────────┐
+│ [3] #35                     01/08  │
+│ @contributor42                     │
+├────────────────────────────────────┤
+│ Refactor database queries          │
+│ for better performance on          │
+│ large result sets                  │
+├────────────────────────────────────┤
+│ Status: Conflicts                  │
+│ • Resolve conflicts                │
+│ • CI failing                       │
+└────────────────────────────────────┘
+
+Enter number (or q to quit):
+```
+
+**Issues/Recommendations column - status indicators:**
+
+| Indicator | When to show |
+|-----------|--------------|
+| `• CI passing` | All checks green |
+| `• CI failing` | Any check failed |
+| `• CI pending` | Checks still running |
+| `• Update branch` | Behind base branch |
+| `• Resolve conflicts` | Has merge conflicts |
+| `• Pending review` | Awaiting review |
+| `• Changes requested` | Reviewer requested changes |
+| `• N approvals` | Has N approved reviews |
+| `• Draft PR` | PR is in draft mode |
+| `• Ready to merge` | No blockers found |
+
+**Step 0.3: Wait for user selection**
+
+Use AskUserQuestion with options for each PR:
+
+| Option | Label |
+|--------|-------|
+| 1 | PR #42 - Add JWT auth flow |
+| 2 | PR #38 - Fix memory leak |
+| 3 | PR #35 - Refactor queries |
+| Q | Quit |
+
+**After selection:** Continue to PHASE 1 with the selected PR number.
 
 ---
 
@@ -513,15 +613,19 @@ When `--dry-run` is specified:
 **Execution flow:**
 
 1. Parse arguments (PR number, --dry-run flag)
-2. PHASE 1: Identify the PR
-3. PHASE 2: Create safety checkpoint (CRITICAL - always do this)
-4. PHASE 3: Detect all blockers
-5. PHASE 4: Resolve blockers one by one (ask user for each)
-6. PHASE 5: Offer contributor thank-you message
-7. PHASE 6: Ask for merge method
-8. PHASE 7: Execute merge (with confirmation)
-9. PHASE 8: Cleanup local environment
-10. PHASE 9: Display success summary
+2. **If NO PR number provided:** PHASE 0 - Show Open PR Menu
+   - Fetch all open PRs with full details
+   - Display formatted table with #, PR, Description (15-20 words), Date (MM/DD), Status, Issues
+   - Wait for user selection, then continue with selected PR
+3. PHASE 1: Identify the PR (with selected or provided number)
+4. PHASE 2: Create safety checkpoint (CRITICAL - always do this)
+5. PHASE 3: Detect all blockers
+6. PHASE 4: Resolve blockers one by one (ask user for each)
+7. PHASE 5: Offer contributor thank-you message
+8. PHASE 6: Ask for merge method
+9. PHASE 7: Execute merge (with confirmation)
+10. PHASE 8: Cleanup local environment
+11. PHASE 9: Display success summary
 
 **On any error:** Immediately rollback and explain clearly.
 
