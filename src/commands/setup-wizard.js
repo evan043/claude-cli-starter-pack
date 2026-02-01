@@ -16,6 +16,7 @@ import { runInit } from './init.js';
 import { detectTechStack } from './detect-tech-stack.js';
 import { runEnhancement } from './claude-audit.js';
 import { runSetup as runGitHubSetup } from './setup.js';
+import { promptForIntegrations } from '../pm-hierarchy/integration-wizard.js';
 import { runList } from './list.js';
 import {
   performVersionCheck,
@@ -1856,6 +1857,8 @@ export async function runSetupWizard(options = {}) {
 
       case 'github':
         await runGitHubSetup({});
+        // Offer additional PM integrations (Jira, Linear, ClickUp)
+        await promptForIntegrations({ skipIfConfigured: false });
         showRestartReminder();
         break;
 

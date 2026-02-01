@@ -29,6 +29,7 @@ import { runExploreMcp } from '../src/commands/explore-mcp.js';
 import { runClaudeAudit } from '../src/commands/claude-audit.js';
 import { runRoadmap } from '../src/commands/roadmap.js';
 import { runCreateRoadmap } from '../src/commands/create-roadmap.js';
+import { runGitHubEpicMenu } from '../src/commands/github-epic-menu.js';
 import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
 import { runSetupWizard } from '../src/commands/setup-wizard.js';
@@ -311,6 +312,26 @@ program
   .option('-f, --file <file>', 'Path to ROADMAP.json file')
   .action(async (subcommand, options) => {
     await runRoadmap({ subcommand, ...options });
+  });
+
+// GitHub Epic System - new unified epic management
+program
+  .command('github-epic-menu')
+  .alias('epic')
+  .description('GitHub Epic management dashboard (view, create, sync epics)')
+  .action(async () => {
+    await runGitHubEpicMenu({});
+  });
+
+// Create GitHub Epic (alias for create-roadmap with epic semantics)
+program
+  .command('create-github-epic')
+  .description('Create GitHub Epic (multi-phase project with GitHub integration)')
+  .option('--from-github', 'Import from GitHub issues')
+  .option('--from-project <number>', 'Import from GitHub Project Board')
+  .action(async (options) => {
+    // Uses the same underlying command but with epic semantics
+    await runCreateRoadmap({ ...options, epicMode: true });
   });
 
 // Help with examples
