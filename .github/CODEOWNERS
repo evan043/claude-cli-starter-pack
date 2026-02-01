@@ -1,0 +1,22 @@
+# CODEOWNERS - Define who reviews what
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @evan043
+
+# CI/CD workflows - critical infrastructure
+/.github/workflows/ @evan043
+
+# Core CLI entry point
+/bin/ @evan043
+
+# Source code
+/src/ @evan043
+/src/commands/ @evan043
+
+# Templates affect all users
+/templates/ @evan043
+
+# Package configuration
+package.json @evan043
+package-lock.json @evan043

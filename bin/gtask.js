@@ -38,6 +38,7 @@ import { runInstallPanelHook } from '../src/commands/install-panel-hook.js';
 import { runUninstall } from '../src/commands/uninstall.js';
 import { runGlobalUninstall } from '../src/commands/global-uninstall.js';
 import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
+import { runDevDeploy } from '../src/commands/dev-deploy.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -364,6 +365,19 @@ program
   .option('--force', 'Overwrite existing hook')
   .action(async (options) => {
     await runInstallPanelHook(options);
+  });
+
+// Developer deploy - worktree-based local testing (does not publish to npm)
+program
+  .command('dev-deploy')
+  .description('Deploy worktree locally for testing (developer only, no npm publish)')
+  .option('--create <name>', 'Create new worktree for development')
+  .option('--list', 'List active worktrees')
+  .option('--cleanup [name]', 'Remove worktree and restore npm version')
+  .option('--private', 'Push worktree branch to private remote')
+  .option('--force', 'Skip confirmation prompts')
+  .action(async (options) => {
+    await runDevDeploy(options);
   });
 
 // Parse and run

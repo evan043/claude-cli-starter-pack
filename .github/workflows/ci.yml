@@ -1,0 +1,230 @@
+# CI Pipeline - Runs on all PRs and pushes to feature branches
+# Validates code quality, runs tests, and ensures package builds correctly
+
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+      - '!master'
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Lint and Type Check
+  # ============================================
+  lint:
+    name: Lint & Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Syntax validation
+        run: npm test
+
+  # ============================================
+  # Matrix Test - Multiple Node versions and OS
+  # ============================================
+  test:
+    name: Test (Node ${{ matrix.node }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['18', '20', '22']
+        exclude:
+          # Skip some combinations to save CI minutes
+          - os: macos-latest
+            node: '18'
+          - os: windows-latest
+            node: '18'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify CLI entry point
+        run: node bin/gtask.js --version
+
+      - name: Verify help command
+        run: node bin/gtask.js --help
+
+  # ============================================
+  # Package Build Verification
+  # ============================================
+  build:
+    name: Package Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create package tarball
+        run: npm pack
+
+      - name: Verify package contents
+        run: |
+          tar -tzf *.tgz
+          echo "---"
+          echo "Package size:"
+          ls -lh *.tgz
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: '*.tgz'
+          retention-days: 7
+
+  # ============================================
+  # Integration Test - Actually run ccasp init
+  # ============================================
+  integration:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Link package globally
+        run: npm link
+
+      - name: Create test project
+        run: |
+          mkdir -p /tmp/test-project
+          cd /tmp/test-project
+          npm init -y
+          echo '{"name": "test-project", "version": "1.0.0"}' > package.json
+
+      - name: Run ccasp init
+        run: |
+          cd /tmp/test-project
+          ccasp init --force --no-register
+        env:
+          # Skip interactive prompts
+          CI: true
+
+      - name: Verify .claude directory created
+        run: |
+          test -d /tmp/test-project/.claude
+          test -d /tmp/test-project/.claude/commands
+          echo "✓ .claude directory structure verified"
+
+      - name: Verify tech-stack.json created
+        run: |
+          test -f /tmp/test-project/.claude/tech-stack.json
+          cat /tmp/test-project/.claude/tech-stack.json
+          echo "✓ tech-stack.json created"
+
+  # ============================================
+  # PR Status Comment
+  # ============================================
+  pr-comment:
+    name: PR Status
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, integration]
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('CI Status')
+            );
+
+            const body = `## ✅ CI Status
+
+            All checks passed!
+
+            | Check | Status |
+            |-------|--------|
+            | Lint | ✅ Passed |
+            | Tests (Matrix) | ✅ Passed |
+            | Build | ✅ Passed |
+            | Integration | ✅ Passed |
+
+            Ready for review and merge.
+
+            ---
+            *Generated by CI workflow*`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }

@@ -1,0 +1,296 @@
+# Integration Test Pipeline
+# Tests ccasp against real project structures to catch regressions
+
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      test_project:
+        description: 'Test project type'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - react
+          - nextjs
+          - node-api
+          - python
+
+jobs:
+  # ============================================
+  # Test with React project
+  # ============================================
+  test-react:
+    name: React Project
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_project == 'all' || github.event.inputs.test_project == 'react' || github.event.inputs.test_project == ''
+    steps:
+      - name: Checkout CCASP
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install CCASP
+        run: |
+          npm ci
+          npm link
+
+      - name: Create React project
+        run: |
+          npx create-react-app /tmp/test-react-app --template typescript
+        env:
+          CI: true
+
+      - name: Run ccasp init
+        run: |
+          cd /tmp/test-react-app
+          ccasp init --force --no-register
+        env:
+          CI: true
+
+      - name: Verify detection
+        run: |
+          cd /tmp/test-react-app
+          cat .claude/tech-stack.json
+
+          # Verify React was detected
+          node -e "
+            const ts = require('./.claude/tech-stack.json');
+            if (!ts.frontend?.framework?.includes('React')) {
+              console.error('React not detected!');
+              process.exit(1);
+            }
+            console.log('✓ React detected correctly');
+          "
+
+      - name: Verify commands created
+        run: |
+          test -d /tmp/test-react-app/.claude/commands
+          ls -la /tmp/test-react-app/.claude/commands/
+          echo "✓ Commands directory created"
+
+  # ============================================
+  # Test with Next.js project
+  # ============================================
+  test-nextjs:
+    name: Next.js Project
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_project == 'all' || github.event.inputs.test_project == 'nextjs' || github.event.inputs.test_project == ''
+    steps:
+      - name: Checkout CCASP
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install CCASP
+        run: |
+          npm ci
+          npm link
+
+      - name: Create Next.js project
+        run: |
+          npx create-next-app@latest /tmp/test-nextjs-app --typescript --tailwind --eslint --app --no-src-dir --import-alias "@/*" --use-npm
+        env:
+          CI: true
+
+      - name: Run ccasp init
+        run: |
+          cd /tmp/test-nextjs-app
+          ccasp init --force --no-register
+        env:
+          CI: true
+
+      - name: Verify detection
+        run: |
+          cd /tmp/test-nextjs-app
+          cat .claude/tech-stack.json
+
+          # Verify Next.js was detected
+          node -e "
+            const ts = require('./.claude/tech-stack.json');
+            if (!ts.frontend?.framework?.includes('Next')) {
+              console.error('Next.js not detected!');
+              process.exit(1);
+            }
+            console.log('✓ Next.js detected correctly');
+          "
+
+  # ============================================
+  # Test with Node.js API project
+  # ============================================
+  test-node-api:
+    name: Node.js API Project
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_project == 'all' || github.event.inputs.test_project == 'node-api' || github.event.inputs.test_project == ''
+    steps:
+      - name: Checkout CCASP
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install CCASP
+        run: |
+          npm ci
+          npm link
+
+      - name: Create Express API project
+        run: |
+          mkdir -p /tmp/test-express-api
+          cd /tmp/test-express-api
+          npm init -y
+          npm install express cors helmet
+          npm install -D typescript @types/node @types/express jest
+
+          # Create basic structure
+          mkdir -p src routes
+          cat > src/index.ts << 'EOF'
+          import express from 'express';
+          const app = express();
+          app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+          app.listen(3000);
+          EOF
+
+      - name: Run ccasp init
+        run: |
+          cd /tmp/test-express-api
+          ccasp init --force --no-register
+        env:
+          CI: true
+
+      - name: Verify detection
+        run: |
+          cd /tmp/test-express-api
+          cat .claude/tech-stack.json
+
+          # Verify Express was detected
+          node -e "
+            const ts = require('./.claude/tech-stack.json');
+            if (!ts.backend?.framework?.includes('Express')) {
+              console.error('Express not detected!');
+              process.exit(1);
+            }
+            console.log('✓ Express detected correctly');
+          "
+
+  # ============================================
+  # Test with Python project
+  # ============================================
+  test-python:
+    name: Python Project
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_project == 'all' || github.event.inputs.test_project == 'python' || github.event.inputs.test_project == ''
+    steps:
+      - name: Checkout CCASP
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install CCASP
+        run: |
+          npm ci
+          npm link
+
+      - name: Create FastAPI project
+        run: |
+          mkdir -p /tmp/test-fastapi
+          cd /tmp/test-fastapi
+
+          # Create requirements.txt
+          cat > requirements.txt << 'EOF'
+          fastapi==0.109.0
+          uvicorn==0.27.0
+          pydantic==2.5.3
+          sqlalchemy==2.0.25
+          pytest==7.4.4
+          EOF
+
+          # Create basic structure
+          mkdir -p app tests
+          cat > app/main.py << 'EOF'
+          from fastapi import FastAPI
+          app = FastAPI()
+
+          @app.get("/health")
+          def health():
+              return {"status": "ok"}
+          EOF
+
+          cat > pyproject.toml << 'EOF'
+          [project]
+          name = "test-fastapi"
+          version = "0.1.0"
+          dependencies = ["fastapi", "uvicorn"]
+          EOF
+
+      - name: Run ccasp init
+        run: |
+          cd /tmp/test-fastapi
+          ccasp init --force --no-register
+        env:
+          CI: true
+
+      - name: Verify detection
+        run: |
+          cd /tmp/test-fastapi
+          cat .claude/tech-stack.json
+
+          # Verify Python/FastAPI was detected
+          node -e "
+            const ts = require('./.claude/tech-stack.json');
+            if (ts.backend?.language !== 'Python') {
+              console.error('Python not detected!');
+              process.exit(1);
+            }
+            console.log('✓ Python detected correctly');
+          "
+
+  # ============================================
+  # Summary
+  # ============================================
+  summary:
+    name: Integration Summary
+    runs-on: ubuntu-latest
+    needs: [test-react, test-nextjs, test-node-api, test-python]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## Integration Test Results"
+          echo ""
+          echo "| Project Type | Status |"
+          echo "|--------------|--------|"
+          echo "| React | ${{ needs.test-react.result == 'success' && '✅' || '❌' }} |"
+          echo "| Next.js | ${{ needs.test-nextjs.result == 'success' && '✅' || '❌' }} |"
+          echo "| Node.js API | ${{ needs.test-node-api.result == 'success' && '✅' || '❌' }} |"
+          echo "| Python | ${{ needs.test-python.result == 'success' && '✅' || '❌' }} |"
+
+      - name: Fail if any test failed
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
