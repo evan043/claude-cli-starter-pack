@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2.1.2",
+      "date": "2026-02-01",
+      "summary": "refactor: rename /github-update to /github-project-menu",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.1.1",
       "date": "2026-02-01",
       "summary": "refactor: rename /github-update to /github-project-menu",
