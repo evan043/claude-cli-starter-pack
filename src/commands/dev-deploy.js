@@ -25,6 +25,15 @@ import { createInterface } from 'readline';
 import { loadRegistry } from '../utils/global-registry.js';
 import { getVersion } from '../utils.js';
 import { fileURLToPath } from 'url';
+import {
+  activateDevMode,
+  deactivateDevMode,
+  loadDevState,
+  addBackedUpProject,
+  isDevMode,
+  getDevModeInfo
+} from '../utils/dev-mode-state.js';
+import { backupProject, getLatestBackup, restoreProject } from '../utils/project-backup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -261,6 +270,10 @@ async function deployWorktreeLocally(worktreePath) {
   exec('npm link', { cwd: worktreePath });
   console.log(chalk.green('  ✓ Global link created'));
 
+  // Step 2b: Activate global dev mode
+  activateDevMode(worktreePath, pkg.version);
+  console.log(chalk.yellow('  ✓ Global dev mode activated'));
+
   // Step 3: Verify link
   console.log(chalk.dim('  [3/4] Verifying installation...'));
   const ccaspPath = execSilent('npm root -g', worktreePath);
@@ -294,6 +307,7 @@ async function updateRegisteredProjects(worktreePath) {
   let updated = 0;
   let skipped = 0;
   let failed = 0;
+  let backedUp = 0;
 
   for (const project of registry.projects) {
     if (!existsSync(project.path)) {
@@ -308,6 +322,21 @@ async function updateRegisteredProjects(worktreePath) {
     }
 
     try {
+      // Backup project before updating
+      console.log(chalk.dim(`       Backing up ${project.name}...`));
+      const backup = backupProject(project.path);
+      if (backup) {
+        addBackedUpProject({
+          path: project.path,
+          name: project.name,
+          backupPath: backup.backupPath,
+          backedUpAt: backup.backedUpAt,
+          fileCount: backup.fileCount
+        });
+        backedUp++;
+        console.log(chalk.green(`       ✓ Backed up (${backup.fileCount} files)`));
+      }
+
       // Run ccasp init in dev mode to refresh commands
       const originalCwd = process.cwd();
       process.chdir(project.path);
@@ -323,6 +352,9 @@ async function updateRegisteredProjects(worktreePath) {
     }
   }
 
+  if (backedUp > 0) {
+    console.log(chalk.green(`       ✓ Backed up ${backedUp} project(s)`));
+  }
   if (updated > 0) {
     console.log(chalk.green(`       ✓ Updated ${updated} project(s)`));
   }
@@ -350,26 +382,39 @@ async function cleanupWorktree(name) {
   console.log(chalk.dim(`  Path: ${worktree.path}\n`));
 
   // Step 1: Unlink global package
-  console.log(chalk.dim('  [1/4] Unlinking global package...'));
+  console.log(chalk.dim('  [1/5] Unlinking global package...'));
   exec('npm unlink -g claude-cli-advanced-starter-pack', { ignoreError: true, silent: true });
   console.log(chalk.green('  ✓ Unlinked'));
 
+  // Step 1b: Deactivate dev mode
+  deactivateDevMode();
+  console.log(chalk.green('  ✓ Dev mode deactivated'));
+
   // Step 2: Remove worktree
-  console.log(chalk.dim('  [2/4] Removing worktree...'));
+  console.log(chalk.dim('  [2/5] Removing worktree...'));
   exec(`git worktree remove "${worktree.path}" --force`, { cwd: CCASP_ROOT, ignoreError: true });
   console.log(chalk.green('  ✓ Worktree removed'));
 
   // Step 3: Delete remote branch if it was private
   if (worktree.privateRemote) {
-    console.log(chalk.dim('  [3/4] Deleting remote branch...'));
+    console.log(chalk.dim('  [3/5] Deleting remote branch...'));
     exec(`git push origin --delete ${worktree.branch}`, { cwd: CCASP_ROOT, ignoreError: true });
     console.log(chalk.green('  ✓ Remote branch deleted'));
   } else {
-    console.log(chalk.dim('  [3/4] Skipping remote branch deletion (local only)'));
+    console.log(chalk.dim('  [3/5] Skipping remote branch deletion (local only)'));
   }
 
-  // Step 4: Restore npm version
-  console.log(chalk.dim('  [4/4] Restoring npm version...'));
+  // Step 4: Offer to restore projects from backup
+  const devState = loadDevState();
+  if (devState.projects && devState.projects.length > 0) {
+    console.log(chalk.dim(`  [4/5] ${devState.projects.length} project(s) have backups available`));
+    console.log(chalk.dim('        Run /menu to restore or update projects'));
+  } else {
+    console.log(chalk.dim('  [4/5] No project backups to restore'));
+  }
+
+  // Step 5: Restore npm version
+  console.log(chalk.dim('  [5/5] Restoring npm version...'));
   exec('npm install -g claude-cli-advanced-starter-pack@latest', { ignoreError: true });
   console.log(chalk.green('  ✓ npm version restored'));
 

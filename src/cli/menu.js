@@ -28,6 +28,8 @@ import { hasValidConfig, getVersion, loadTechStack, saveTechStack } from '../uti
 import { performVersionCheck, formatUpdateBanner } from '../utils/version-check.js';
 import { isHappyMode, shouldUseMobileUI } from '../utils/happy-detect.js';
 import { showMobileMenu, showMobilePanel, showMobileSettings, mobileReturnPrompt } from './mobile-menu.js';
+import { isDevMode, getDevModeInfo, hasPendingRestore, loadDevState, clearPendingProjects } from '../utils/dev-mode-state.js';
+import { restoreProject, getLatestBackup } from '../utils/project-backup.js';
 
 /**
  * Get bypass permissions status from settings.json
@@ -259,6 +261,97 @@ const BANNER = `
 ║    Advanced Claude Code CLI Toolkit - Agents, MCP, GitHub & More           ║
 ║                                                                            ║
 ╚════════════════════════════════════════════════════════════════════════════╝`;
+
+/**
+ * Development Mode Warning Banner
+ */
+const DEV_MODE_BANNER = `
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    ⚠️  DEVELOPMENT MODE ACTIVE ⚠️                           ║
+║   Running from local worktree - NOT the npm published version              ║
+║   Custom changes will be reverted when you deploy to npm                   ║
+╚════════════════════════════════════════════════════════════════════════════╝`;
+
+/**
+ * Show development mode indicator if active
+ */
+function showDevModeIndicator() {
+  if (isDevMode()) {
+    console.log(chalk.bgYellow.black(DEV_MODE_BANNER));
+    const info = getDevModeInfo();
+    if (info) {
+      console.log(chalk.yellow(`  Worktree: ${info.worktreePath}`));
+      console.log(chalk.yellow(`  Version: ${info.version} (dev)`));
+      if (info.projectCount > 0) {
+        console.log(chalk.yellow(`  Projects with backups: ${info.projectCount}`));
+      }
+    }
+    console.log('');
+  }
+}
+
+/**
+ * Check for pending project restoration after dev mode
+ */
+async function checkPendingRestore() {
+  if (!hasPendingRestore()) {
+    return;
+  }
+
+  const devState = loadDevState();
+  const projectCount = devState.projects?.length || 0;
+
+  console.log(chalk.yellow('\n  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
+  console.log(chalk.yellow('  ⚠️  Dev mode was recently deactivated'));
+  console.log(chalk.yellow(`  ${projectCount} project(s) may need to be restored or updated`));
+  console.log(chalk.yellow('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+
+  const { action } = await inquirer.prompt([{
+    type: 'list',
+    name: 'action',
+    message: 'What would you like to do with backed up projects?',
+    choices: [
+      { name: 'Restore projects from backup (keep customizations)', value: 'restore' },
+      { name: 'Update projects to npm version (fresh install)', value: 'update' },
+      { name: 'Skip for now (ask again later)', value: 'skip' },
+      { name: 'Clear backups (no restore needed)', value: 'clear' }
+    ]
+  }]);
+
+  if (action === 'restore') {
+    console.log(chalk.cyan('\n  Restoring projects from backup...\n'));
+    let restored = 0;
+    let failed = 0;
+
+    for (const project of devState.projects) {
+      const backup = getLatestBackup(project.path);
+      if (backup) {
+        console.log(chalk.dim(`  Restoring ${project.name}...`));
+        const result = restoreProject(backup);
+        if (result.success) {
+          console.log(chalk.green(`  ✓ Restored ${project.name}`));
+          restored++;
+        } else {
+          console.log(chalk.red(`  ✗ Failed: ${result.errors.join(', ')}`));
+          failed++;
+        }
+      }
+    }
+
+    console.log(chalk.green(`\n  ✓ Restored ${restored} project(s)`));
+    if (failed > 0) {
+      console.log(chalk.yellow(`  ⚠️  Failed ${failed} project(s)`));
+    }
+    clearPendingProjects();
+  } else if (action === 'update') {
+    console.log(chalk.cyan('\n  Projects will be updated on next ccasp init.\n'));
+    clearPendingProjects();
+  } else if (action === 'clear') {
+    clearPendingProjects();
+    console.log(chalk.dim('\n  Backups cleared.\n'));
+  }
+  // 'skip' does nothing - will ask again next time
+}
 
 /**
  * Show Project Settings submenu
@@ -837,6 +930,13 @@ export async function showMainMenu() {
   }
 
   console.clear();
+
+  // Show dev mode warning banner if active
+  showDevModeIndicator();
+
+  // Check for pending restore from dev mode
+  await checkPendingRestore();
+
   console.log(chalk.cyan(BANNER));
   console.log('');
 

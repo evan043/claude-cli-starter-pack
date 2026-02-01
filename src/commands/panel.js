@@ -21,6 +21,7 @@ import {
 } from '../panel/queue.js';
 import { getVersion } from '../utils.js';
 import { isHappyMode } from '../utils/happy-detect.js';
+import { isDevMode } from '../utils/dev-mode-state.js';
 
 // Panel ASCII Banner
 const PANEL_BANNER = `
@@ -72,6 +73,14 @@ const PANEL_COMMANDS = {
  */
 function displayMenu() {
   console.clear();
+
+  // Show dev mode indicator if active
+  if (isDevMode()) {
+    console.log(chalk.bgYellow.black.bold(' ⚠ DEVELOPMENT MODE '));
+    console.log(chalk.yellow('  Running from local worktree'));
+    console.log('');
+  }
+
   console.log(PANEL_BANNER);
   console.log('');
 

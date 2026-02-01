@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { getVersion, loadTechStack, hasValidConfig } from '../utils.js';
 import { isHappyMode, getMobileWidth } from '../utils/happy-detect.js';
+import { isDevMode } from '../utils/dev-mode-state.js';
 
 // Mobile-friendly banner (40 chars max)
 const MOBILE_BANNER = `
@@ -54,6 +55,14 @@ function formatMobileItem(key, label) {
  */
 export async function showMobileMenu() {
   console.clear();
+
+  // Show dev mode indicator (compact for mobile)
+  if (isDevMode()) {
+    console.log(chalk.bgYellow.black(' ⚠ DEV MODE '));
+    console.log(chalk.yellow(' Local worktree active'));
+    console.log('');
+  }
+
   console.log(MOBILE_BANNER);
 
   const configured = hasValidConfig();

@@ -9,7 +9,7 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import readline from 'readline';
@@ -17,6 +17,13 @@ import readline from 'readline';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = join(__dirname, '..');
+
+// Dev mode state path (same as in dev-mode-state.js)
+const DEV_STATE_PATH = join(
+  process.env.HOME || process.env.USERPROFILE || require('os').homedir(),
+  '.claude',
+  'ccasp-dev-state.json'
+);
 
 // Colors for terminal output
 const colors = {
@@ -602,6 +609,69 @@ async function promptForReleaseNotes(commits, bumpType, autoMode) {
   return { summary, highlights };
 }
 
+/**
+ * Check and cleanup dev mode before publishing
+ * This ensures we're not publishing from a linked worktree
+ */
+async function cleanupDevMode() {
+  log('\n[Pre-Deploy] Checking for dev mode...', 'cyan');
+
+  // Check if dev state file exists
+  if (!existsSync(DEV_STATE_PATH)) {
+    log('  ✓ Not in dev mode', 'green');
+    return { wasDevMode: false };
+  }
+
+  let devState;
+  try {
+    devState = JSON.parse(readFileSync(DEV_STATE_PATH, 'utf8'));
+  } catch {
+    log('  ✓ No dev mode state found', 'green');
+    return { wasDevMode: false };
+  }
+
+  if (!devState.isDevMode) {
+    log('  ✓ Dev mode not active', 'green');
+    return { wasDevMode: false, pendingProjects: devState.projects?.length || 0 };
+  }
+
+  log(`  ⚠️  Dev mode is active!`, 'yellow');
+  log(`  Worktree: ${devState.worktreePath}`, 'dim');
+  log(`  Linked since: ${devState.linkedAt}`, 'dim');
+
+  if (devState.projects?.length > 0) {
+    log(`  Projects with backups: ${devState.projects.length}`, 'dim');
+  }
+
+  // Unlink the worktree
+  log('\n  Unlinking dev worktree...', 'cyan');
+  try {
+    exec('npm unlink -g claude-cli-advanced-starter-pack', { ignoreError: true, silent: true });
+    log('  ✓ Unlinked global package', 'green');
+  } catch {
+    log('  ⚠️  Could not unlink (may not have been linked)', 'yellow');
+  }
+
+  // Deactivate dev mode state
+  devState.isDevMode = false;
+  devState.worktreePath = null;
+  devState.linkedAt = null;
+  devState.deactivatedAt = new Date().toISOString();
+  // Keep projects list for restoration prompt
+  writeFileSync(DEV_STATE_PATH, JSON.stringify(devState, null, 2), 'utf8');
+  log('  ✓ Dev mode deactivated', 'green');
+
+  if (devState.projects?.length > 0) {
+    log(`  ℹ  ${devState.projects.length} project(s) will be prompted to restore on next /menu`, 'dim');
+  }
+
+  return {
+    wasDevMode: true,
+    worktreePath: devState.worktreePath,
+    pendingProjects: devState.projects?.length || 0
+  };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const bumpType = args.find(a => ['patch', 'minor', 'major'].includes(a)) || 'patch';
@@ -646,7 +716,12 @@ async function main() {
 
   console.log('\n' + '─'.repeat(60));
 
-  // 0. Get commits for release notes and issue audit
+  // 0a. Cleanup dev mode if active
+  const devModeCleanup = await cleanupDevMode();
+
+  console.log('\n' + '─'.repeat(60));
+
+  // 0b. Get commits for release notes and issue audit
   const commits = getCommitsSinceLastRelease();
   const lastTag = getLastReleaseTag();
 
@@ -802,6 +877,14 @@ ${releaseNotes.highlights.length > 0 ? '### Highlights\n' + releaseNotes.highlig
   log('  ✓ Deployment Complete!', 'green');
   console.log('═'.repeat(60));
   log(`\n  Version: ${currentVersion} → ${newVersion}`, 'cyan');
+
+  // Show dev mode cleanup info
+  if (devModeCleanup.wasDevMode) {
+    log(`  Dev mode: Deactivated (was linked to worktree)`, 'yellow');
+    if (devModeCleanup.pendingProjects > 0) {
+      log(`  Projects to restore: ${devModeCleanup.pendingProjects} (prompt on next /menu)`, 'yellow');
+    }
+  }
 
   // Show closed issues in summary
   if (issueAudit.closed.length > 0) {
