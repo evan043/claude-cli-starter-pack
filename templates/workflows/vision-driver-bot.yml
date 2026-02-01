@@ -1,0 +1,561 @@
+# Vision Driver Bot - Autonomous Development Workflow
+#
+# This workflow monitors your Vision/Epic board and autonomously
+# executes development tasks using Claude Code.
+#
+# Setup:
+# 1. Add ANTHROPIC_API_KEY to repository secrets
+# 2. Create a Personal Access Token with repo + project permissions
+# 3. Add VDB_PAT to repository secrets (or use GITHUB_TOKEN for basic)
+# 4. Configure VDB: run `ccasp vdb init` in your project
+#
+# The bot will:
+# - Scan your Vision board every 15 minutes (configurable)
+# - Pick up phases ready for work (dependencies resolved)
+# - Execute them via Claude Code CLI
+# - Commit changes and update board status
+# - Make AI-driven decisions about next steps
+
+name: Vision Driver Bot
+
+on:
+  # Scheduled execution
+  schedule:
+    # Run every 15 minutes (adjust as needed)
+    # For less frequent: '0 * * * *' (hourly)
+    # For more frequent: '*/5 * * * *' (every 5 min, may hit rate limits)
+    - cron: '*/15 * * * *'
+
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Execution mode'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto          # Scan and execute next task
+          - scan-only     # Scan board, don't execute
+          - execute-next  # Execute next queued task
+          - status        # Show current status
+          - evaluate      # Run decision engine only
+
+      force_phase:
+        description: 'Force execute specific phase ID (optional)'
+        required: false
+        type: string
+
+      dry_run:
+        description: 'Dry run (no actual changes)'
+        required: false
+        default: false
+        type: boolean
+
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: false
+        type: boolean
+
+  # Trigger on issue events (optional - enable if you want faster response)
+  # issues:
+  #   types: [opened, labeled, unlabeled, closed]
+
+  # Trigger on project card events
+  # project_card:
+  #   types: [moved]
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  GITHUB_TOKEN: ${{ secrets.VDB_PAT || secrets.GITHUB_TOKEN }}
+  NODE_VERSION: '22'
+
+# Prevent concurrent runs
+concurrency:
+  group: vdb-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  # ===========================================
+  # SCAN: Check board for actionable items
+  # ===========================================
+  scan:
+    name: Scan Vision Board
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      has_tasks: ${{ steps.scan.outputs.has_tasks }}
+      next_task: ${{ steps.scan.outputs.next_task }}
+      queue_size: ${{ steps.scan.outputs.queue_size }}
+      should_execute: ${{ steps.decide.outputs.should_execute }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts || npm install --ignore-scripts
+          # Install CCASP if not in package.json
+          if ! npm ls claude-cli-advanced-starter-pack 2>/dev/null; then
+            npm install claude-cli-advanced-starter-pack --save-dev
+          fi
+
+      - name: Check VDB configuration
+        id: check_config
+        run: |
+          if [ -f ".claude/vdb/config.json" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+            echo "✅ VDB is configured"
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️ VDB not configured. Run 'ccasp vdb init' first."
+          fi
+
+      - name: Scan Vision Board
+        id: scan
+        if: steps.check_config.outputs.configured == 'true'
+        run: |
+          node -e "
+            const { VisionDriverBot } = require('./node_modules/claude-cli-advanced-starter-pack/src/vdb/index.js');
+
+            async function scan() {
+              const vdb = new VisionDriverBot();
+              await vdb.initialize(process.cwd());
+
+              const result = await vdb.scan();
+
+              console.log('=== Scan Results ===');
+              console.log('Actionable items:', result.actionable.length);
+              console.log('Queue size:', result.queueStatus.total);
+
+              if (result.actionable.length > 0) {
+                console.log('Next task:', result.actionable[0].phase_title);
+              }
+
+              // Set outputs
+              const fs = require('fs');
+              const output = process.env.GITHUB_OUTPUT;
+
+              fs.appendFileSync(output, 'has_tasks=' + (result.actionable.length > 0) + '\n');
+              fs.appendFileSync(output, 'queue_size=' + result.queueStatus.total + '\n');
+
+              if (result.actionable.length > 0) {
+                const taskJson = JSON.stringify(result.actionable[0]).replace(/\n/g, '\\\\n');
+                fs.appendFileSync(output, 'next_task=' + taskJson + '\n');
+              }
+
+              // Save full scan result
+              fs.writeFileSync('.claude/vdb/last-scan.json', JSON.stringify(result, null, 2));
+            }
+
+            scan().catch(err => {
+              console.error('Scan failed:', err.message);
+              process.exit(1);
+            });
+          "
+
+      - name: Decision Engine Evaluation
+        id: decide
+        if: steps.scan.outputs.has_tasks == 'true'
+        run: |
+          node -e "
+            const { VisionDriverBot } = require('./node_modules/claude-cli-advanced-starter-pack/src/vdb/index.js');
+
+            async function decide() {
+              const vdb = new VisionDriverBot();
+              await vdb.initialize(process.cwd());
+
+              const decision = await vdb.evaluate({
+                type: 'board_scan',
+                actionable: JSON.parse(process.env.NEXT_TASK || '[]'),
+                mode: '${{ inputs.mode || 'auto' }}'
+              });
+
+              console.log('Decision:', decision.decision);
+              console.log('Reason:', decision.reason);
+
+              const fs = require('fs');
+              fs.appendFileSync(process.env.GITHUB_OUTPUT,
+                'should_execute=' + (decision.decision !== 'pause') + '\n'
+              );
+
+              // Save decision
+              fs.writeFileSync('.claude/vdb/last-decision.json', JSON.stringify(decision, null, 2));
+            }
+
+            decide().catch(err => {
+              console.error('Decision failed:', err.message);
+              process.exit(1);
+            });
+          "
+        env:
+          NEXT_TASK: ${{ steps.scan.outputs.next_task }}
+
+      - name: Upload scan artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vdb-scan-${{ github.run_id }}
+          path: |
+            .claude/vdb/last-scan.json
+            .claude/vdb/last-decision.json
+          retention-days: 7
+
+  # ===========================================
+  # EXECUTE: Run the next task
+  # ===========================================
+  execute:
+    name: Execute Task
+    needs: scan
+    if: |
+      needs.scan.outputs.has_tasks == 'true' &&
+      needs.scan.outputs.should_execute == 'true' &&
+      (inputs.mode == 'auto' || inputs.mode == 'execute-next' || inputs.mode == null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Claude Code CLI
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts || npm install --ignore-scripts
+          if ! npm ls claude-cli-advanced-starter-pack 2>/dev/null; then
+            npm install claude-cli-advanced-starter-pack --save-dev
+          fi
+
+      - name: Configure Git
+        run: |
+          git config user.name "Vision Driver Bot"
+          git config user.email "vdb@users.noreply.github.com"
+
+      - name: Build execution prompt
+        id: prompt
+        run: |
+          node -e "
+            const { VisionDriverBot } = require('./node_modules/claude-cli-advanced-starter-pack/src/vdb/index.js');
+            const fs = require('fs');
+
+            async function buildPrompt() {
+              const vdb = new VisionDriverBot();
+              await vdb.initialize(process.cwd());
+
+              // Get task from queue
+              const task = await vdb.queue.dequeue();
+              if (!task) {
+                console.log('No tasks in queue');
+                process.exit(0);
+              }
+
+              console.log('Building prompt for:', task.phase_title);
+
+              // Build prompt
+              const prompt = await vdb.executor.buildPrompt(task);
+
+              // Save prompt and task
+              fs.writeFileSync('.claude/vdb/current-prompt.txt', prompt);
+              fs.writeFileSync('.claude/vdb/current-task.json', JSON.stringify(task, null, 2));
+
+              console.log('Prompt saved to .claude/vdb/current-prompt.txt');
+            }
+
+            buildPrompt().catch(err => {
+              console.error('Prompt build failed:', err.message);
+              process.exit(1);
+            });
+          "
+
+      - name: Execute via Claude Code
+        id: execute
+        if: inputs.dry_run != true
+        run: |
+          set +e  # Don't exit on error
+
+          echo "🤖 Starting Claude Code execution..."
+
+          # Read the prompt
+          PROMPT=$(cat .claude/vdb/current-prompt.txt)
+
+          # Execute with Claude Code CLI
+          claude --print \
+            --dangerously-skip-permissions \
+            -p "$PROMPT" \
+            2>&1 | tee .claude/vdb/execution-output.txt
+
+          EXIT_CODE=$?
+
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Execution completed successfully"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Execution failed with code $EXIT_CODE"
+            echo "success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Dry run output
+        if: inputs.dry_run == true
+        run: |
+          echo "🔍 DRY RUN MODE - No actual execution"
+          echo ""
+          echo "=== Prompt that would be sent ==="
+          head -100 .claude/vdb/current-prompt.txt
+          echo ""
+          echo "... (truncated)"
+
+      - name: Parse execution results
+        id: parse
+        run: |
+          node -e "
+            const fs = require('fs');
+
+            const output = fs.readFileSync('.claude/vdb/execution-output.txt', 'utf8');
+            const task = JSON.parse(fs.readFileSync('.claude/vdb/current-task.json', 'utf8'));
+
+            // Parse signals
+            const signals = [];
+            const taskComplete = output.match(/TASK_COMPLETE:(\S+)/g) || [];
+            const phaseComplete = output.includes('PHASE_COMPLETE');
+            const blocked = output.match(/TASK_BLOCKED:(\S+):(.+)/g) || [];
+            const errors = output.match(/ERROR:(.+)/g) || [];
+
+            console.log('Signals found:');
+            console.log('- Task completions:', taskComplete.length);
+            console.log('- Phase complete:', phaseComplete);
+            console.log('- Blocked:', blocked.length);
+            console.log('- Errors:', errors.length);
+
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              'phase_complete=' + phaseComplete + '\n'
+            );
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              'tasks_completed=' + taskComplete.length + '\n'
+            );
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              'has_errors=' + (errors.length > 0) + '\n'
+            );
+          "
+
+      - name: Commit changes
+        if: steps.execute.outputs.success == 'true' && inputs.dry_run != true
+        run: |
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            TASK_TITLE=$(jq -r '.phase_title' .claude/vdb/current-task.json)
+
+            git commit -m "$(cat <<EOF
+          🤖 VDB: $TASK_TITLE
+
+          Automated by Vision Driver Bot
+          Phase: $(jq -r '.phase_id' .claude/vdb/current-task.json)
+          Epic: $(jq -r '.epic_id' .claude/vdb/current-task.json)
+
+          Tasks completed: ${{ steps.parse.outputs.tasks_completed }}
+          Phase complete: ${{ steps.parse.outputs.phase_complete }}
+          EOF
+          )"
+
+            echo "✅ Changes committed"
+          fi
+
+      - name: Push changes
+        if: steps.execute.outputs.success == 'true' && inputs.dry_run != true
+        run: |
+          git push origin HEAD
+          echo "✅ Changes pushed"
+
+      - name: Update board status
+        if: inputs.dry_run != true
+        run: |
+          node -e "
+            const { VisionDriverBot } = require('./node_modules/claude-cli-advanced-starter-pack/src/vdb/index.js');
+            const fs = require('fs');
+
+            async function updateBoard() {
+              const vdb = new VisionDriverBot();
+              await vdb.initialize(process.cwd());
+
+              const task = JSON.parse(fs.readFileSync('.claude/vdb/current-task.json', 'utf8'));
+              const success = '${{ steps.execute.outputs.success }}' === 'true';
+              const phaseComplete = '${{ steps.parse.outputs.phase_complete }}' === 'true';
+
+              const status = success ? (phaseComplete ? 'completed' : 'in_progress') : 'blocked';
+
+              console.log('Updating board status to:', status);
+
+              await vdb.boardSync.updateStatus(task, status, {
+                tasks_completed: parseInt('${{ steps.parse.outputs.tasks_completed }}') || 0,
+                has_errors: '${{ steps.parse.outputs.has_errors }}' === 'true'
+              });
+
+              // Report completion/failure
+              if (success) {
+                await vdb.reporter.reportCompletion(task, {
+                  tasks_completed: parseInt('${{ steps.parse.outputs.tasks_completed }}') || 0,
+                  duration_ms: 0 // Would need to track actual duration
+                });
+              } else {
+                await vdb.reporter.reportFailure(task, new Error('Execution failed'));
+              }
+
+              // Mark task in queue
+              if (success && phaseComplete) {
+                await vdb.queue.markComplete(task.id || task.phase_id);
+              }
+            }
+
+            updateBoard().catch(err => {
+              console.error('Board update failed:', err.message);
+            });
+          "
+
+      - name: Post-execution decision
+        if: steps.execute.outputs.success == 'true'
+        run: |
+          node -e "
+            const { VisionDriverBot } = require('./node_modules/claude-cli-advanced-starter-pack/src/vdb/index.js');
+            const fs = require('fs');
+
+            async function postDecision() {
+              const vdb = new VisionDriverBot();
+              await vdb.initialize(process.cwd());
+
+              const task = JSON.parse(fs.readFileSync('.claude/vdb/current-task.json', 'utf8'));
+              const phaseComplete = '${{ steps.parse.outputs.phase_complete }}' === 'true';
+
+              const decision = await vdb.evaluate({
+                type: phaseComplete ? 'phase_complete' : 'task_complete',
+                task,
+                result: {
+                  success: true,
+                  tasks_completed: parseInt('${{ steps.parse.outputs.tasks_completed }}') || 0
+                }
+              });
+
+              console.log('Post-execution decision:', decision.decision);
+
+              if (decision.recommendations?.length > 0) {
+                console.log('Recommendations:');
+                decision.recommendations.forEach(r => {
+                  console.log('-', r.description);
+                });
+              }
+            }
+
+            postDecision().catch(err => {
+              console.error('Post-decision failed:', err.message);
+            });
+          "
+
+      - name: Upload execution artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vdb-execution-${{ github.run_id }}
+          path: |
+            .claude/vdb/current-prompt.txt
+            .claude/vdb/current-task.json
+            .claude/vdb/execution-output.txt
+          retention-days: 14
+
+  # ===========================================
+  # REPORT: Generate status report
+  # ===========================================
+  report:
+    name: Status Report
+    needs: [scan, execute]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Generate report
+        run: |
+          echo "# Vision Driver Bot Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** ${{ inputs.mode || 'auto' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Has tasks: ${{ needs.scan.outputs.has_tasks }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Queue size: ${{ needs.scan.outputs.queue_size }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Should execute: ${{ needs.scan.outputs.should_execute }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.execute.result }}" != "skipped" ]; then
+            echo "## Execution Results" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: ${{ needs.execute.result }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Execution" >> $GITHUB_STEP_SUMMARY
+            echo "_Skipped (no tasks or paused)_" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "⚠️ VDB workflow failed. Check the logs for details."
+          # Could add Slack/Discord notification here
+
+  # ===========================================
+  # CLEANUP: Periodic maintenance
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    if: github.event.schedule != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cleanup old logs
+        run: |
+          # Remove logs older than 30 days
+          find .claude/vdb/logs -type f -mtime +30 -delete 2>/dev/null || true
+          find .claude/vdb/summaries -type f -mtime +30 -delete 2>/dev/null || true
+          echo "Cleanup complete"

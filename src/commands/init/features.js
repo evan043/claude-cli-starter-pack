@@ -179,6 +179,21 @@ export const OPTIONAL_FEATURES = [
     default: true,
     requiresPostConfig: false,
   },
+  {
+    name: 'visionDriverBot',
+    label: 'Vision Driver Bot (Autonomous Development)',
+    description: 'Autonomous development system that monitors Vision/Epic boards and drives development forward without human intervention. Uses GitHub Actions for scheduled execution, AI-powered decision making, and automatic task completion.',
+    commands: ['vdb-status', 'vdb-scan', 'vdb-execute-next', 'vdb-init'],
+    hooks: ['agent-epic-progress'],
+    workflows: ['vision-driver-bot.yml'],
+    default: false,
+    requiresPostConfig: true,
+    postConfigSteps: [
+      'Add ANTHROPIC_API_KEY to GitHub repository secrets',
+      'Create PAT with repo+project permissions and add as VDB_PAT secret',
+      '(Optional) Create GitHub Project board for Vision tracking',
+    ],
+  },
 ];
 
 /**
@@ -459,6 +474,35 @@ export const AVAILABLE_COMMANDS = [
     category: 'Orchestration',
     selected: false,
     feature: 'agentOrchestration',
+  },
+  // Vision Driver Bot commands
+  {
+    name: 'vdb-status',
+    description: 'Check Vision Driver Bot status, queue, and recommendations',
+    category: 'VDB',
+    selected: false,
+    feature: 'visionDriverBot',
+  },
+  {
+    name: 'vdb-scan',
+    description: 'Scan Vision board for actionable items and queue them',
+    category: 'VDB',
+    selected: false,
+    feature: 'visionDriverBot',
+  },
+  {
+    name: 'vdb-execute-next',
+    description: 'Execute the next task from VDB queue autonomously',
+    category: 'VDB',
+    selected: false,
+    feature: 'visionDriverBot',
+  },
+  {
+    name: 'vdb-init',
+    description: 'Initialize Vision Driver Bot for this project',
+    category: 'VDB',
+    selected: false,
+    feature: 'visionDriverBot',
   },
 ];
 
