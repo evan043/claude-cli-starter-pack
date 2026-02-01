@@ -28,6 +28,7 @@ import { runDetection } from '../src/commands/detect-tech-stack.js';
 import { runExploreMcp } from '../src/commands/explore-mcp.js';
 import { runClaudeAudit } from '../src/commands/claude-audit.js';
 import { runRoadmap } from '../src/commands/roadmap.js';
+import { runCreateRoadmap } from '../src/commands/create-roadmap.js';
 import { runInit } from '../src/commands/init.js';
 import { showHelp } from '../src/commands/help.js';
 import { runSetupWizard } from '../src/commands/setup-wizard.js';
@@ -292,7 +293,17 @@ program
     await runClaudeAudit(options);
   });
 
-// Roadmap Integration
+// Create Roadmap - Roadmap Orchestration Framework
+program
+  .command('create-roadmap')
+  .description('Create multi-phase development roadmap (manual or from GitHub issues)')
+  .option('--from-github', 'Import from GitHub issues')
+  .option('--from-project <number>', 'Import from GitHub Project Board')
+  .action(async (options) => {
+    await runCreateRoadmap(options);
+  });
+
+// Roadmap Integration (legacy - sync with GitHub)
 program
   .command('roadmap [subcommand]')
   .description('Sync roadmaps with GitHub Project Board (import/sync/create/status)')

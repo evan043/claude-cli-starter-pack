@@ -82,3 +82,87 @@ export {
   loadConfigSync,
   execCommand,
 } from './utils.js';
+
+// Roadmap Orchestration Framework
+export { runCreateRoadmap } from './commands/create-roadmap.js';
+export {
+  createRoadmap,
+  createPhase,
+  validateRoadmap,
+  validatePhase,
+  calculateCompletion,
+  getNextAvailablePhases,
+  updateRoadmapMetadata,
+  generateSlug,
+  ROADMAP_SCHEMA,
+  COMPLEXITY,
+  PHASE_STATUS,
+  ROADMAP_SOURCE,
+} from './roadmap/schema.js';
+export {
+  listRoadmaps,
+  loadRoadmap,
+  saveRoadmap,
+  createNewRoadmap,
+  deleteRoadmap,
+  addPhase,
+  updatePhase,
+  removePhase,
+  reorderPhase,
+  mergePhases,
+  splitPhase,
+  getRoadmapSummary,
+  getRoadmapsDir,
+  generateRoadmapsIndex,
+} from './roadmap/roadmap-manager.js';
+export {
+  classifyDomain,
+  getPrimaryDomain,
+  groupRelatedItems,
+  detectDependencies,
+  estimateComplexity,
+  identifyParallelWork,
+  shouldRecommendSinglePhase,
+  analyzeScope,
+  generatePhaseRecommendations,
+  suggestAgents,
+} from './roadmap/intelligence.js';
+export {
+  checkGhCli,
+  getRepoInfo,
+  fetchIssues,
+  fetchProjectItems,
+  formatIssueTable,
+  parseSelection,
+  createPhaseIssue,
+  createRoadmapEpic,
+  addProgressComment,
+  closeIssue,
+  syncToGitHub,
+} from './roadmap/github-integration.js';
+export {
+  checkNormalizationStatus,
+  normalizeIssue,
+  batchNormalize,
+  extractNormalizationMetadata,
+} from './roadmap/issue-normalizer.js';
+export {
+  generatePhasePlan,
+  generateAllPhasePlans,
+  loadPhasePlan,
+  updatePhasePlan,
+  completeTask,
+  getRoadmapProgress,
+  getPhasePlansDir,
+} from './roadmap/phase-generator.js';
+export {
+  loadExecutionState,
+  checkDependencies,
+  startPhase,
+  completePhase,
+  blockPhase,
+  getExecutionStatus,
+  autoAdvance,
+  syncExecution,
+  generateExecutionReport,
+} from './roadmap/executor.js';

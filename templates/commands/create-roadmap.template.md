@@ -1,6 +1,6 @@
-# Create Roadmap - Multi-Phase Development Planner
+# Create Roadmap - Roadmap Orchestration Framework
 
-You are a roadmap planning specialist. Your goal is to create comprehensive multi-phase development roadmaps for complex projects that span multiple features, domains, or require sequential dependencies.
+You are a roadmap planning specialist using the CCASP Roadmap Orchestration Framework. Transform project ideas into executable multi-phase development plans with GitHub integration, agent delegation, and automated phase-dev-plan generation.
 
 ## When to Create a Roadmap
 
@@ -11,16 +11,49 @@ Create a roadmap instead of a single phase plan when:
 - **Long duration** (> 2 weeks estimated)
 - User explicitly requests roadmap organization
 
+**Small Scope Recommendation**: If < 5 issues and complexity is low, recommend `/create-phase-dev` instead.
+
+## Two Creation Modes
+
+### Mode A: Manual Builder
+User describes what they want to build in natural language. Claude analyzes and structures into phases.
+
+### Mode B: GitHub Import
+Import existing GitHub issues, display in table format, user selects which to include, then structure into phases.
+
 ## Execution Protocol
 
-### Step 1: Gather Roadmap Requirements
+### Step 1: Choose Mode
+
+Ask user which mode to use:
+- **A) Manual Builder** - Describe what you want to build
+- **B) From GitHub Issues** - Import and organize existing issues
+
+### Step 2A (Manual): Gather Requirements
 
 Use AskUserQuestion to collect:
 
 1. **Roadmap Name**: What should this roadmap be called?
 2. **Primary Goal**: What is the main objective? (1-2 sentences)
-3. **Scope**: What features/changes are included?
+3. **Scope**: What features/changes are included? (open editor for detailed input)
 4. **Timeline**: Target completion (optional)
+
+### Step 2B (GitHub): Fetch and Display Issues
+
+1. Fetch open issues from repository
+2. Display in numbered table format:
+
+```
+┌────┬──────────┬────────────────────────────────┬────────────┬─────────┐
+│ #  │ Issue ID │ Title                          │ Status     │ Include │
+├────┼──────────┼────────────────────────────────┼────────────┼─────────┤
+│ 1  │ #45      │ Add user authentication        │ Open       │ [ ]     │
+│ 2  │ #46      │ Implement JWT tokens           │ Open       │ [ ]     │
+└────┴──────────┴────────────────────────────────┴────────────┴─────────┘
+```
+
+3. User selects rows: "Create roadmap from rows: 2,4,5-7" or "all"
+4. Optionally normalize issues (add structured metadata, additive only)
 
 ### Step 2: Analyze and Decompose
 
@@ -72,52 +105,108 @@ For each phase, define:
 4. Testing - E2E, integration tests
 5. Deploy - Release, monitoring
 
+### Step 3: Apply Intelligence Layer
+
+Analyze selected scope/issues using the intelligence layer:
+
+```javascript
+// Group related items by domain (frontend, backend, database, testing, deployment)
+// Detect dependencies from text ("depends on", "after", "requires")
+// Analyze file overlap to infer ordering
+// Estimate complexity (S/M/L) based on scope
+// Identify parallel work opportunities
+// Check if scope is too small for roadmap
+```
+
+**Complexity Estimation:**
+- **S (Small)**: < 10 tasks, single domain, 2-4 hours
+- **M (Medium)**: 10-30 tasks, 2-3 domains, 8-16 hours
+- **L (Large)**: 30+ tasks, 3+ domains, 24-40 hours
+
 ### Step 4: Generate ROADMAP.json
 
-Create the roadmap file at `.claude/docs/roadmaps/{slug}/ROADMAP.json`:
+Create the roadmap file at `.claude/roadmaps/{slug}.json`:
 
 ```json
 {
-  "roadmap_name": "{{name}}",
-  "roadmap_slug": "{{slug}}",
-  "created_at": "{{timestamp}}",
-  "primary_goal": "{{goal}}",
-  "status": "planning",
-  "total_projects": {{phaseCount}},
-  "completed_projects": 0,
-  "completion_percentage": 0,
-  "projects": [
+  "roadmap_id": "{{uuid}}",
+  "slug": "{{slug}}",
+  "title": "{{title}}",
+  "description": "{{description}}",
+  "created": "{{timestamp}}",
+  "updated": "{{timestamp}}",
+  "source": "manual | github-issues | github-project",
+  "status": "planning | active | paused | completed",
+  "phases": [
     {
-      "project_id": "phase-1",
-      "project_name": "{{phaseName}}",
-      "description": "{{phaseDescription}}",
-      "priority": "HIGH",
-      "status": "pending",
-      "estimated_effort_hours": "{{effort}}",
+      "phase_id": "phase-1",
+      "phase_title": "{{phaseName}}",
+      "goal": "{{phaseDescription}}",
+      "inputs": {
+        "issues": ["#45", "#46"],
+        "docs": ["path/to/doc.md"],
+        "prompts": ["user requirements"]
+      },
+      "outputs": ["deliverable descriptions"],
+      "agents_assigned": ["frontend-react-specialist"],
       "dependencies": [],
+      "complexity": "S | M | L",
+      "status": "pending",
       "phase_dev_config": {
         "scale": "{{scale}}",
-        "progress_json_path": ".claude/docs/roadmaps/{{slug}}/phase-1/PROGRESS.json"
+        "progress_json_path": ".claude/phase-plans/{{slug}}/phase-1.json"
       }
     }
   ],
-  "dependency_graph": {
-    "phase-1": [],
-    "phase-2": ["phase-1"],
-    "phase-3": ["phase-2"]
-  },
-  "github_integrated": false
+  "metadata": {
+    "total_phases": {{phaseCount}},
+    "completed_phases": 0,
+    "completion_percentage": 0,
+    "github_integrated": false,
+    "github_epic_number": null,
+    "last_github_sync": null
+  }
 }
 ```
 
-### Step 5: Generate Phase Plans
+### Step 5: Generate Phase-Dev-Plans
 
-For each phase in the roadmap, create a PROGRESS.json using the phase development system:
+For each phase in the roadmap, create a phase-dev-plan JSON:
 
-1. Create directory: `.claude/docs/roadmaps/{slug}/phase-{n}/`
-2. Generate PROGRESS.json with tasks and validation gates
-3. Generate EXECUTIVE_SUMMARY.md
-4. Generate phase-specific documentation
+**Storage Location:** `.claude/phase-plans/{roadmap-slug}/`
+
+For each phase:
+1. Create `phase-{n}.json` with tasks and validation gates
+2. Generate tasks from phase inputs and outputs
+3. Assign suggested agents based on domain
+4. Set up Ralph Loop testing config
+
+```json
+{
+  "plan_id": "{{roadmap-slug}}-phase-1",
+  "phase_id": "phase-1",
+  "roadmap_id": "{{roadmap-id}}",
+  "project_name": "{{phase_title}}",
+  "scale": "M",
+  "target_success": 0.95,
+  "agent_assignments": {
+    "suggested": ["frontend-react-specialist"],
+    "current": []
+  },
+  "phases": [{
+    "id": 1,
+    "name": "{{phase_title}}",
+    "status": "pending",
+    "tasks": [
+      { "id": "1.1", "description": "Task 1", "completed": false }
+    ],
+    "success_criteria": ["deliverable 1"]
+  }],
+  "testing_config": {
+    "ralph_loop": { "enabled": true, "testCommand": "npm test" }
+  }
+}
+```
 
 ### Step 5.5: Enable Agent Orchestration (Auto-enabled for Roadmaps)
 
@@ -248,7 +337,10 @@ After creation, display:
 
 If invoked with arguments:
 
-- `/create-roadmap {description}` - Use description as initial scope
+- `/create-roadmap` - Interactive mode selection
+- `/create-roadmap {description}` - Use description as initial scope (Mode A)
+- `/create-roadmap --from-github` - Import from GitHub issues (Mode B)
+- `/create-roadmap --from-project {number}` - Import from GitHub Project Board
 - `/create-roadmap --from-tasks` - Create roadmap from existing task list
 - `/create-roadmap --split` - Split a complex phase plan into roadmap
 
@@ -262,11 +354,22 @@ If any step fails:
 
 ## Related Commands
 
+- `/roadmap-status` - View overall roadmap progress dashboard
+- `/roadmap-edit` - Edit roadmap structure (reorder, merge, split, remove phases)
+- `/roadmap-track` - Track execution and manage phase lifecycle
 - `/phase-track` - Track progress on individual phases
-- `/roadmap-status` - View overall roadmap progress
 - `/create-phase-dev` - Create single phase development plan
 - `/github-update` - Sync with GitHub Project Board
 
+## Enforcement Rules
+
+| Rule | Implementation |
+|------|----------------|
+| No roadmap without JSON artifact | Always writes `.claude/roadmaps/{slug}.json` |
+| Every phase maps to phase-dev-plan | Auto-generates `.claude/phase-plans/{slug}/phase-*.json` |
+| User selects issues via table | Mode B displays numbered table for selection |
+| Single-phase recommendation | Intelligence layer recommends `/create-phase-dev` for small scope |
+
 ---
 
-*Create Roadmap - Part of CCASP Multi-Phase Development System*
+*Create Roadmap - Part of CCASP Roadmap Orchestration Framework*
