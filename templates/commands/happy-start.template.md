@@ -25,10 +25,15 @@ Launches a new PowerShell terminal with Happy CLI wrapping Claude Code for mobil
 **When this command is invoked, IMMEDIATELY execute the following Bash command:**
 
 ```bash
-wt.exe -d "${CWD}" powershell -NoExit -Command "happy"
+wt.exe -d "${CWD}" cmd /k "${CWD}/bin/happy-start.bat"
 ```
 
-Note: Uses Windows Terminal (`wt.exe`) to launch a completely independent terminal window. Falls back to `cmd.exe /c "start powershell..."` if Windows Terminal is unavailable.
+This uses the `happy-start.bat` batch file which:
+1. Clears the `HAPPY_SERVER_URL` environment variable (prevents 401 auth errors)
+2. Changes to the project directory
+3. Launches the `happy` CLI
+
+Note: Uses Windows Terminal (`wt.exe`) to launch a completely independent terminal window.
 
 After executing, respond with:
 
