@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "2.2.0",
+      "date": "2026-02-01",
+      "summary": "Feature: add GitHub Epic System with testing integration (#50)",
+      "highlights": [
+        "add GitHub Epic System with testing integration (#50)",
+        "Fixed: enforce explicit repo selection in /happy-start-cd"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.1.5",
       "date": "2026-02-01",
       "summary": "Feature: add /happy-start-cd command for repo selection",
