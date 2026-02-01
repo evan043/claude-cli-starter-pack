@@ -3,7 +3,7 @@ description: View and sync GitHub Project Board status
 model: haiku
 ---
 
-# /github-update - GitHub Project Board Sync
+# /github-project-menu - GitHub Project Board Sync
 
 View current status of your GitHub Project Board and sync progress.
 
