@@ -1,15 +1,15 @@
 # Claude CLI Advanced Starter Pack - Complete Overview
 
-**Version 1.8.22** | **90+ Components** | **Production Ready**
+**Version 1.8.30** | **100+ Components** | **Production Ready**
 
-**A platform-agnostic toolkit for supercharging Claude Code CLI with 26 hooks, 5 agent patterns, 18 auto-generated agents, 5 skills, 7 MCP servers, refactoring system, project scaffolding, and GitHub integration.**
+**A platform-agnostic toolkit for supercharging Claude Code CLI with 30+ hooks, 5 agent patterns, 18 auto-generated agents, 5 skills, 7 MCP servers, refactoring system, project scaffolding, mobile UI, and GitHub integration.**
 
-> **New in v1.8.22**:
-> - **Refactoring System**: Ralph Loop (continuous test-fix), Golden Master (characterization tests), complexity analysis, atomic transactions
-> - **Project Scaffolding**: `/project-explorer` wizard for fresh directories (React, FastAPI, Express, Tauri, CLI)
-> - **Auto-Generated Agents**: 18 framework-specific specialists auto-generated from detected tech stack
-> - **4 new hooks**: `ralph-loop-enforcer`, `refactor-verify`, `refactor-audit`, `refactor-transaction`
-> - **2 new skills**: `refactor-react`, `refactor-fastapi`
+> **New in v1.8.30**:
+> - **Happy.engineering Mobile UI**: Auto-detect Happy CLI, 40-char mobile formatting, card layouts, word-aware wrapping
+> - **PR Merge Command**: `/pr-merge` with 9-phase workflow, safety checkpoints, rollback, blocker resolution
+> - **Smart Update System**: Smart mode protects customizations, Full mode overwrites, auto-repair hooks
+> - **Roadmap Orchestration**: Manual builder + GitHub integration, epic hierarchy, `/roadmap-*` commands
+> - **Dev Mode & Backup**: `ccasp init --dev`, project backup system, configurable co-authors
 
 ---
 
@@ -513,6 +513,68 @@
 |---------|-------------|---------|
 | `ccasp generate-agents` | Generate stack agents | `ccasp generate-agents` |
 
+### PR & Git Commands (NEW v1.8.29+)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/pr-merge` | Interactive PR merge with safety | `/pr-merge 123` |
+| `/update-smart` | Smart update manager | `/update-smart` |
+
+### Roadmap Commands (NEW v1.8.27+)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/roadmap-status` | View progress dashboard | `/roadmap-status` |
+| `/roadmap-edit` | Edit roadmap structure | `/roadmap-edit` |
+| `/roadmap-track` | Execute and track | `/roadmap-track` |
+
+---
+
+## PR Merge System (NEW in v1.8.29)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          PR MERGE WORKFLOW                                   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     9-PHASE WORKFLOW                                 │   │
+│  │                                                                      │   │
+│  │   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐       │   │
+│  │   │ 1.ID   │─▶│2.SAFE  │─▶│3.CHECK │─▶│4.RESOLVE│─▶│5.MSG   │       │   │
+│  │   │ PR     │  │ POINT  │  │ BLOCK  │  │ BLOCK   │  │ CONTRIB│       │   │
+│  │   └────────┘  └────────┘  └────────┘  └────────┘  └────────┘       │   │
+│  │        │                                                │            │   │
+│  │        │      ┌────────┐  ┌────────┐  ┌────────┐       │            │   │
+│  │        └─────▶│6.METHOD│─▶│7.MERGE │─▶│8.CLEAN │─▶ DONE             │   │
+│  │               │ SELECT │  │ EXECUTE│  │ UP     │                    │   │
+│  │               └────────┘  └────────┘  └────────┘                    │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     BLOCKER TYPES                                    │   │
+│  │                                                                      │   │
+│  │   Draft PR        │ Convert to ready                                │   │
+│  │   Outdated Branch │ Merge base or rebase                            │   │
+│  │   Merge Conflicts │ Interactive resolution                          │   │
+│  │   Failing CI      │ Wait or bypass                                  │   │
+│  │   Pending Reviews │ Request re-review or admin merge                │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     SAFETY FEATURES                                  │   │
+│  │                                                                      │   │
+│  │   ✓ Automatic stash of uncommitted changes                          │   │
+│  │   ✓ State recording (branch, HEAD, status)                          │   │
+│  │   ✓ Automatic rollback on failure                                   │   │
+│  │   ✓ Dry-run mode for preview                                        │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Complete User Flow Diagram
@@ -609,6 +671,81 @@ ccasp setup
 
 # 5. Open Claude Code in your project
 # Now you have access to all slash commands!
+```
+
+---
+
+## Happy.engineering Mobile UI (NEW in v1.8.30)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       HAPPY MOBILE UI SYSTEM                                 │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     DETECTION FLOW                                   │   │
+│  │                                                                      │   │
+│  │   User runs CCASP command                                            │   │
+│  │            │                                                         │   │
+│  │            ▼                                                         │   │
+│  │   ┌──────────────────────────────────────┐                          │   │
+│  │   │ Check Happy Environment Variables    │                          │   │
+│  │   │                                      │                          │   │
+│  │   │ • HAPPY_HOME_DIR                     │                          │   │
+│  │   │ • HAPPY_SERVER_URL                   │                          │   │
+│  │   │ • HAPPY_WEBAPP_URL                   │                          │   │
+│  │   │ • HAPPY_EXPERIMENTAL                 │                          │   │
+│  │   │ • HAPPY_SESSION=true                 │                          │   │
+│  │   └─────────────────┬────────────────────┘                          │   │
+│  │                     │                                                │   │
+│  │         ┌───────────┴───────────┐                                   │   │
+│  │         │                       │                                   │   │
+│  │    Any Found              None Found                                │   │
+│  │         │                       │                                   │   │
+│  │         ▼                       ▼                                   │   │
+│  │   ┌──────────────┐     ┌──────────────┐                            │   │
+│  │   │ MOBILE MODE  │     │ DESKTOP MODE │                            │   │
+│  │   │              │     │              │                            │   │
+│  │   │ 40 char max  │     │ 76 char wide │                            │   │
+│  │   │ Card layout  │     │ Table layout │                            │   │
+│  │   │ Word wrap    │     │ Truncate     │                            │   │
+│  │   │ Stacked rows │     │ Multi-column │                            │   │
+│  │   └──────────────┘     └──────────────┘                            │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     MOBILE FORMATTING RULES                          │   │
+│  │                                                                      │   │
+│  │   Width Constraints:                                                 │   │
+│  │   ┌────────────────────────────────────────┐                        │   │
+│  │   │ Total width:   40 characters           │                        │   │
+│  │   │ Content width: 36 characters           │                        │   │
+│  │   │ Border space:  4 characters (2 each)   │                        │   │
+│  │   └────────────────────────────────────────┘                        │   │
+│  │                                                                      │   │
+│  │   Box Drawing Characters:                                            │   │
+│  │   ┌─────┐  ├─────┤  └─────┘  │                                      │   │
+│  │   Top      Middle    Bottom   Vertical                               │   │
+│  │                                                                      │   │
+│  │   Word Wrapping:                                                     │   │
+│  │   ┌────────────────────────────────────┐                            │   │
+│  │   │ "Add user auth with JWT"  (OK)     │  ← Full word fits          │   │
+│  │   │ "Add user auth with JW"   (BAD)    │  ← Word cut off!           │   │
+│  │   └────────────────────────────────────┘                            │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     SUPPORTED COMMANDS                               │   │
+│  │                                                                      │   │
+│  │   /menu           │ Main menu with stacked options                  │   │
+│  │   /pr-merge       │ PR cards with wrapped descriptions              │   │
+│  │   /menu-issues-list │ Issue cards with metadata                     │   │
+│  │   /ccasp-panel    │ Inline panel (no new terminal)                  │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -732,6 +869,77 @@ ccasp setup
 │  │   3. Deploy CCASP commands to .claude/                              │   │
 │  │   4. Create initial task list from features                         │   │
 │  │   5. Prompt: "Run /create-task-list to continue"                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Roadmap Orchestration (NEW in v1.8.27)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       ROADMAP ORCHESTRATION FRAMEWORK                        │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     CREATION MODES                                   │   │
+│  │                                                                      │   │
+│  │   MODE A: Manual Builder              MODE B: GitHub Integration    │   │
+│  │   ──────────────────────              ─────────────────────────     │   │
+│  │                                                                      │   │
+│  │   ccasp create-roadmap                ccasp roadmap import          │   │
+│  │            │                                   │                     │   │
+│  │            ▼                                   ▼                     │   │
+│  │   ┌────────────────────┐          ┌────────────────────┐            │   │
+│  │   │ Natural Language   │          │ Fetch GitHub Issues │            │   │
+│  │   │ "Build auth system │          │ from Project Board  │            │   │
+│  │   │  with JWT tokens"  │          │                     │            │   │
+│  │   └─────────┬──────────┘          └──────────┬─────────┘            │   │
+│  │             │                                │                       │   │
+│  │             ▼                                ▼                       │   │
+│  │   ┌────────────────────┐          ┌────────────────────┐            │   │
+│  │   │ AI extracts phases │          │ Group by labels/   │            │   │
+│  │   │ and dependencies   │          │ milestones/columns │            │   │
+│  │   └─────────┬──────────┘          └──────────┬─────────┘            │   │
+│  │             │                                │                       │   │
+│  │             └────────────────┬───────────────┘                       │   │
+│  │                              │                                       │   │
+│  │                              ▼                                       │   │
+│  │                   ┌────────────────────┐                            │   │
+│  │                   │  ROADMAP.json      │                            │   │
+│  │                   │  .claude/roadmaps/ │                            │   │
+│  │                   └────────────────────┘                            │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     EXECUTION FLOW                                   │   │
+│  │                                                                      │   │
+│  │   /roadmap-status      /roadmap-edit       /roadmap-track           │   │
+│  │        │                    │                    │                   │   │
+│  │        ▼                    ▼                    ▼                   │   │
+│  │   ┌──────────┐       ┌──────────┐        ┌──────────┐               │   │
+│  │   │ View     │       │ Reorder  │        │ Execute  │               │   │
+│  │   │ Progress │       │ Merge    │        │ Check    │               │   │
+│  │   │ Dashboard│       │ Split    │        │ Deps     │               │   │
+│  │   │          │       │ Remove   │        │ Advance  │               │   │
+│  │   └──────────┘       └──────────┘        └──────────┘               │   │
+│  │                                                                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     GITHUB EPIC INTEGRATION                          │   │
+│  │                                                                      │   │
+│  │   Roadmap → GitHub Epic (parent issue)                              │   │
+│  │                  │                                                   │   │
+│  │                  ├── Child Issue #1 (Phase 1 task)                  │   │
+│  │                  ├── Child Issue #2 (Phase 1 task)                  │   │
+│  │                  ├── Child Issue #3 (Phase 2 task)                  │   │
+│  │                  └── Child Issue #4 (Phase 2 task)                  │   │
+│  │                                                                      │   │
+│  │   Progress automatically synced to epic description                 │   │
+│  │                                                                      │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘

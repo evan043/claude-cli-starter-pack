@@ -63,6 +63,26 @@ For each asset with differences, offer:
 /update-smart --list
 ```
 
+### Explore a specific asset (from panel)
+```
+/update-smart --explore commands/create-task-list
+```
+
+### Smart merge a specific asset (from panel)
+```
+/update-smart --merge commands/github-update
+```
+
+### Replace a specific asset (from panel)
+```
+/update-smart --replace skills/dms
+```
+
+### Apply smart merge to all skipped files (from panel)
+```
+/update-smart --merge-all
+```
+
 ## Output
 
 ### Asset Summary Table
@@ -109,3 +129,47 @@ For each asset with differences, offer:
 3. Display findings and prompt for decisions
 4. Apply updates with backups
 5. Update tracking file to reflect new state
+
+### Handling Panel Commands
+
+When invoked from the panel with specific flags:
+
+**`--explore <path>`**: Analyze a single asset
+1. Parse asset path (e.g., "commands/create-task-list")
+2. Load both local and template versions
+3. Generate detailed comparison with Claude's analysis
+4. Explain what would change and recommend action
+5. DO NOT modify any files - exploration only
+
+**`--merge <path>`**: Smart merge a single asset
+1. Load both versions
+2. Analyze differences and user customizations
+3. Create intelligent merge preserving user intent
+4. Backup original to `.claude/backups/`
+5. Write merged version
+6. Update usage tracking
+7. Remove from skipped files list in ccasp-state.json
+
+**`--replace <path>`**: Replace with template version
+1. Backup current version to `.claude/backups/`
+2. Copy template version to local
+3. Update usage tracking (customized = false)
+4. Remove from skipped files list
+
+**`--merge-all`**: Apply smart merge to all skipped files
+1. Load skipped files from `.claude/config/ccasp-state.json`
+2. For each file, perform smart merge as above
+3. Generate summary report of all merges
+4. Clear skipped files list
+
+### Backup Strategy
+
+All backups go to `.claude/backups/` with structure:
+```
+.claude/backups/
+  commands/
+    create-task-list.md.2026-02-01-120000.bak
+  skills/
+    dms/
+      SKILL.md.2026-02-01-120000.bak
+```

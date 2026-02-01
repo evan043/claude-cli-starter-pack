@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "1.8.31",
+      "date": "2026-02-01",
+      "summary": "Feature: add Neovim plugin for CCASP integration (nvim-ccasp) (#35)",
+      "highlights": [
+        "add Neovim plugin for CCASP integration (nvim-ccasp) (#35)",
+        "Fixed: resolve 401 auth error by unsetting HAPPY_SERVER_URL"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.30",
       "date": "2026-02-01",
       "summary": "Feature: add comprehensive Happy.engineering mobile UI support",

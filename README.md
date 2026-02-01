@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.8.24  •  Production Ready                         ║
+║                          v1.8.30  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -18,7 +18,7 @@
 [![Node.js 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**A professional-grade CLI toolkit for Claude Code CLI — 90+ components including agents, hooks, skills, MCP servers, refactoring system, project scaffolding, and GitHub integration.**
+**A professional-grade CLI toolkit for Claude Code CLI — 100+ components including 40 hooks, 34 commands, 18 agent templates, 5 skills, MCP servers, refactoring system, mobile UI, and GitHub integration.**
 
 [Getting Started](#quick-start) • [Documentation](./docs/WIKI.md) • [API Reference](#api-reference) • [Contributing](#contributing)
 
@@ -29,7 +29,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [What's New in v1.8.24](#whats-new-in-v1824)
+- [What's New in v1.8.30](#whats-new-in-v1830)
 - [Agent Orchestration](#agent-orchestration)
 - [Key Features](#key-features)
 - [Refactoring System](#refactoring-system)
@@ -69,11 +69,45 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
-## What's New in v1.8.24
+## What's New in v1.8.30
 
 **Major additions in v1.8.x:**
 
-### Agent Orchestration System (v1.8.24) - NEW!
+### Happy.engineering Mobile UI (v1.8.30) - NEW!
+- **Auto-Detection**: Detects Happy CLI via environment variables (HAPPY_HOME_DIR, HAPPY_SERVER_URL, HAPPY_WEBAPP_URL, HAPPY_EXPERIMENTAL, HAPPY_SESSION)
+- **Mobile-Optimized Formatting**: 40-character max width, card-based layouts
+- **Word-Aware Wrapping**: Text wraps at word boundaries (no mid-word breaks)
+- **Box-Drawing Characters**: Consistent UI with ┌─┐│├┤└┘
+- **Updated Commands**: `/menu`, `/pr-merge`, `/menu-issues-list`, `/ccasp-panel` all support mobile formatting
+- **`happy-mode-detector` Hook**: Runs on session start, caches detection for 4 hours
+
+### PR Merge Command (v1.8.29)
+- **`/pr-merge`**: Interactive PR merge with 9-phase workflow
+- **Safety Checkpoint**: Stashes changes, records state before any modifications
+- **Automatic Rollback**: Reverts on any failure
+- **Blocker Resolution**: Handles draft, outdated, conflicts, CI failures, pending reviews
+- **Contributor Messaging**: Thank-you messages before merge
+- **Mobile Card Layout**: PR selection with mobile-friendly cards
+
+### Smart Update System (v1.8.28)
+- **Smart Update Mode (A)**: Protects customizations while adding new features
+- **Full Overwrite Mode (B)**: Replaces all .claude/ assets (preserves config)
+- **Auto-Repair Hooks**: Outdated hooks repaired during `ccasp init`
+- **`/update-smart`**: New command for intelligent updates
+
+### Roadmap Orchestration Framework (v1.8.27)
+- **Manual Builder (Mode A)**: Natural language to structured phases
+- **GitHub Integration (Mode B)**: Issue import with table selection, epic hierarchy
+- **Commands**: `/roadmap-status`, `/roadmap-edit`, `/roadmap-track`
+- **Storage**: `.claude/roadmaps/{slug}.json`, `.claude/phase-plans/{slug}/`
+- **Auto-Advance**: Dependency checking, progress tracking
+
+### Dev Mode & Utilities (v1.8.26)
+- **Dev Mode**: `ccasp init --dev` for rapid template testing
+- **Project Backup**: Automatic backup before overwrites (`.ccasp-backup/`)
+- **Configurable Co-Authors**: `commit.coAuthors` in tech-stack.json
+
+### Agent Orchestration System (v1.8.24)
 - **Hierarchical Agent Execution**: L1 Orchestrator → L2 Specialists → L3 Workers
 - **Automatic PROGRESS.json Updates**: Agents report completion, state auto-updates
 - **GitHub Issue Sync**: Progress comments pushed to linked issues
@@ -84,11 +118,15 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 - **Audit Logging**: All agent actions logged to `.claude/logs/orchestrator-audit.jsonl`
 - **`/orchestration-guide`**: Quick reference for spawning agents and completion formats
 
-### Roadmap Management System (v1.8.23)
-- **Multi-phase Roadmaps**: ROADMAP.json with dependency graphs
+### Roadmap Orchestration Framework (v1.8.27)
+- **Manual Builder (Mode A)**: Natural language to structured phases
+- **GitHub Integration (Mode B)**: Issue import with table selection, epic hierarchy
+- **Dependency Graphs**: Automatic cycle detection, topological ordering
+- **Commands**: `/roadmap-status`, `/roadmap-edit`, `/roadmap-track`
+- **Storage**: `.claude/roadmaps/{slug}.json`, `.claude/phase-plans/{slug}/`
+- **Phase-Dev Integration**: Auto-generate PROGRESS.json from roadmap phases
+- **Execution Tracking**: Dependency checking, progress tracking, auto-advance
 - **GitHub Epic Hierarchy**: Auto-create epic → child issue structure
-- **Complexity Detection**: Recommends roadmaps for plans with 30+ tasks
-- **Auto Documentation**: Generate architecture docs from roadmap structure
 
 ### Refactoring System (v1.8.19-1.8.22)
 - **`/ralph`**: Ralph Loop - continuous test-fix cycles until all tests pass
@@ -109,7 +147,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 - **`ccasp init --dev`**: Dev mode for rapid template testing
 - **Mobile-optimized menus**: Single-char inputs for Happy.Engineering
 
-**90+ components** across 10 implementation phases:
+**100+ components** across 11 implementation phases:
 
 | Phase | Version | Components |
 |-------|---------|------------|
@@ -122,6 +160,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Phase 8 | v1.8 | **7 Utility Scripts** — deployment validation, roadmap scanning |
 | Phase 9 | v1.8.16 | **18 Agent Templates** — framework-specific specialists |
 | Phase 10 | v1.8.19 | **Refactoring System** — 5 commands, 4 hooks, 2 skills |
+| Phase 11 | v1.8.27-30 | **Mobile UI, PR Merge, Roadmaps** — Happy.engineering support, `/pr-merge`, orchestration |
 
 ---
 
@@ -132,11 +171,16 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Feature | Description |
 |---------|-------------|
 | **L1/L2/L3 Agent Hierarchy** | Orchestrators, specialists, and workers with configurable model selection |
-| **26 Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
+| **40 Enforcement Hooks** | PreToolUse, PostToolUse, UserPromptSubmit hooks for validation and monitoring |
+| **34 Slash Commands** | Full-featured commands for development workflow |
 | **5 RAG-Enhanced Skills** | Domain-specific knowledge packages with context, templates, and workflows |
+| **Happy.engineering Mobile UI** | 40-char formatting, card layouts, word-aware wrapping |
+| **PR Merge Workflow** | 9-phase merge with safety, blockers, rollback |
+| **Roadmap Orchestration** | Multi-phase planning with GitHub epic integration |
 | **Refactoring System** | Ralph Loop, Golden Master, complexity analysis, atomic transactions |
 | **Project Scaffolding** | Fresh project wizard with 6+ stack templates |
 | **Auto-Generated Agents** | 18 framework-specific agents from tech stack detection |
+| **Smart Update System** | Protects customizations, auto-repairs hooks |
 | **Phased Development** | 95%+ success rate planning with PROGRESS.json state tracking |
 | **GitHub Integration** | Project Board sync, issue creation with codebase analysis |
 | **7 MCP Servers** | Auto-recommend and configure MCP servers for your stack |
@@ -145,7 +189,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | **Template Engine** | Handlebars-style placeholders with conditionals and loops |
 | **Tech Stack Detection** | Pattern-based detection of 40+ frameworks and tools |
 
-### Hook Templates (26 Total)
+### Hook Templates (40 Total)
 
 #### Token & Session Hooks
 | Hook | Purpose | Portability |
@@ -313,11 +357,101 @@ Use `/orchestration-guide` inside Claude Code for spawning syntax, error handlin
 
 ---
 
+## Happy.engineering Mobile UI
+
+CCASP v1.8.30 includes comprehensive mobile UI support for [Happy.engineering](https://github.com/slopus/happy) CLI wrapper.
+
+### Detection
+
+Happy mode is auto-detected via environment variables:
+
+```bash
+# Any of these trigger mobile formatting:
+HAPPY_HOME_DIR=/path/to/.happy
+HAPPY_SERVER_URL=https://...
+HAPPY_WEBAPP_URL=https://...
+HAPPY_EXPERIMENTAL=true
+HAPPY_SESSION=true
+```
+
+### Mobile Formatting Rules
+
+| Rule | Value |
+|------|-------|
+| **Max width** | 40 characters total |
+| **Content width** | 36 characters (4 for borders) |
+| **Word wrapping** | At word boundaries only (no mid-word breaks) |
+| **Layout** | Card-based, stacked (one item per row) |
+
+### Box-Drawing Characters
+
+```
+┌────────────────────────────────────┐  Top border
+│ Content line here                  │  Vertical
+├────────────────────────────────────┤  Separator
+│ More content                       │
+└────────────────────────────────────┘  Bottom border
+```
+
+### Supported Commands
+
+| Command | Mobile Support |
+|---------|----------------|
+| `/menu` | ✅ Card-based menu with stacked options |
+| `/pr-merge` | ✅ PR cards with wrapped descriptions |
+| `/menu-issues-list` | ✅ Issue cards with metadata |
+| `/ccasp-panel` | ✅ Inline panel (no new terminal) |
+
+### Example: Desktop vs Mobile
+
+**Desktop (76 chars):**
+```
+╔══════════════════════════════════════════════════════════════════════════╗
+║  #   │ Issue        │ Status   │ Priority │ Assigned       │ Updated    ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║  42  │ Add JWT auth │ Ready    │ High     │ @johndoe       │ 2h ago     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+**Mobile (40 chars):**
+```
+┌────────────────────────────────────┐
+│ [1] Issue #42                      │
+│ Add JWT auth                       │
+├────────────────────────────────────┤
+│ Status: Ready                      │
+│ Priority: High                     │
+│ @johndoe • 2h ago                  │
+└────────────────────────────────────┘
+```
+
+### Enabling Happy Mode
+
+Happy mode is auto-detected when running via Happy CLI. For testing:
+
+```bash
+# Set environment variable
+export HAPPY_HOME_DIR=/path/to/.happy
+
+# Run any CCASP command
+/menu  # Will display mobile format
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `.claude/hooks/happy-mode-detector.js` | Session startup detection |
+| `src/utils/mobile-table.js` | Mobile formatting utilities |
+| `.claude/docs/HAPPY_MOBILE_UI_GUIDELINES.md` | Complete style guide |
+
+---
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CCASP ARCHITECTURE (v1.8.22)                             │
+│                    CCASP ARCHITECTURE (v1.8.30)                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  PHASE 1: TERMINAL (No AI)                                                   │
@@ -459,6 +593,51 @@ claude-advanced                 # Medium form
 claude-cli-advanced-starter-pack # Full name
 ```
 
+### Dev Mode (v1.8.26+)
+
+For template development and rapid testing:
+
+```bash
+# Enable dev mode - templates read directly from package
+ccasp init --dev
+
+# Changes to templates/ reflect immediately
+# No need to reinstall package between edits
+```
+
+### Project Backup (v1.8.26+)
+
+Before overwriting `.claude/`, CCASP creates automatic backups:
+
+```bash
+# Backups stored in:
+.ccasp-backup/
+├── 2026-02-01T12-00-00/
+│   └── .claude/          # Complete backup
+└── 2026-02-01T14-30-00/
+    └── .claude/          # Another backup
+```
+
+### Configurable Co-Authors (v1.8.26+)
+
+Configure commit co-author attribution in `tech-stack.json`:
+
+```json
+{
+  "commit": {
+    "coAuthors": {
+      "enabled": true,
+      "authors": [
+        { "name": "Claude", "email": "noreply@anthropic.com" },
+        { "name": "Happy", "email": "yesreply@happy.engineering" }
+      ]
+    }
+  }
+}
+```
+
+When `enabled: false` (default), no co-authors are added to commits.
+
 ---
 
 ## Commands Reference
@@ -528,11 +707,143 @@ claude-cli-advanced-starter-pack # Full name
 |---------|-------------|
 | `/project-explorer` | Interactive wizard for scaffolding fresh projects |
 
+#### PR & Git Commands (NEW in v1.8.29+)
+
+| Command | Description |
+|---------|-------------|
+| `/pr-merge` | Interactive PR merge with blocker resolution, safety, rollback |
+| `/update-smart` | Smart update manager - protects customizations |
+
+#### Roadmap Commands (NEW in v1.8.27+)
+
+| Command | Description |
+|---------|-------------|
+| `/roadmap-status` | View roadmap progress dashboard |
+| `/roadmap-edit` | Edit roadmap structure (reorder, merge, split phases) |
+| `/roadmap-track` | Execute and track roadmap phases |
+
+---
+
+## PR Merge Workflow
+
+The `/pr-merge` command (v1.8.29) provides a safe, interactive PR merge workflow:
+
+### 9-Phase Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          /pr-merge WORKFLOW                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Phase 1: Identify PR (current branch or explicit number)                   │
+│  Phase 2: Create safety checkpoint (stash, record state)                    │
+│  Phase 3: Detect all blockers (draft, outdated, conflicts, CI, reviews)     │
+│  Phase 4: Resolve blockers one-by-one with user choice                      │
+│  Phase 5: Offer contributor thank-you message                               │
+│  Phase 6: Select merge method (squash/merge/rebase)                         │
+│  Phase 7: Execute merge with confirmation                                   │
+│  Phase 8: Post-merge cleanup (checkout base, prune)                         │
+│  Phase 9: Success summary with next steps                                   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Blocker Types & Resolution
+
+| Blocker | Resolution Options |
+|---------|-------------------|
+| **Draft PR** | Convert to ready, or cancel |
+| **Outdated Branch** | Merge base into branch, or rebase |
+| **Merge Conflicts** | Interactive resolution with conflict markers |
+| **Failing CI** | Wait for completion, or bypass (with warning) |
+| **Pending Reviews** | Request re-review, or admin merge |
+
+### Safety Features
+
+- **Automatic Stash**: Uncommitted changes saved before operations
+- **State Recording**: Original branch, HEAD, and status recorded
+- **Automatic Rollback**: On any failure, reverts to original state
+- **Dry-Run Mode**: Preview changes without executing (`/pr-merge --dry-run`)
+
+### Usage
+
+```bash
+# Merge PR for current branch
+/pr-merge
+
+# Merge specific PR by number
+/pr-merge 123
+
+# Preview without changes
+/pr-merge --dry-run
+```
+
+---
+
+## Roadmap Orchestration
+
+The Roadmap Orchestration Framework (v1.8.27) enables multi-phase project planning with GitHub integration.
+
+### Creation Modes
+
+| Mode | Command | Description |
+|------|---------|-------------|
+| **Mode A: Manual** | `ccasp create-roadmap` | Natural language description → structured phases |
+| **Mode B: GitHub** | `ccasp roadmap import` | Import issues from GitHub → grouped phases |
+
+### Roadmap Structure
+
+```json
+{
+  "slug": "my-feature",
+  "phases": [
+    {
+      "id": "P1",
+      "name": "Discovery",
+      "tasks": ["Research existing implementation", "Document requirements"],
+      "dependencies": [],
+      "status": "completed"
+    },
+    {
+      "id": "P2",
+      "name": "Implementation",
+      "tasks": ["Build core feature", "Write tests"],
+      "dependencies": ["P1"],
+      "status": "in_progress"
+    }
+  ]
+}
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `/roadmap-status` | View progress dashboard with phase breakdown |
+| `/roadmap-edit` | Reorder, merge, split, or remove phases |
+| `/roadmap-track` | Execute phases, check dependencies, auto-advance |
+
+### GitHub Epic Integration
+
+When creating from GitHub issues, the framework:
+
+1. **Groups Issues**: By label, milestone, or project column
+2. **Creates Epic**: Parent issue linking all child issues
+3. **Tracks Progress**: Updates epic when children complete
+4. **Syncs Status**: Bidirectional sync with Project Board
+
+### Storage
+
+| Path | Content |
+|------|---------|
+| `.claude/roadmaps/{slug}.json` | Roadmap definition |
+| `.claude/phase-plans/{slug}/phase-*.json` | Phase execution plans |
+
 ---
 
 ## Hook Templates
 
-CCASP includes 12 production-ready hook templates:
+CCASP includes 30+ production-ready hook templates:
 
 ### Token & Session Management
 
@@ -1014,6 +1325,63 @@ During setup, choose a preset for quick configuration:
 | **B** | Standard | + GitHub Integration + Phased Development |
 | **C** | Full | + Deployment + Hooks + Refactoring + Scripts |
 | **D** | Custom | Pick individual features |
+
+---
+
+## Update System
+
+CCASP v1.8.28 includes a smart update system for managing project updates:
+
+### Update Modes
+
+| Mode | Command | Behavior |
+|------|---------|----------|
+| **Smart (A)** | `/update-smart` | Protects customizations, merges new features |
+| **Full (B)** | `ccasp init --force` | Overwrites all `.claude/` assets, preserves config |
+
+### Smart Update Features
+
+- **Customization Protection**: Detects modified files and prompts before overwriting
+- **Selective Updates**: Choose which features to add or update
+- **Auto-Repair**: Outdated hooks automatically repaired during `ccasp init`
+- **State Tracking**: Update history stored in `.claude/config/ccasp-state.json`
+
+### Update Flow
+
+```
+/update-smart or /update-check
+       ↓
+Check npm registry for new version
+       ↓
+Compare installed vs latest
+       ↓
+   ┌───────────┴───────────┐
+   │                       │
+Up to date           Update available
+   ↓                       ↓
+"All good!"          Show highlights
+                           ↓
+                   ┌───────┴───────┐
+                   │               │
+              Smart (A)       Full (B)
+                   │               │
+                   ↓               ↓
+            Merge changes    Overwrite all
+            Keep customs     Fresh install
+```
+
+### Auto-Repair
+
+When running `ccasp init`, outdated hooks are detected and repaired:
+
+```bash
+# During init
+[REPAIR] Found outdated hooks:
+  • ccasp-update-check.js (v1.8.25 → v1.8.30)
+  • happy-mode-detector.js (v1.8.24 → v1.8.30)
+
+Auto-repairing... Done!
+```
 
 ---
 
