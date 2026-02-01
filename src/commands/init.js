@@ -54,6 +54,7 @@ const OPTIONAL_FEATURES = [
     description: 'Integration with Happy Coder mobile app for remote session control, checkpoint management, and mobile-optimized responses.',
     commands: ['happy-start'],
     hooks: ['happy-checkpoint-manager', 'happy-title-generator', 'happy-mode-detector', 'context-injector'],
+    binaries: ['happy-start.ps1'],  // Helper scripts deployed to bin/
     default: false,
     requiresPostConfig: true,
     npmPackage: 'happy-coder',
@@ -2035,14 +2036,16 @@ export async function runInit(options = {}) {
   const enabledFeatures = OPTIONAL_FEATURES.filter((f) => selectedFeatures.includes(f.name));
   const featuresRequiringConfig = enabledFeatures.filter((f) => f.requiresPostConfig);
 
-  // Collect feature-specific commands, hooks, and skills to deploy
+  // Collect feature-specific commands, hooks, skills, and binaries to deploy
   const featureCommands = [];
   const featureHooks = [];
   const featureSkills = [];
+  const featureBinaries = [];
   for (const feature of enabledFeatures) {
     featureCommands.push(...feature.commands);
     featureHooks.push(...(feature.hooks || []));
     featureSkills.push(...(feature.skills || []));
+    featureBinaries.push(...(feature.binaries || []));
   }
 
   if (featureCommands.length > 0) {
@@ -2586,6 +2589,61 @@ export async function runInit(options = {}) {
 
     if (deployedSkills.length > 0) {
       console.log(chalk.green(`\n  ✓ Deployed ${deployedSkills.length} feature skill(s)`));
+    }
+  }
+
+  // Step 6d: Deploy feature binaries (helper scripts)
+  const deployedBinaries = [];
+  const failedBinaries = [];
+
+  if (featureBinaries.length > 0) {
+    console.log(chalk.bold('\nStep 6d: Deploying helper scripts\n'));
+
+    // Create bin directory in project root (alongside .claude)
+    const binDir = join(cwd, 'bin');
+    if (!existsSync(binDir)) {
+      mkdirSync(binDir, { recursive: true });
+    }
+
+    for (const binaryName of featureBinaries) {
+      try {
+        const binaryPath = join(binDir, binaryName);
+        const binaryExists = existsSync(binaryPath);
+
+        // Respect overwrite setting
+        if (binaryExists && !overwrite) {
+          console.log(chalk.blue(`  ○ bin/${binaryName} exists (preserved)`));
+          continue;
+        }
+
+        // Try to load from templates/bin/ folder (remove .template suffix if present)
+        const templateName = binaryName.includes('.template.') ? binaryName : binaryName.replace(/(\.[^.]+)$/, '.template$1');
+        const templatePath = join(__dirname, '..', '..', 'templates', 'bin', templateName);
+        if (existsSync(templatePath)) {
+          // Create backup if overwriting
+          if (binaryExists && overwrite) {
+            const backupPath = createBackup(binaryPath);
+            if (backupPath) {
+              backedUpFiles.push({ original: binaryPath, backup: backupPath });
+            }
+          }
+          const binaryContent = readFileSync(templatePath, 'utf8');
+          writeFileSync(binaryPath, binaryContent, 'utf8');
+          deployedBinaries.push(binaryName);
+          const action = binaryExists ? 'Updated' : 'Created';
+          console.log(chalk.green(`  ✓ ${action} bin/${binaryName}`));
+        } else {
+          failedBinaries.push({ name: binaryName, error: 'No template found' });
+          console.log(chalk.yellow(`  ⚠ Skipped bin/${binaryName} (no template)`));
+        }
+      } catch (error) {
+        failedBinaries.push({ name: binaryName, error: error.message });
+        console.log(chalk.red(`  ✗ Failed: bin/${binaryName} - ${error.message}`));
+      }
+    }
+
+    if (deployedBinaries.length > 0) {
+      console.log(chalk.green(`\n  ✓ Deployed ${deployedBinaries.length} helper script(s)`));
     }
   }
 

@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "2.1.3",
+      "date": "2026-02-01",
+      "summary": "Feature: add API key validation and Windows compatibility",
+      "highlights": [
+        "add API key validation and Windows compatibility"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.1.2",
       "date": "2026-02-01",
       "summary": "refactor: rename /github-update to /github-project-menu",
