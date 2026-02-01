@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "1.8.30",
+      "date": "2026-02-01",
+      "summary": "Feature: add comprehensive Happy.engineering mobile UI support",
+      "highlights": [
+        "add comprehensive Happy.engineering mobile UI support"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.29",
       "date": "2026-02-01",
       "summary": "Feature: add open PR menu with mobile-friendly card layout",
