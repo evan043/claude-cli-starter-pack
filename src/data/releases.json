@@ -1,6 +1,41 @@
 {
   "releases": [
     {
+      "version": "1.8.28",
+      "date": "2026-02-01",
+      "summary": "Fix: update notification system and add update modes to /update-check",
+      "highlights": [
+        "Fix update notification not showing - hook was writing to wrong state file location",
+        "Auto-repair outdated hooks during ccasp init (fixes Issue #9)",
+        "Fix stale version display in /menu - now always reads dynamically from ccasp-state.json",
+        "Add Smart Update mode (A) - protects customizations while adding new features",
+        "Add Full Overwrite mode (B) - replaces all .claude/ assets while preserving config",
+        "Improved update check instructions with step-by-step guidance"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "Smart Update Mode",
+            "description": "Protect your customized commands/skills while adding new features"
+          },
+          {
+            "name": "Full Overwrite Mode",
+            "description": "Replace all .claude/ assets (preserves tech-stack.json config)"
+          },
+          {
+            "name": "Auto-repair Hooks",
+            "description": "ccasp init now detects and fixes outdated hooks automatically"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.25",
       "date": "2026-02-01",
       "summary": "Feature: add hierarchical agent orchestration system (L1/L2/L3)",

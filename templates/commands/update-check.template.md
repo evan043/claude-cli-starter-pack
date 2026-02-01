@@ -24,8 +24,10 @@ Check for Claude CLI Advanced Starter Pack updates and manage new features.
 | **2** | Add New Features | Install features from recent updates |
 | **3** | Prior Releases | Review and enable features from older versions |
 | **4** | View Changelog | See what changed in each release |
+| **A** | Smart Update | Protect customizations, merge new features carefully |
+| **B** | Full Overwrite | Replace all .claude/ assets (preserves tech-stack.json) |
 | **P** | Planning Mode | Audit new features before adding them |
-| **B** | Back to /menu | Return to main menu |
+| **X** | Back to /menu | Return to main menu |
 
 ---
 
@@ -93,8 +95,10 @@ What would you like to do?
 2. Add New Features - Install features from recent updates
 3. Prior Releases - Review features from older versions
 4. View Changelog - See release history
+A. Smart Update - Protect customizations, merge carefully
+B. Full Overwrite - Replace all assets (backup created)
 P. Planning Mode - Audit features before adding
-B. Back to /menu
+X. Back to /menu
 ```
 
 ---
@@ -224,6 +228,96 @@ For users who want to audit new features before adding them:
 4. Review: Present plan to user
 5. Approve: User confirms or modifies
 6. Implement: Execute approved changes
+```
+
+---
+
+## Option A: Smart Update (Protect Customizations)
+
+This mode preserves your customizations while adding new features.
+
+**What gets preserved:**
+- All files in `.claude/commands/` that you've modified
+- Custom skills in `.claude/skills/`
+- Custom agents in `.claude/agents/`
+- Custom hooks in `.claude/hooks/`
+- `.claude/config/tech-stack.json` (your project configuration)
+- `.claude/settings.json` and `.claude/settings.local.json`
+
+**What gets updated:**
+- New commands that don't exist yet
+- New skills, agents, hooks that don't exist yet
+- System files like INDEX.md (merged carefully)
+
+**Process:**
+1. Scan `.claude/config/usage-tracking.json` for customized assets
+2. For each customized asset, compare with new template
+3. Show diff and offer: Keep Local | Use New | Merge Manually
+4. Create backups in `.claude/backups/` before any changes
+5. Deploy only non-conflicting new content
+
+**Example:**
+```
+╔════════════════════════════════════════════════════════════════╗
+║  Smart Update - Protecting Customizations                      ║
+╠════════════════════════════════════════════════════════════════╣
+║  Customized assets detected (will be preserved):               ║
+║    • /create-task-list (modified)                              ║
+║    • /github-update (modified)                                 ║
+║                                                                ║
+║  New assets to add:                                            ║
+║    • /pr-merge (new in v1.8.27)                                ║
+║    • agent-orchestrator skill (new in v1.8.26)                 ║
+║                                                                ║
+║  Proceed with Smart Update? [Y/n]                              ║
+╚════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## Option B: Full Overwrite (Replace All Assets)
+
+This mode replaces all .claude/ assets with fresh templates from CCASP.
+
+**What gets replaced:**
+- All `.claude/commands/*.md` files
+- All `.claude/skills/*/` directories
+- All `.claude/agents/*.md` files
+- All `.claude/hooks/*.js` files
+- `.claude/commands/INDEX.md`
+- `.claude/docs/` directory
+
+**What is preserved:**
+- `.claude/config/tech-stack.json` (your project configuration)
+- `.claude/config/ccasp-state.json` (update tracking)
+- `.claude/config/usage-tracking.json` (usage history)
+- `.claude/settings.json` and `.claude/settings.local.json`
+- `.claude/backups/` directory
+
+**Process:**
+1. Create timestamped backup of entire `.claude/` folder in `.claude/backups/`
+2. Run `ccasp init --force` to redeploy all assets
+3. Restore config files from backup
+4. Update ccasp-state.json with new version
+
+**Warning:**
+```
+⚠️  FULL OVERWRITE will replace ALL customized commands, skills, agents, and hooks.
+Your customizations will be lost (backup created).
+
+Only use this if:
+- You want a clean slate
+- Your customizations are outdated
+- You're troubleshooting issues
+
+Backup location: .claude/backups/YYYY-MM-DD_HHMMSS/
+```
+
+**Execution:**
+```bash
+# This runs in the terminal
+cd <project-directory>
+ccasp init --force
 ```
 
 ---

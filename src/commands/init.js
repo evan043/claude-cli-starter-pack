@@ -1940,9 +1940,10 @@ export async function runInit(options = {}) {
 
   // Always deploy the CCASP update check hook (essential for update notifications)
   const updateCheckHookPath = join(hooksDir, 'ccasp-update-check.js');
+  const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
+
   if (!existsSync(updateCheckHookPath)) {
-    // Try to read from template
-    const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
+    // Hook doesn't exist - create from template
     if (existsSync(templatePath)) {
       const hookContent = readFileSync(templatePath, 'utf8');
       writeFileSync(updateCheckHookPath, hookContent, 'utf8');
@@ -1953,7 +1954,20 @@ export async function runInit(options = {}) {
       console.log(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
     }
   } else {
-    console.log(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
+    // Hook exists - check if it has the buggy path (Issue #9: state file mismatch)
+    const existingHook = readFileSync(updateCheckHookPath, 'utf8');
+    const hasBuggyPath = existingHook.includes('.ccasp-dev/ccasp-state.json') ||
+                         existingHook.includes("'.ccasp-dev/") ||
+                         !existingHook.includes('.claude/config/ccasp-state.json');
+
+    if (hasBuggyPath && existsSync(templatePath)) {
+      // Replace with fixed template version
+      const hookContent = readFileSync(templatePath, 'utf8');
+      writeFileSync(updateCheckHookPath, hookContent, 'utf8');
+      console.log(chalk.green('  ✓ Updated hooks/ccasp-update-check.js (fixed state file path)'));
+    } else {
+      console.log(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
+    }
   }
 
   // Deploy the usage tracking hook (tracks command/skill/agent usage for smart merge)
@@ -2946,7 +2960,9 @@ export async function verifyLegacyInstallation(projectDir = process.cwd()) {
     return { isLegacy: false, message: 'No .claude folder found' };
   }
 
-  // Check 1: Does the update-check hook file exist?
+  // Check 1: Does the update-check hook file exist and have correct paths?
+  const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
+
   if (!existsSync(updateCheckHookPath)) {
     issues.push('Missing ccasp-update-check.js hook file');
 
@@ -2955,11 +2971,26 @@ export async function verifyLegacyInstallation(projectDir = process.cwd()) {
       mkdirSync(hooksDir, { recursive: true });
     }
 
-    const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
     if (existsSync(templatePath)) {
       const hookContent = readFileSync(templatePath, 'utf8');
       writeFileSync(updateCheckHookPath, hookContent, 'utf8');
       fixes.push('Created ccasp-update-check.js hook file');
+    }
+  } else {
+    // Check 1b: Hook exists - verify it has correct state file path (Issue #9 fix)
+    const existingHook = readFileSync(updateCheckHookPath, 'utf8');
+    const hasBuggyPath = existingHook.includes('.ccasp-dev/ccasp-state.json') ||
+                         existingHook.includes("'.ccasp-dev/") ||
+                         !existingHook.includes('.claude/config/ccasp-state.json');
+
+    if (hasBuggyPath) {
+      issues.push('Update-check hook has incorrect state file path (update notifications broken)');
+
+      if (existsSync(templatePath)) {
+        const hookContent = readFileSync(templatePath, 'utf8');
+        writeFileSync(updateCheckHookPath, hookContent, 'utf8');
+        fixes.push('Fixed ccasp-update-check.js state file path');
+      }
     }
   }
 

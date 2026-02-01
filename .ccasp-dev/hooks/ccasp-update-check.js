@@ -13,8 +13,9 @@ const path = require('path');
 
 const PACKAGE_NAME = 'claude-cli-advanced-starter-pack';
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
-const STATE_FILE = '.ccasp-dev/ccasp-state.json';
-const SESSION_MARKER = '.ccasp-dev/.ccasp-session-checked';
+const STATE_FILE = '.claude/config/ccasp-state.json';
+const USAGE_FILE = '.claude/config/usage-tracking.json';
+const SESSION_MARKER = '.claude/config/.ccasp-session-checked';
 
 /**
  * Load state from file
@@ -87,15 +88,35 @@ function getCurrentVersion() {
 
 /**
  * Check npm for latest version
+ * Issue #8: Added npm registry API fallback for Windows compatibility
  */
 function checkLatestVersion() {
+  // Try npm CLI first
   try {
     const result = execSync(`npm view ${PACKAGE_NAME} version`, {
       encoding: 'utf8',
       timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    return result.trim();
+    const version = result.trim();
+    if (version && /^\d+\.\d+\.\d+/.test(version)) {
+      return version;
+    }
+  } catch {
+    // npm CLI failed, try fallback
+  }
+
+  // Fallback: Direct npm registry API call (synchronous for hook compatibility)
+  try {
+    const https = require('https');
+    // Use synchronous approach for hook
+    const { execSync: execSyncFallback } = require('child_process');
+    const curlResult = execSyncFallback(
+      `curl -s https://registry.npmjs.org/${PACKAGE_NAME}/latest`,
+      { encoding: 'utf8', timeout: 8000, stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const pkg = JSON.parse(curlResult);
+    return pkg.version || null;
   } catch {
     return null;
   }
