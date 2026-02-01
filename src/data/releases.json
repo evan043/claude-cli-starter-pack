@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2.2.2",
+      "date": "2026-02-01",
+      "summary": "Bug fixes and improvements",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.1",
       "date": "2026-02-01",
       "summary": "Feature: add project intent collection and full workflow",

@@ -11,12 +11,12 @@ import ora from 'ora';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import {
-  createEmptyIntegrationConfig,
   SUPPORTED_INTEGRATIONS,
   getIntegrationInfo,
   validateIntegrationConfig,
   createAdapterRegistry,
 } from './integrations/index.js';
+import { createEmptyIntegrationConfig } from './schema.js';
 
 const CONFIG_PATH = '.claude/integrations/config.json';
 
