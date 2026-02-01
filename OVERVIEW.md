@@ -1038,9 +1038,13 @@ ccasp setup
 
 - **🤖 Agent Hierarchy** - L1/L2/L3 agents for complex task orchestration
 - **🔧 Auto-Generated Agents** - 18 framework-specific specialists from tech stack
-- **🪝 26 Enforcement Hooks** - Quality gates for every tool call
+- **🪝 40 Enforcement Hooks** - Quality gates for every tool call
+- **📱 Happy.engineering Mobile UI** - 40-char formatting, card layouts, word-aware wrapping
+- **🔀 PR Merge Workflow** - 9-phase merge with safety, blockers, rollback
+- **🗺️ Roadmap Orchestration** - Multi-phase planning with GitHub epic integration
 - **🔄 Refactoring System** - Ralph Loop, Golden Master, complexity analysis, atomic transactions
 - **📦 Project Scaffolding** - `/project-explorer` for fresh projects
+- **🔄 Smart Update System** - Protects customizations, auto-repairs hooks
 - **🧪 Ralph Loop Testing** - Continuous test-fix until all pass
 - **📋 GitHub Integration** - Bidirectional task tracking
 - **🔍 Tech Stack Detection** - Auto-configure from your codebase
