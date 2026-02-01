@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "2.1.5",
+      "date": "2026-02-01",
+      "summary": "Feature: add /happy-start-cd command for repo selection",
+      "highlights": [
+        "add /happy-start-cd command for repo selection"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.1.4",
       "date": "2026-02-01",
       "summary": "Bug fixes and improvements",
