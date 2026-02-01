@@ -21,6 +21,7 @@ import { runCreatePhaseDev, showPhasDevMainMenu } from '../commands/create-phase
 import { runExploreMcp, showExploreMcpMenu } from '../commands/explore-mcp.js';
 import { runClaudeAudit, showClaudeAuditMenu } from '../commands/claude-audit.js';
 import { runRoadmap, showRoadmapMenu } from '../commands/roadmap.js';
+import { showGitHubEpicMenu } from '../commands/github-epic-menu.js';
 import { launchPanel, launchPanelInline } from '../commands/panel.js';
 import { hasTestingConfig } from '../testing/config.js';
 import { showHelp } from '../commands/help.js';
@@ -1046,7 +1047,12 @@ export async function showMainMenu() {
       short: 'Claude Audit',
     },
     {
-      name: `${chalk.magenta('R)')} ${chalk.bold('Roadmap Integration')}    Sync roadmaps with GitHub Project Board`,
+      name: `${chalk.magenta('E)')} ${chalk.bold('GitHub Epic System')}     Manage epics, phases, and testing schedules`,
+      value: 'github-epic',
+      short: 'Epic System',
+    },
+    {
+      name: `${chalk.dim('R)')} ${chalk.bold('Roadmap Integration')}    ${chalk.dim('(legacy)')} Sync roadmaps with GitHub`,
       value: 'roadmap',
       short: 'Roadmap',
     },
@@ -1239,6 +1245,11 @@ export async function showMainMenu() {
 
     case 'claude-audit':
       await showClaudeAuditMenu();
+      await returnToMenu();
+      break;
+
+    case 'github-epic':
+      await showGitHubEpicMenu();
       await returnToMenu();
       break;
 
