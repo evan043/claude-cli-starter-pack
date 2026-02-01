@@ -468,6 +468,9 @@ export function createCheckpoint(statePath, summary) {
   return checkpoint;
 }
 
+// Named exports for direct imports
+export { AGENT_CONFIGS, DOMAIN_KEYWORDS };
+
 export default {
   detectTaskDomain,
   generateL2Config,

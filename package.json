@@ -53,6 +53,7 @@
     "glob": "^10.3.10",
     "inquirer": "^9.2.23",
     "ora": "^8.0.1",
+    "uuid": "^13.0.0",
     "yaml": "^2.4.1"
   },
   "devDependencies": {

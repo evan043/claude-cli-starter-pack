@@ -328,6 +328,9 @@ export function parseL3Result(output) {
  */
 export const WORKER_TYPES = Object.keys(L3_WORKER_TYPES);
 
+// Named export for L3_WORKER_TYPES
+export { L3_WORKER_TYPES };
+
 export default {
   generateL3Worker,
   generateL3Workers,
