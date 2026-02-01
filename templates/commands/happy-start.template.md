@@ -10,46 +10,47 @@ Launches a new PowerShell terminal with Happy CLI wrapping Claude Code for mobil
 ## What This Does
 
 1. Opens a **new PowerShell window** in the current project directory
-2. Runs the `happy` command (from `happy-coder` npm package)
-3. Happy wraps Claude Code, enabling:
-   - QR code for mobile app connection
-   - Remote control from phone via Happy app
-   - Push notifications for permission requests and errors
+2. Runs `npx happy-coder` which wraps Claude Code
+3. Your paired Happy mobile app automatically sees the new session
+4. Control this Claude session from your phone
 
 ## Prerequisites
 
 - `happy-coder` npm package installed globally: `npm install -g happy-coder`
 - Claude Code CLI authenticated: `claude auth`
-- Happy app: https://app.happy.engineering
+- Happy mobile app paired (run `happy auth` once to pair)
 
 ## Instructions for Claude
 
 **When this command is invoked, IMMEDIATELY execute the following Bash command:**
 
 ```bash
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '${CWD}'; happy"
+wt.exe -d "${CWD}" powershell -NoExit -Command "happy"
 ```
+
+Note: Uses Windows Terminal (`wt.exe`) to launch a completely independent terminal window. Falls back to `cmd.exe /c "start powershell..."` if Windows Terminal is unavailable.
 
 After executing, respond with:
 
 ```
-Happy Terminal Launched
-──────────────────────
-A new PowerShell window has opened running Happy CLI.
+Happy Session Started
+─────────────────────
+A new PowerShell window has opened with Claude Code wrapped by Happy.
 
-Look for the QR code in the new terminal to connect your mobile device.
+Your Happy mobile app should now see this session.
+You can control Claude from your phone.
 
-This terminal session will close normally. The Happy session runs in the new window.
+This terminal will close normally. The Happy session runs in the new window.
 ```
 
-## Happy CLI Quick Reference
+## Happy CLI Flags
 
 | Flag | Description |
 |------|-------------|
-| `happy` | Start with Claude Code (default) |
-| `happy -m opus` | Use Opus model |
-| `happy -p auto` | Auto-approve permissions |
-| `happy auth` | Show QR code for mobile connection |
+| `npx happy-coder` | Start Claude Code wrapped by Happy |
+| `npx happy-coder -m opus` | Use Opus model |
+| `npx happy-coder -p auto` | Auto-approve permissions |
+| `npx happy-coder auth` | Pair with mobile app (one-time setup) |
 
 {{#if happyMode.enabled}}
 ## Project Configuration
@@ -59,12 +60,6 @@ This terminal session will close normally. The Happy session runs in the new win
 | Dashboard URL | {{happyMode.dashboardUrl}} |
 | Default Verbosity | {{happyMode.verbosity}} |
 {{/if}}
-
-## Mobile App Connection
-
-1. Install Happy app on your phone
-2. Scan QR code shown in the new terminal
-3. Control Claude Code from your phone!
 
 ---
 
