@@ -1,17 +1,28 @@
 /**
  * Project Management Hierarchy Schema
  *
- * 5-Layer Hierarchy:
- *   Vision (AI-managed, optional) → Epic (User-managed) → Roadmap → Phase → Task
+ * Hierarchy Structure:
+ *   OPTIONAL (disabled by default):
+ *     Vision (AI-managed) → Contains Epics (User-managed with AI assistance)
+ *
+ *   ALWAYS AVAILABLE (work independently):
+ *     Roadmaps → Phases → Tasks
+ *
+ * When Vision/Epics enabled, they can link to Roadmaps.
+ * When disabled, Roadmaps, Phase Dev Plans, and Task Lists work independently.
  *
  * Integrations:
- *   GitHub, Jira, Linear, ClickUp
+ *   GitHub, Jira, Linear, ClickUp - same rules apply to all
  */
 
 /**
  * Vision Schema (Optional, disabled by default)
  * AI-managed strategic direction with OKRs
  * Generated on manual trigger, with reminders when ahead of schedule
+ *
+ * IMPORTANT: Vision CONTAINS Epics - they are part of the Vision layer
+ * Both Vision and its Epics are disabled by default and must be
+ * explicitly enabled via /menu -> settings -> Epic & Vision toggle
  */
 export const VISION_SCHEMA = {
   vision_id: 'string (uuid)',
@@ -44,8 +55,12 @@ export const VISION_SCHEMA = {
     velocity_adjustment: 'number (multiplier based on actual vs planned)',
   },
 
-  // Linked epics
-  epics: ['epic_id'],
+  // CONTAINED Epics - Epics are PART OF Vision, not separate
+  // When Vision is enabled, Epics are also enabled
+  epics: ['Epic objects inline or epic_id references'],
+
+  // Linked roadmaps (optional - roadmaps work independently)
+  linked_roadmaps: ['roadmap_id'],
 
   // AI generation settings
   ai_settings: {
@@ -63,6 +78,10 @@ export const VISION_SCHEMA = {
 /**
  * Epic Schema (User-managed with AI assistance)
  * Strategic initiative - can be quarterly OR feature-based
+ *
+ * IMPORTANT: Epics are PART OF Vision and disabled by default.
+ * When Vision is enabled, Epics become available.
+ * Epics can link to Roadmaps, but Roadmaps work independently.
  */
 export const EPIC_SCHEMA = {
   epic_id: 'string (uuid)',
@@ -93,9 +112,10 @@ export const EPIC_SCHEMA = {
     estimated_completion: 'ISO8601 | null',
   },
 
-  // Hierarchy links
-  vision_id: 'string | null (optional)',
-  roadmaps: ['roadmap_id'],
+  // Hierarchy links - Epic is part of Vision (parent)
+  vision_id: 'string (required when Vision enabled)',
+  // Linked roadmaps - optional, roadmaps work independently
+  linked_roadmaps: ['roadmap_id'],
 
   // External integrations
   external_links: {
@@ -138,6 +158,9 @@ export const EPIC_SCHEMA = {
 /**
  * Roadmap Schema (Timeline/Sequencing layer)
  * Already implemented in src/roadmap/schema.js - extended here
+ *
+ * ALWAYS AVAILABLE - works independently of Vision/Epics
+ * Can optionally link to an Epic when Vision is enabled
  */
 export const ROADMAP_SCHEMA = {
   roadmap_id: 'string (uuid)',
@@ -145,8 +168,8 @@ export const ROADMAP_SCHEMA = {
   title: 'string',
   description: 'string',
 
-  // Hierarchy link
-  epic_id: 'string | null',
+  // Optional hierarchy link - only used when Vision/Epics enabled
+  epic_id: 'string | null (optional - roadmaps work independently)',
 
   // Source of roadmap
   source: 'manual | github-issues | github-project | jira | linear | clickup',
@@ -178,6 +201,8 @@ export const ROADMAP_SCHEMA = {
 /**
  * Phase Schema (Execution layer)
  * Already implemented in src/roadmap/schema.js - reference
+ *
+ * ALWAYS AVAILABLE - works independently as part of Phase Dev Plans
  */
 export const PHASE_SCHEMA = {
   phase_id: 'string',
@@ -199,6 +224,8 @@ export const PHASE_SCHEMA = {
 /**
  * Task Schema (Work unit layer)
  * Already implemented in decompose.js - reference
+ *
+ * ALWAYS AVAILABLE - works independently as Task Lists
  */
 export const TASK_SCHEMA = {
   task_id: 'string',
@@ -390,15 +417,33 @@ export const INTEGRATION_CONFIG_SCHEMA = {
  * Default values
  */
 export const DEFAULTS = {
+  // Vision & Epics - DISABLED by default
+  // Both must be explicitly enabled via /menu -> settings -> Epic & Vision toggle
+  vision_epics: {
+    enabled: false, // Master toggle for both Vision and Epics
+    require_tech_stack: true, // Must have tech stack configured first
+    require_scaffolded_project: true, // Must be initialized project
+  },
   vision: {
     enabled: false,
     reminder_threshold_percent: 120,
     generation_trigger: 'manual',
   },
   epic: {
+    enabled: false, // Epics are part of Vision, disabled by default
     type: 'feature',
     priority: 'P2',
     status: 'backlog',
+  },
+  // Always available independently
+  roadmap: {
+    always_available: true,
+  },
+  phase: {
+    always_available: true,
+  },
+  task: {
+    always_available: true,
   },
   integration: {
     primary: 'github',

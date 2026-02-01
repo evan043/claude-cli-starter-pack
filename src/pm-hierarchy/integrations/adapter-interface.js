@@ -3,6 +3,21 @@
  *
  * Base interface for all external PM tool integrations.
  * Implementations: GitHub, Jira, Linear, ClickUp
+ *
+ * HIERARCHY RULES (same for all integrations):
+ *
+ * OPTIONAL (disabled by default):
+ *   - Vision: AI-managed strategic direction with OKRs
+ *   - Epics: User-managed initiatives CONTAINED within Vision
+ *   - Both must be enabled via /menu -> settings -> Vision & Epics
+ *
+ * ALWAYS AVAILABLE (work independently):
+ *   - Roadmaps: Timeline and sequencing of phases
+ *   - Phases: Collections of related tasks
+ *   - Tasks: Individual work units
+ *
+ * When Vision/Epics are enabled, they can optionally link to Roadmaps.
+ * When disabled, Roadmaps, Phase Dev Plans, and Task Lists work independently.
  */
 
 /**

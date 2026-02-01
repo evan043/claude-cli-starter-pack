@@ -1,8 +1,15 @@
 /**
  * PM Hierarchy Module
  *
- * 5-Layer Project Management Hierarchy:
- *   Vision (AI-managed, optional) → Epic (User-managed) → Roadmap → Phase → Task
+ * Hierarchy Structure:
+ *   OPTIONAL (disabled by default):
+ *     Vision (AI-managed) → Contains Epics (User-managed with AI assistance)
+ *
+ *   ALWAYS AVAILABLE (work independently):
+ *     Roadmaps → Phases → Tasks
+ *
+ * When Vision/Epics enabled, they can link to Roadmaps.
+ * When disabled, Roadmaps, Phase Dev Plans, and Task Lists work independently.
  *
  * Features:
  * - Schema definitions for all layers
@@ -10,6 +17,8 @@
  * - Completion tracking with velocity metrics
  * - Timeline scaling based on actual development time
  * - Vision generation with ahead-of-schedule reminders
+ *
+ * Same rules apply to all integrations (GitHub, Jira, Linear, ClickUp)
  */
 
 // Schema exports
@@ -155,51 +164,76 @@ export function getProjectAdapters(cwd = process.cwd()) {
 export const PM_HIERARCHY_VERSION = '1.0.0';
 
 /**
- * Summary of the 5-layer hierarchy
+ * Summary of the hierarchy structure
+ *
+ * OPTIONAL (disabled by default, enabled via /menu -> settings -> Vision & Epics):
+ *   Vision → Contains Epics
+ *
+ * ALWAYS AVAILABLE (work independently):
+ *   Roadmaps → Phases → Tasks
  */
 export const HIERARCHY_SUMMARY = {
-  layers: [
-    {
-      name: 'Vision',
-      level: 0,
-      scope: 'Years (1-3)',
-      managedBy: 'AI (optional, user-triggered)',
-      storageDir: '.claude/vision/',
-      description: 'Strategic direction with OKRs, auto-generated on manual trigger',
-    },
-    {
-      name: 'Epic',
-      level: 1,
-      scope: 'Quarterly/Feature (1-4 months)',
-      managedBy: 'User with AI assistance',
-      storageDir: '.claude/epics/',
-      description: 'Strategic initiatives that bundle multiple roadmaps',
-    },
-    {
-      name: 'Roadmap',
-      level: 2,
-      scope: 'Weeks/Months (2-8 weeks)',
-      managedBy: 'User/AI',
-      storageDir: '.claude/roadmaps/',
-      description: 'Timeline and sequencing of phases',
-    },
-    {
-      name: 'Phase',
-      level: 3,
-      scope: 'Days/Weeks (3-10 days)',
-      managedBy: 'AI executor',
-      storageDir: '.claude/phase-plans/',
-      description: 'Collection of related tasks with PROGRESS.json',
-    },
-    {
-      name: 'Task',
-      level: 4,
-      scope: 'Hours (1-8 hours)',
-      managedBy: 'AI executor',
-      storageDir: 'Inline in phase PROGRESS.json',
-      description: 'Individual work units with file/function refs',
-    },
-  ],
+  // Optional layers - disabled by default
+  optional: {
+    description: 'Vision & Epics - disabled by default, enable in settings',
+    layers: [
+      {
+        name: 'Vision',
+        scope: 'Years (1-3)',
+        managedBy: 'AI (optional, user-triggered)',
+        storageDir: '.claude/vision/',
+        description: 'Strategic direction with OKRs, auto-generated on manual trigger',
+        enabled: false, // Default
+        containsEpics: true, // Epics are PART OF Vision
+      },
+      {
+        name: 'Epic',
+        scope: 'Quarterly/Feature (1-4 months)',
+        managedBy: 'User with AI assistance',
+        storageDir: '.claude/epics/',
+        description: 'Strategic initiatives that bundle multiple roadmaps',
+        enabled: false, // Default - part of Vision
+        partOfVision: true,
+      },
+    ],
+  },
+  // Always available layers - work independently
+  alwaysAvailable: {
+    description: 'Roadmaps, Phases, Tasks - always available independently',
+    layers: [
+      {
+        name: 'Roadmap',
+        scope: 'Weeks/Months (2-8 weeks)',
+        managedBy: 'User/AI',
+        storageDir: '.claude/roadmaps/',
+        description: 'Timeline and sequencing of phases',
+        alwaysAvailable: true,
+      },
+      {
+        name: 'Phase',
+        scope: 'Days/Weeks (3-10 days)',
+        managedBy: 'AI executor',
+        storageDir: '.claude/phase-plans/',
+        description: 'Collection of related tasks with PROGRESS.json',
+        alwaysAvailable: true,
+      },
+      {
+        name: 'Task',
+        scope: 'Hours (1-8 hours)',
+        managedBy: 'AI executor',
+        storageDir: 'Inline in phase PROGRESS.json',
+        description: 'Individual work units with file/function refs',
+        alwaysAvailable: true,
+      },
+    ],
+  },
   integrations: SUPPORTED_INTEGRATIONS,
   defaults: DEFAULTS,
+  rules: {
+    visionEpicsDisabledByDefault: true,
+    roadmapsWorkIndependently: true,
+    phasesWorkIndependently: true,
+    tasksWorkIndependently: true,
+    sameRulesForAllIntegrations: true, // GitHub, Jira, Linear, ClickUp
+  },
 };
