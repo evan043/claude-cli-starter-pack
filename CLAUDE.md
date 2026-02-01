@@ -93,6 +93,33 @@ All code uses ES6 `import`/`export` syntax. Package has `"type": "module"`.
 - **GitHub CLI (`gh`)**: Required for GitHub integration features. Must be v2.40+ and authenticated.
 - **Node.js 18+**: Minimum version requirement.
 
+## Key Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/pr-merge` | Interactive PR merge with conflict/blocker resolution |
+| `/github-task-start` | Start or complete tasks from GitHub Project Board |
+| `/deploy-full` | Parallel full-stack deployment |
+| `/create-task-list` | AI-powered task list generation |
+| `/phase-dev-plan` | Create phased development plans |
+
+## Agent-Only Mode
+
+When Agent-Only Mode is enabled (`delegation.json`), certain commands bypass restrictions via exempt patterns:
+
+```javascript
+// src/hooks/delegation-config.js
+exemptPatterns: [
+  '^git ',       // Git operations
+  '^gh ',        // GitHub CLI (PRs, issues, checks)
+  '^npm test',   // Test runners
+  '^pytest',
+  '^npx playwright'
+]
+```
+
+Commands like `/pr-merge` work seamlessly because `git` and `gh` are exempt.
+
 ## Session Restart Requirement
 
 After running `ccasp init` or modifying `.claude/`, users must restart Claude Code CLI for new commands to appear.

@@ -124,8 +124,15 @@ const DEFAULT_DELEGATION_CONFIG = {
     enabled: false,
     // Tools that should trigger delegation in agent-only mode
     restrictedTools: ['Edit', 'Write', 'Bash'],
-    // Exempt patterns (e.g., git commands, running tests)
-    exemptPatterns: ['^git ', '^npm test', '^npm run test', '^pytest', '^npx playwright'],
+    // Exempt patterns (e.g., git commands, gh CLI, running tests)
+    exemptPatterns: [
+      '^git ',
+      '^gh ',         // GitHub CLI - PRs, issues, checks
+      '^npm test',
+      '^npm run test',
+      '^pytest',
+      '^npx playwright',
+    ],
   },
 };
 
