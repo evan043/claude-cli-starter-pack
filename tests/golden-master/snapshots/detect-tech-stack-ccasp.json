@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "claude-cli-advanced-starter-pack",
+    "rootPath": "."
+  },
+  "frontend": {
+    "port": 5173
+  },
+  "backend": {
+    "port": 8000,
+    "healthEndpoint": "/api/health"
+  },
+  "database": {},
+  "deployment": {
+    "frontend": {},
+    "backend": {}
+  },
+  "devEnvironment": {
+    "packageManager": "npm",
+    "tunnel": {
+      "service": "none",
+      "url": null,
+      "subdomain": null
+    }
+  },
+  "testing": {
+    "e2e": {},
+    "unit": {},
+    "selectors": {
+      "strategy": "data-testid",
+      "username": "[data-testid=\"username-input\"]",
+      "password": "[data-testid=\"password-input\"]",
+      "loginButton": "[data-testid=\"login-submit\"]",
+      "loginSuccess": "[data-testid=\"dashboard\"]"
+    },
+    "credentials": {}
+  },
+  "versionControl": {
+    "provider": "github",
+    "owner": "evan043",
+    "repo": "claude-cli-advanced-starter-pack",
+    "defaultBranch": "master",
+    "projectBoard": {
+      "type": "none"
+    }
+  },
+  "urls": {
+    "local": {
+      "frontend": "http://localhost:5173",
+      "backend": "http://localhost:8000",
+      "api": "http://localhost:8000/api"
+    },
+    "tunnel": {},
+    "production": {}
+  },
+  "_detected": [
+    "frontend.port: 5173",
+    "versionControl: github/evan043/claude-cli-advanced-starter-pack"
+  ],
+  "commit": {
+    "coAuthors": {
+      "enabled": false,
+      "authors": []
+    }
+  }
+}
