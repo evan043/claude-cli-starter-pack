@@ -1,6 +1,21 @@
 {
   "releases": [
     {
+      "version": "2.0.0",
+      "date": "2026-02-01",
+      "summary": "Major release",
+      "highlights": [],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.31",
       "date": "2026-02-01",
       "summary": "Feature: add Neovim plugin for CCASP integration (nvim-ccasp) (#35)",
