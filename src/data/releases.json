@@ -1,6 +1,29 @@
 {
   "releases": [
     {
+      "version": "1.8.29",
+      "date": "2026-02-01",
+      "summary": "Feature: add open PR menu with mobile-friendly card layout",
+      "highlights": [
+        "add open PR menu with mobile-friendly card layout",
+        "complete rewrite with safety, rollback, and contributor messaging",
+        "add /pr-merge command with interactive blocker resolution",
+        "implement Roadmap Orchestration Framework with full CI/CD integration",
+        "make co-author attribution configurable",
+        "Fixed: update notification system and add update modes",
+        "Fixed: add uuid dependency and fix agent module exports"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.28",
       "date": "2026-02-01",
       "summary": "Fix: update notification system and add update modes to /update-check",
