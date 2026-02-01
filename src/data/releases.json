@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "version": "1.8.25",
+      "date": "2026-02-01",
+      "summary": "Feature: add hierarchical agent orchestration system (L1/L2/L3)",
+      "highlights": [
+        "add hierarchical agent orchestration system (L1/L2/L3)",
+        "add roadmap management system with auto GitHub integration",
+        "add project-explorer, ralph loop, and comprehensive refactoring system"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.18",
       "date": "2026-01-31",
       "summary": "Bug fixes and improvements",
