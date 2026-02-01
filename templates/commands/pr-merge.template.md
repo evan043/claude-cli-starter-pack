@@ -1,6 +1,5 @@
 ---
-description: Merge PR with interactive handling of blocks, conflicts, and out-of-date branches
-model: sonnet
+description: Merge PR with interactive blocker resolution, safety checkpoints, and contributor messaging
 allowed-tools:
   - Bash
   - Read
@@ -9,7 +8,7 @@ allowed-tools:
 
 # /pr-merge - Interactive PR Merge
 
-Merge a pull request with intelligent handling of all blocking conditions including out-of-date branches, failing checks, merge conflicts, and pending reviews.
+An intelligent merge assistant that handles all PR scenarios safely, with clear communication to contributors.
 
 {{#if versionControl.owner}}
 
@@ -17,127 +16,165 @@ Merge a pull request with intelligent handling of all blocking conditions includ
 
 ```
 /pr-merge                    # Merge PR for current branch
-/pr-merge <pr-number>        # Merge specific PR
-/pr-merge --dry-run          # Preview merge without executing
+/pr-merge 42                 # Merge PR #42
+/pr-merge --dry-run          # Preview only, no changes
 ```
 
-## Workflow Steps
+---
 
-### Step 1: Identify PR
+## PHASE 1: IDENTIFY THE PR
 
-Parse arguments to determine which PR to merge:
+**Step 1.1: Determine which PR to merge**
 
 ```bash
-# If PR number provided, use it directly
+# If PR number provided as argument, use it
 # Otherwise, find PR for current branch:
 CURRENT_BRANCH=$(git branch --show-current)
-gh pr list --repo {{versionControl.owner}}/{{versionControl.repo}} --head "$CURRENT_BRANCH" --json number,title,state,mergeable,mergeStateStatus,headRefName,baseRefName,isDraft,reviewDecision,statusCheckRollup --jq '.[0]'
+gh pr list --repo {{versionControl.owner}}/{{versionControl.repo}} --head "$CURRENT_BRANCH" --json number,title,headRefName --jq '.[0]'
 ```
 
-If no PR found, offer to create one with `/github-task-start --complete`.
+**If no PR found:**
+- Tell user: "I couldn't find an open PR for this branch."
+- Offer: "Would you like me to create one with `/github-task-start --complete`?"
+
+**Step 1.2: Fetch complete PR details**
+
+```bash
+gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json number,title,body,state,author,mergeable,mergeStateStatus,headRefName,baseRefName,isDraft,reviewDecision,statusCheckRollup,commits,additions,deletions,changedFiles,url
+```
+
+**Display a friendly summary:**
+
+```
+📋 PR #<number>: <title>
+   Author: @<username>
+   Branch: <head> → <base>
+   Changes: +<additions> -<deletions> across <files> files
+   Status: <current state>
+```
 
 ---
 
-### Step 2: Fetch PR Status
+## PHASE 2: CREATE SAFETY CHECKPOINT
 
-Get comprehensive PR information:
+**Before ANY changes, create a safety net.**
 
-```bash
-gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json number,title,state,mergeable,mergeStateStatus,headRefName,baseRefName,isDraft,reviewDecision,statusCheckRollup,commits,additions,deletions,changedFiles
-```
-
-**Display summary to user:**
-- PR title and number
-- Head branch → Base branch
-- Lines changed (+additions/-deletions)
-- Current merge state
-
----
-
-### Step 3: Evaluate Merge Blockers
-
-Check for these blocking conditions in order of severity:
-
-| Blocker | Detection | Resolution |
-|---------|-----------|------------|
-| **Draft PR** | `isDraft: true` | Offer to mark ready for review |
-| **Merge Conflicts** | `mergeable: CONFLICTING` | Interactive conflict resolution |
-| **Out of Date** | `mergeStateStatus: BEHIND` | Update branch options |
-| **Failing Checks** | `statusCheckRollup` has failures | Wait or bypass options |
-| **Pending Reviews** | `reviewDecision: REVIEW_REQUIRED` | Request review or admin merge |
-| **Changes Requested** | `reviewDecision: CHANGES_REQUESTED` | Address feedback first |
-
----
-
-### Step 4: Handle Each Blocker Interactively
-
-#### 4a. Draft PR
-
-If PR is a draft:
+**Step 2.1: Verify clean working tree**
 
 ```bash
-# Ask user
-# Option A: Mark as ready for review
-gh pr ready <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}}
-
-# Option B: Cancel merge operation
+git status --porcelain
 ```
 
-#### 4b. Merge Conflicts
+If there are uncommitted changes:
+- Tell user: "You have uncommitted changes. I need a clean working tree before we start."
+- Ask: "Should I stash them temporarily, or would you like to commit/discard first?"
 
-If conflicts detected:
-
-```bash
-# Show conflict summary
-gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json files --jq '.files[] | select(.conflictStatus == "CONFLICTING") | .path'
-```
-
-**Ask user for resolution strategy:**
-
+Options:
 | Option | Action |
 |--------|--------|
-| **A** | Update branch and resolve locally (recommended) |
-| **B** | Resolve in GitHub web interface |
-| **C** | Cancel merge - conflicts need manual attention |
+| **A** | Stash changes (I'll restore them after) |
+| **B** | Let me commit first (abort merge) |
+| **C** | Discard changes (WARNING: loses work) |
 
-For option A:
+**Step 2.2: Record current state**
+
 ```bash
-# Checkout PR branch
+# Save current branch and commit
+SAFETY_BRANCH=$(git branch --show-current)
+SAFETY_COMMIT=$(git rev-parse HEAD)
+SAFETY_BASE_COMMIT=$(git rev-parse origin/{{versionControl.defaultBranch}})
+
+# Fetch latest from remote
+git fetch origin
+```
+
+**Tell user:**
+> "✅ Safety checkpoint created. If anything goes wrong, I can restore you to exactly where you started."
+
+---
+
+## PHASE 3: DETECT ALL BLOCKERS
+
+Check for every possible merge blocker and collect them into a list.
+
+**Blocker Detection:**
+
+| Blocker | How to Detect | Severity |
+|---------|---------------|----------|
+| Draft PR | `isDraft: true` | 🟡 Warning |
+| Out of date | `mergeStateStatus: BEHIND` | 🟠 Fixable |
+| Merge conflicts | `mergeable: CONFLICTING` | 🔴 Blocking |
+| Failing checks | `statusCheckRollup` has failures | 🔴 Blocking |
+| Pending reviews | `reviewDecision: REVIEW_REQUIRED` | 🟠 Depends on settings |
+| Changes requested | `reviewDecision: CHANGES_REQUESTED` | 🔴 Blocking |
+
+**Display blockers clearly:**
+
+```
+🔍 Pre-merge check complete.
+
+Found <N> issue(s) to resolve:
+
+1. 🔴 Merge conflicts in 2 files
+2. 🟠 Branch is 3 commits behind {{versionControl.defaultBranch}}
+3. 🟡 PR is still in draft mode
+
+Let's handle these one at a time.
+```
+
+If NO blockers:
+> "✅ All checks passed! This PR is ready to merge."
+> Skip to Phase 5.
+
+---
+
+## PHASE 4: RESOLVE EACH BLOCKER
+
+Handle blockers **one at a time**, in order of severity.
+
+### 4.1 Draft PR
+
+**Explain:**
+> "This PR is marked as a draft, which usually means the author isn't ready for review yet."
+
+**Ask:**
+
+| Option | What happens |
+|--------|--------------|
+| **A** | Mark as ready for review, then continue |
+| **B** | Merge anyway (author may have forgotten to un-draft) |
+| **C** | Abort - let me check with the author first |
+
+For A:
+```bash
+gh pr ready <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}}
+```
+
+---
+
+### 4.2 Out-of-Date Branch
+
+**Explain:**
+> "The PR branch is behind {{versionControl.defaultBranch}}. This means new commits were merged since this PR was created."
+
+**Ask:**
+
+| Option | What happens |
+|--------|--------------|
+| **A** | Update by merging {{versionControl.defaultBranch}} into PR branch (recommended - preserves history) |
+| **B** | Update by rebasing onto {{versionControl.defaultBranch}} (cleaner history, rewrites commits) |
+| **C** | Skip - merge anyway if branch protection allows |
+| **D** | Abort - I want to review the new commits first |
+
+For A (merge update):
+```bash
 git fetch origin
 git checkout <head-branch>
-
-# Update with base branch
-git fetch origin {{versionControl.defaultBranch}}
-git merge origin/{{versionControl.defaultBranch}}
-
-# If conflicts:
-# - List conflicting files
-# - Offer to open in editor
-# - After resolution: git add . && git commit
+git merge origin/{{versionControl.defaultBranch}} --no-edit
 git push origin <head-branch>
 ```
 
-#### 4c. Out-of-Date Branch
-
-If branch is behind base:
-
-**Ask user for update strategy:**
-
-| Option | Description |
-|--------|-------------|
-| **A** | Merge base into branch (preserves history) - Recommended |
-| **B** | Rebase on base (cleaner history, may rewrite commits) |
-| **C** | Proceed anyway (if branch protection allows) |
-
-For option A (merge):
-```bash
-git fetch origin
-git checkout <head-branch>
-git merge origin/{{versionControl.defaultBranch}}
-git push origin <head-branch>
-```
-
-For option B (rebase):
+For B (rebase):
 ```bash
 git fetch origin
 git checkout <head-branch>
@@ -145,216 +182,355 @@ git rebase origin/{{versionControl.defaultBranch}}
 git push origin <head-branch> --force-with-lease
 ```
 
-**Wait for checks to re-run after update:**
+**After update:**
+> "✅ Branch updated. Waiting for CI checks to restart..."
+
 ```bash
-# Poll for check status
 gh pr checks <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --watch
 ```
 
-#### 4d. Failing Checks
+---
 
-If CI/checks are failing:
+### 4.3 Merge Conflicts
 
+**Explain:**
+> "There are merge conflicts between this PR and {{versionControl.defaultBranch}}. The same files were changed in both branches."
+
+**Show conflicting files:**
 ```bash
-# Show check details
+gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json files --jq '.files[] | select(.conflictStatus == "CONFLICTING") | .path'
+```
+
+**Ask:**
+
+| Option | What happens |
+|--------|--------------|
+| **A** | I'll help you resolve conflicts locally (recommended) |
+| **B** | Open GitHub's web conflict resolver |
+| **C** | Abort and notify the contributor to fix conflicts |
+
+For A:
+```bash
+git fetch origin
+git checkout <head-branch>
+git merge origin/{{versionControl.defaultBranch}}
+# Conflicts will appear - guide user through resolution
+```
+
+Then walk through each conflicting file, explaining what changed and asking which version to keep.
+
+For C (notify contributor):
+Post comment to PR (see Phase 6 for template).
+
+---
+
+### 4.4 Failing CI Checks
+
+**Explain:**
+> "Some automated checks are failing. This usually means tests aren't passing or there's a build error."
+
+**Show failing checks:**
+```bash
 gh pr checks <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}}
 ```
 
-**Ask user:**
+**Ask:**
 
-| Option | Action |
-|--------|--------|
-| **A** | Wait for checks to complete |
-| **B** | View failing check logs |
-| **C** | Cancel - fix issues first |
-| **D** | Force merge (admin only, if allowed) |
+| Option | What happens |
+|--------|--------------|
+| **A** | Wait for checks to complete (they might still be running) |
+| **B** | View the failing check logs |
+| **C** | Abort and notify contributor about failures |
+| **D** | Force merge anyway (admin bypass - use carefully!) |
 
-For option A:
+For A:
 ```bash
 gh pr checks <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --watch
 ```
 
-For option B:
+For B:
 ```bash
-# Get check run details
-gh api repos/{{versionControl.owner}}/{{versionControl.repo}}/commits/<head-sha>/check-runs --jq '.check_runs[] | select(.conclusion == "failure") | {name, html_url, output: .output.summary}'
+gh pr checks <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json name,state,conclusion,detailsUrl --jq '.[] | select(.conclusion == "FAILURE")'
 ```
 
-#### 4e. Pending Reviews
+For C:
+Post comment with failure details (see Phase 6).
 
-If review is required but not approved:
+---
 
-```bash
-# Show review status
-gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json reviews --jq '.reviews[] | {author: .author.login, state: .state}'
-```
+### 4.5 Pending Reviews
 
-**Ask user:**
+**Explain:**
+> "This repository requires reviews before merging. No approved reviews yet."
 
-| Option | Action |
-|--------|--------|
-| **A** | Request review from team member |
-| **B** | Wait for pending reviews |
+**Ask:**
+
+| Option | What happens |
+|--------|--------------|
+| **A** | Request a review from a team member |
+| **B** | I'll review and approve it myself |
 | **C** | Admin merge (bypass review requirement) |
+| **D** | Abort - reviews are required for a reason |
 
-For option A:
+For A:
 ```bash
-# List potential reviewers
+# Show collaborators
 gh api repos/{{versionControl.owner}}/{{versionControl.repo}}/collaborators --jq '.[].login'
-
 # Request review
 gh pr edit <PR_NUMBER> --add-reviewer <username>
 ```
 
 ---
 
-### Step 5: Select Merge Method
+### 4.6 Changes Requested
 
-Once all blockers are resolved, ask for merge method:
+**Explain:**
+> "A reviewer requested changes on this PR. The feedback should be addressed before merging."
 
-| Option | Method | Best For |
-|--------|--------|----------|
-| **A** | Squash and merge (recommended) | Clean history, single commit |
-| **B** | Create merge commit | Preserve all commits |
-| **C** | Rebase and merge | Linear history, individual commits |
+**Show the requested changes:**
+```bash
+gh pr view <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --json reviews --jq '.reviews[] | select(.state == "CHANGES_REQUESTED") | {author: .author.login, body: .body}'
+```
+
+**Ask:**
+
+| Option | What happens |
+|--------|--------------|
+| **A** | View the review comments in detail |
+| **B** | Dismiss the review (requires justification) |
+| **C** | Abort - changes need to be addressed first |
 
 ---
 
-### Step 6: Execute Merge
+## PHASE 5: CONTRIBUTOR MESSAGING (Pre-Merge)
+
+**Before merging, offer to thank the contributor.**
+
+**Ask:**
+> "Would you like to post a friendly comment thanking the contributor before I merge?"
+
+| Option | Action |
+|--------|--------|
+| **A** | Yes, post a thank-you message (recommended for external contributors) |
+| **B** | No, just merge silently |
+
+For A, post this comment:
+```bash
+gh pr comment <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --body "Thanks for the contribution! 🎉 Reviewing and merging now."
+```
+
+---
+
+## PHASE 6: SELECT MERGE METHOD
+
+**Explain the options:**
+
+| Method | Best for | What happens |
+|--------|----------|--------------|
+| **A** Squash (recommended) | Most PRs | All commits become one clean commit |
+| **B** Merge commit | Preserving history | Creates a merge commit, keeps all PR commits |
+| **C** Rebase | Linear history | Replays commits on top of base branch |
+
+**Ask:**
+> "How would you like to merge this PR?"
+
+---
+
+## PHASE 7: EXECUTE MERGE
+
+**Confirm before proceeding:**
+
+> "Ready to merge PR #<number> using <method>."
+> "This will:"
+> "  • Merge <N> commits into {{versionControl.defaultBranch}}"
+> "  • Delete the <branch-name> branch"
+> "  • Close any linked issues"
+>
+> "Proceed?"
+
+**Execute:**
 
 ```bash
 # Squash merge
 gh pr merge <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --squash --delete-branch
 
-# Merge commit
+# OR Merge commit
 gh pr merge <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --merge --delete-branch
 
-# Rebase merge
+# OR Rebase
 gh pr merge <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --rebase --delete-branch
 ```
 
-**Options to include:**
-- `--delete-branch`: Remove head branch after merge
-- `--auto`: Enable auto-merge when requirements are met
-- `--admin`: Merge without required reviews (admin only)
-
 ---
 
-### Step 7: Post-Merge Cleanup
+## PHASE 8: POST-MERGE CLEANUP
 
-After successful merge:
+**After successful merge:**
 
 ```bash
-# Switch to base branch
+# Return to base branch
 git checkout {{versionControl.defaultBranch}}
 
-# Pull latest changes
+# Pull the merged changes
 git pull origin {{versionControl.defaultBranch}}
 
-# Delete local branch
-git branch -d <head-branch>
+# Delete local PR branch
+git branch -d <head-branch> 2>/dev/null || true
 
-# Prune remote-tracking branches
+# Clean up remote tracking
 git fetch --prune
 ```
 
+**If we stashed changes earlier:**
+```bash
+git stash pop
+```
+
 ---
 
-### Step 8: Summary & Next Steps
+## PHASE 9: SUCCESS SUMMARY
 
-Display merge summary:
+**Display final summary:**
 
 ```
-✅ PR #<number> merged successfully
+✅ PR #<number> merged successfully!
 
 📋 Summary:
-   - Title: <PR title>
-   - Method: <squash|merge|rebase>
-   - Commits: <count> → 1 (if squashed)
-   - Branch deleted: <head-branch>
+   Title: <PR title>
+   Author: @<username>
+   Method: Squash and merge
+   Commits: <N> → 1
+   Branch: <head-branch> (deleted)
 
 🔗 Links:
-   - Merged PR: https://github.com/{{versionControl.owner}}/{{versionControl.repo}}/pull/<number>
-   - Commit: https://github.com/{{versionControl.owner}}/{{versionControl.repo}}/commit/<sha>
+   Merged PR: <pr-url>
+   Commit: https://github.com/{{versionControl.owner}}/{{versionControl.repo}}/commit/<sha>
 
-📌 Next steps:
-   - View deployment: /deploy-full
-   - Start next task: /github-task-start
-   - Update project board: /github-update
+📌 What's next?
+   • Deploy changes: /deploy-full
+   • Start next task: /github-task-start
+   • View project board: /github-update
 ```
 
 ---
 
-## Dry Run Mode
+## ERROR HANDLING & ROLLBACK
 
-When `--dry-run` is specified:
+**If ANY step fails:**
 
-1. Perform all status checks
-2. Identify all blockers
-3. Show what actions would be taken
-4. **DO NOT** execute any merge or update operations
+1. **Stop immediately** - no partial merges
+2. **Restore safety checkpoint:**
+   ```bash
+   git checkout $SAFETY_BRANCH
+   git reset --hard $SAFETY_COMMIT
+   git stash pop 2>/dev/null || true
+   ```
+3. **Explain what happened:**
+   > "❌ The merge couldn't be completed. Don't worry - I've restored everything to exactly how it was before we started."
+   > "What went wrong: <specific error>"
+
+4. **Post failure comment to PR** (if contributor is external):
+
+```bash
+gh pr comment <PR_NUMBER> --repo {{versionControl.owner}}/{{versionControl.repo}} --body "$(cat <<'COMMENT'
+Thanks so much for the contribution! 🙏
+
+I wasn't able to merge this yet due to:
+
+<BLOCKER_LIST>
+
+**What needs to happen:**
+<ACTION_ITEMS>
+
+Once these are resolved, I'll be happy to try again. Let me know if you have any questions!
+COMMENT
+)"
+```
 
 ---
 
-## Agent-Only Mode Compatibility
+## FAILURE COMMENT TEMPLATES
+
+### CI Failures
+```
+- ❌ Failing CI checks
+  - <check-name>: [View logs](<url>)
+  - <check-name>: [View logs](<url>)
+
+**To fix:** Please check the failing tests and push a fix.
+```
+
+### Merge Conflicts
+```
+- ❌ Merge conflicts in:
+  - `<file1>`
+  - `<file2>`
+
+**To fix:** Please merge or rebase with `{{versionControl.defaultBranch}}` and resolve conflicts.
+```
+
+### Outdated Branch
+```
+- ⚠️ Branch is behind `{{versionControl.defaultBranch}}`
+
+**To fix:** Please update your branch:
+\`\`\`bash
+git fetch origin
+git merge origin/{{versionControl.defaultBranch}}
+git push
+\`\`\`
+```
+
+---
+
+## AGENT-ONLY MODE COMPATIBILITY
 
 This command is **fully compatible** with Agent-Only Mode:
 
 - `git` and `gh` commands are in the exempt patterns list
 - All PR operations bypass agent delegation requirements
-- No file edits (Edit/Write tools) are performed by this command
+- No Edit/Write tools are used by this command
 
-**Note**: If you have an existing `delegation.json`, ensure `^gh ` is in your `exemptPatterns`:
-
-```json
-{
-  "agentOnlyMode": {
-    "exemptPatterns": [
-      "^git ",
-      "^gh ",
-      "^npm test",
-      ...
-    ]
-  }
-}
-```
+**For existing projects:** Ensure `^gh ` is in your `delegation.json` exemptPatterns.
 
 ---
 
-## Error Handling
+## DRY RUN MODE
 
-| Error | Response |
-|-------|----------|
-| PR not found | Offer to list open PRs or create new one |
-| No merge permission | Suggest requesting admin merge or adding as collaborator |
-| Protected branch rules | Explain which rules are blocking, offer compliant alternatives |
-| Network/API error | Retry with exponential backoff, offer manual merge instructions |
+When `--dry-run` is specified:
+
+1. Run all detection and analysis phases
+2. Show what blockers exist and what actions would be taken
+3. **DO NOT** execute any merge, update, or comment operations
+4. Display: "This was a dry run. No changes were made."
 
 ---
 
-## Instructions for Claude
+## INSTRUCTIONS FOR CLAUDE
 
-When `/pr-merge` is invoked:
+**Mindset:** Act as a helpful senior engineer sitting next to the user, making sure they don't break their repo and helping them communicate clearly with contributors.
 
-1. **Parse arguments**: Extract PR number, flags (--dry-run)
-2. **Identify PR**: Use argument or find from current branch
-3. **Fetch full status**: Get all merge-relevant fields
-4. **Evaluate blockers**: Check each condition systematically
-5. **Handle interactively**: For each blocker, present options via AskUserQuestion
-6. **Execute resolution**: Run chosen commands for each blocker
-7. **Re-check status**: After each resolution, verify state changed
-8. **Loop if needed**: Continue until no blockers remain
-9. **Merge method**: Ask user preference for squash/merge/rebase
-10. **Execute merge**: Run gh pr merge with chosen options
-11. **Cleanup**: Offer local branch cleanup
-12. **Summary**: Display results and next steps
+**Execution flow:**
 
-**Critical behaviors:**
-- Always show current status before asking for action
-- Re-fetch PR status after any update operation
-- Handle rate limiting gracefully
-- Provide escape option at every decision point
-- Never force-push or admin-merge without explicit confirmation
+1. Parse arguments (PR number, --dry-run flag)
+2. PHASE 1: Identify the PR
+3. PHASE 2: Create safety checkpoint (CRITICAL - always do this)
+4. PHASE 3: Detect all blockers
+5. PHASE 4: Resolve blockers one by one (ask user for each)
+6. PHASE 5: Offer contributor thank-you message
+7. PHASE 6: Ask for merge method
+8. PHASE 7: Execute merge (with confirmation)
+9. PHASE 8: Cleanup local environment
+10. PHASE 9: Display success summary
+
+**On any error:** Immediately rollback and explain clearly.
+
+**Communication style:**
+- No jargon - explain git concepts simply
+- Always explain what's happening and why
+- Always ask before any destructive action
+- Never silently automate - transparency first
+- Be encouraging, especially about contributor PRs
 
 {{else}}
 
@@ -366,19 +542,10 @@ GitHub repository is not configured. Run:
 ccasp init
 ```
 
-Or configure manually in `tech-stack.json`:
-
-```json
-{
-  "versionControl": {
-    "owner": "your-username",
-    "repo": "your-repo"
-  }
-}
-```
+Then restart Claude Code for commands to appear.
 
 {{/if}}
 
 ---
 
-*Generated from tech-stack.json template*
+*Part of CCASP - Claude CLI Advanced Starter Pack*
