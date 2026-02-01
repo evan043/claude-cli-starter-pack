@@ -83,9 +83,16 @@ function markSessionDetected(result) {
 
 /**
  * Detect Happy mode via environment variable
+ * Checks multiple Happy CLI environment variables
  */
 function detectViaEnvVar() {
-  return process.env.HAPPY_SESSION === 'true';
+  return !!(
+    process.env.HAPPY_SESSION === 'true' ||
+    process.env.HAPPY_HOME_DIR ||
+    process.env.HAPPY_SERVER_URL ||
+    process.env.HAPPY_WEBAPP_URL ||
+    process.env.HAPPY_EXPERIMENTAL
+  );
 }
 
 /**

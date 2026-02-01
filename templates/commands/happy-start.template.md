@@ -3,115 +3,69 @@ description: Start a Happy Mode session for mobile app integration
 model: sonnet
 ---
 
-# /happy-start - Start Happy Mode Session
+# /happy-start - Launch Happy CLI Session
 
-Initialize Happy Engineering integration for mobile app control and checkpoint management.
+Launches a new PowerShell terminal with Happy CLI wrapping Claude Code for mobile app control.
+
+## What This Does
+
+1. Opens a **new PowerShell window** in the current project directory
+2. Runs the `happy` command (from `happy-coder` npm package)
+3. Happy wraps Claude Code, enabling:
+   - QR code for mobile app connection
+   - Remote control from phone via Happy app
+   - Push notifications for permission requests and errors
+
+## Prerequisites
+
+- `happy-coder` npm package installed globally: `npm install -g happy-coder`
+- Claude Code CLI authenticated: `claude auth`
+- Happy app: https://app.happy.engineering
+
+## Instructions for Claude
+
+**When this command is invoked, IMMEDIATELY execute the following Bash command:**
+
+```bash
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '${CWD}'; happy"
+```
+
+After executing, respond with:
+
+```
+Happy Terminal Launched
+──────────────────────
+A new PowerShell window has opened running Happy CLI.
+
+Look for the QR code in the new terminal to connect your mobile device.
+
+This terminal session will close normally. The Happy session runs in the new window.
+```
+
+## Happy CLI Quick Reference
+
+| Flag | Description |
+|------|-------------|
+| `happy` | Start with Claude Code (default) |
+| `happy -m opus` | Use Opus model |
+| `happy -p auto` | Auto-approve permissions |
+| `happy auth` | Show QR code for mobile connection |
 
 {{#if happyMode.enabled}}
-
-## Configuration
+## Project Configuration
 
 | Setting | Value |
 |---------|-------|
 | Dashboard URL | {{happyMode.dashboardUrl}} |
-| Checkpoint Interval | {{happyMode.checkpointInterval}} minutes |
-| Verbosity | {{happyMode.verbosity}} |
-| Notify on Task Complete | {{happyMode.notifications.onTaskComplete}} |
-| Notify on Error | {{happyMode.notifications.onError}} |
-
-## Session Modes
-
-### 1. Full Verbosity
-Complete responses with all details. Best for desktop use.
-
-### 2. Condensed (Recommended for Mobile)
-Summarized responses optimized for mobile viewing:
-- Bullet points instead of paragraphs
-- Collapsed code blocks
-- Status indicators (✓, ⚠, ✗)
-
-### 3. Minimal
-Essential information only:
-- Task status
-- Error messages
-- Required user input
-
-## Commands During Happy Session
-
-| Command | Description |
-|---------|-------------|
-| `happy:checkpoint` | Save current progress checkpoint |
-| `happy:status` | Show session status and metrics |
-| `happy:pause` | Pause and save state |
-| `happy:resume` | Resume from last checkpoint |
-| `happy:end` | End Happy session gracefully |
-
-## Checkpoint Structure
-
-Checkpoints are saved to: `.claude/self-hosted-happy/checkpoints/`
-
-```json
-{
-  "timestamp": "2025-01-30T12:00:00Z",
-  "sessionId": "uuid",
-  "progress": {
-    "tasksCompleted": 3,
-    "tasksRemaining": 2,
-    "currentTask": "Implement feature X"
-  },
-  "context": {
-    "summary": "Working on...",
-    "recentFiles": ["src/...", "..."],
-    "pendingActions": []
-  }
-}
-```
-
-## Instructions for Claude
-
-When this command is invoked:
-
-1. **Initialize Session**
-   - Generate session ID
-   - Create initial checkpoint
-   - Set response format to `{{happyMode.verbosity}}`
-
-2. **Configure Notifications**
-   {{#if happyMode.notifications.onTaskComplete}}
-   - Enable task completion notifications
-   {{/if}}
-   {{#if happyMode.notifications.onError}}
-   - Enable error notifications
-   {{/if}}
-
-3. **Start Checkpoint Timer**
-   - Schedule checkpoints every {{happyMode.checkpointInterval}} minutes
-   - Auto-save on significant progress
-
-4. **Respond with Session Info**
-   ```
-   Happy Mode Started
-   ─────────────────
-   Session: <id>
-   Verbosity: {{happyMode.verbosity}}
-   Checkpoints: Every {{happyMode.checkpointInterval}} min
-
-   Ready for tasks. Mobile app can now control this session.
-   ```
-
-{{else}}
-
-## Happy Mode Disabled
-
-Happy Engineering integration is not enabled for this project.
-
-To enable:
-1. Run `/menu` → Project Settings → Happy Mode
-2. Configure dashboard URL and checkpoint interval
-3. Install Happy Coder mobile app
-
+| Default Verbosity | {{happyMode.verbosity}} |
 {{/if}}
+
+## Mobile App Connection
+
+1. Install Happy app on your phone
+2. Scan QR code shown in the new terminal
+3. Control Claude Code from your phone!
 
 ---
 
-*Generated from tech-stack.json template*
+*Requires: happy-coder npm package*
