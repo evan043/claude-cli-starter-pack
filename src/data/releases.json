@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "2.2.1",
+      "date": "2026-02-01",
+      "summary": "Feature: add project intent collection and full workflow",
+      "highlights": [
+        "add project intent collection and full workflow",
+        "add /init-ccasp-new-project command for Happy users"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.0",
       "date": "2026-02-01",
       "summary": "Feature: add GitHub Epic System with testing integration (#50)",
