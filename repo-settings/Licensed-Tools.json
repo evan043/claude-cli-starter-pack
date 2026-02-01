@@ -1,0 +1,60 @@
+{
+  "version": "1.0.0",
+  "description": "Licensed tools and dependencies registry for CCASP license tracking",
+  "metadata": {
+    "generatedAt": null,
+    "lastUpdated": null,
+    "totalPackages": 0,
+    "scanVersion": "1.0.0"
+  },
+  "licensePolicy": {
+    "allowed": [
+      "MIT",
+      "Apache-2.0",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "ISC",
+      "CC0-1.0",
+      "Unlicense",
+      "0BSD",
+      "CC-BY-3.0",
+      "CC-BY-4.0",
+      "WTFPL",
+      "Zlib",
+      "BlueOak-1.0.0"
+    ],
+    "restricted": [
+      "GPL-2.0",
+      "GPL-2.0-only",
+      "GPL-3.0",
+      "GPL-3.0-only",
+      "LGPL-2.0",
+      "LGPL-2.1",
+      "LGPL-3.0",
+      "AGPL-3.0",
+      "AGPL-3.0-only"
+    ],
+    "requiresReview": [
+      "MPL-2.0",
+      "EPL-1.0",
+      "EPL-2.0",
+      "CDDL-1.0",
+      "Artistic-2.0",
+      "OSL-3.0"
+    ],
+    "blocked": [
+      "UNLICENSED",
+      "PROPRIETARY",
+      "COMMERCIAL",
+      "SEE LICENSE IN LICENSE"
+    ]
+  },
+  "packages": {
+    "npm": {},
+    "pip": {},
+    "cargo": {},
+    "go": {},
+    "composer": {}
+  },
+  "history": []
+}

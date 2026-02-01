@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v1.8.30  •  Production Ready                         ║
+║                          v2.0.1   •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -29,7 +29,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [What's New in v1.8.30](#whats-new-in-v1830)
+- [What's New in v2.0](#whats-new-in-v20)
 - [Agent Orchestration](#agent-orchestration)
 - [Key Features](#key-features)
 - [Refactoring System](#refactoring-system)
@@ -69,11 +69,20 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
-## What's New in v1.8.30
+## What's New in v2.0
 
-**Major additions in v1.8.x:**
+**Major release with Neovim integration and mobile improvements!**
 
-### Happy.engineering Mobile UI (v1.8.30) - NEW!
+### Neovim Plugin - nvim-ccasp (v2.0.0) - NEW!
+- **Multi-Agent Grid**: Run 6 Claude CLI sessions in aligned grid layout
+- **Control Panel**: Floating panel for feature toggles, model selection
+- **Feature Toggles**: Enable/disable CCASP features without editing JSON
+- **Hook Manager**: Visual management of Pre/Post tool use hooks
+- **Dashboard**: Project overview with token usage, installed components
+- **Telescope Integration**: Browse commands, skills, hooks with fuzzy finding
+- **Statusline Components**: Token usage, agent status for lualine
+
+### Happy.engineering Mobile UI (v1.8.30)
 - **Auto-Detection**: Detects Happy CLI via environment variables (HAPPY_HOME_DIR, HAPPY_SERVER_URL, HAPPY_WEBAPP_URL, HAPPY_EXPERIMENTAL, HAPPY_SESSION)
 - **Mobile-Optimized Formatting**: 40-character max width, card-based layouts
 - **Word-Aware Wrapping**: Text wraps at word boundaries (no mid-word breaks)
@@ -101,6 +110,10 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 - **Commands**: `/roadmap-status`, `/roadmap-edit`, `/roadmap-track`
 - **Storage**: `.claude/roadmaps/{slug}.json`, `.claude/phase-plans/{slug}/`
 - **Auto-Advance**: Dependency checking, progress tracking
+
+### Happy.engineering Fixes (v1.8.31)
+- **401 Auth Error Fix**: Resolved authentication error by unsetting HAPPY_SERVER_URL before launch
+- **PowerShell Launch**: Clean environment inheritance for Windows users
 
 ### Dev Mode & Utilities (v1.8.26)
 - **Dev Mode**: `ccasp init --dev` for rapid template testing
@@ -161,6 +174,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Phase 9 | v1.8.16 | **18 Agent Templates** — framework-specific specialists |
 | Phase 10 | v1.8.19 | **Refactoring System** — 5 commands, 4 hooks, 2 skills |
 | Phase 11 | v1.8.27-30 | **Mobile UI, PR Merge, Roadmaps** — Happy.engineering support, `/pr-merge`, orchestration |
+| Phase 12 | v2.0.0 | **Neovim Plugin** — nvim-ccasp with grid, dashboard, Telescope, statusline |
 
 ---
 
@@ -447,11 +461,80 @@ export HAPPY_HOME_DIR=/path/to/.happy
 
 ---
 
+## Neovim Plugin (nvim-ccasp)
+
+CCASP v2.0.0 includes a comprehensive Neovim plugin for deep IDE integration.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Agent Grid** | Run 6 Claude CLI sessions in aligned grid layout |
+| **Control Panel** | Floating panel for feature toggles, model selection |
+| **Feature Toggles** | Enable/disable CCASP features without editing JSON |
+| **Hook Manager** | Visual management of Pre/Post tool use hooks |
+| **Dashboard** | Project overview with token usage, installed components |
+| **Telescope Integration** | Browse commands, skills, hooks with fuzzy finding |
+| **Statusline Components** | Token usage, agent status for lualine |
+
+### Installation (lazy.nvim)
+
+```lua
+{
+  "evan043/nvim-ccasp",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+    "nvim-lua/plenary.nvim",
+  },
+  config = function()
+    require("ccasp").setup({
+      -- Optional: customize keymaps
+      keymaps = {
+        panel = "<leader>cp",     -- Open control panel
+        grid = "<leader>cg",      -- Open multi-agent grid
+        dashboard = "<leader>cd", -- Open dashboard
+      },
+    })
+  end,
+}
+```
+
+### Key Bindings
+
+| Keymap | Action |
+|--------|--------|
+| `<leader>cp` | Open control panel |
+| `<leader>cg` | Open multi-agent grid |
+| `<leader>cd` | Open dashboard |
+| `<leader>cf` | Telescope: Find commands |
+| `<leader>ch` | Telescope: Find hooks |
+| `<leader>cs` | Telescope: Find skills |
+
+### Plugin Files
+
+```
+nvim-ccasp/
+├── lua/ccasp/
+│   ├── init.lua           # Main plugin setup and keymaps
+│   ├── agents.lua         # Multi-agent grid management
+│   ├── config.lua         # Configuration defaults
+│   ├── panels/
+│   │   ├── control.lua    # Main control panel
+│   │   ├── dashboard.lua  # Overview dashboard
+│   │   ├── features.lua   # Feature toggle panel
+│   │   └── hooks.lua      # Hook management panel
+│   ├── statusline.lua     # Statusline components
+│   └── telescope.lua      # Telescope extension
+└── plugin/ccasp.lua       # Auto-load entry point
+```
+
+---
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CCASP ARCHITECTURE (v1.8.30)                             │
+│                    CCASP ARCHITECTURE (v2.0.1)                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  PHASE 1: TERMINAL (No AI)                                                   │

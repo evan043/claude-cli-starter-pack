@@ -40,6 +40,7 @@ import { runUninstall } from '../src/commands/uninstall.js';
 import { runGlobalUninstall } from '../src/commands/global-uninstall.js';
 import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
 import { runDevDeploy } from '../src/commands/dev-deploy.js';
+import { runModelMode } from '../src/commands/model-mode.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -389,6 +390,16 @@ program
   .option('--force', 'Skip confirmation prompts')
   .action(async (options) => {
     await runDevDeploy(options);
+  });
+
+// Model mode - configure agent model defaults
+program
+  .command('model-mode')
+  .description('Configure model defaults for L1/L2/L3 agents (efficiency/default/performance)')
+  .option('-s, --set <mode>', 'Set mode: efficiency, default, or performance')
+  .option('--show', 'Show current mode configuration')
+  .action(async (options) => {
+    await runModelMode(options);
   });
 
 // Parse and run

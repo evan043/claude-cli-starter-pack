@@ -1,9 +1,9 @@
 {
   "releases": [
     {
-      "version": "2.0.0",
+      "version": "2.1.0",
       "date": "2026-02-01",
-      "summary": "Major release",
+      "summary": "New features and improvements",
       "highlights": [],
       "newFeatures": {
         "commands": [],
@@ -16,12 +16,59 @@
       "deprecated": []
     },
     {
+      "version": "2.0.1",
+      "date": "2026-02-01",
+      "summary": "Documentation updates for v2.0 features",
+      "highlights": [
+        "Updated README.md and OVERVIEW.md for v2.0.1",
+        "Added Neovim plugin documentation section",
+        "Added happy-start 401 fix notes"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
+      "version": "2.0.0",
+      "date": "2026-02-01",
+      "summary": "Major release with Neovim plugin integration",
+      "highlights": [
+        "Neovim plugin (nvim-ccasp) with multi-agent grid, control panel, Telescope integration",
+        "Multi-agent grid: Run 6 Claude CLI sessions in aligned grid layout",
+        "Control panel: Floating panel for feature toggles, model selection",
+        "Hook manager: Visual management of Pre/Post tool use hooks",
+        "Dashboard: Project overview with token usage, installed components",
+        "Telescope integration: Browse commands, skills, hooks with fuzzy finding",
+        "Statusline components: Token usage, agent status for lualine"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": [
+          {
+            "name": "nvim-ccasp",
+            "description": "Comprehensive Neovim plugin for CCASP integration with multi-agent grid, control panel, Telescope, and statusline"
+          }
+        ]
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "1.8.31",
       "date": "2026-02-01",
-      "summary": "Feature: add Neovim plugin for CCASP integration (nvim-ccasp) (#35)",
+      "summary": "Fix: resolve 401 auth error in happy-start command",
       "highlights": [
-        "add Neovim plugin for CCASP integration (nvim-ccasp) (#35)",
-        "Fixed: resolve 401 auth error by unsetting HAPPY_SERVER_URL"
+        "Fixed: resolve 401 auth error by unsetting HAPPY_SERVER_URL before launch",
+        "Improved: PowerShell Start-Process for clean environment inheritance on Windows"
       ],
       "newFeatures": {
         "commands": [],

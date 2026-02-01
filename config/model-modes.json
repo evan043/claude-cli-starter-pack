@@ -1,0 +1,51 @@
+{
+  "$schema": "./model-modes.schema.json",
+  "version": "1.0.0",
+  "description": "Central model configuration for CCASP agent infrastructure",
+  "mode": "default",
+  "modes": {
+    "efficiency": {
+      "description": "Cost-optimized mode using smaller models where possible",
+      "L1": "sonnet",
+      "L2": "sonnet",
+      "L3": "haiku"
+    },
+    "default": {
+      "description": "Balanced mode with optimal model selection per level",
+      "L1": "opus",
+      "L2": "sonnet",
+      "L3": "haiku"
+    },
+    "performance": {
+      "description": "Maximum capability mode using Opus for all levels",
+      "L1": "opus",
+      "L2": "opus",
+      "L3": "opus"
+    }
+  },
+  "modelMetadata": {
+    "opus": {
+      "fullName": "claude-opus-4-5-20251101",
+      "tier": "flagship",
+      "costPerMToken": 15.0,
+      "capabilities": ["complex-reasoning", "code-generation", "orchestration", "long-context"]
+    },
+    "sonnet": {
+      "fullName": "claude-sonnet-4-20250514",
+      "tier": "balanced",
+      "costPerMToken": 3.0,
+      "capabilities": ["code-generation", "analysis", "general-tasks"]
+    },
+    "haiku": {
+      "fullName": "claude-haiku-3-20240307",
+      "tier": "fast",
+      "costPerMToken": 0.25,
+      "capabilities": ["classification", "simple-tasks", "high-volume"]
+    }
+  },
+  "levelDescriptions": {
+    "L1": "Orchestrator - Routes and coordinates specialists, handles complex decomposition",
+    "L2": "Specialist - Deep domain expertise, handles specific task domains",
+    "L3": "Worker - Parallel atomic tasks, high-volume simple operations"
+  }
+}

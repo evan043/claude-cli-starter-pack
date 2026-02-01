@@ -166,3 +166,117 @@ export {
   syncExecution,
   generateExecutionReport,
 } from './roadmap/executor.js';
+
+// Phase 1: Foundation Hooks (License Tracking & Security)
+export {
+  loadRegistry as loadLicenseRegistry,
+  saveRegistry as saveLicenseRegistry,
+  registerPackage,
+  checkLicensePolicy,
+  parseNpmInstallOutput,
+  parsePipInstallOutput,
+  generateLicenseTrackerHook,
+} from './hooks/license-tracker.js';
+
+export {
+  isToolAvailable,
+  runGuardDogScan,
+  runOsvScan,
+  runSecurityScan,
+  generateSarifReport,
+  saveScanReport,
+  generateSecurityScannerHook,
+} from './hooks/security-scanner.js';
+
+export {
+  normalizeLicense,
+  detectLicenseFromContent,
+  getLicenseMetadata,
+  getLicenseUrl,
+  classifyLicense,
+  detectLicenseFromPackage,
+  checkLicenseCompatibility,
+  LICENSE_DATABASE,
+} from './utils/license-detector.js';
+
+// Phase 2: Hook Extensions (OpenSourceScout & MCP Hooks)
+export {
+  detectFeatureIntent,
+  detectRelevantCategories,
+  generateSearchQueries,
+  scoreTool,
+  formatRecommendation,
+  createScoutPrompt,
+  loadInventory as loadOssInventory,
+  saveToInventory as saveOssInventory,
+  FEATURE_INTENT_KEYWORDS,
+  SCOUT_CATEGORIES,
+  RANKING_CRITERIA,
+} from './agents/open-source-scout.js';
+
+export {
+  GITHUB_HOOKS,
+  PLAYWRIGHT_HOOKS,
+  DATABASE_HOOKS,
+  DEPLOYMENT_HOOKS,
+  getAllHookTemplates,
+  getHooksForInstalledMcps,
+  generateHookFile,
+} from '../templates/mcp/hook-templates.js';
+
+// Phase 3: MCP Governance (Manifest & Token Awareness)
+export {
+  TOKEN_CLASSIFICATIONS,
+  MCP_TOKEN_PROFILES,
+  DEFAULT_PERMISSIONS,
+  getManifestPath,
+  loadManifest,
+  saveManifest,
+  readMcpJson,
+  getTokenProfile,
+  classifyTokenUsage,
+  generateManifest,
+  generateTokenCostTable,
+  getOptimizationCandidates,
+} from './mcp/manifest-generator.js';
+
+// Phase 5: Agent Infrastructure (Model Resolver)
+export {
+  resolveModel,
+  getModelMode,
+  setModelMode,
+  getConfigSummary,
+  getAvailableModes,
+  getFullModelName,
+  getModelMetadata,
+  resolveModelWithMetadata,
+  DEFAULT_CONFIG as DEFAULT_MODEL_CONFIG,
+} from './utils/model-resolver.js';
+
+// Phase 6: Testing Framework (TestingScout)
+export {
+  TESTING_TOOLS,
+  FRAMEWORK_RECOMMENDATIONS,
+  getRecommendations as getTestingRecommendations,
+  generateConfigFile as generateTestingConfig,
+} from './agents/testing-scout.js';
+
+// Phase 4: Competitor Analysis
+export {
+  ANALYSIS_PHASES,
+  SEARCH_PROVIDERS,
+  SCRAPER_CONFIG,
+  PRICING_PATTERNS,
+  TECH_STACK_PATTERNS,
+  getReportDir as getCompetitorReportDir,
+  generateDiscoveryQueries,
+  generateFeatureQueries,
+  createCompetitorProfile,
+  createSwotAnalysis,
+  generateFeatureGapMatrix,
+  generateMarkdownReport as generateCompetitorReport,
+  saveReport as saveCompetitorReport,
+  loadAnalysis as loadCompetitorAnalysis,
+  createAnalysisPrompt,
+  checkMcpAvailability,
+} from './analysis/competitor-analysis.js';

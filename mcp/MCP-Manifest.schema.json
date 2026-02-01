@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Manifest",
+  "description": "Schema for MCP server manifest with token cost awareness and permission control",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Manifest schema version",
+      "default": "1.0"
+    },
+    "generated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this manifest was generated"
+    },
+    "projectScope": {
+      "type": "string",
+      "enum": ["global", "project"],
+      "description": "Whether MCPs are installed globally or project-scoped"
+    },
+    "servers": {
+      "type": "object",
+      "description": "Map of MCP server configurations",
+      "additionalProperties": {
+        "$ref": "#/definitions/McpServer"
+      }
+    },
+    "tokenBudget": {
+      "$ref": "#/definitions/TokenBudget"
+    }
+  },
+  "required": ["version", "servers"],
+  "definitions": {
+    "McpServer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MCP"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this MCP does"
+        },
+        "npmPackage": {
+          "type": "string",
+          "description": "npm package name (e.g., @playwright/mcp)"
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to run the MCP"
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Command arguments"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this MCP is enabled"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/McpTool" },
+          "description": "Available tools from this MCP"
+        },
+        "defaultEnabledTools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tools enabled by default"
+        },
+        "permissions": {
+          "$ref": "#/definitions/McpPermissions"
+        },
+        "tokenUsage": {
+          "$ref": "#/definitions/TokenUsage"
+        },
+        "requiredEnv": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Required environment variables"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["testing", "deployment", "database", "api", "browser", "search", "ai", "utility"],
+          "description": "MCP category"
+        }
+      },
+      "required": ["id", "name"]
+    },
+    "McpTool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tool name (e.g., browser_navigate)"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this tool does"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["read", "write", "execute", "network", "filesystem"]
+          }
+        },
+        "tokenUsage": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Estimated token usage per call"
+        },
+        "estimatedTokens": {
+          "type": "integer",
+          "description": "Estimated tokens per typical call"
+        },
+        "rateLimit": {
+          "type": "object",
+          "properties": {
+            "maxPerMinute": { "type": "integer" },
+            "maxPerHour": { "type": "integer" }
+          }
+        }
+      },
+      "required": ["name"]
+    },
+    "McpPermissions": {
+      "type": "object",
+      "properties": {
+        "read": {
+          "type": "boolean",
+          "default": true,
+          "description": "Can read data"
+        },
+        "write": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can write/modify data"
+        },
+        "execute": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can execute commands/scripts"
+        },
+        "network": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can make network requests"
+        },
+        "filesystem": {
+          "type": "boolean",
+          "default": false,
+          "description": "Can access filesystem"
+        }
+      }
+    },
+    "TokenUsage": {
+      "type": "object",
+      "properties": {
+        "classification": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Overall token usage classification"
+        },
+        "estimatedPerCall": {
+          "type": "integer",
+          "description": "Average tokens per tool call"
+        },
+        "estimatedPerSession": {
+          "type": "integer",
+          "description": "Typical tokens used in a session"
+        },
+        "costFactors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What contributes to token cost"
+        }
+      }
+    },
+    "TokenBudget": {
+      "type": "object",
+      "properties": {
+        "dailyLimit": {
+          "type": "integer",
+          "description": "Daily token budget"
+        },
+        "warningThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage at which to warn (e.g., 0.75)"
+        },
+        "trackUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to track token usage"
+        }
+      }
+    }
+  }
+}
