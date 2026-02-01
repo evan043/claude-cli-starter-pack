@@ -695,6 +695,15 @@ export async function detectTechStack(projectRoot, options = {}) {
     result._detected.push(`versionControl: ${gitInfo.provider}/${gitInfo.owner}/${gitInfo.repo}`);
   }
 
+  // --- COMMIT CONFIG ---
+  // Co-author attribution is disabled by default so users see only their own GitHub username
+  result.commit = {
+    coAuthors: {
+      enabled: false,
+      authors: [],
+    },
+  };
+
   // --- BUILD URLs ---
   result.urls.local = {
     frontend: `http://localhost:${result.frontend.port || 5173}`,

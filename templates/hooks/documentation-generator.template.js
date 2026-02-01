@@ -26,6 +26,32 @@ const CONFIG = {
 };
 
 /**
+ * Load commit configuration from tech-stack.json
+ * Returns the coAuthors config or defaults (disabled)
+ */
+function loadCommitConfig(projectRoot) {
+  const techStackPaths = [
+    path.join(projectRoot, '.claude', 'config', 'tech-stack.json'),
+    path.join(projectRoot, '.claude', 'tech-stack.json'),
+    path.join(projectRoot, 'tech-stack.json'),
+  ];
+
+  for (const configPath of techStackPaths) {
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        return config.commit?.coAuthors || { enabled: false, authors: [] };
+      } catch (e) {
+        // Invalid JSON, use defaults
+      }
+    }
+  }
+
+  // Default: co-authors disabled
+  return { enabled: false, authors: [] };
+}
+
+/**
  * Check if file is a trigger file
  */
 function isTriggerFile(filePath) {
@@ -255,11 +281,19 @@ function generatePhaseExecutor(progressData, projectRoot) {
   md += '```\n';
   md += `feat(${plan_id.split('-')[0]}): Phase N - [phase name]\n\n`;
   md += `- [Task P1.1]: [what was done]\n`;
-  md += `- [Task P1.2]: [what was done]\n\n`;
-  md += `Generated with [Claude Code](https://claude.ai/code)\n`;
-  md += `via [Happy](https://happy.engineering)\n\n`;
-  md += `Co-Authored-By: Claude <noreply@anthropic.com>\n`;
-  md += `Co-Authored-By: Happy <yesreply@happy.engineering>\n`;
+  md += `- [Task P1.2]: [what was done]\n`;
+
+  // Add co-author lines only if configured
+  const coAuthorConfig = loadCommitConfig(projectRoot);
+  if (coAuthorConfig.enabled && coAuthorConfig.authors && coAuthorConfig.authors.length > 0) {
+    md += `\n`;
+    for (const author of coAuthorConfig.authors) {
+      if (author.name && author.email) {
+        md += `Co-Authored-By: ${author.name} <${author.email}>\n`;
+      }
+    }
+  }
+
   md += '```\n\n';
 
   md += `---\n\n`;
