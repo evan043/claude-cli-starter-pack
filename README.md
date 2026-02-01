@@ -1491,6 +1491,34 @@ ccasp explore-mcp --testing    # Quick install Playwright + Puppeteer
 | **Communication** | Slack, Discord, Resend Email |
 | **Utilities** | Filesystem, Fetch, Memory (ChromaDB) |
 
+### API Key Management (v2.1.3+)
+
+Many MCP servers require API keys. CCASP now:
+
+1. **Prompts before installation** - Shows API key requirements with links to obtain keys
+2. **Allows skipping** - Users can skip MCPs they don't have keys for
+3. **Validates configuration** - Optional hook warns about missing API keys
+
+**API Key Validation Hook:**
+```bash
+# Enable the hook via explore-mcp menu
+ccasp explore-mcp  # Select "API Key Validation"
+```
+
+| MCP Server | Required Key | Get Key At | Free Tier |
+|------------|--------------|------------|-----------|
+| GitHub | `GITHUB_PERSONAL_ACCESS_TOKEN` | [github.com/settings/tokens](https://github.com/settings/tokens) | Yes |
+| Railway | `RAILWAY_API_TOKEN` | [railway.app/account/tokens](https://railway.app/account/tokens) | Yes |
+| Cloudflare | `CLOUDFLARE_API_TOKEN` | [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) | Yes |
+| Supabase | `SUPABASE_ACCESS_TOKEN` | [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) | Yes |
+| Resend | `RESEND_API_KEY` | [resend.com/api-keys](https://resend.com/api-keys) | Yes |
+| Exa | `EXA_API_KEY` | [exa.ai/pricing](https://exa.ai/pricing) | Yes |
+| **No key needed** | Playwright, Puppeteer, Log Monitor, Git, SQLite | - | - |
+
+### Windows Compatibility
+
+CCASP automatically uses `cmd /c npx` wrapper on Windows for proper MCP execution.
+
 ---
 
 ## Prerequisites

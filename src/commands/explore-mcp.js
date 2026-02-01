@@ -22,6 +22,8 @@ import {
   getMcpById,
   getCategories,
   mergeMcpResults,
+  mcpRequiresApiKey,
+  getMcpApiKeyInfo,
 } from './explore-mcp/mcp-registry.js';
 import {
   installMcp,
@@ -29,6 +31,8 @@ import {
   isMcpInstalled,
   getInstalledMcps,
   removeMcp,
+  loadClaudeSettings,
+  saveClaudeSettings,
 } from './explore-mcp/mcp-installer.js';
 import { updateClaudeMd, removeMcpSection } from './explore-mcp/claude-md-updater.js';
 import { loadCachedDiscovery, saveCachedDiscovery } from './explore-mcp/mcp-cache.js';
@@ -105,6 +109,11 @@ export async function showExploreMcpMenu() {
           value: 'update-docs',
           short: 'Update Docs',
         },
+        {
+          name: `${chalk.dim('8)')} API Key Validation       ${isApiKeyHookEnabled() ? chalk.green('[enabled]') : chalk.dim('[disabled]')} Configure hook`,
+          value: 'api-key-hook',
+          short: 'API Key Hook',
+        },
         new inquirer.Separator(),
         {
           name: `${chalk.dim('Q)')} Back`,
@@ -136,6 +145,9 @@ export async function showExploreMcpMenu() {
       break;
     case 'update-docs':
       await runUpdateDocsFlow();
+      break;
+    case 'api-key-hook':
+      await runApiKeyHookFlow();
       break;
     case 'back':
       return null;
@@ -689,11 +701,31 @@ function displayInstallResults(results) {
   console.log(chalk.cyan.bold('\n📋 Installation Results\n'));
 
   const successful = results.filter((r) => r.success);
-  const failed = results.filter((r) => !r.success);
+  const skipped = results.filter((r) => r.skipped);
+  const queued = results.filter((r) => r.queued);
+  const failed = results.filter((r) => !r.success && !r.skipped && !r.queued);
 
   if (successful.length > 0) {
     console.log(chalk.green('✓ Installed:'));
     for (const result of successful) {
+      console.log(`  - ${result.mcp.name}`);
+    }
+  }
+
+  if (skipped.length > 0) {
+    console.log(chalk.yellow('\n⏭ Skipped (no API key):'));
+    for (const result of skipped) {
+      const apiInfo = getMcpApiKeyInfo(result.mcp);
+      console.log(`  - ${result.mcp.name}`);
+      if (apiInfo?.url) {
+        console.log(chalk.dim(`    Get key at: ${apiInfo.url}`));
+      }
+    }
+  }
+
+  if (queued.length > 0) {
+    console.log(chalk.blue('\n📋 Queued for later:'));
+    for (const result of queued) {
       console.log(`  - ${result.mcp.name}`);
     }
   }
@@ -763,6 +795,9 @@ For each MCP found, extract:
   - npmPackage: npm package name (e.g., @playwright/mcp)
   - description: What it does
   - tools: List of available tools
+  - apiKeyRequired: Does it need an API key? (true/false)
+  - apiKeyUrl: Where to get the API key (if required)
+  - apiKeyFree: Is there a free tier? (true/false)
 
 Save results using /explore-mcp --save-discovery
 `));
@@ -805,6 +840,243 @@ For each MCP found, provide: name, npmPackage, description, tools list.`;
   }
 
   console.log(chalk.dim('\nTip: Run "/explore-mcp" in Claude Code CLI to use discovered MCPs.\n'));
+}
+
+/**
+ * Check if the API key validation hook is enabled
+ */
+function isApiKeyHookEnabled() {
+  try {
+    const settings = loadClaudeSettings();
+    const hooks = settings.hooks?.PostToolUse || [];
+    return hooks.some((h) =>
+      h.hooks?.some((hook) =>
+        hook.command?.includes('mcp-api-key-validator')
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Enable the API key validation hook
+ */
+function enableApiKeyHook() {
+  const settings = loadClaudeSettings();
+
+  if (!settings.hooks) {
+    settings.hooks = {};
+  }
+  if (!settings.hooks.PostToolUse) {
+    settings.hooks.PostToolUse = [];
+  }
+
+  // Check if already enabled
+  const alreadyEnabled = settings.hooks.PostToolUse.some((h) =>
+    h.hooks?.some((hook) => hook.command?.includes('mcp-api-key-validator'))
+  );
+
+  if (alreadyEnabled) {
+    return { success: true, action: 'already_enabled' };
+  }
+
+  // Add the hook
+  settings.hooks.PostToolUse.push({
+    matcher: 'Write|Edit',
+    hooks: [
+      {
+        type: 'command',
+        command: 'node .claude/hooks/mcp-api-key-validator.js',
+      },
+    ],
+  });
+
+  saveClaudeSettings(settings);
+  return { success: true, action: 'enabled' };
+}
+
+/**
+ * Disable the API key validation hook
+ */
+function disableApiKeyHook() {
+  const settings = loadClaudeSettings();
+
+  if (!settings.hooks?.PostToolUse) {
+    return { success: true, action: 'already_disabled' };
+  }
+
+  // Remove the hook
+  settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
+    (h) => !h.hooks?.some((hook) => hook.command?.includes('mcp-api-key-validator'))
+  );
+
+  // Clean up empty arrays
+  if (settings.hooks.PostToolUse.length === 0) {
+    delete settings.hooks.PostToolUse;
+  }
+  if (Object.keys(settings.hooks).length === 0) {
+    delete settings.hooks;
+  }
+
+  saveClaudeSettings(settings);
+  return { success: true, action: 'disabled' };
+}
+
+/**
+ * Deploy the API key validator hook file
+ */
+async function deployApiKeyHook() {
+  const hookDir = path.join(process.cwd(), '.claude', 'hooks');
+  const hookPath = path.join(hookDir, 'mcp-api-key-validator.js');
+
+  // Create hooks directory if needed
+  if (!fs.existsSync(hookDir)) {
+    fs.mkdirSync(hookDir, { recursive: true });
+  }
+
+  // Read the template
+  const templatePaths = [
+    path.join(process.cwd(), 'templates', 'hooks', 'mcp-api-key-validator.template.js'),
+    path.join(process.cwd(), 'node_modules', '@anthropic-ai/claude-cli-advanced-starter-pack', 'templates', 'hooks', 'mcp-api-key-validator.template.js'),
+  ];
+
+  let templateContent = null;
+  for (const templatePath of templatePaths) {
+    if (fs.existsSync(templatePath)) {
+      templateContent = fs.readFileSync(templatePath, 'utf8');
+      break;
+    }
+  }
+
+  if (!templateContent) {
+    // Use embedded template
+    templateContent = getEmbeddedHookTemplate();
+  }
+
+  fs.writeFileSync(hookPath, templateContent, 'utf8');
+  return hookPath;
+}
+
+/**
+ * Get embedded hook template (fallback)
+ */
+function getEmbeddedHookTemplate() {
+  return `/**
+ * MCP API Key Validator Hook
+ * Validates .mcp.json configurations and warns about missing API keys.
+ */
+
+import { readFileSync, existsSync } from 'fs';
+import { join, basename } from 'path';
+
+const MCP_API_KEY_INFO = {
+  github: { required: true, keyName: 'GITHUB_PERSONAL_ACCESS_TOKEN', url: 'https://github.com/settings/tokens', free: true },
+  railway: { required: true, keyName: 'RAILWAY_API_TOKEN', url: 'https://railway.app/account/tokens', free: true },
+  cloudflare: { required: true, keyName: 'CLOUDFLARE_API_TOKEN', url: 'https://dash.cloudflare.com/profile/api-tokens', free: true },
+  supabase: { required: true, keyName: 'SUPABASE_ACCESS_TOKEN', url: 'https://supabase.com/dashboard/account/tokens', free: true },
+  exa: { required: true, keyName: 'EXA_API_KEY', url: 'https://exa.ai/pricing', free: true },
+  resend: { required: true, keyName: 'RESEND_API_KEY', url: 'https://resend.com/api-keys', free: true },
+  playwright: { required: false },
+  puppeteer: { required: false },
+};
+
+async function readStdin() {
+  return new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => { data += chunk; });
+    process.stdin.on('end', () => {
+      try { resolve(JSON.parse(data)); } catch { resolve({ tool: '', input: {} }); }
+    });
+    setTimeout(() => resolve({ tool: '', input: {} }), 1000);
+  });
+}
+
+async function main() {
+  const context = await readStdin();
+  const { tool, input } = context;
+
+  if (!['Write', 'Edit'].includes(tool)) process.exit(0);
+
+  const filePath = input?.file_path || input?.path || '';
+  if (!filePath.endsWith('.mcp.json')) process.exit(0);
+
+  const mcpJsonPath = join(process.cwd(), '.mcp.json');
+  if (!existsSync(mcpJsonPath)) process.exit(0);
+
+  try {
+    const mcpJson = JSON.parse(readFileSync(mcpJsonPath, 'utf8'));
+    const servers = mcpJson.mcpServers || {};
+
+    for (const [id, config] of Object.entries(servers)) {
+      const info = MCP_API_KEY_INFO[id];
+      if (!info?.required) continue;
+
+      const env = config.env || {};
+      if (!env[info.keyName]) {
+        console.error(\`\\x1b[33m[Warning] \${id}: Missing API key \${info.keyName}\\x1b[0m\`);
+        if (info.url) console.error(\`\\x1b[36m  Get key at: \${info.url}\\x1b[0m\`);
+      }
+    }
+  } catch {}
+
+  process.exit(0);
+}
+
+main();
+`;
+}
+
+/**
+ * API Key Hook configuration flow
+ */
+async function runApiKeyHookFlow() {
+  console.log(chalk.cyan.bold('\n🔑 API Key Validation Hook\n'));
+
+  const isEnabled = isApiKeyHookEnabled();
+  console.log(chalk.dim('This hook validates .mcp.json and warns about missing API keys.'));
+  console.log(`Current status: ${isEnabled ? chalk.green('Enabled') : chalk.yellow('Disabled')}\n`);
+
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'What would you like to do?',
+      choices: [
+        {
+          name: isEnabled ? 'Disable hook' : 'Enable hook',
+          value: isEnabled ? 'disable' : 'enable',
+        },
+        { name: 'View hook status', value: 'status' },
+        { name: 'Back', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (action === 'back') return;
+
+  if (action === 'enable') {
+    const spinner = ora('Deploying API key validation hook...').start();
+    try {
+      const hookPath = await deployApiKeyHook();
+      const result = enableApiKeyHook();
+
+      spinner.succeed('API key validation hook enabled');
+      console.log(chalk.dim(`  Hook file: ${hookPath}`));
+      console.log(chalk.dim('  Registered in .claude/settings.json'));
+      console.log(chalk.yellow('\n  Restart Claude Code for changes to take effect.'));
+    } catch (error) {
+      spinner.fail(`Failed to enable hook: ${error.message}`);
+    }
+  } else if (action === 'disable') {
+    const result = disableApiKeyHook();
+    console.log(chalk.green('✓ API key validation hook disabled'));
+  } else if (action === 'status') {
+    const settings = loadClaudeSettings();
+    console.log(chalk.white('\nHook configuration:'));
+    console.log(chalk.dim(JSON.stringify(settings.hooks || {}, null, 2)));
+  }
 }
 
 /**

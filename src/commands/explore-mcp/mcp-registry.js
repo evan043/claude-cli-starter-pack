@@ -6,6 +6,15 @@
  */
 
 /**
+ * API Key metadata structure:
+ * - apiKeyRequired: boolean - Whether an API key is needed
+ * - apiKeyName: string - Environment variable name for the API key
+ * - apiKeyUrl: string - URL to obtain the API key
+ * - apiKeyFree: boolean - Whether a free tier is available
+ * - apiKeyNote: string - Additional notes about the API key
+ */
+
+/**
  * MCP server registry - organized by category
  * Each entry includes npm package, required env vars, and tech stack relevance
  */
@@ -67,6 +76,12 @@ export const MCP_REGISTRY = {
       recommended: false,
       tools: ['skyvern_run_task'],
       note: 'AI-powered automation that can handle CAPTCHAs, dynamic content, and complex workflows',
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'SKYVERN_API_KEY',
+      apiKeyUrl: 'https://app.skyvern.com',
+      apiKeyFree: true,
+      apiKeyNote: 'Sign up for free tier at app.skyvern.com',
     },
   ],
 
@@ -85,6 +100,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['all'],
       recommended: true,
       tools: ['create_issue', 'create_pull_request', 'get_file_contents', 'search_code'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+      apiKeyUrl: 'https://github.com/settings/tokens',
+      apiKeyFree: true,
+      apiKeyNote: 'Create a Personal Access Token with repo scope. Free for all GitHub users.',
     },
     {
       id: 'git',
@@ -115,6 +136,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['railway', 'backend', 'api', 'fastapi', 'express', 'nodejs'],
       recommended: false,
       tools: ['deployment_trigger', 'deployment_logs', 'service_list', 'variable_set'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'RAILWAY_API_TOKEN',
+      apiKeyUrl: 'https://railway.app/account/tokens',
+      apiKeyFree: true,
+      apiKeyNote: 'Railway has a generous free tier. Create API token in Account Settings.',
     },
     {
       id: 'cloudflare',
@@ -129,6 +156,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['cloudflare', 'vercel', 'netlify', 'frontend', 'workers'],
       recommended: false,
       tools: ['deploy_worker', 'kv_get', 'kv_put', 'dns_records'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'CLOUDFLARE_API_TOKEN',
+      apiKeyUrl: 'https://dash.cloudflare.com/profile/api-tokens',
+      apiKeyFree: true,
+      apiKeyNote: 'Cloudflare has a generous free tier. Create an API token with appropriate permissions.',
     },
     {
       id: 'digitalocean',
@@ -143,6 +176,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['digitalocean', 'self-hosted', 'backend'],
       recommended: false,
       tools: ['list_droplets', 'create_droplet', 'list_databases'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'DIGITALOCEAN_API_TOKEN',
+      apiKeyUrl: 'https://cloud.digitalocean.com/account/api/tokens',
+      apiKeyFree: false,
+      apiKeyNote: 'DigitalOcean requires a paid account. Create a Personal Access Token.',
     },
     {
       id: 'vercel',
@@ -157,6 +196,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['vercel', 'nextjs', 'frontend', 'react'],
       recommended: false,
       tools: ['list_deployments', 'trigger_deploy', 'get_domains'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'VERCEL_TOKEN',
+      apiKeyUrl: 'https://vercel.com/account/tokens',
+      apiKeyFree: true,
+      apiKeyNote: 'Vercel has a generous Hobby tier. Create token in Account Settings.',
     },
   ],
 
@@ -201,6 +246,12 @@ export const MCP_REGISTRY = {
       recommended: true,
       tools: ['list_tables', 'execute_sql', 'get_logs', 'list_edge_functions', 'deploy_edge_function', 'list_storage_buckets'],
       note: 'Full Supabase platform access - database, auth, storage, edge functions, and logs',
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'SUPABASE_ACCESS_TOKEN',
+      apiKeyUrl: 'https://supabase.com/dashboard/account/tokens',
+      apiKeyFree: true,
+      apiKeyNote: 'Supabase has a generous free tier. Create an access token in Account Settings.',
     },
   ],
 
@@ -221,6 +272,12 @@ export const MCP_REGISTRY = {
       recommended: true,
       tools: ['list_workflows', 'get_workflow', 'execute_workflow', 'list_executions', 'list_credentials'],
       note: 'Automate workflows and integrate with 400+ apps via n8n',
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'N8N_API_KEY',
+      apiKeyUrl: 'https://docs.n8n.io/api/authentication/',
+      apiKeyFree: true,
+      apiKeyNote: 'n8n Cloud has a free tier. Self-hosted is free. Generate API key in Settings.',
     },
   ],
 
@@ -239,6 +296,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['slack', 'team'],
       recommended: false,
       tools: ['send_message', 'read_channel', 'list_channels'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'SLACK_BOT_TOKEN',
+      apiKeyUrl: 'https://api.slack.com/apps',
+      apiKeyFree: true,
+      apiKeyNote: 'Create a Slack app and install it to your workspace. Free for most use cases.',
     },
     {
       id: 'resend',
@@ -254,6 +317,12 @@ export const MCP_REGISTRY = {
       relevantFor: ['email', 'notifications'],
       recommended: false,
       tools: ['send_email'],
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'RESEND_API_KEY',
+      apiKeyUrl: 'https://resend.com/api-keys',
+      apiKeyFree: true,
+      apiKeyNote: 'Resend has a free tier (100 emails/day). Create an API key in dashboard.',
     },
   ],
 
@@ -328,6 +397,12 @@ export const MCP_REGISTRY = {
       tools: [],
       note: 'Requires ngrok CLI installed. Not an MCP - use via Bash tool with "ngrok http <port>"',
       installGuide: 'Install from https://ngrok.com/download, then run: ngrok config add-authtoken YOUR_TOKEN',
+      // API Key metadata
+      apiKeyRequired: true,
+      apiKeyName: 'NGROK_AUTHTOKEN',
+      apiKeyUrl: 'https://dashboard.ngrok.com/get-started/your-authtoken',
+      apiKeyFree: true,
+      apiKeyNote: 'ngrok has a free tier. Sign up and get your authtoken from the dashboard.',
     },
     {
       id: 'cloudflare-tunnel',
@@ -609,6 +684,47 @@ export function mergeMcpResults(staticMcps = [], dynamicMcps = [], coreTestingMc
 
   // Sort by score descending
   return merged.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Check if an MCP requires an API key
+ * @param {Object} mcp - MCP object from registry
+ * @returns {boolean} True if API key is required
+ */
+export function mcpRequiresApiKey(mcp) {
+  // Explicit apiKeyRequired field takes precedence
+  if (typeof mcp.apiKeyRequired === 'boolean') {
+    return mcp.apiKeyRequired;
+  }
+  // Fall back to checking requiredEnv
+  return mcp.requiredEnv && Object.keys(mcp.requiredEnv).length > 0;
+}
+
+/**
+ * Get API key information for an MCP
+ * @param {Object} mcp - MCP object from registry
+ * @returns {Object|null} API key info or null if not required
+ */
+export function getMcpApiKeyInfo(mcp) {
+  if (!mcpRequiresApiKey(mcp)) {
+    return null;
+  }
+
+  return {
+    required: true,
+    keyName: mcp.apiKeyName || Object.keys(mcp.requiredEnv || {})[0] || 'API_KEY',
+    url: mcp.apiKeyUrl || null,
+    free: mcp.apiKeyFree !== false, // Default to true if not specified
+    note: mcp.apiKeyNote || mcp.requiredEnv?.[Object.keys(mcp.requiredEnv)[0]]?.description || null,
+  };
+}
+
+/**
+ * Get all MCPs that don't require API keys (good for quick start)
+ * @returns {Array} MCPs that work without API keys
+ */
+export function getMcpsWithoutApiKeys() {
+  return getAllMcps().filter((mcp) => !mcpRequiresApiKey(mcp));
 }
 
 /**

@@ -13,6 +13,7 @@ import inquirer from 'inquirer';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
+import { mcpRequiresApiKey, getMcpApiKeyInfo } from './mcp-registry.js';
 
 /**
  * Check if running on Windows
@@ -158,6 +159,60 @@ export function enableMcpServer(settings, mcpId) {
 }
 
 /**
+ * Display API key requirement information
+ */
+export function displayApiKeyInfo(mcp) {
+  const apiKeyInfo = getMcpApiKeyInfo(mcp);
+  if (!apiKeyInfo) return;
+
+  console.log('');
+  console.log(chalk.yellow('╔═══════════════════════════════════════════════════════════════╗'));
+  console.log(chalk.yellow('║') + chalk.bold.cyan('  🔑 API Key Required: ') + chalk.white(apiKeyInfo.keyName).padEnd(35) + chalk.yellow('║'));
+  console.log(chalk.yellow('╠═══════════════════════════════════════════════════════════════╣'));
+  if (apiKeyInfo.url) {
+    console.log(chalk.yellow('║') + chalk.gray('  Get your key at: ') + chalk.blue(apiKeyInfo.url).padEnd(41) + chalk.yellow('║'));
+  }
+  console.log(chalk.yellow('║') + chalk.gray('  Free tier available: ') + (apiKeyInfo.free ? chalk.green('Yes') : chalk.red('No')).padEnd(37) + chalk.yellow('║'));
+  if (apiKeyInfo.note) {
+    // Wrap note text if too long
+    const noteLines = apiKeyInfo.note.match(/.{1,55}/g) || [apiKeyInfo.note];
+    noteLines.forEach((line) => {
+      console.log(chalk.yellow('║') + chalk.gray('  ' + line).padEnd(62) + chalk.yellow('║'));
+    });
+  }
+  console.log(chalk.yellow('╚═══════════════════════════════════════════════════════════════╝'));
+  console.log('');
+}
+
+/**
+ * Prompt user for API key with options to skip or install later
+ * @returns {Object} { action: 'provide'|'skip'|'later', envValues?: {} }
+ */
+export async function promptApiKeyDecision(mcp) {
+  const apiKeyInfo = getMcpApiKeyInfo(mcp);
+  if (!apiKeyInfo) {
+    return { action: 'provide', envValues: {} };
+  }
+
+  displayApiKeyInfo(mcp);
+
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'How would you like to proceed?',
+      choices: [
+        { name: '[P] Provide API key now', value: 'provide' },
+        { name: '[S] Skip this MCP', value: 'skip' },
+        { name: '[L] Install later (add to queue)', value: 'later' },
+      ],
+    },
+  ]);
+
+  return { action };
+}
+
+/**
  * Prompt user for required environment variables
  */
 export async function promptForEnvVars(mcp) {
@@ -218,8 +273,34 @@ export async function promptForEnvVars(mcp) {
  * @returns {Object} Installation result
  */
 export async function installMcp(mcp, options = {}) {
-  const spinner = ora(`Installing ${mcp.name}...`).start();
   const cwd = options.cwd || process.cwd();
+
+  // Check if API key is required and prompt user BEFORE installation
+  if (!options.skipApiKeyPrompt && mcpRequiresApiKey(mcp)) {
+    const { action } = await promptApiKeyDecision(mcp);
+
+    if (action === 'skip') {
+      console.log(chalk.yellow(`⏭ Skipped ${mcp.name}`));
+      return {
+        success: false,
+        skipped: true,
+        mcp,
+        reason: 'User chose to skip',
+      };
+    }
+
+    if (action === 'later') {
+      console.log(chalk.blue(`📋 Added ${mcp.name} to install queue`));
+      return {
+        success: false,
+        queued: true,
+        mcp,
+        reason: 'User chose to install later',
+      };
+    }
+  }
+
+  const spinner = ora(`Installing ${mcp.name}...`).start();
 
   try {
     // 1. Get environment variables
