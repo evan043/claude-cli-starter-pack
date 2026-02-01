@@ -25,6 +25,16 @@ Scans your drive for git repositories and presents a menu to select which one to
 
 **When this command is invoked, follow these steps:**
 
+### CRITICAL: NO AUTO-SELECTION
+
+**YOU MUST NOT auto-select or assume which repository the user wants.** Even if there's an obvious choice or a "recommended" option, you MUST:
+
+1. Present the full menu of repositories
+2. Wait for explicit user selection via AskUserQuestion
+3. Never launch Happy until the user has explicitly chosen a repo
+
+This is mandatory because the user may want to work in a different project than expected.
+
 ### Step 1: Ask for Scan Location
 
 Use AskUserQuestion to determine where to scan:
@@ -101,7 +111,9 @@ Display the discovered repos as a numbered menu:
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-Use AskUserQuestion with the repos as options (max 10 shown, with "Show more..." option if needed).
+**MANDATORY: Use AskUserQuestion** with the repos as options. Do NOT add "(Recommended)" to any option - all repos are equal choices. Present up to 10 repos, with "Show more..." option if needed.
+
+**DO NOT proceed to Step 4 until the user has explicitly selected a repository.**
 
 ### Step 4: Launch Happy Session
 
