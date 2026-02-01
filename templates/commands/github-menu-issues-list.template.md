@@ -8,7 +8,7 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /menu-issues-list - Quick Issues View
+# /github-menu-issues-list - Quick Issues View
 
 **Mobile-friendly list of open GitHub issues with single-character selection.**
 
