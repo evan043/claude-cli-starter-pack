@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.2.3   •  Production Ready                         ║
+║                          v2.2.4   •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -351,6 +351,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Version | Released |
 |---------|---------|----------|
+| [E2E Testing Integration](#e2e-testing-integration) | [v2.2.4](#v224) | Feb 2025 |
 | [Vision Driver Bot](#vision-driver-bot-vdb) | [v2.2.0](#v220) | Jan 2025 |
 | [GitHub Epic System](#github-epic-system) | [v2.2.0](#v220) | Jan 2025 |
 | [Neovim Plugin (nvim-ccasp)](#neovim-plugin) | [v2.0.0](#v200) | Dec 2024 |
@@ -364,6 +365,14 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.2.4
+**E2E Testing Integration & Happy Mode Fix** — Feb 2025
+- **Comprehensive E2E Testing Integration**: Deep Playwright integration with credential injection, tunnel services, and Ralph Loop configuration
+- **Happy Mode Detection Fix**: BREAKING - `HAPPY_SERVER_URL` alone no longer triggers mobile mode; requires active session indicators
+- **GitHub Integration Improvements**: Enhanced error handling, cleaner issue parsing, refined MCP handling
+- **Screenshot Gallery**: Added 6 screenshots showcasing desktop and mobile UI
+- **Developer Guides**: New wiki sections for forking, local development, contributing, and npm updates
 
 ### v2.2.3
 **Security & Packaging** — Feb 2025

@@ -1,6 +1,6 @@
 # CCASP Wiki - Complete Documentation
 
-**Version 2.2.3** | **For Senior Full-Stack Developers**
+**Version 2.2.4** | **For Senior Full-Stack Developers**
 
 This documentation provides comprehensive technical details for the Claude CLI Advanced Starter Pack (CCASP). It covers architecture, implementation patterns, extension points, and production deployment strategies.
 
