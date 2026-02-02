@@ -14,5 +14,17 @@ Write-Host "Starting Happy CLI..."
 Write-Host "========================================"
 Write-Host ""
 
-# Launch happy
-& "C:\Users\erola\AppData\Roaming\npm\happy.cmd"
+# Launch happy - find it dynamically
+$npmPrefix = (npm config get prefix 2>$null)
+if ($npmPrefix) {
+    $happyPath = Join-Path $npmPrefix "happy.cmd"
+    if (Test-Path $happyPath) {
+        & $happyPath
+    } else {
+        # Fallback to PATH lookup
+        & happy
+    }
+} else {
+    # Fallback to PATH lookup
+    & happy
+}

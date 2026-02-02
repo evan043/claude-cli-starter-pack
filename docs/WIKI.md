@@ -1176,9 +1176,9 @@ Uses MCP server for Railway deployments:
 ```javascript
 // Trigger deployment
 mcp__railway-mcp-server__deployment_trigger({
-  projectId: "0895c750-0e83-43ed-8ac0-9a4fe8443838",
-  environmentId: "3c0e8495-6452-4cb1-bdf1-d904fffe039b",
-  serviceId: "a65c3253-ec8e-4727-8111-1e03c750e4c1"
+  projectId: "your-railway-project-id",
+  environmentId: "your-railway-environment-id",
+  serviceId: "your-railway-service-id"
 })
 
 // Check deployment status

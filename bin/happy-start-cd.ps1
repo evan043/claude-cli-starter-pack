@@ -131,7 +131,14 @@ Remove-Item Env:HAPPY_SERVER_URL -ErrorAction SilentlyContinue
 
 # Launch in new Windows Terminal tab
 try {
-    $happyPath = "C:\Users\erola\AppData\Roaming\npm\happy.cmd"
+    # Find happy.cmd dynamically
+    $npmPrefix = (npm config get prefix 2>$null)
+    if ($npmPrefix -and (Test-Path (Join-Path $npmPrefix "happy.cmd"))) {
+        $happyPath = Join-Path $npmPrefix "happy.cmd"
+    } else {
+        # Fallback - assume it's in PATH
+        $happyPath = "happy"
+    }
 
     # Check if Windows Terminal is available
     $wtExists = Get-Command wt.exe -ErrorAction SilentlyContinue

@@ -98,14 +98,14 @@ Display the discovered repos as a numbered menu:
 ║  📂 Git Repositories Found                                    ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  1) benefits-outreach-360                                     ║
-║     F:\1 - Benefits-Outreach-360 (Web)                        ║
+║  1) my-web-app                                                ║
+║     C:\Projects\my-web-app                                    ║
 ║                                                               ║
-║  2) claude-cli-advanced-starter-pack                          ║
-║     F:\...\tools\claude-cli-advanced-starter-pack             ║
+║  2) api-backend                                               ║
+║     C:\Projects\api-backend                                   ║
 ║                                                               ║
-║  3) my-other-project                                          ║
-║     C:\Users\user\Projects\my-other-project                   ║
+║  3) shared-utils                                              ║
+║     C:\Projects\shared-utils                                  ║
 ║                                                               ║
 ║  [Enter number to select, or 'q' to quit]                     ║
 ╚═══════════════════════════════════════════════════════════════╝
@@ -120,7 +120,7 @@ Display the discovered repos as a numbered menu:
 Once user selects a repo, execute:
 
 ```bash
-wt.exe -d "[SELECTED_PATH]" powershell -NoExit -Command "Remove-Item Env:HAPPY_SERVER_URL -ErrorAction SilentlyContinue; Write-Host 'Starting Happy CLI in [REPO_NAME]...'; & 'C:\Users\erola\AppData\Roaming\npm\happy.cmd'"
+wt.exe -d "[SELECTED_PATH]" powershell -NoExit -Command "Remove-Item Env:HAPPY_SERVER_URL -ErrorAction SilentlyContinue; Write-Host 'Starting Happy CLI in [REPO_NAME]...'; & happy"
 ```
 
 ### Step 5: Confirm Launch
@@ -159,9 +159,9 @@ When presenting repos on mobile (Happy app), use compact single-char selection:
 ```
 Git Repos Found:
 ─────────────────
-1) benefits-outreach-360
-2) claude-cli-starter
-3) my-project
+1) my-web-app
+2) api-backend
+3) shared-utils
 ─────────────────
 Enter number (1-N):
 ```
