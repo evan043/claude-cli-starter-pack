@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "2.2.4",
+      "date": "2026-02-02",
+      "summary": "Feature: comprehensive E2E testing integration across CCASP",
+      "highlights": [
+        "comprehensive E2E testing integration across CCASP",
+        "Fixed: distinguish configured vs active session"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.3",
       "date": "2026-02-02",
       "summary": "Feature: add Vision Driver Bot (VDB) for autonomous development",
