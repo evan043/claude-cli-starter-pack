@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "version": "2.2.5",
+      "date": "2026-02-02",
+      "summary": "Feature: implement CCASP v2.3 roadmap features (#48, #61, #62)",
+      "highlights": [
+        "implement CCASP v2.3 roadmap features (#48, #61, #62)",
+        "comprehensive E2E testing integration across CCASP",
+        "Fixed: distinguish configured vs active session"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.4",
       "date": "2026-02-02",
       "summary": "Feature: comprehensive E2E testing integration across CCASP",
