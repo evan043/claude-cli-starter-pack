@@ -613,7 +613,7 @@ export class DecisionEngine {
     const phases = epic?.phases || [];
 
     switch (area) {
-      case 'testing':
+      case 'testing': {
         const hasTestingPhase = phases.some(p =>
           p.phase_title?.toLowerCase().includes('test') ||
           p.goal?.toLowerCase().includes('test')
@@ -627,8 +627,9 @@ export class DecisionEngine {
           };
         }
         break;
+      }
 
-      case 'documentation':
+      case 'documentation': {
         const hasDocsPhase = phases.some(p =>
           p.phase_title?.toLowerCase().includes('doc') ||
           p.outputs?.some(o => o.toLowerCase().includes('doc'))
@@ -642,8 +643,9 @@ export class DecisionEngine {
           };
         }
         break;
+      }
 
-      case 'security':
+      case 'security': {
         const hasSecurityReview = phases.some(p =>
           p.phase_title?.toLowerCase().includes('security') ||
           p.goal?.toLowerCase().includes('security')
@@ -657,6 +659,7 @@ export class DecisionEngine {
           };
         }
         break;
+      }
     }
 
     return null;
@@ -681,21 +684,23 @@ export class DecisionEngine {
         await this.notifyHuman(action.params);
         break;
 
-      case 'queue_phase':
+      case 'queue_phase': {
         const { TaskQueue } = await import('./queue.js');
         const queue = new TaskQueue(this.config, this.projectRoot);
         await queue.enqueue({ phase_id: action.target, ...action.params });
         break;
+      }
 
       case 'post_epic_summary':
         // Will be handled by reporter
         break;
 
-      case 'clear_stuck_tasks':
+      case 'clear_stuck_tasks': {
         const { TaskQueue: TQ } = await import('./queue.js');
         const q = new TQ(this.config, this.projectRoot);
         await q.clear();
         break;
+      }
     }
   }
 
