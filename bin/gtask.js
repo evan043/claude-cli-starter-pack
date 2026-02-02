@@ -423,5 +423,17 @@ program
     await runModelMode(options);
   });
 
+// Vision Driver Bot - autonomous development from Vision board
+program
+  .command('vdb [subcommand]')
+  .description('Vision Driver Bot - autonomous development from Vision/Epic board')
+  .option('--dry-run', 'Preview without executing')
+  .option('--force', 'Force operation even if already done')
+  .option('--days <days>', 'Days for statistics', '7')
+  .action(async (subcommand, options) => {
+    const { vdbCommand } = await import('../src/commands/vdb.js');
+    await vdbCommand(subcommand || 'status', options);
+  });
+
 // Parse and run
 program.parse();

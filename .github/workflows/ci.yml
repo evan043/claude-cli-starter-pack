@@ -168,8 +168,8 @@ jobs:
 
       - name: Verify tech-stack.json created
         run: |
-          test -f /tmp/test-project/.claude/tech-stack.json
-          cat /tmp/test-project/.claude/tech-stack.json
+          test -f /tmp/test-project/.claude/config/tech-stack.json
+          cat /tmp/test-project/.claude/config/tech-stack.json
           echo "✓ tech-stack.json created"
 
   # ============================================

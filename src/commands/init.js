@@ -253,6 +253,16 @@ async function runDevMode(options = {}) {
  * Run the init wizard
  */
 export async function runInit(options = {}) {
+  // CI MODE: Auto-detect and skip prompts in CI environments
+  const isCI = process.env.CI === 'true' || process.env.CI === '1' || process.env.GITHUB_ACTIONS === 'true';
+  if (isCI && !options.skipPrompts) {
+    options.skipPrompts = true;
+    // Use default features in CI if not specified
+    if (!options.features) {
+      options.features = getDefaultFeatures().map(f => f.name);
+    }
+  }
+
   // DEV MODE: Fast path for template testing
   if (options.dev) {
     showHeader('Claude CLI Advanced Starter Pack - DEV MODE');
@@ -507,9 +517,9 @@ export async function runInit(options = {}) {
   // Step 4: Select optional features
   let selectedFeatures;
 
-  if (options.skipPrompts && options.features) {
-    // Use features passed from wizard
-    selectedFeatures = options.features;
+  if (options.skipPrompts) {
+    // Use features passed from wizard, or default features in CI mode
+    selectedFeatures = options.features || getDefaultFeatures().map(f => f.name);
     console.log(chalk.bold('Step 4: Using pre-selected features\n'));
     if (selectedFeatures.length > 0) {
       console.log(chalk.dim(`  Features: ${selectedFeatures.join(', ')}`));

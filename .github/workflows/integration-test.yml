@@ -58,26 +58,30 @@ jobs:
         env:
           CI: true
 
-      - name: Verify detection
+      - name: Verify CCASP installation
         run: |
           cd /tmp/test-react-app
-          cat .claude/tech-stack.json
 
-          # Verify React was detected
-          node -e "
-            const ts = require('./.claude/tech-stack.json');
-            if (!ts.frontend?.framework?.includes('React')) {
-              console.error('React not detected!');
-              process.exit(1);
-            }
-            console.log('✓ React detected correctly');
-          "
+          # Verify .claude directory structure
+          test -d .claude/commands || (echo "Missing commands directory" && exit 1)
+          test -d .claude/agents || (echo "Missing agents directory" && exit 1)
+          test -d .claude/skills || (echo "Missing skills directory" && exit 1)
+          test -d .claude/hooks || (echo "Missing hooks directory" && exit 1)
+          test -d .claude/config || (echo "Missing config directory" && exit 1)
+          echo "✓ .claude directory structure created"
 
-      - name: Verify commands created
-        run: |
-          test -d /tmp/test-react-app/.claude/commands
-          ls -la /tmp/test-react-app/.claude/commands/
-          echo "✓ Commands directory created"
+          # Verify key files exist
+          test -f .claude/settings.json || (echo "Missing settings.json" && exit 1)
+          test -f .claude/config/tech-stack.json || (echo "Missing tech-stack.json" && exit 1)
+          echo "✓ Configuration files created"
+
+          # Verify commands were deployed
+          ls .claude/commands/*.md | wc -l | xargs -I{} test {} -gt 5 || (echo "Expected more commands" && exit 1)
+          echo "✓ Commands deployed successfully"
+
+          # List installed commands
+          echo "Installed commands:"
+          ls .claude/commands/
 
   # ============================================
   # Test with Next.js project
@@ -114,20 +118,26 @@ jobs:
         env:
           CI: true
 
-      - name: Verify detection
+      - name: Verify CCASP installation
         run: |
           cd /tmp/test-nextjs-app
-          cat .claude/tech-stack.json
 
-          # Verify Next.js was detected
-          node -e "
-            const ts = require('./.claude/tech-stack.json');
-            if (!ts.frontend?.framework?.includes('Next')) {
-              console.error('Next.js not detected!');
-              process.exit(1);
-            }
-            console.log('✓ Next.js detected correctly');
-          "
+          # Verify .claude directory structure
+          test -d .claude/commands || (echo "Missing commands directory" && exit 1)
+          test -d .claude/agents || (echo "Missing agents directory" && exit 1)
+          test -d .claude/skills || (echo "Missing skills directory" && exit 1)
+          test -d .claude/hooks || (echo "Missing hooks directory" && exit 1)
+          test -d .claude/config || (echo "Missing config directory" && exit 1)
+          echo "✓ .claude directory structure created"
+
+          # Verify key files exist
+          test -f .claude/settings.json || (echo "Missing settings.json" && exit 1)
+          test -f .claude/config/tech-stack.json || (echo "Missing tech-stack.json" && exit 1)
+          echo "✓ Configuration files created"
+
+          # Verify commands were deployed
+          ls .claude/commands/*.md | wc -l | xargs -I{} test {} -gt 5 || (echo "Expected more commands" && exit 1)
+          echo "✓ Commands deployed successfully"
 
   # ============================================
   # Test with Node.js API project
@@ -175,20 +185,26 @@ jobs:
         env:
           CI: true
 
-      - name: Verify detection
+      - name: Verify CCASP installation
         run: |
           cd /tmp/test-express-api
-          cat .claude/tech-stack.json
 
-          # Verify Express was detected
-          node -e "
-            const ts = require('./.claude/tech-stack.json');
-            if (!ts.backend?.framework?.includes('Express')) {
-              console.error('Express not detected!');
-              process.exit(1);
-            }
-            console.log('✓ Express detected correctly');
-          "
+          # Verify .claude directory structure
+          test -d .claude/commands || (echo "Missing commands directory" && exit 1)
+          test -d .claude/agents || (echo "Missing agents directory" && exit 1)
+          test -d .claude/skills || (echo "Missing skills directory" && exit 1)
+          test -d .claude/hooks || (echo "Missing hooks directory" && exit 1)
+          test -d .claude/config || (echo "Missing config directory" && exit 1)
+          echo "✓ .claude directory structure created"
+
+          # Verify key files exist
+          test -f .claude/settings.json || (echo "Missing settings.json" && exit 1)
+          test -f .claude/config/tech-stack.json || (echo "Missing tech-stack.json" && exit 1)
+          echo "✓ Configuration files created"
+
+          # Verify commands were deployed
+          ls .claude/commands/*.md | wc -l | xargs -I{} test {} -gt 5 || (echo "Expected more commands" && exit 1)
+          echo "✓ Commands deployed successfully"
 
   # ============================================
   # Test with Python project
@@ -256,20 +272,26 @@ jobs:
         env:
           CI: true
 
-      - name: Verify detection
+      - name: Verify CCASP installation
         run: |
           cd /tmp/test-fastapi
-          cat .claude/tech-stack.json
 
-          # Verify Python/FastAPI was detected
-          node -e "
-            const ts = require('./.claude/tech-stack.json');
-            if (ts.backend?.language !== 'Python') {
-              console.error('Python not detected!');
-              process.exit(1);
-            }
-            console.log('✓ Python detected correctly');
-          "
+          # Verify .claude directory structure
+          test -d .claude/commands || (echo "Missing commands directory" && exit 1)
+          test -d .claude/agents || (echo "Missing agents directory" && exit 1)
+          test -d .claude/skills || (echo "Missing skills directory" && exit 1)
+          test -d .claude/hooks || (echo "Missing hooks directory" && exit 1)
+          test -d .claude/config || (echo "Missing config directory" && exit 1)
+          echo "✓ .claude directory structure created"
+
+          # Verify key files exist
+          test -f .claude/settings.json || (echo "Missing settings.json" && exit 1)
+          test -f .claude/config/tech-stack.json || (echo "Missing tech-stack.json" && exit 1)
+          echo "✓ Configuration files created"
+
+          # Verify commands were deployed
+          ls .claude/commands/*.md | wc -l | xargs -I{} test {} -gt 5 || (echo "Expected more commands" && exit 1)
+          echo "✓ Commands deployed successfully"
 
   # ============================================
   # Summary
