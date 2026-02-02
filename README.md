@@ -77,24 +77,47 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 ## See It In Action
 
-<details open>
+<details>
 <summary><strong>📸 Screenshots Gallery</strong> (click to expand/collapse)</summary>
 
 <br>
+
+### Desktop UI
 
 <table>
 <tr>
 <td align="center" width="50%">
 <strong>/menu — Interactive Navigation</strong><br><br>
-<a href="./assets/screenshots/menu-command.jpg">
-<img src="./assets/screenshots/menu-command.jpg" alt="CCASP Menu Command" width="400">
+<a href="./assets/screenshots/desktop/menu.jpg">
+<img src="./assets/screenshots/desktop/menu.jpg" alt="CCASP Desktop Menu" width="400">
 </a>
-<br><em>Single-key navigation, mobile-optimized</em>
+<br><em>Full-featured menu with all options</em>
+</td>
+<td align="center" width="50%">
+<strong>Project Configuration Settings</strong><br><br>
+<a href="./assets/screenshots/desktop/project-settings.jpg">
+<img src="./assets/screenshots/desktop/project-settings.jpg" alt="CCASP Project Settings" width="400">
+</a>
+<br><em>GitHub, deployment, tunnels, tokens</em>
+</td>
+</tr>
+</table>
+
+### Mobile UI (Happy.engineering)
+
+<table>
+<tr>
+<td align="center" width="50%">
+<strong>/menu — Mobile Navigation</strong><br><br>
+<a href="./assets/screenshots/mobile/menu.jpg">
+<img src="./assets/screenshots/mobile/menu.jpg" alt="CCASP Mobile Menu" width="400">
+</a>
+<br><em>Single-key navigation, 40-char width</em>
 </td>
 <td align="center" width="50%">
 <strong>Setup Wizard — Feature Selection</strong><br><br>
-<a href="./assets/screenshots/setup-wizard.jpg">
-<img src="./assets/screenshots/setup-wizard.jpg" alt="CCASP Setup Wizard" width="400">
+<a href="./assets/screenshots/mobile/setup-wizard.jpg">
+<img src="./assets/screenshots/mobile/setup-wizard.jpg" alt="CCASP Setup Wizard" width="400">
 </a>
 <br><em>Choose commands, agents, hooks, skills</em>
 </td>
@@ -102,31 +125,31 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 <tr>
 <td align="center" width="50%">
 <strong>GitHub Project Setup</strong><br><br>
-<a href="./assets/screenshots/github-setup.jpg">
-<img src="./assets/screenshots/github-setup.jpg" alt="GitHub Project Setup" width="400">
+<a href="./assets/screenshots/mobile/github-setup.jpg">
+<img src="./assets/screenshots/mobile/github-setup.jpg" alt="GitHub Project Setup" width="400">
 </a>
 <br><em>One-click repo and Project Board sync</em>
 </td>
 <td align="center" width="50%">
-<strong>/claude-audit — Full Analysis Report</strong><br><br>
-<a href="./assets/screenshots/claude-audit-report.jpg">
-<img src="./assets/screenshots/claude-audit-report.jpg" alt="Claude Audit Report" width="400">
+<strong>/claude-audit — Analysis Report</strong><br><br>
+<a href="./assets/screenshots/mobile/claude-audit-1.jpg">
+<img src="./assets/screenshots/mobile/claude-audit-1.jpg" alt="Claude Audit Report" width="400">
 </a>
-<br><em>92/100 score with detailed checks</em>
+<br><em>CLAUDE.md analysis with score</em>
 </td>
 </tr>
 <tr>
 <td align="center" width="50%">
 <strong>Audit Score Breakdown</strong><br><br>
-<a href="./assets/screenshots/audit-score.jpg">
-<img src="./assets/screenshots/audit-score.jpg" alt="Audit Score Breakdown" width="400">
+<a href="./assets/screenshots/mobile/claude-audit-2.jpg">
+<img src="./assets/screenshots/mobile/claude-audit-2.jpg" alt="Audit Score Breakdown" width="400">
 </a>
-<br><em>Line count, commands, structure validation</em>
+<br><em>Detailed scoring and summary</em>
 </td>
 <td align="center" width="50%">
 <strong>Actionable Recommendations</strong><br><br>
-<a href="./assets/screenshots/audit-recommendations.jpg">
-<img src="./assets/screenshots/audit-recommendations.jpg" alt="Audit Recommendations" width="400">
+<a href="./assets/screenshots/mobile/recommendations.jpg">
+<img src="./assets/screenshots/mobile/recommendations.jpg" alt="Audit Recommendations" width="400">
 </a>
 <br><em>Priority-ordered improvements</em>
 </td>

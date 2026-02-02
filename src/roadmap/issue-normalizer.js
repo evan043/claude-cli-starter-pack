@@ -143,16 +143,21 @@ function extractAcceptanceCriteria(issue) {
   const body = issue.body || '';
   const criteria = [];
 
+  // Limit input size to prevent ReDoS (max 50KB)
+  const safeBody = body.length > 50000 ? body.slice(0, 50000) : body;
+
   // Look for existing checklist items
-  const checklistRegex = /^[\s-]*\[[ x]\]\s*(.+)$/gim;
+  // Using [^\n]+ instead of .+ to prevent catastrophic backtracking
+  const checklistRegex = /^[\s-]*\[[ x]\]\s*([^\n]+)$/gim;
   let match;
-  while ((match = checklistRegex.exec(body)) !== null) {
+  while ((match = checklistRegex.exec(safeBody)) !== null) {
     criteria.push(match[1].trim());
   }
 
   // Look for bullet points that look like requirements
-  const bulletRegex = /^[\s-]*•?\s*(?:must|should|shall|need to|requires?)\s+(.+)$/gim;
-  while ((match = bulletRegex.exec(body)) !== null) {
+  // Using [^\n]+ instead of .+ to prevent catastrophic backtracking
+  const bulletRegex = /^[\s-]*•?\s*(?:must|should|shall|need to|requires?)\s+([^\n]+)$/gim;
+  while ((match = bulletRegex.exec(safeBody)) !== null) {
     const criterion = match[1].trim();
     if (!criteria.includes(criterion)) {
       criteria.push(criterion);
@@ -338,6 +343,31 @@ export function batchNormalize(issues, options = {}) {
 }
 
 /**
+ * Safely extract a section from markdown body
+ * Uses indexOf instead of regex with [\s\S]*? to prevent ReDoS
+ *
+ * @param {string} body - Full body text
+ * @param {string} sectionHeader - Header to find (e.g., "### Acceptance Criteria")
+ * @returns {string|null} Section content or null
+ */
+function extractSection(body, sectionHeader) {
+  const startIdx = body.indexOf(sectionHeader);
+  if (startIdx === -1) return null;
+
+  const contentStart = startIdx + sectionHeader.length;
+
+  // Find the next section boundary (### or ---)
+  let endIdx = body.length;
+  const nextHeader = body.indexOf('\n###', contentStart);
+  const nextDivider = body.indexOf('\n---', contentStart);
+
+  if (nextHeader !== -1) endIdx = Math.min(endIdx, nextHeader);
+  if (nextDivider !== -1) endIdx = Math.min(endIdx, nextDivider);
+
+  return body.slice(contentStart, endIdx);
+}
+
+/**
  * Extract metadata from a normalized issue body
  *
  * @param {string} body - Issue body
@@ -348,25 +378,29 @@ export function extractNormalizationMetadata(body) {
     return null;
   }
 
+  // Limit input size to prevent ReDoS (max 50KB)
+  const safeBody = body.length > 50000 ? body.slice(0, 50000) : body;
+
   const metadata = {};
 
   // Extract domain
-  const domainMatch = body.match(/\*\*Domain:\*\*\s*(\w+)/);
+  const domainMatch = safeBody.match(/\*\*Domain:\*\*\s*(\w+)/);
   if (domainMatch) metadata.domain = domainMatch[1];
 
   // Extract complexity
-  const complexityMatch = body.match(/\*\*Complexity:\*\*\s*([SML])/);
+  const complexityMatch = safeBody.match(/\*\*Complexity:\*\*\s*([SML])/);
   if (complexityMatch) metadata.complexity = complexityMatch[1];
 
   // Extract effort
-  const effortMatch = body.match(/\*\*Estimated Effort:\*\*\s*([^\n]+)/);
+  const effortMatch = safeBody.match(/\*\*Estimated Effort:\*\*\s*([^\n]+)/);
   if (effortMatch) metadata.effort = effortMatch[1].trim();
 
-  // Extract criteria
-  const criteriaSection = body.match(/### Acceptance Criteria\n([\s\S]*?)(?=###|---)/);
+  // Extract criteria using safe section extraction (no ReDoS-prone regex)
+  const criteriaSection = extractSection(safeBody, '### Acceptance Criteria\n');
   if (criteriaSection) {
     metadata.criteria = [];
-    const criteriaMatches = criteriaSection[1].matchAll(/- \[[ x]\] (.+)/g);
+    // Using [^\n]+ instead of .+ to prevent backtracking
+    const criteriaMatches = criteriaSection.matchAll(/- \[[ x]\] ([^\n]+)/g);
     for (const match of criteriaMatches) {
       metadata.criteria.push({
         text: match[1],
@@ -375,11 +409,11 @@ export function extractNormalizationMetadata(body) {
     }
   }
 
-  // Extract dependencies
-  const depsSection = body.match(/### Dependencies\n([\s\S]*?)(?=###|---)/);
+  // Extract dependencies using safe section extraction (no ReDoS-prone regex)
+  const depsSection = extractSection(safeBody, '### Dependencies\n');
   if (depsSection) {
     metadata.dependencies = [];
-    const depMatches = depsSection[1].matchAll(/- Requires: ([^\n]+)/g);
+    const depMatches = depsSection.matchAll(/- Requires: ([^\n]+)/g);
     for (const match of depMatches) {
       metadata.dependencies.push(match[1].trim());
     }

@@ -19,6 +19,7 @@ import { shouldUseMobileUI } from '../utils/happy-detect.js';
 import { listRoadmaps, loadRoadmap, getRoadmapsDir } from '../roadmap/roadmap-manager.js';
 import { checkGhCli, getRepoInfo } from '../roadmap/github-integration.js';
 import { execSync } from 'child_process';
+import { safeCreateIssue } from '../utils/safe-exec.js';
 
 // New directory for epics
 const EPICS_DIR = '.claude/github-epics';
@@ -360,25 +361,26 @@ async function createTestingIssues(epic, cwd = process.cwd()) {
     const body = generateTestingIssueBody(epic, phase, testDate);
     const title = `[Testing] ${epic.title || epic.roadmap_name}: ${phase.phase_title}`;
 
-    try {
-      spinner.text = `Creating testing issue for ${phase.phase_title}...`;
+    spinner.text = `Creating testing issue for ${phase.phase_title}...`;
 
-      const result = execSync(
-        `gh issue create --repo "${repoInfo.owner}/${repoInfo.repo}" --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}" --label "testing,phase-testing"`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-      );
+    // Use safe execution to prevent shell injection
+    const result = safeCreateIssue({
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      title,
+      body,
+      labels: ['testing', 'phase-testing'],
+    });
 
-      const issueUrl = result.trim();
-      const issueNumber = issueUrl.match(/\/issues\/(\d+)/)?.[1];
-
+    if (result.success) {
       created.push({
         phase: phase.phase_title,
-        issueNumber,
-        issueUrl,
+        issueNumber: result.number,
+        issueUrl: result.url,
         testDate: testDate.toISOString(),
       });
-    } catch (e) {
-      errors.push({ phase: phase.phase_title, error: e.message });
+    } else {
+      errors.push({ phase: phase.phase_title, error: result.error });
     }
   }
 

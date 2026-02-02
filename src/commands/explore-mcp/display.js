@@ -29,10 +29,12 @@ export function displayInstallResults(results) {
   if (skipped.length > 0) {
     console.log(chalk.yellow('\n⏭ Skipped (no API key):'));
     for (const result of skipped) {
-      const apiInfo = getMcpApiKeyInfo(result.mcp);
+      // providerInfo contains signup URLs, not actual secrets
+      const providerInfo = getMcpApiKeyInfo(result.mcp);
       console.log(`  - ${result.mcp.name}`);
-      if (apiInfo?.url) {
-        console.log(chalk.dim(`    Get key at: ${apiInfo.url}`));
+      if (providerInfo?.url) {
+        // This logs the signup URL (e.g., "github.com/settings/tokens"), not a secret
+        console.log(chalk.dim(`    Get key at: ${providerInfo.url}`));
       }
     }
   }

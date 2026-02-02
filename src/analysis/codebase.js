@@ -8,6 +8,7 @@ import { execCommand } from '../utils.js';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { join, relative, extname } from 'path';
 import { glob } from 'glob';
+import { spawnSync } from 'child_process';
 
 /**
  * File extensions to analyze by language
@@ -143,22 +144,42 @@ export async function searchFiles(keywords, options = {}) {
 
 /**
  * Search file contents using grep/ripgrep
+ * Uses spawnSync to prevent shell injection from search patterns
  */
 export function searchContent(pattern, options = {}) {
   const { cwd = process.cwd(), maxResults = 20, contextLines = 2 } = options;
 
-  // Try ripgrep first (faster)
-  let cmd = `rg -n -C ${contextLines} --max-count 50 "${pattern}"`;
-  let result = execCommand(cmd, { cwd });
+  // Try ripgrep first (faster) - use spawnSync to prevent shell injection
+  let proc = spawnSync('rg', [
+    '-n',
+    '-C', String(contextLines),
+    '--max-count', '50',
+    pattern
+  ], {
+    cwd,
+    encoding: 'utf8',
+    timeout: 30000,
+  });
 
-  // Fall back to grep
-  if (!result.success) {
-    cmd = `grep -rn -C ${contextLines} "${pattern}" .`;
-    result = execCommand(cmd, { cwd });
+  let output = proc.status === 0 ? proc.stdout : null;
+
+  // Fall back to grep if ripgrep not available or failed
+  if (!output) {
+    proc = spawnSync('grep', [
+      '-rn',
+      '-C', String(contextLines),
+      pattern,
+      '.'
+    ], {
+      cwd,
+      encoding: 'utf8',
+      timeout: 30000,
+    });
+    output = proc.status === 0 ? proc.stdout : null;
   }
 
-  if (result.success && result.output) {
-    const matches = parseGrepOutput(result.output);
+  if (output) {
+    const matches = parseGrepOutput(output);
     return matches.slice(0, maxResults);
   }
 

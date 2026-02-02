@@ -265,14 +265,18 @@ async function main() {
     const message = formatWarnings(warnings);
 
     if (message) {
+      // message contains only warning text about missing env vars, no secrets
       console.error(message);
     }
 
     // Always allow the operation (this is a warning hook, not a blocker)
     process.exit(0);
   } catch (error) {
-    // Don't fail the operation on hook errors
-    console.error(`[mcp-api-key-validator] Error: ${error.message}`);
+    // Sanitize error message to avoid leaking any sensitive data
+    const safeMessage = error.message
+      ? error.message.replace(/[A-Za-z0-9_]{20,}/g, '[REDACTED]')
+      : 'Unknown error';
+    console.error(`[mcp-api-key-validator] Error: ${safeMessage}`);
     process.exit(0);
   }
 }

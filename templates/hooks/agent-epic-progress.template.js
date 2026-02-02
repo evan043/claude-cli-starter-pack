@@ -13,7 +13,56 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
+
+/**
+ * Safely execute GitHub CLI commands using execFileSync (no shell injection)
+ */
+function safeGhExec(args, options = {}) {
+  const defaultOptions = {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    ...options,
+  };
+  return execFileSync('gh', args, defaultOptions);
+}
+
+/**
+ * Safely add a comment to a GitHub issue
+ */
+function safeAddIssueComment({ owner, repo, issueNumber, body }) {
+  try {
+    safeGhExec([
+      'issue', 'comment',
+      String(issueNumber),
+      '--repo', `${owner}/${repo}`,
+      '--body', body,
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safely close a GitHub issue
+ */
+function safeCloseIssue({ owner, repo, issueNumber, comment }) {
+  try {
+    const args = [
+      'issue', 'close',
+      String(issueNumber),
+      '--repo', `${owner}/${repo}`,
+    ];
+    if (comment) {
+      args.push('--comment', comment);
+    }
+    safeGhExec(args);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Configuration
 const CONFIG = {
@@ -236,16 +285,13 @@ ${codeSnippet.substring(0, 500)}${codeSnippet.length > 500 ? '\n...' : ''}
 ---
 _Updated by CCASP Agent Progress Hook_`;
 
-  try {
-    const escapedComment = comment.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/`/g, '\\`');
-    execSync(
-      `gh issue comment ${issueNumber} --repo ${owner}/${repo} --body "${escapedComment}"`,
-      { stdio: 'pipe' }
-    );
-    return true;
-  } catch {
-    return false;
-  }
+  // Use safe execution to prevent shell injection
+  return safeAddIssueComment({
+    owner,
+    repo,
+    issueNumber,
+    body: comment,
+  });
 }
 
 /**
@@ -284,26 +330,29 @@ function updateEpicCheckboxes(epic, projectRoot) {
   const completion = calculateEpicCompletion(epic);
   checkboxList += `\n**Overall Progress:** ${completion}%`;
 
-  // Post update comment
-  try {
-    const escapedComment = checkboxList.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-    execSync(
-      `gh issue comment ${epicNumber} --repo ${owner}/${repo} --body "${escapedComment}"`,
-      { stdio: 'pipe' }
-    );
+  // Post update comment using safe execution (no shell injection)
+  const commentSuccess = safeAddIssueComment({
+    owner,
+    repo,
+    issueNumber: epicNumber,
+    body: checkboxList,
+  });
 
-    // Close epic if 100% complete
-    if (completion >= 100) {
-      execSync(
-        `gh issue close ${epicNumber} --repo ${owner}/${repo} --comment "✅ Epic completed! All phases finished."`,
-        { stdio: 'pipe' }
-      );
-    }
-
-    return true;
-  } catch {
+  if (!commentSuccess) {
     return false;
   }
+
+  // Close epic if 100% complete
+  if (completion >= 100) {
+    safeCloseIssue({
+      owner,
+      repo,
+      issueNumber: epicNumber,
+      comment: '✅ Epic completed! All phases finished.',
+    });
+  }
+
+  return true;
 }
 
 /**

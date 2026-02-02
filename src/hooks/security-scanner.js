@@ -51,11 +51,17 @@ export function runGuardDogScan(packageName, ecosystem = 'npm') {
 
   try {
     const ecosystemArg = ecosystem === 'npm' ? 'npm' : 'pypi';
-    const output = execSync(`guarddog ${ecosystemArg} scan ${packageName}`, {
+    // Use spawnSync to prevent shell injection from malicious package names
+    const proc = spawnSync('guarddog', [ecosystemArg, 'scan', packageName], {
       encoding: 'utf8',
       timeout: 60000,
     });
 
+    if (proc.error) {
+      throw proc.error;
+    }
+
+    const output = proc.stdout || '';
     result.scanned = true;
     result.rawOutput = output;
 
@@ -114,11 +120,17 @@ export function runOsvScan(target, options = {}) {
       args.push('--package', target);
     }
 
-    const output = execSync(`osv-scanner ${args.join(' ')}`, {
+    // Use spawnSync to prevent shell injection from malicious paths/package names
+    const proc = spawnSync('osv-scanner', args, {
       encoding: 'utf8',
       timeout: 120000,
     });
 
+    if (proc.error) {
+      throw proc.error;
+    }
+
+    const output = proc.stdout || '';
     result.scanned = true;
 
     try {

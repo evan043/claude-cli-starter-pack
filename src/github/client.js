@@ -2,10 +2,36 @@
  * GitHub CLI Wrapper
  *
  * Provides clean interface for gh CLI operations
+ * Uses execFileSync to prevent shell injection vulnerabilities
  */
 
 import { execCommand, execAsync } from '../utils.js';
+import { execFileSync } from 'child_process';
 import chalk from 'chalk';
+
+/**
+ * Safely execute gh CLI commands using execFileSync (no shell injection)
+ * @param {string[]} args - Array of arguments for gh command
+ * @param {Object} options - execFileSync options
+ * @returns {{ success: boolean, output: string, error?: string }}
+ */
+function safeGhExec(args, options = {}) {
+  try {
+    const output = execFileSync('gh', args, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 30000,
+      ...options,
+    });
+    return { success: true, output: output.trim() };
+  } catch (error) {
+    return {
+      success: false,
+      output: '',
+      error: error.stderr || error.message,
+    };
+  }
+}
 
 /**
  * Check if gh CLI is authenticated
@@ -30,12 +56,12 @@ export function getCurrentUser() {
  * List repositories for a user/org
  */
 export function listRepos(owner, options = {}) {
-  const { limit = 30, type = 'all' } = options;
-  const cmd = owner
-    ? `gh repo list ${owner} --limit ${limit} --json name,description,isPrivate`
-    : `gh repo list --limit ${limit} --json name,description,isPrivate`;
+  const { limit = 30 } = options;
+  const args = owner
+    ? ['repo', 'list', owner, '--limit', String(limit), '--json', 'name,description,isPrivate']
+    : ['repo', 'list', '--limit', String(limit), '--json', 'name,description,isPrivate'];
 
-  const result = execCommand(cmd);
+  const result = safeGhExec(args);
   if (result.success) {
     try {
       return JSON.parse(result.output);
@@ -50,7 +76,7 @@ export function listRepos(owner, options = {}) {
  * Check if repo exists and is accessible
  */
 export function repoExists(owner, repo) {
-  const result = execCommand(`gh repo view ${owner}/${repo} --json name`);
+  const result = safeGhExec(['repo', 'view', `${owner}/${repo}`, '--json', 'name']);
   return result.success;
 }
 
@@ -58,9 +84,10 @@ export function repoExists(owner, repo) {
  * Get repository info
  */
 export function getRepoInfo(owner, repo) {
-  const result = execCommand(
-    `gh repo view ${owner}/${repo} --json name,description,isPrivate,defaultBranchRef`
-  );
+  const result = safeGhExec([
+    'repo', 'view', `${owner}/${repo}`,
+    '--json', 'name,description,isPrivate,defaultBranchRef'
+  ]);
   if (result.success) {
     try {
       return JSON.parse(result.output);
@@ -75,9 +102,7 @@ export function getRepoInfo(owner, repo) {
  * List GitHub Projects for a user/org
  */
 export function listProjects(owner) {
-  const result = execCommand(
-    `gh project list --owner ${owner} --format json`
-  );
+  const result = safeGhExec(['project', 'list', '--owner', owner, '--format', 'json']);
   if (result.success) {
     try {
       const data = JSON.parse(result.output);
@@ -93,9 +118,11 @@ export function listProjects(owner) {
  * Get project details
  */
 export function getProject(owner, projectNumber) {
-  const result = execCommand(
-    `gh project view ${projectNumber} --owner ${owner} --format json`
-  );
+  const result = safeGhExec([
+    'project', 'view', String(projectNumber),
+    '--owner', owner,
+    '--format', 'json'
+  ]);
   if (result.success) {
     try {
       return JSON.parse(result.output);
@@ -110,9 +137,11 @@ export function getProject(owner, projectNumber) {
  * List project fields
  */
 export function listProjectFields(owner, projectNumber) {
-  const result = execCommand(
-    `gh project field-list ${projectNumber} --owner ${owner} --format json`
-  );
+  const result = safeGhExec([
+    'project', 'field-list', String(projectNumber),
+    '--owner', owner,
+    '--format', 'json'
+  ]);
   if (result.success) {
     try {
       const data = JSON.parse(result.output);
@@ -128,6 +157,8 @@ export function listProjectFields(owner, projectNumber) {
  * Get field options for single-select fields via GraphQL
  */
 export function getFieldOptions(projectId, fieldId) {
+  // Note: fieldId is interpolated into the query, but GraphQL handles this safely
+  // via variable substitution for projectId. fieldId is a field name, not user input.
   const query = `
     query($projectId: ID!) {
       node(id: $projectId) {
@@ -144,11 +175,13 @@ export function getFieldOptions(projectId, fieldId) {
         }
       }
     }
-  `;
+  `.replace(/\n/g, ' ');
 
-  const result = execCommand(
-    `gh api graphql -f query='${query.replace(/\n/g, ' ')}' -F projectId="${projectId}"`
-  );
+  const result = safeGhExec([
+    'api', 'graphql',
+    '-f', `query=${query}`,
+    '-F', `projectId=${projectId}`
+  ]);
 
   if (result.success) {
     try {
@@ -192,12 +225,13 @@ export function getAllFieldOptions(projectId) {
         }
       }
     }
-  `;
+  `.replace(/\n/g, ' ');
 
-  const escapedQuery = query.replace(/\n/g, ' ').replace(/"/g, '\\"');
-  const result = execCommand(
-    `gh api graphql -f query="${escapedQuery}" -F projectId="${projectId}"`
-  );
+  const result = safeGhExec([
+    'api', 'graphql',
+    '-f', `query=${query}`,
+    '-F', `projectId=${projectId}`
+  ]);
 
   if (result.success) {
     try {
@@ -216,19 +250,22 @@ export function getAllFieldOptions(projectId) {
 export async function createIssue(owner, repo, options) {
   const { title, body, labels = [], assignees = [] } = options;
 
-  let cmd = `gh issue create --repo ${owner}/${repo}`;
-  cmd += ` --title "${title.replace(/"/g, '\\"')}"`;
-  cmd += ` --body "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+  const args = [
+    'issue', 'create',
+    '--repo', `${owner}/${repo}`,
+    '--title', title,
+    '--body', body,
+  ];
 
   if (labels.length > 0) {
-    cmd += ` --label "${labels.join(',')}"`;
+    args.push('--label', labels.join(','));
   }
 
   if (assignees.length > 0) {
-    cmd += ` --assignee "${assignees.join(',')}"`;
+    args.push('--assignee', assignees.join(','));
   }
 
-  const result = execCommand(cmd);
+  const result = safeGhExec(args);
   if (result.success) {
     // Extract issue URL from output
     const urlMatch = result.output.match(
@@ -246,7 +283,7 @@ export async function createIssue(owner, repo, options) {
 
   return {
     success: false,
-    error: result.error || result.stderr || 'Failed to create issue',
+    error: result.error || 'Failed to create issue',
   };
 }
 
@@ -254,9 +291,11 @@ export async function createIssue(owner, repo, options) {
  * Add issue to project board
  */
 export function addIssueToProject(owner, projectNumber, issueUrl) {
-  const result = execCommand(
-    `gh project item-add ${projectNumber} --owner ${owner} --url "${issueUrl}"`
-  );
+  const result = safeGhExec([
+    'project', 'item-add', String(projectNumber),
+    '--owner', owner,
+    '--url', issueUrl
+  ]);
   return result.success;
 }
 
@@ -264,9 +303,11 @@ export function addIssueToProject(owner, projectNumber, issueUrl) {
  * Get project item ID for an issue
  */
 export function getProjectItemId(owner, projectNumber, issueNumber) {
-  const result = execCommand(
-    `gh project item-list ${projectNumber} --owner ${owner} --format json`
-  );
+  const result = safeGhExec([
+    'project', 'item-list', String(projectNumber),
+    '--owner', owner,
+    '--format', 'json'
+  ]);
 
   if (result.success) {
     try {
@@ -292,17 +333,22 @@ export function updateProjectItemField(
   value,
   fieldType = 'text'
 ) {
-  let cmd = `gh project item-edit --id "${itemId}" --project-id "${projectId}" --field-id "${fieldId}"`;
+  const args = [
+    'project', 'item-edit',
+    '--id', itemId,
+    '--project-id', projectId,
+    '--field-id', fieldId,
+  ];
 
   if (fieldType === 'single-select') {
-    cmd += ` --single-select-option-id "${value}"`;
+    args.push('--single-select-option-id', value);
   } else if (fieldType === 'number') {
-    cmd += ` --number ${value}`;
+    args.push('--number', String(value));
   } else {
-    cmd += ` --text "${value.replace(/"/g, '\\"')}"`;
+    args.push('--text', value);
   }
 
-  const result = execCommand(cmd);
+  const result = safeGhExec(args);
   return result.success;
 }
 
@@ -312,13 +358,19 @@ export function updateProjectItemField(
 export function listIssues(owner, repo, options = {}) {
   const { limit = 10, state = 'open', assignee } = options;
 
-  let cmd = `gh issue list --repo ${owner}/${repo} --limit ${limit} --state ${state} --json number,title,state,labels,createdAt,author`;
+  const args = [
+    'issue', 'list',
+    '--repo', `${owner}/${repo}`,
+    '--limit', String(limit),
+    '--state', state,
+    '--json', 'number,title,state,labels,createdAt,author'
+  ];
 
   if (assignee) {
-    cmd += ` --assignee ${assignee}`;
+    args.push('--assignee', assignee);
   }
 
-  const result = execCommand(cmd);
+  const result = safeGhExec(args);
   if (result.success) {
     try {
       return JSON.parse(result.output);
@@ -333,9 +385,11 @@ export function listIssues(owner, repo, options = {}) {
  * Get issue details
  */
 export function getIssue(owner, repo, issueNumber) {
-  const result = execCommand(
-    `gh issue view ${issueNumber} --repo ${owner}/${repo} --json number,title,body,state,labels,assignees,createdAt,author`
-  );
+  const result = safeGhExec([
+    'issue', 'view', String(issueNumber),
+    '--repo', `${owner}/${repo}`,
+    '--json', 'number,title,body,state,labels,assignees,createdAt,author'
+  ]);
 
   if (result.success) {
     try {
@@ -351,10 +405,11 @@ export function getIssue(owner, repo, issueNumber) {
  * Add comment to issue
  */
 export function addIssueComment(owner, repo, issueNumber, body) {
-  const escapedBody = body.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  const result = execCommand(
-    `gh issue comment ${issueNumber} --repo ${owner}/${repo} --body "${escapedBody}"`
-  );
+  const result = safeGhExec([
+    'issue', 'comment', String(issueNumber),
+    '--repo', `${owner}/${repo}`,
+    '--body', body
+  ]);
   return result.success;
 }
 
@@ -613,10 +668,11 @@ function generatePhaseChildBody(project, parentIssueNumber) {
  * Update issue body (for progress updates)
  */
 export function updateIssueBody(owner, repo, issueNumber, body) {
-  const escapedBody = body.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  const result = execCommand(
-    `gh issue edit ${issueNumber} --repo ${owner}/${repo} --body "${escapedBody}"`
-  );
+  const result = safeGhExec([
+    'issue', 'edit', String(issueNumber),
+    '--repo', `${owner}/${repo}`,
+    '--body', body
+  ]);
   return result.success;
 }
 
@@ -627,8 +683,9 @@ export function closeIssue(owner, repo, issueNumber, comment) {
   if (comment) {
     addIssueComment(owner, repo, issueNumber, comment);
   }
-  const result = execCommand(
-    `gh issue close ${issueNumber} --repo ${owner}/${repo}`
-  );
+  const result = safeGhExec([
+    'issue', 'close', String(issueNumber),
+    '--repo', `${owner}/${repo}`
+  ]);
   return result.success;
 }

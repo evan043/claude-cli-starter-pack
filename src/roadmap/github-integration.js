@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig } from '../utils.js';
+import { safeCreateIssue } from '../utils/safe-exec.js';
 
 /**
  * Check if gh CLI is available and authenticated
@@ -254,30 +255,14 @@ export async function createPhaseIssue(phase, roadmap, options = {}) {
     labels.push(`complexity:${phase.complexity.toLowerCase()}`);
   }
 
-  try {
-    const escapedTitle = title.replace(/"/g, '\\"');
-    const escapedBody = body.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/`/g, '\\`');
-
-    const cmd = `gh issue create --repo "${owner}/${repo}" --title "${escapedTitle}" --body "${escapedBody}" --label "${labels.join(',')}"`;
-    const result = execSync(cmd, { encoding: 'utf8' });
-
-    // Extract issue URL and number
-    const urlMatch = result.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/);
-    if (urlMatch) {
-      return {
-        success: true,
-        url: urlMatch[0],
-        number: parseInt(urlMatch[1]),
-      };
-    }
-
-    return { success: true, url: result.trim() };
-  } catch (e) {
-    return {
-      success: false,
-      error: e.message,
-    };
-  }
+  // Use safe execution to prevent shell injection
+  return safeCreateIssue({
+    owner,
+    repo,
+    title,
+    body,
+    labels,
+  });
 }
 
 /**
@@ -342,29 +327,14 @@ export async function createRoadmapEpic(roadmap, options = {}) {
   const body = generateRoadmapEpicBody(roadmap);
   const labels = ['roadmap', 'epic'];
 
-  try {
-    const escapedTitle = title.replace(/"/g, '\\"');
-    const escapedBody = body.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/`/g, '\\`');
-
-    const cmd = `gh issue create --repo "${owner}/${repo}" --title "${escapedTitle}" --body "${escapedBody}" --label "${labels.join(',')}"`;
-    const result = execSync(cmd, { encoding: 'utf8' });
-
-    const urlMatch = result.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/);
-    if (urlMatch) {
-      return {
-        success: true,
-        url: urlMatch[0],
-        number: parseInt(urlMatch[1]),
-      };
-    }
-
-    return { success: true, url: result.trim() };
-  } catch (e) {
-    return {
-      success: false,
-      error: e.message,
-    };
-  }
+  // Use safe execution to prevent shell injection
+  return safeCreateIssue({
+    owner,
+    repo,
+    title,
+    body,
+    labels,
+  });
 }
 
 /**

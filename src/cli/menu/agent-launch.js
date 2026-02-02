@@ -5,6 +5,9 @@
 
 import chalk from 'chalk';
 import { spawn } from 'child_process';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { getAgentOnlyPolicy } from './constants.js';
 
 /**
@@ -54,24 +57,32 @@ ${policy}
     console.log(chalk.green('  ✓ Launching new terminal with Agent-Only + Bypass mode...'));
     console.log('');
 
+    // Write prompt to temp file to avoid shell escaping issues
+    const tempPromptFile = join(tmpdir(), `ccasp-agent-prompt-${Date.now()}.txt`);
+    writeFileSync(tempPromptFile, appendPrompt, 'utf8');
+
     let terminalCmd;
-    const claudeCmd = `claude --dangerously-skip-permissions --append-system-prompt '${appendPrompt.replace(/'/g, "'\\''")}'`;
+    // Use --append-system-prompt with file read to avoid complex shell escaping
+    // The temp file approach prevents any shell injection from appendPrompt content
+    const claudeCmd = `claude --dangerously-skip-permissions --append-system-prompt "$(cat '${tempPromptFile}')" ; rm '${tempPromptFile}'`;
 
     if (terminal.includes('iTerm') || process.platform === 'darwin') {
       // macOS - use osascript to open Terminal
+      // AppleScript escaping: only need to escape backslashes and quotes for the outer string
+      const escapedCmd = claudeCmd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
       terminalCmd = spawn('osascript', [
         '-e',
-        `tell application "Terminal" to do script "${claudeCmd.replace(/"/g, '\\"')}"`,
+        `tell application "Terminal" to do script "${escapedCmd}"`,
       ], {
         detached: true,
         stdio: 'ignore',
       });
     } else {
       // Linux - try common terminals
-      terminalCmd = spawn('x-terminal-emulator', ['-e', claudeCmd], {
+      // Use array form to avoid shell interpretation issues
+      terminalCmd = spawn('x-terminal-emulator', ['-e', 'bash', '-c', claudeCmd], {
         detached: true,
         stdio: 'ignore',
-        shell: true,
       });
     }
 
