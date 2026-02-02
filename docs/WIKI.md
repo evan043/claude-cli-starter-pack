@@ -15,6 +15,15 @@ This documentation provides comprehensive technical details for the Claude CLI A
 4. [Using Vision Driver Bot (VDB)](#using-vision-driver-bot-vdb)
 5. [PM Tools Integration (Linear, ClickUp, Jira)](#pm-tools-integration-linear-clickup-jira)
 
+### Workflow Guides
+6. [CI/CD Pipelines](#cicd-pipelines)
+7. [PR Merge Workflow](#pr-merge-workflow)
+8. [Full-Stack Deployment](#full-stack-deployment)
+9. [Ralph Loop Testing](#ralph-loop-testing)
+10. [Phased Development Workflow](#phased-development-workflow)
+11. [Golden Master Testing](#golden-master-testing)
+12. [Refactoring Workflow](#refactoring-workflow)
+
 ### Technical Reference
 5. [Architecture Deep Dive](#architecture-deep-dive)
 6. [Agent Orchestration Patterns](#agent-orchestration-patterns)
@@ -839,6 +848,796 @@ CLICKUP_API_KEY=pk_xxx
 | Sync conflicts | Switch to `outbound` mode temporarily |
 | Missing fields | Check field mapping configuration |
 | Rate limiting | Reduce sync frequency or batch operations |
+
+---
+
+# Workflow Guides
+
+## CI/CD Pipelines
+
+CCASP includes three GitHub Actions workflows for continuous integration, testing, and releases.
+
+### Available Workflows
+
+| Workflow | File | Trigger | Purpose |
+|----------|------|---------|---------|
+| **CI** | `.github/workflows/ci.yml` | Push, PR | Lint, type-check, unit tests |
+| **Integration Test** | `.github/workflows/integration-test.yml` | Push, PR | Full CCASP installation test |
+| **Release** | `.github/workflows/release.yml` | Tags, Manual | npm publish, GitHub release |
+
+### CI Workflow (ci.yml)
+
+The main CI workflow runs on every push and pull request:
+
+```yaml
+# Triggers
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main]
+
+# Matrix testing
+strategy:
+  matrix:
+    os: [ubuntu-latest, windows-latest, macos-latest]
+    node: [18, 20, 22]
+```
+
+**What it does:**
+1. Checks out code
+2. Sets up Node.js (matrix of versions)
+3. Installs dependencies
+4. Runs linting (`npm run lint`)
+5. Runs syntax validation (`npm test`)
+6. Runs unit tests if present
+
+### Integration Test Workflow
+
+Tests actual CCASP installation in a fresh environment:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Integration Test Flow                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Create temporary directory                                   │
+│     └─ mkdir test-project && cd test-project                    │
+│                                                                  │
+│  2. Initialize Node project                                      │
+│     └─ npm init -y                                              │
+│                                                                  │
+│  3. Install CCASP locally                                        │
+│     └─ npm install ../claude-cli-advanced-starter-pack          │
+│                                                                  │
+│  4. Run init with skip-prompts (CI mode auto-detected)          │
+│     └─ npx ccasp init --skip-prompts                            │
+│                                                                  │
+│  5. Run tech stack detection                                     │
+│     └─ npx ccasp detect-stack                                   │
+│                                                                  │
+│  6. Verify outputs                                               │
+│     └─ Check .claude/ folder created                            │
+│     └─ Check tech-stack.json exists                             │
+│     └─ Validate JSON structure                                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Release Workflow
+
+Automated npm publishing on version tags:
+
+```yaml
+# Trigger on version tags
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:  # Manual trigger
+
+# Publish steps
+- run: npm publish
+  env:
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+# Create GitHub Release
+- uses: softprops/action-gh-release@v1
+```
+
+**Secrets Required:**
+- `NPM_TOKEN`: npm automation token for publishing
+
+### CI Auto-Detection
+
+CCASP automatically detects CI environments and adjusts behavior:
+
+```javascript
+// src/commands/init.js
+function isCI() {
+  return process.env.CI === 'true' ||
+         process.env.GITHUB_ACTIONS === 'true' ||
+         process.env.JENKINS_URL ||
+         process.env.TRAVIS;
+}
+```
+
+When running in CI:
+- Interactive prompts are skipped
+- Default feature preset is used
+- No TTY-dependent operations
+
+### Adding CI to Your Project
+
+After running `ccasp init`, workflows are deployed to `.github/workflows/`:
+
+```bash
+# Initialize with CI enabled
+ccasp init
+
+# Or add CI later
+ccasp wizard
+# Select Advanced Options → Deploy Workflows
+```
+
+---
+
+## PR Merge Workflow
+
+The `/pr-merge` command provides a comprehensive 9-phase merge process with blocker detection, worktree testing, and contributor messaging.
+
+### Quick Start
+
+```bash
+# In Claude Code CLI
+/pr-merge 123
+
+# Or without PR number (prompts for selection)
+/pr-merge
+```
+
+### The 9-Phase Process
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   PR Merge Workflow Phases                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  PHASE 1: PR Validation                                          │
+│  ├─ Fetch PR details via `gh pr view`                           │
+│  ├─ Check PR state (open, merged, closed)                       │
+│  └─ Extract title, author, base branch                          │
+│                                                                  │
+│  PHASE 2: Blocker Detection                                      │
+│  ├─ Check CI status (`gh pr checks`)                            │
+│  ├─ Count pending/failing checks                                │
+│  ├─ Check review requirements                                   │
+│  └─ Identify merge conflicts                                    │
+│                                                                  │
+│  PHASE 3: Blocker Resolution (if needed)                        │
+│  ├─ Prompt for each blocker type                                │
+│  ├─ Options: Wait, Skip, Cancel, Admin override                 │
+│  └─ Log decisions for audit trail                               │
+│                                                                  │
+│  PHASE 4: Worktree Testing                                       │
+│  ├─ Create isolated worktree                                    │
+│  ├─ Fetch PR branch                                             │
+│  ├─ Run test suite in worktree                                  │
+│  └─ Clean up worktree                                           │
+│                                                                  │
+│  PHASE 5: Pre-Merge Confirmation                                 │
+│  ├─ Display summary of changes                                  │
+│  ├─ Show test results                                           │
+│  └─ Request final confirmation                                  │
+│                                                                  │
+│  PHASE 6: Merge Execution                                        │
+│  ├─ Determine merge method (squash/merge/rebase)               │
+│  ├─ Execute `gh pr merge`                                       │
+│  └─ Handle merge failures                                       │
+│                                                                  │
+│  PHASE 7: Branch Cleanup                                         │
+│  ├─ Delete remote branch (if configured)                        │
+│  ├─ Delete local branch                                         │
+│  └─ Update local refs                                           │
+│                                                                  │
+│  PHASE 8: Post-Merge Actions                                     │
+│  ├─ Trigger deployment (if configured)                          │
+│  ├─ Update project board status                                 │
+│  └─ Close related issues                                        │
+│                                                                  │
+│  PHASE 9: Contributor Notification                               │
+│  ├─ Post thank-you comment to PR                                │
+│  ├─ Tag contributor in issue updates                            │
+│  └─ Generate merge summary                                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Blocker Types and Resolutions
+
+| Blocker | Auto-Detected | Resolution Options |
+|---------|---------------|-------------------|
+| Failing CI | Yes | Wait, Retry, Skip, Admin |
+| Pending Reviews | Yes | Request review, Skip |
+| Merge Conflicts | Yes | Resolve locally, Cancel |
+| Draft PR | Yes | Mark ready, Cancel |
+| Branch Protection | Yes | Admin bypass, Cancel |
+
+### Merge Methods
+
+The workflow supports three merge methods:
+
+```bash
+# Squash merge (default) - combines all commits
+gh pr merge 123 --squash
+
+# Regular merge - preserves commit history
+gh pr merge 123 --merge
+
+# Rebase - linear history
+gh pr merge 123 --rebase
+```
+
+### Admin Override
+
+For urgent merges with passing local tests but failing CI:
+
+```bash
+# Use --admin flag to bypass checks
+gh pr merge 123 --admin --squash
+```
+
+### Configuration
+
+Configure merge behavior in `.claude/config.json`:
+
+```json
+{
+  "pr_merge": {
+    "default_method": "squash",
+    "delete_branch_after_merge": true,
+    "run_worktree_tests": true,
+    "test_command": "npm test",
+    "notify_contributors": true,
+    "auto_close_issues": true
+  }
+}
+```
+
+---
+
+## Full-Stack Deployment
+
+The `/deploy-full` command orchestrates parallel frontend and backend deployments.
+
+### Quick Start
+
+```bash
+# Deploy both frontend and backend
+/deploy-full
+
+# Deploy only backend
+/deploy-full --backend-only
+
+# Deploy only frontend
+/deploy-full --frontend-only
+```
+
+### Deployment Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    /deploy-full Workflow                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                   PRE-FLIGHT CHECKS                      │    │
+│  │  1. Check for uncommitted changes                        │    │
+│  │  2. Verify on correct branch                             │    │
+│  │  3. Run lint/type-check                                  │    │
+│  │  4. Run quick tests                                      │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                            │                                     │
+│                            ▼                                     │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │               PARALLEL DEPLOYMENT                         │   │
+│  │                                                           │   │
+│  │   ┌─────────────────┐      ┌─────────────────┐          │   │
+│  │   │ BACKEND (Railway)│      │FRONTEND (CF)   │          │   │
+│  │   ├─────────────────┤      ├─────────────────┤          │   │
+│  │   │ 1. Trigger via   │      │ 1. npm run build│          │   │
+│  │   │    MCP deploy   │      │ 2. Delete dist/ │          │   │
+│  │   │ 2. Wait for     │      │ 3. wrangler     │          │   │
+│  │   │    build        │      │    pages deploy │          │   │
+│  │   │ 3. Verify health│      │ 4. Verify deploy│          │   │
+│  │   └─────────────────┘      └─────────────────┘          │   │
+│  │            │                        │                     │   │
+│  │            └──────────┬─────────────┘                    │   │
+│  │                       ▼                                   │   │
+│  │            ┌─────────────────────┐                       │   │
+│  │            │   POST-DEPLOY       │                       │   │
+│  │            │   VERIFICATION      │                       │   │
+│  │            └─────────────────────┘                       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Backend Deployment (Railway)
+
+Uses MCP server for Railway deployments:
+
+```javascript
+// Trigger deployment
+mcp__railway-mcp-server__deployment_trigger({
+  projectId: "0895c750-0e83-43ed-8ac0-9a4fe8443838",
+  environmentId: "3c0e8495-6452-4cb1-bdf1-d904fffe039b",
+  serviceId: "a65c3253-ec8e-4727-8111-1e03c750e4c1"
+})
+
+// Check deployment status
+mcp__railway-mcp-server__deployment_status({...})
+
+// View deployment logs
+mcp__railway-mcp-server__deployment_logs({...})
+```
+
+### Frontend Deployment (Cloudflare)
+
+Uses wrangler CLI for Cloudflare Pages:
+
+```bash
+# Build frontend
+npm run build
+
+# Deploy to Cloudflare Pages
+npx wrangler pages deploy dist --project-name=your-project
+```
+
+### Cache Busting Protocol
+
+For frontend deployments, CCASP implements cache busting:
+
+1. **Delete `/dist` folder** before build
+2. **Run fresh build** with `npm run build`
+3. **Deploy** with wrangler
+4. **Verify** deployed SHA matches local commit
+
+### Configuration
+
+Set up deployment targets in `tech-stack.json`:
+
+```json
+{
+  "deployment": {
+    "backend": {
+      "platform": "railway",
+      "projectId": "your-project-id",
+      "environmentId": "your-env-id",
+      "serviceId": "your-service-id"
+    },
+    "frontend": {
+      "platform": "cloudflare",
+      "projectName": "your-cf-project"
+    }
+  }
+}
+```
+
+---
+
+## Ralph Loop Testing
+
+The `/ralph` command implements a continuous test-fix cycle that runs until all tests pass.
+
+### Quick Start
+
+```bash
+# Run Ralph loop with default test command
+/ralph
+
+# Run with specific test command
+/ralph pytest tests/
+
+# Run with max iterations
+/ralph --max-iterations 10
+```
+
+### How Ralph Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Ralph Loop Workflow                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│                    ┌──────────────────┐                         │
+│                    │   START RALPH    │                         │
+│                    └────────┬─────────┘                         │
+│                             │                                    │
+│                             ▼                                    │
+│           ┌─────────────────────────────────────┐               │
+│           │         RUN TEST SUITE              │               │
+│           │    (npm test / pytest / etc)        │               │
+│           └─────────────────┬───────────────────┘               │
+│                             │                                    │
+│                    ┌────────┴────────┐                          │
+│                    │  ALL PASSING?   │                          │
+│                    └────────┬────────┘                          │
+│                    YES │         │ NO                            │
+│                        │         │                               │
+│           ┌────────────┘         └────────────┐                 │
+│           │                                   │                  │
+│           ▼                                   ▼                  │
+│  ┌────────────────┐               ┌───────────────────┐         │
+│  │   SUCCESS!     │               │  ANALYZE FAILURES │         │
+│  │   Exit Loop    │               │  ├─ Parse errors  │         │
+│  └────────────────┘               │  ├─ Identify files│         │
+│                                   │  └─ Extract line #│         │
+│                                   └─────────┬─────────┘         │
+│                                             │                    │
+│                                             ▼                    │
+│                                   ┌───────────────────┐         │
+│                                   │    APPLY FIXES    │         │
+│                                   │  ├─ Edit files    │         │
+│                                   │  ├─ Add imports   │         │
+│                                   │  └─ Fix logic     │         │
+│                                   └─────────┬─────────┘         │
+│                                             │                    │
+│                           ┌─────────────────┴────────────┐      │
+│                           │   MAX ITERATIONS REACHED?    │      │
+│                           └─────────────────┬────────────┘      │
+│                                    NO │         │ YES           │
+│                                       │         │                │
+│                             ┌─────────┘         └───────┐       │
+│                             │                           │        │
+│                             │ (loop back to             ▼        │
+│                             │  RUN TEST SUITE)  ┌────────────┐  │
+│                             │                   │ PARTIAL    │  │
+│                             │                   │ SUCCESS    │  │
+│                             │                   │ Report     │  │
+│                             │                   └────────────┘  │
+│                             │                                    │
+│                             └────────────────────────────────────┘
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Ralph Output Format
+
+Ralph produces structured JSON output for tracking:
+
+```json
+{
+  "session_id": "ralph-2026-02-01-143022",
+  "start_time": "2026-02-01T14:30:22Z",
+  "end_time": "2026-02-01T14:45:18Z",
+  "iterations": 4,
+  "max_iterations": 10,
+  "final_status": "success",
+  "test_command": "npm test",
+  "failures_fixed": [
+    {
+      "iteration": 1,
+      "file": "src/utils/parser.js",
+      "line": 42,
+      "error": "TypeError: Cannot read property 'map' of undefined",
+      "fix": "Added null check before array.map()"
+    }
+  ]
+}
+```
+
+### Configuration
+
+Configure Ralph in `.claude/config.json`:
+
+```json
+{
+  "ralph": {
+    "default_command": "npm test",
+    "max_iterations": 10,
+    "timeout_per_iteration": 120000,
+    "stop_on_lint_error": false,
+    "auto_commit_fixes": false
+  }
+}
+```
+
+### Use Cases
+
+1. **After Large Refactoring** - Fix cascading test failures
+2. **Dependency Updates** - Resolve breaking changes
+3. **Type System Migration** - Fix type errors iteratively
+4. **CI Pipeline Recovery** - Fix locally before push
+
+---
+
+## Phased Development Workflow
+
+The `/phase-dev-plan` and `/phase-track` commands implement structured development with PROGRESS.json tracking.
+
+### Creating a Phased Plan
+
+```bash
+# Generate phased development plan
+/phase-dev-plan "Implement user authentication with OAuth"
+
+# Track existing plan
+/phase-track
+```
+
+### PROGRESS.json Structure
+
+```json
+{
+  "version": "1.0.0",
+  "projectId": "auth-implementation",
+  "title": "User Authentication with OAuth",
+  "status": "in_progress",
+  "currentPhase": 2,
+  "scale": "M",
+  "successProbability": 0.92,
+  "phases": [
+    {
+      "id": "P1",
+      "name": "Research & Design",
+      "status": "complete",
+      "priority": "critical",
+      "tasks": [
+        {
+          "id": "P1.1",
+          "description": "Evaluate OAuth providers",
+          "status": "complete"
+        }
+      ],
+      "validation": {
+        "gate": "design-review",
+        "passed": true
+      }
+    },
+    {
+      "id": "P2",
+      "name": "Implementation",
+      "status": "in_progress",
+      "dependencies": ["P1"],
+      "tasks": [...]
+    }
+  ]
+}
+```
+
+### Phase Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Phase Development Lifecycle                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  PLANNING                                                        │
+│  ├─ /phase-dev-plan "task description"                          │
+│  ├─ AI analyzes codebase and requirements                       │
+│  ├─ Generates phases with tasks and validation gates            │
+│  └─ Creates PROGRESS.json in .claude/docs/                      │
+│                                                                  │
+│  EXECUTION                                                       │
+│  ├─ /phase-track → View current status                          │
+│  ├─ Work on tasks in current phase                              │
+│  ├─ Mark tasks complete as you go                               │
+│  └─ Phase auto-advances when all tasks complete                 │
+│                                                                  │
+│  VALIDATION                                                      │
+│  ├─ Each phase has validation gates                             │
+│  ├─ Gates define pass/fail criteria                             │
+│  └─ Failed gates block phase advancement                        │
+│                                                                  │
+│  COMPLETION                                                      │
+│  ├─ All phases complete                                         │
+│  ├─ Final validation passes                                     │
+│  └─ Status → "complete"                                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Scale Levels
+
+| Scale | Description | Typical Phases | Duration |
+|-------|-------------|----------------|----------|
+| **XS** | Bug fix, typo | 1-2 | Minutes |
+| **S** | Small feature | 2-3 | Hours |
+| **M** | Feature | 3-5 | Days |
+| **L** | Epic | 5-8 | Weeks |
+| **XL** | Major rewrite | 8+ | Months |
+
+### Validation Gates
+
+Phases include validation gates that must pass:
+
+```json
+{
+  "validation": {
+    "gate": "test-coverage",
+    "passed": false,
+    "checks": [
+      { "name": "unit_tests_pass", "passed": true },
+      { "name": "coverage_above_80", "passed": false },
+      { "name": "no_lint_errors", "passed": true }
+    ]
+  }
+}
+```
+
+---
+
+## Golden Master Testing
+
+The `/golden-master` command generates characterization tests before refactoring to capture current behavior.
+
+### What is Golden Master Testing?
+
+Golden Master (also called "characterization testing") captures the current output of code before refactoring, then verifies the refactored code produces identical output.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Golden Master Testing Flow                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  CAPTURE PHASE (Before Refactoring)                              │
+│  ├─ Run /golden-master capture                                  │
+│  ├─ Execute target functions with test inputs                   │
+│  ├─ Record all outputs to snapshot files                        │
+│  └─ Store in .claude/golden-master/                             │
+│                                                                  │
+│  REFACTORING PHASE                                               │
+│  ├─ Make code changes                                           │
+│  ├─ Improve structure, readability, performance                 │
+│  └─ Golden master snapshots remain unchanged                    │
+│                                                                  │
+│  VERIFY PHASE (After Refactoring)                                │
+│  ├─ Run /golden-master verify                                   │
+│  ├─ Execute same functions with same inputs                     │
+│  ├─ Compare outputs to snapshots                                │
+│  └─ Report any differences                                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Quick Start
+
+```bash
+# Capture current behavior
+/golden-master capture src/utils/parser.js
+
+# After refactoring, verify behavior unchanged
+/golden-master verify src/utils/parser.js
+```
+
+### Snapshot Format
+
+Golden master snapshots are stored as JSON:
+
+```json
+{
+  "function": "parseConfig",
+  "file": "src/utils/parser.js",
+  "captured_at": "2026-02-01T12:00:00Z",
+  "test_cases": [
+    {
+      "input": {"key": "value"},
+      "output": {"parsed": true, "data": {"key": "value"}},
+      "error": null
+    },
+    {
+      "input": null,
+      "output": null,
+      "error": "ConfigError: Input cannot be null"
+    }
+  ]
+}
+```
+
+### Use Cases
+
+1. **Legacy Code Refactoring** - No existing tests, behavior unknown
+2. **Performance Optimization** - Verify output unchanged after optimization
+3. **API Compatibility** - Ensure responses remain stable
+4. **Database Migration** - Verify query results unchanged
+
+---
+
+## Refactoring Workflow
+
+The `/refactor-workflow` command provides a structured 8-step refactoring process with safety checkpoints.
+
+### Quick Start
+
+```bash
+# Start guided refactoring
+/refactor-workflow src/components/UserProfile.jsx
+
+# Pre-refactoring safety check
+/refactor-prep src/components/UserProfile.jsx
+
+# Quick quality gate
+/refactor-check
+```
+
+### The 8-Step Process
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 Refactoring Workflow Steps                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  STEP 1: Safety Check (/refactor-prep)                          │
+│  ├─ Verify clean git state                                      │
+│  ├─ Check test coverage exists                                  │
+│  ├─ Ensure CI is passing                                        │
+│  └─ Create backup branch                                        │
+│                                                                  │
+│  STEP 2: Create Feature Branch                                   │
+│  ├─ git checkout -b refactor/component-name                     │
+│  └─ Create GitHub issue for tracking                            │
+│                                                                  │
+│  STEP 3: Capture Golden Master                                   │
+│  ├─ /golden-master capture target-file                          │
+│  └─ Store behavior snapshots                                    │
+│                                                                  │
+│  STEP 4: Analyze Complexity (/refactor-analyze)                  │
+│  ├─ Calculate cyclomatic complexity                             │
+│  ├─ Identify code smells                                        │
+│  ├─ Generate task list                                          │
+│  └─ Prioritize refactoring targets                              │
+│                                                                  │
+│  STEP 5: Execute Refactoring                                     │
+│  ├─ Apply changes incrementally                                 │
+│  ├─ Commit after each logical change                            │
+│  └─ Run tests after each commit                                 │
+│                                                                  │
+│  STEP 6: Verify Golden Master                                    │
+│  ├─ /golden-master verify target-file                           │
+│  └─ Confirm behavior unchanged                                  │
+│                                                                  │
+│  STEP 7: Quality Gate (/refactor-check)                          │
+│  ├─ Run linting                                                 │
+│  ├─ Run type checking                                           │
+│  ├─ Run affected tests                                          │
+│  └─ Verify coverage maintained                                  │
+│                                                                  │
+│  STEP 8: Create PR                                               │
+│  ├─ Push branch to remote                                       │
+│  ├─ Create PR with refactoring notes                            │
+│  └─ Request code review                                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Related Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/refactor-prep` | Pre-refactoring safety checklist |
+| `/refactor-analyze` | Deep complexity analysis |
+| `/refactor-check` | Fast quality gate (lint, type, test) |
+| `/refactor-cleanup` | Daily maintenance (fix lint, remove unused) |
+| `/golden-master` | Behavior snapshot capture/verify |
+
+### Configuration
+
+Configure refactoring preferences in `.claude/config.json`:
+
+```json
+{
+  "refactoring": {
+    "create_backup_branch": true,
+    "create_github_issue": true,
+    "require_golden_master": false,
+    "min_coverage_threshold": 80,
+    "lint_command": "npm run lint",
+    "test_command": "npm test",
+    "typecheck_command": "npm run typecheck"
+  }
+}
+```
 
 ---
 
