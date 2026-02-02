@@ -13,6 +13,7 @@ This documentation provides comprehensive technical details for the Claude CLI A
 2. [Creating a New Project with CCASP](#creating-a-new-project-with-ccasp)
 3. [Enabling Vision & Epic System](#enabling-vision--epic-system)
 4. [Using Vision Driver Bot (VDB)](#using-vision-driver-bot-vdb)
+5. [PM Tools Integration (Linear, ClickUp, Jira)](#pm-tools-integration-linear-clickup-jira)
 
 ### Technical Reference
 5. [Architecture Deep Dive](#architecture-deep-dive)
@@ -582,6 +583,262 @@ To stop VDB from running:
 1. Delete `.github/workflows/vision-driver-bot.yml`
 2. Or disable the workflow in GitHub Actions UI
 3. Optionally remove `.claude/vdb/` directory
+
+---
+
+## PM Tools Integration (Linear, ClickUp, Jira)
+
+CCASP supports integration with popular project management tools to sync your epics, roadmaps, and tasks across platforms.
+
+### Supported PM Tools
+
+| Tool | Auth Method | API Key Required | Hierarchy Support |
+|------|-------------|------------------|-------------------|
+| **GitHub** | GitHub CLI (`gh`) | No | Issues, Projects, Labels |
+| **Jira** | Basic Auth | Yes | Epics, Stories, Tasks, Subtasks |
+| **Linear** | Bearer Token | Yes | Projects, Issues, Sub-issues |
+| **ClickUp** | API Key | Yes | Folders, Lists, Tasks, Subtasks |
+
+### Hierarchy Mapping
+
+CCASP maps its internal hierarchy to each PM tool:
+
+| CCASP Layer | GitHub | Jira | Linear | ClickUp |
+|-------------|--------|------|--------|---------|
+| **Epic** | Issue + epic label | Epic | Project | Folder |
+| **Roadmap** | Issue + roadmap label | Story | Issue | List |
+| **Phase** | Issue + phase label | Task | Issue | Task |
+| **Task** | Checklist/Comment | Subtask | Sub-issue | Subtask |
+
+### Setting Up Integrations
+
+#### Using the Integration Wizard
+
+The easiest way to configure PM integrations is through the wizard:
+
+```bash
+ccasp wizard
+# Select option 3: GitHub Setup
+# Choose your PM tools to configure
+```
+
+#### Manual Configuration
+
+Create or edit `.claude/integrations/config.json`:
+
+```json
+{
+  "github": {
+    "enabled": true,
+    "owner": "your-username",
+    "repo": "your-repo",
+    "project_number": null,
+    "sync_direction": "bidirectional"
+  },
+  "jira": {
+    "enabled": false,
+    "base_url": "",
+    "project_key": "",
+    "api_token": "",
+    "email": "",
+    "sync_direction": "outbound"
+  },
+  "linear": {
+    "enabled": false,
+    "api_key": "",
+    "team_key": "",
+    "sync_direction": "outbound"
+  },
+  "clickup": {
+    "enabled": false,
+    "api_key": "",
+    "workspace_id": "",
+    "space_id": "",
+    "sync_direction": "outbound"
+  }
+}
+```
+
+### Configuring Each Tool
+
+#### GitHub (Default)
+
+GitHub integration uses the `gh` CLI and requires no API key:
+
+```bash
+# Authenticate with GitHub CLI
+gh auth login
+
+# Verify authentication
+gh auth status
+```
+
+Configuration:
+```json
+{
+  "github": {
+    "enabled": true,
+    "owner": "your-username",
+    "repo": "your-repo",
+    "project_number": 3,
+    "default_labels": ["epic", "phase-dev"],
+    "sync_direction": "bidirectional"
+  }
+}
+```
+
+#### Jira
+
+1. **Generate API Token**: [Atlassian API Tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+2. **Get your Project Key**: Found in your Jira project URL (e.g., `PROJ-123` → key is `PROJ`)
+
+Configuration:
+```json
+{
+  "jira": {
+    "enabled": true,
+    "base_url": "https://your-company.atlassian.net",
+    "project_key": "PROJ",
+    "board_id": 1,
+    "api_token": "your-api-token",
+    "email": "your-email@company.com",
+    "sync_direction": "bidirectional"
+  }
+}
+```
+
+**Features:**
+- Create Jira Epics from CCASP epics
+- Sync phase status to Jira Tasks
+- Two-way status synchronization
+- Comment posting for progress updates
+
+#### Linear
+
+1. **Generate API Key**: [Linear Settings → API](https://linear.app/settings/api)
+2. **Get your Team Key**: Found in your Linear team URL (e.g., `linear.app/team/ENG` → key is `ENG`)
+
+Configuration:
+```json
+{
+  "linear": {
+    "enabled": true,
+    "api_key": "lin_api_xxxxxxxxxxxxx",
+    "team_key": "ENG",
+    "sync_direction": "bidirectional"
+  }
+}
+```
+
+**Features:**
+- Create Linear Projects from CCASP epics
+- Sync phases as Linear Issues
+- Priority mapping (P0-P4 → Urgent to No Priority)
+- Label synchronization
+
+#### ClickUp
+
+1. **Generate API Key**: [ClickUp Settings → Apps](https://app.clickup.com/settings/apps)
+2. **Get IDs**: Use the ClickUp API or find in URLs
+   - Workspace ID: In URL after login
+   - Space ID: In URL when viewing a Space
+
+Configuration:
+```json
+{
+  "clickup": {
+    "enabled": true,
+    "api_key": "pk_xxxxxxxxxx",
+    "workspace_id": "1234567",
+    "space_id": "7654321",
+    "default_list_id": null,
+    "sync_direction": "bidirectional"
+  }
+}
+```
+
+**Features:**
+- Create ClickUp Folders from CCASP epics
+- Sync roadmaps as ClickUp Lists
+- Task and subtask synchronization
+- Custom field mapping
+
+### Sync Directions
+
+| Direction | Behavior |
+|-----------|----------|
+| `outbound` | CCASP → PM Tool (read local, push to external) |
+| `bidirectional` | Two-way sync (changes in either system are synced) |
+
+### Status Mapping
+
+CCASP automatically maps statuses between platforms:
+
+| CCASP Status | GitHub | Jira | Linear | ClickUp |
+|--------------|--------|------|--------|---------|
+| `pending` | Open | To Do | Backlog | To Do |
+| `in_progress` | Open + label | In Progress | In Progress | In Progress |
+| `completed` | Closed | Done | Done | Complete |
+| `blocked` | Open + blocked label | Blocked | Blocked | Blocked |
+
+### Testing Connections
+
+Verify your integrations are working:
+
+```bash
+# Through the wizard
+ccasp wizard
+# Select GitHub Setup → Test Connections
+
+# Or programmatically
+ccasp test-integrations
+```
+
+### Syncing Epics
+
+Once configured, sync operations happen automatically when:
+
+1. Creating epics via `/create-github-epic`
+2. Updating phase status via `/github-epic-menu`
+3. VDB completes tasks (if enabled)
+
+Manual sync:
+```bash
+/github-epic-menu
+# Select [S] Sync
+```
+
+### Best Practices
+
+1. **Start with GitHub** - It's the default and requires no API keys
+2. **Use Environment Variables** - Store API tokens in `.env`, not config files
+3. **Enable One at a Time** - Test each integration before adding another
+4. **Use `outbound` First** - Start with one-way sync to avoid conflicts
+5. **Review Field Mappings** - Ensure priority/status mappings match your workflow
+
+### Security Considerations
+
+**Never commit API tokens to version control!**
+
+Recommended approach:
+```bash
+# .env file (add to .gitignore)
+JIRA_API_TOKEN=your-token
+LINEAR_API_KEY=lin_api_xxx
+CLICKUP_API_KEY=pk_xxx
+
+# Reference in config
+# Or use environment variable injection
+```
+
+### Troubleshooting Integrations
+
+| Issue | Solution |
+|-------|----------|
+| Auth failed | Verify API token and permissions |
+| Sync conflicts | Switch to `outbound` mode temporarily |
+| Missing fields | Check field mapping configuration |
+| Rate limiting | Reduce sync frequency or batch operations |
 
 ---
 
@@ -1774,7 +2031,7 @@ ccasp validate --path templates/commands/
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 2.2.3 | 2026-02-02 | **User Guides**: CCASP Wizard, Creating Projects, Vision/Epic System, VDB usage guides |
+| 2.2.3 | 2026-02-02 | **User Guides**: CCASP Wizard, Creating Projects, Vision/Epic System, VDB usage, PM Tools Integration (Linear, ClickUp, Jira) |
 | 2.2.2 | 2026-02-01 | CI fixes: tech-stack.json path corrections, simplified integration tests |
 | 2.2.1 | 2026-02-01 | CI fixes: run detect-stack after init, path corrections |
 | 2.2.0 | 2026-02-01 | **Vision Driver Bot (VDB)**, GitHub Epic System, /init-ccasp-new-project, modular commands |
