@@ -446,7 +446,7 @@ npx claude-cli-advanced-starter-pack init
 
 ## Top Features
 
-### Vision Driver Bot (VDB)
+### Vision Driver Bot (VDB) *(Actively Being Developed)*
 
 Autonomous development workflows with automatic lint fixes:
 
@@ -460,7 +460,7 @@ VDB State (.claude/vdb/state.json)
 Workflow: Detect lint errors → Queue fixes → Apply → Verify
 ```
 
-### GitHub Epic System
+### GitHub Epic System *(Actively Being Developed)*
 
 Multi-issue epic workflows:
 
@@ -500,7 +500,7 @@ L1 Orchestrator (You / Main Conversation)
 /refactor-workflow
 ```
 
-### Neovim Plugin
+### Neovim Plugin *(Actively Being Developed)*
 
 ```lua
 -- lazy.nvim
