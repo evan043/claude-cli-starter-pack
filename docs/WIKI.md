@@ -24,6 +24,12 @@ This documentation provides comprehensive technical details for the Claude CLI A
 11. [Golden Master Testing](#golden-master-testing)
 12. [Refactoring Workflow](#refactoring-workflow)
 
+### Developer Guides
+13. [Forking & Local Development](#forking--local-development)
+14. [Development Mode](#development-mode)
+15. [Contributing to CCASP](#contributing-to-ccasp)
+16. [npm Updates & Backup System](#npm-updates--backup-system)
+
 ### Technical Reference
 5. [Architecture Deep Dive](#architecture-deep-dive)
 6. [Agent Orchestration Patterns](#agent-orchestration-patterns)
@@ -1638,6 +1644,527 @@ Configure refactoring preferences in `.claude/config.json`:
   }
 }
 ```
+
+---
+
+# Developer Guides
+
+## Forking & Local Development
+
+This guide covers how to fork CCASP, set up a local development environment, and test changes before contributing.
+
+### Forking the Repository
+
+```bash
+# 1. Fork on GitHub
+# Go to https://github.com/evan043/claude-cli-advanced-starter-pack
+# Click "Fork" button in top-right
+
+# 2. Clone your fork
+git clone https://github.com/YOUR-USERNAME/claude-cli-advanced-starter-pack.git
+cd claude-cli-advanced-starter-pack
+
+# 3. Add upstream remote
+git remote add upstream https://github.com/evan043/claude-cli-advanced-starter-pack.git
+
+# 4. Install dependencies
+npm install
+```
+
+### Development Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Fork Development Workflow                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. SYNC WITH UPSTREAM                                           │
+│     └─ git fetch upstream                                       │
+│     └─ git checkout master                                      │
+│     └─ git merge upstream/master                                │
+│                                                                  │
+│  2. CREATE FEATURE BRANCH                                        │
+│     └─ git checkout -b feature/your-feature-name                │
+│                                                                  │
+│  3. MAKE CHANGES                                                 │
+│     └─ Edit files in src/, templates/, or bin/                  │
+│     └─ Test with `npm run lint` and `npm test`                  │
+│                                                                  │
+│  4. TEST LOCALLY                                                 │
+│     └─ npm link (creates global symlink)                        │
+│     └─ ccasp --version (verify your changes)                    │
+│     └─ Test in a separate project directory                     │
+│                                                                  │
+│  5. COMMIT AND PUSH                                              │
+│     └─ git add .                                                │
+│     └─ git commit -m "feat: your feature description"           │
+│     └─ git push origin feature/your-feature-name                │
+│                                                                  │
+│  6. CREATE PULL REQUEST                                          │
+│     └─ Open PR from your fork to upstream                       │
+│     └─ Fill in PR template                                      │
+│     └─ Wait for CI checks                                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Local Testing with npm link
+
+```bash
+# In your CCASP clone directory
+npm link
+
+# In a test project directory
+cd /path/to/test-project
+ccasp wizard    # Uses your local version
+
+# Unlink when done
+npm unlink -g claude-cli-advanced-starter-pack
+```
+
+### Keeping Your Fork Updated
+
+```bash
+# Fetch latest changes from upstream
+git fetch upstream
+
+# Merge into your master branch
+git checkout master
+git merge upstream/master
+
+# Push to your fork
+git push origin master
+
+# Rebase feature branch (if working on one)
+git checkout feature/your-feature
+git rebase master
+```
+
+---
+
+## Development Mode
+
+Development Mode (`--dev` flag) enables rapid template iteration without reinstalling the package. This is essential for template developers.
+
+### When to Use Dev Mode
+
+Use dev mode when:
+- Developing new command templates
+- Testing placeholder replacements
+- Iterating on hook implementations
+- Debugging template processing
+
+### Running in Dev Mode
+
+```bash
+# Standard init (normal installation)
+ccasp init
+
+# Dev mode (uses templates directly from package directory)
+ccasp init --dev
+```
+
+### How Dev Mode Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Dev Mode Workflow                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  NORMAL MODE                         DEV MODE                    │
+│  ─────────────                       ────────                    │
+│                                                                  │
+│  1. Read templates/                  1. Read templates/          │
+│  2. Process placeholders             2. Load existing tech-stack │
+│  3. Copy to .claude/                 3. Process placeholders     │
+│  4. Done                             4. OVERWRITE .claude/       │
+│                                      5. Show DEV MODE header     │
+│  (Requires npm install               (Instant - no reinstall)   │
+│   to see changes)                                                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Dev Mode Requirements
+
+1. **Existing `.claude/` folder** - Run normal `ccasp init` first
+2. **Existing `tech-stack.json`** - Must have been generated previously
+3. **Package directory access** - Must run from CCASP clone
+
+### Dev Mode Session Example
+
+```bash
+# Initial setup (one-time)
+cd my-test-project
+ccasp init
+
+# Now iterate on templates
+cd ~/claude-cli-advanced-starter-pack
+
+# Edit a template
+vim templates/commands/menu.template.md
+
+# Apply changes instantly
+ccasp init --dev
+
+# Changes reflected immediately in my-test-project/.claude/commands/
+```
+
+### DEV MODE Output
+
+When running in dev mode, you'll see:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                       DEV MODE ACTIVE                          ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Project: my-test-project                                      ║
+║  Tech Stack: Node.js + React + PostgreSQL                      ║
+║  Templates: 34 commands, 26 hooks, 5 skills                   ║
+╚═══════════════════════════════════════════════════════════════╝
+
+[DEV] Regenerating commands from templates...
+[DEV] Updated: menu.md
+[DEV] Updated: deploy-full.md
+[DEV] Complete! Changes applied to .claude/
+```
+
+### Tips for Template Development
+
+1. **Use a dedicated test project** - Keep one project for template testing
+2. **Run lint after changes** - `npm run lint` catches syntax errors
+3. **Check placeholder replacement** - Verify `{{variable}}` substitution works
+4. **Test conditionals** - Ensure `{{#if}}` blocks render correctly
+5. **Validate YAML frontmatter** - Commands need valid frontmatter
+
+---
+
+## Contributing to CCASP
+
+This guide covers how to contribute to CCASP effectively.
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+- Git
+- GitHub CLI (`gh`) for testing GitHub features
+
+### Setting Up Development Environment
+
+```bash
+# Clone and install
+git clone https://github.com/evan043/claude-cli-advanced-starter-pack.git
+cd claude-cli-advanced-starter-pack
+npm install
+
+# Verify setup
+npm run lint    # Should pass with no errors
+npm test        # Should output "Syntax OK"
+```
+
+### Project Structure
+
+```
+claude-cli-advanced-starter-pack/
+├── bin/
+│   ├── gtask.js          # CLI entry point (Commander.js)
+│   └── postinstall.js    # npm install welcome message
+│
+├── src/
+│   ├── commands/         # 30+ command implementations
+│   │   ├── init/         # Init features, generators
+│   │   ├── create-*      # Agent/hook/skill builders
+│   │   └── setup-wizard/ # Wizard utilities
+│   ├── cli/              # Interactive menu (desktop + mobile)
+│   ├── github/           # GitHub API wrapper
+│   ├── agents/           # Agent generator, registry
+│   │   ├── generator.js  # Auto-generate from tech stack
+│   │   ├── registry.js   # Agent registry management
+│   │   └── stack-mapping.js  # Tech → agent mapping
+│   ├── hooks/            # Hook configuration
+│   ├── panel/            # Control panel system
+│   └── utils/            # Template engine, validators
+│       ├── smart-merge.js      # Asset comparison
+│       ├── version-check.js    # Update state tracking
+│       ├── project-backup.js   # Backup management
+│       └── template-engine.js  # Handlebars-style templates
+│
+├── templates/
+│   ├── commands/         # Slash command templates (30+)
+│   ├── hooks/            # Hook templates (26)
+│   ├── skills/           # Skill templates (5)
+│   ├── agents/           # Agent templates (18)
+│   └── patterns/         # Agent patterns (5)
+│
+└── tests/
+    └── golden-master/    # API contract tests
+```
+
+### Available npm Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm start` | Run CLI (`node bin/gtask.js`) |
+| `npm run lint` | ESLint on src/ |
+| `npm test` | Syntax validation on entry points |
+| `npm run test:golden` | Run golden master tests |
+| `npm run test:golden:capture` | Capture golden master snapshots |
+| `npm run test:golden:verify` | Verify against golden master |
+| `npm run test:detect` | Test tech stack detection |
+
+### Contribution Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Contribution Workflow                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. FIND OR CREATE ISSUE                                         │
+│     └─ Check existing issues first                              │
+│     └─ Create issue if new feature/bug                          │
+│                                                                  │
+│  2. FORK AND BRANCH                                              │
+│     └─ Fork repository                                          │
+│     └─ Create feature branch from master                        │
+│     └─ Branch naming: feature/, fix/, docs/                     │
+│                                                                  │
+│  3. MAKE CHANGES                                                 │
+│     └─ Follow existing code style                               │
+│     └─ Add/update tests if applicable                           │
+│     └─ Update documentation if needed                           │
+│                                                                  │
+│  4. TEST LOCALLY                                                 │
+│     └─ npm run lint                                             │
+│     └─ npm test                                                 │
+│     └─ npm link + manual testing                                │
+│                                                                  │
+│  5. COMMIT                                                       │
+│     └─ Use conventional commits                                 │
+│     └─ feat:, fix:, docs:, refactor:, test:                     │
+│                                                                  │
+│  6. OPEN PULL REQUEST                                            │
+│     └─ Reference issue number                                   │
+│     └─ Describe changes                                         │
+│     └─ Add screenshots if UI changes                            │
+│                                                                  │
+│  7. ADDRESS FEEDBACK                                             │
+│     └─ Respond to review comments                               │
+│     └─ Push fixes to same branch                                │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Commit Message Format
+
+Use conventional commits:
+
+```
+feat: add new slash command for database migrations
+fix: resolve template placeholder not replacing in conditionals
+docs: update WIKI with PM tools integration guide
+refactor: modularize detect-tech-stack.js into smaller functions
+test: add golden master tests for agent generation
+chore: update dependencies
+```
+
+### Areas for Contribution
+
+| Area | Description | Difficulty |
+|------|-------------|------------|
+| **Templates** | New command/hook/skill templates | Easy |
+| **Documentation** | WIKI, README improvements | Easy |
+| **Tech Detection** | New framework patterns | Medium |
+| **Bug Fixes** | Issue tracker bugs | Medium |
+| **New Features** | Major functionality | Hard |
+| **Core Refactoring** | Architecture changes | Hard |
+
+### Code Style Guidelines
+
+1. **ES Modules** - Use `import`/`export` syntax
+2. **Async/Await** - Prefer over callbacks/promises
+3. **Error Handling** - Use try/catch with meaningful messages
+4. **Comments** - Add JSDoc for exported functions
+5. **Line Length** - Keep under 100 characters
+6. **Naming** - camelCase for functions, PascalCase for classes
+
+---
+
+## npm Updates & Backup System
+
+CCASP includes a sophisticated update system that protects customizations while enabling new features.
+
+### Update Modes Overview
+
+CCASP offers two update modes with different behaviors:
+
+| Mode | Command | Behavior |
+|------|---------|----------|
+| **Smart Update** | `/update-smart` | Protects customizations, merges new features |
+| **Full Update** | `ccasp init --force` | Overwrites all assets, preserves config only |
+
+### Smart Update System
+
+The Smart Update system intelligently handles updates:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Smart Update Workflow                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  /update-smart or /update-check                                  │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌─────────────────────────────────────────┐                    │
+│  │   Check npm registry for new version    │                    │
+│  └─────────────────────────────────────────┘                    │
+│           │                                                      │
+│           ▼                                                      │
+│  ┌─────────────────────────────────────────┐                    │
+│  │     Compare installed vs latest          │                    │
+│  └─────────────────────────────────────────┘                    │
+│           │                                                      │
+│     ┌─────┴─────┐                                               │
+│     │           │                                                │
+│ Up to date   Update available                                    │
+│     │           │                                                │
+│     ▼           ▼                                                │
+│ "All good!"  Show highlights + change significance              │
+│                 │                                                │
+│         ┌───────┴───────┐                                       │
+│         │               │                                        │
+│     Smart (A)       Full (B)                                     │
+│         │               │                                        │
+│         ▼               ▼                                        │
+│   Merge changes    Overwrite all                                 │
+│   Keep customs     Fresh install                                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Change Significance Levels
+
+The smart merge system analyzes changes into three levels:
+
+| Level | Trigger | Action |
+|-------|---------|--------|
+| **High** | Structural changes (headers, exports) or >50% changed | Requires user review |
+| **Medium** | Configuration changes or 20-50% changed | Show diff, offer merge options |
+| **Low** | Comments-only or <20% changed | Auto-merge allowed |
+
+**Structural patterns that trigger "High" significance:**
+- Markdown headers (`# ##`)
+- YAML frontmatter (`---`)
+- Export statements (`export`)
+- Import statements (`import`)
+
+### Customization Tracking
+
+CCASP tracks which assets you've customized:
+
+**State File**: `.claude/config/usage-tracking.json`
+
+```json
+{
+  "assets": {
+    "commands/menu.md": {
+      "firstUsed": "2026-01-15T10:00:00Z",
+      "lastUsed": "2026-02-01T14:30:00Z",
+      "useCount": 47,
+      "customized": true
+    },
+    "hooks/file-guard.js": {
+      "firstUsed": "2026-01-15T10:00:00Z",
+      "lastUsed": "2026-02-01T14:25:00Z",
+      "useCount": 123,
+      "customized": false
+    }
+  }
+}
+```
+
+When you modify a file from its template version, it's marked as `customized: true`. Smart update will protect these files.
+
+### Update Notification Settings
+
+**State File**: `.claude/config/ccasp-state.json`
+
+```json
+{
+  "lastCheckTimestamp": 1706792400000,
+  "lastCheckResult": null,
+  "lastSeenVersion": "2.2.3",
+  "dismissedVersions": ["2.2.2"],
+  "installedFeatures": ["github", "phased-dev", "deployment"],
+  "skippedFeatures": ["neovim"]
+}
+```
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| Cache Duration | 1 hour | Prevents constant npm registry checks |
+| Reminder Interval | 7 days | Time between update reminders |
+| Dismissal Tracking | Unlimited | Suppress specific version notifications |
+
+### Backup System
+
+Before major updates, CCASP creates automatic backups:
+
+**Backup Location**: `~/.claude/ccasp-project-backups/`
+
+```
+~/.claude/ccasp-project-backups/
+├── my-project_2026-02-01T10-30-00/
+│   ├── .claude/
+│   │   ├── commands/
+│   │   ├── hooks/
+│   │   └── config/
+│   ├── CLAUDE.md
+│   └── manifest.json
+└── my-project_2026-01-28T14-15-00/
+    └── ...
+```
+
+**Backup Features:**
+- **Full backup** of `.claude/` folder and `CLAUDE.md`
+- **Manifest tracking** with timestamps and file counts
+- **Rotation**: Keep last 5 backups per project (oldest purged)
+- **Exclusions**: Skips `node_modules`, `.git`
+
+### Auto-Repair Feature
+
+During `ccasp init`, outdated hooks are detected and repaired:
+
+```
+[REPAIR] Found outdated hooks:
+  • ccasp-update-check.js (v1.8.25 → v2.2.3)
+  • happy-mode-detector.js (v1.8.24 → v2.2.3)
+
+Auto-repairing... Done!
+```
+
+### Restoring from Backup
+
+To restore a previous version:
+
+```bash
+# List available backups
+ls ~/.claude/ccasp-project-backups/
+
+# Restore specific backup (manual process)
+cp -r ~/.claude/ccasp-project-backups/my-project_2026-02-01T10-30-00/.claude ./
+
+# Or selectively restore a file
+cp ~/.claude/ccasp-project-backups/my-project_2026-02-01T10-30-00/.claude/commands/menu.md ./.claude/commands/
+```
+
+### Best Practices for Updates
+
+1. **Review changelogs** before updating to understand what's new
+2. **Use Smart mode first** to protect customizations
+3. **Backup critical customizations** manually if unsure
+4. **Test after update** by running key commands
+5. **Check hook versions** with `ccasp status` after update
 
 ---
 
