@@ -1,6 +1,6 @@
 # CCASP Wiki - Complete Documentation
 
-**Version 1.8.3** | **For Senior Full-Stack Developers**
+**Version 2.2.2** | **For Senior Full-Stack Developers**
 
 This documentation provides comprehensive technical details for the Claude CLI Advanced Starter Pack (CCASP). It covers architecture, implementation patterns, extension points, and production deployment strategies.
 
@@ -149,7 +149,7 @@ claude-cli-advanced-starter-pack/
 │   └── postinstall.js     # npm postinstall welcome
 │
 ├── src/
-│   ├── commands/          # 25 command implementations
+│   ├── commands/          # 30+ command implementations (modularized in v2.2.0)
 │   │   ├── init.js                    # Feature deployment (1386 LOC)
 │   │   ├── detect-tech-stack.js       # Stack detection (768 LOC)
 │   │   ├── setup-wizard.js            # Vibe-friendly wizard
@@ -179,9 +179,14 @@ claude-cli-advanced-starter-pack/
 │   │
 │   └── index.js           # Public API exports
 │
+├── src/
+│   ├── vdb/               # Vision Driver Bot (v2.2.0)
+│   │   ├── state.js       # VDB state management
+│   │   └── driver.js      # Autonomous workflow driver
+│
 ├── templates/
-│   ├── commands/          # 18 slash command templates (.template.md)
-│   ├── hooks/             # 12 hook templates (.template.js)
+│   ├── commands/          # 34+ slash command templates (.template.md)
+│   ├── hooks/             # 40+ hook templates (.template.js)
 │   ├── skills/            # 3 skill packages
 │   │   ├── agent-creator/
 │   │   ├── hook-creator/
@@ -192,6 +197,87 @@ claude-cli-advanced-starter-pack/
 │
 └── docs/
     └── WIKI.md            # This file
+```
+
+---
+
+## Vision Driver Bot (VDB) - v2.2.0
+
+The Vision Driver Bot enables autonomous development workflows with automatic lint fixes and state management.
+
+### VDB Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         VISION DRIVER BOT (VDB)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  State Management (.claude/vdb/state.json)                                   │
+│  ├── currentTask: Active task being processed                               │
+│  ├── lintQueue: Pending lint errors to fix                                  │
+│  ├── fixHistory: Record of applied fixes                                    │
+│  └── sessionMetrics: Token usage, task counts                               │
+│                                                                              │
+│  Workflow Engine                                                             │
+│  ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐                       │
+│  │ Detect │───▶│ Queue  │───▶│ Apply  │───▶│ Verify │                       │
+│  │ Errors │    │ Fixes  │    │ Fixes  │    │ Success│                       │
+│  └────────┘    └────────┘    └────────┘    └────────┘                       │
+│                                                                              │
+│  Integration Points                                                          │
+│  ├── L1/L2/L3 Agent Hierarchy                                               │
+│  ├── Enforcement Hooks (respects all guards)                                │
+│  ├── PROGRESS.json Updates                                                  │
+│  └── GitHub Progress Sync                                                   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### VDB Usage
+
+VDB activates automatically when:
+- Lint errors are detected during development
+- Code changes require validation
+- Autonomous fix mode is enabled
+
+---
+
+## CI/CD Integration - v2.2.2
+
+CCASP now includes robust CI/CD support with auto-detection.
+
+### CI Environment Auto-Detection
+
+```javascript
+// Automatically detects CI environments
+const isCI = process.env.CI === 'true' ||
+             process.env.GITHUB_ACTIONS === 'true' ||
+             process.env.GITLAB_CI === 'true';
+
+// Skips interactive prompts in CI
+if (isCI) {
+  options.nonInteractive = true;
+}
+```
+
+### Integration Test Pattern
+
+```yaml
+# .github/workflows/ci.yml
+- name: Install CCASP
+  run: npm install -g claude-cli-advanced-starter-pack
+
+- name: Initialize Project
+  run: ccasp init --non-interactive
+
+- name: Detect Tech Stack
+  run: ccasp detect-stack
+
+- name: Verify Installation
+  run: |
+    test -d .claude
+    test -f .claude/config/tech-stack.json
+    ls .claude/commands/ | wc -l | xargs test 5 -lt
 ```
 
 ---
@@ -467,7 +553,7 @@ export default {
 };
 ```
 
-### Available Hooks (12 Total)
+### Available Hooks (40+ Total)
 
 | Hook | Event | Purpose |
 |------|-------|---------|
@@ -483,6 +569,30 @@ export default {
 | `context-injector` | UserPromptSubmit | Inject prior session context |
 | `happy-title-generator` | UserPromptSubmit | Auto-generate session titles |
 | `happy-mode-detector` | UserPromptSubmit | Detect Happy daemon env |
+
+### Additional Hooks (v1.8.24+)
+
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `orchestrator-init` | UserPromptSubmit | Initialize orchestration on /phase-dev |
+| `orchestrator-enforcer` | PreToolUse | Enforce delegation hierarchy |
+| `hierarchy-validator` | PreToolUse | Validate L1→L2→L3 spawning rules |
+| `progress-tracker` | PostToolUse | Auto-update PROGRESS.json on completions |
+| `github-progress-sync` | PostToolUse | Push progress updates to GitHub issues |
+| `l2-completion-reporter` | PostToolUse | Capture L2 completion reports |
+| `l3-parallel-executor` | PreToolUse | Manage parallel L3 worker execution |
+| `subagent-context-injector` | PreToolUse | Inject orchestrator context to agents |
+| `completion-verifier` | PostToolUse | Validate completion report format |
+| `agent-error-recovery` | PostToolUse | Handle failures with retry/escalate/abort |
+| `orchestrator-audit-logger` | PostToolUse | Log all agent actions to JSONL |
+| `ralph-loop-enforcer` | PostToolUse | Continuous test-fix cycle management |
+| `refactor-verify` | PostToolUse | Auto-verify changes, run tests |
+| `refactor-audit` | PostToolUse | Flag files >500 lines |
+| `refactor-transaction` | Pre+PostToolUse | Atomic refactoring with savepoints |
+| `task-classifier` | UserPromptSubmit | Classify tasks by complexity/domain |
+| `agent-delegator` | PreToolUse | Route tasks to appropriate agents |
+| `delegation-enforcer` | PreToolUse | Enforce agent-only mode |
+| `happy-checkpoint-manager` | PostToolUse | Manage session checkpoints |
 
 ### settings.json Configuration
 
@@ -1099,6 +1209,22 @@ ccasp validate --path templates/commands/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2.2 | 2026-02-01 | CI fixes: tech-stack.json path corrections, simplified integration tests |
+| 2.2.1 | 2026-02-01 | CI fixes: run detect-stack after init, path corrections |
+| 2.2.0 | 2026-02-01 | **Vision Driver Bot (VDB)**, GitHub Epic System, /init-ccasp-new-project, modular commands |
+| 2.1.5 | 2026-01-31 | /happy-start-cd command for repo selection |
+| 2.1.4 | 2026-01-31 | Release maintenance |
+| 2.1.3 | 2026-01-31 | API key validation, Windows compatibility for explore-mcp |
+| 2.1.2 | 2026-01-31 | Release maintenance |
+| 2.1.1 | 2026-01-31 | Release maintenance |
+| 2.1.0 | 2026-01-31 | Renamed /github-update → /github-project-menu, /menu-issues-list → /github-menu-issues-list |
+| 2.0.1 | 2026-01-31 | Release maintenance |
+| 2.0.0 | 2026-01-31 | **Neovim plugin (nvim-ccasp)**, major architecture updates |
+| 1.8.31 | 2026-01-31 | Happy.engineering 401 auth error fix |
+| 1.8.30 | 2026-01-31 | Happy.engineering mobile UI, auto-detection |
+| 1.8.29 | 2026-01-31 | /pr-merge command with 9-phase workflow |
+| 1.8.28 | 2026-01-31 | Smart update system, auto-repair hooks |
+| 1.8.27 | 2026-01-30 | Roadmap Orchestration Framework |
 | 1.8.3 | 2026-01-31 | Dev mode (`--dev` flag), npm-deploy auto mode (`--auto` flag) |
 | 1.8.0 | 2026-01-30 | 7 utility scripts, install-scripts command |
 | 1.7.0 | 2026-01-30 | 7 MCP servers (log-monitor, tunnel services) |
@@ -1112,4 +1238,4 @@ ccasp validate --path templates/commands/
 
 ---
 
-*Documentation generated for Claude CLI Advanced Starter Pack v1.8.3*
+*Documentation generated for Claude CLI Advanced Starter Pack v2.2.2*

@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.0.1   •  Production Ready                         ║
+║                          v2.2.2   •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -69,11 +69,42 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 
 ---
 
+## What's New in v2.2
+
+**Major release with Vision Driver Bot, GitHub Epics, and CI improvements!**
+
+### Vision Driver Bot (VDB) - v2.2.0 - NEW!
+- **Autonomous Development**: VDB drives development workflows with automatic lint fixes
+- **State Management**: Persistent state tracking across sessions
+- **Integration**: Works with existing agent hierarchy (L1/L2/L3)
+
+### GitHub Epic System - v2.2.0 - NEW!
+- **Epic Creation**: `/create-github-epic` for multi-issue epic workflows
+- **Testing Integration**: Automated test suite for epic management (#50)
+- **Progress Tracking**: Epic status synced with Project Board
+
+### Init for New Projects - v2.2.0 - NEW!
+- **`/init-ccasp-new-project`**: One-shot project initialization for Happy users
+- **Project Intent Collection**: Gathers project goals and requirements
+- **Full Workflow**: Detect stack → Configure → Deploy → Verify
+
+### CI/CD Improvements - v2.2.1-v2.2.2
+- **Auto-Detection**: Automatically detects CI environment and skips interactive prompts
+- **Integration Tests**: Simplified tests verify CCASP installation correctly
+- **Path Fixes**: Corrected tech-stack.json paths in CI workflows
+
+### Modular Architecture - v2.2.0
+- **Command Refactoring**: 7 large command files modularized (#51-#57)
+- **Improved Maintainability**: Smaller, focused modules
+- **Better Testing**: Easier to test individual components
+
+---
+
 ## What's New in v2.0
 
 **Major release with Neovim integration and mobile improvements!**
 
-### Neovim Plugin - nvim-ccasp (v2.0.0) - NEW!
+### Neovim Plugin - nvim-ccasp (v2.0.0)
 - **Multi-Agent Grid**: Run 6 Claude CLI sessions in aligned grid layout
 - **Control Panel**: Floating panel for feature toggles, model selection
 - **Feature Toggles**: Enable/disable CCASP features without editing JSON
@@ -175,6 +206,7 @@ CCASP is a **two-phase toolkit** that extends Claude Code CLI capabilities:
 | Phase 10 | v1.8.19 | **Refactoring System** — 5 commands, 4 hooks, 2 skills |
 | Phase 11 | v1.8.27-30 | **Mobile UI, PR Merge, Roadmaps** — Happy.engineering support, `/pr-merge`, orchestration |
 | Phase 12 | v2.0.0 | **Neovim Plugin** — nvim-ccasp with grid, dashboard, Telescope, statusline |
+| Phase 13 | v2.2.0 | **VDB & Epics** — Vision Driver Bot, GitHub Epic System, modular commands |
 
 ---
 
@@ -534,7 +566,7 @@ nvim-ccasp/
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    CCASP ARCHITECTURE (v2.0.1)                              │
+│                    CCASP ARCHITECTURE (v2.2.2)                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  PHASE 1: TERMINAL (No AI)                                                   │
@@ -577,6 +609,32 @@ nvim-ccasp/
 │  │  Hooks: PreToolUse | PostToolUse | UserPromptSubmit              │       │
 │  │  Skills: refactor-react | refactor-fastapi | agent-creator       │       │
 │  └──────────────────────────────────────────────────────────────────┘       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Vision Driver Bot (VDB)
+
+The Vision Driver Bot (v2.2.0) enables autonomous development workflows:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      VISION DRIVER BOT (VDB)                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  VDB State (.claude/vdb/state.json)                                          │
+│  ├── Current task tracking                                                   │
+│  ├── Lint error queue                                                        │
+│  ├── Fix history                                                             │
+│  └── Session metrics                                                         │
+│                                                                              │
+│  Workflow:                                                                   │
+│  1. Detect lint errors  →  2. Queue fixes  →  3. Apply fixes  →  4. Verify  │
+│                                                                              │
+│  Integration:                                                                │
+│  • Works with L1/L2/L3 agent hierarchy                                       │
+│  • Respects enforcement hooks                                                │
+│  • Updates PROGRESS.json                                                     │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -771,6 +829,10 @@ When `enabled: false` (default), no co-authors are added to commits.
 | `/create-smoke-test` | Testing | Auto-generate Playwright tests |
 | `/ask-claude` | Discovery | Natural language command search |
 | `/generate-agents` | Auto Stack Agents | Generate agents from tech stack |
+| `/init-ccasp-new-project` | Happy Integration | One-shot project initialization |
+| `/create-github-epic` | GitHub Integration | Create multi-issue epic workflows |
+| `/github-epic-menu` | GitHub Integration | Epic management dashboard |
+| `/github-epic-status` | GitHub Integration | Epic progress dashboard |
 
 #### Refactoring Commands (NEW in v1.8.19+)
 
