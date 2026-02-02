@@ -100,7 +100,39 @@ Continuous test-fix cycle until green:
 ```
 Runs tests → Parses failures → Fixes code → Repeats.
 
+**Smart Recovery**: Every 3rd failed attempt deploys a web search agent to find best-practice solutions for stubborn bugs or implementation issues.
+
 Max 10 iterations. Stops on 3x same failure.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🗺️ Multi-Phase Roadmaps
+
+Coordinate full-stack, multi-feature development:
+```bash
+/create-roadmap "Q1 Feature Sprint"
+```
+- Break epics into phased milestones
+- GitHub issue tracking per phase
+- Customizable Project Board sync
+- Dependency graphs with auto-ordering
+- Progress dashboard across all phases
+
+</td>
+<td width="50%">
+
+### 🚀 One-Command Deployment
+
+Full-stack deploy to Railway + Cloudflare:
+```bash
+/deploy-full
+```
+- Backend and frontend in parallel
+- Pre-flight validation
+- Automatic rollback on failure
 
 </td>
 </tr>
@@ -121,21 +153,6 @@ Break complex features into phases:
 </td>
 <td width="50%">
 
-### 🚀 One-Command Deployment
-
-Full-stack deploy to Railway + Cloudflare:
-```bash
-/deploy-full
-```
-- Backend and frontend in parallel
-- Pre-flight validation
-- Automatic rollback on failure
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
 ### 🔀 Safe PR Merges
 
 9-phase merge workflow with safety:
@@ -145,6 +162,22 @@ Full-stack deploy to Railway + Cloudflare:
 - Auto-stash uncommitted changes
 - Resolve conflicts, CI failures, reviews
 - Automatic rollback on any failure
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🎫 GitHub Epic System
+
+Multi-issue epic workflows:
+```bash
+/create-github-epic "Auth System"
+```
+- Creates parent epic with child issues
+- Tracks completion across all issues
+- Auto-syncs with Project Board
+- Progress comments on epic issue
 
 </td>
 <td width="50%">
