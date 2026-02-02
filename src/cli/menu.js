@@ -94,6 +94,12 @@ export async function showProjectSettingsMenu() {
   console.log(chalk.cyan('║') + '   [5] Happy Mode                                                              ' + chalk.cyan('║'));
   console.log(chalk.cyan('║') + chalk.dim('       └─ Configure mobile app integration                                    ') + chalk.cyan('║'));
   console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [6] Ralph Loop                                                              ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Occurrence auditor, max iterations, web search                      ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '   [7] GitHub Task                                                             ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Auto-split detection, parallel agents, post-creation                ') + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
   console.log(chalk.cyan('║') + '   [B] Back to main menu                                                       ' + chalk.cyan('║'));
   console.log(chalk.cyan('║') + '                                                                               ' + chalk.cyan('║'));
   console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
@@ -113,6 +119,8 @@ export async function showProjectSettingsMenu() {
         { name: '3. Tunnel Services', value: 'tunnel' },
         { name: '4. Token Management', value: 'token' },
         { name: '5. Happy Mode', value: 'happy' },
+        { name: '6. Ralph Loop', value: 'ralph-loop' },
+        { name: '7. GitHub Task', value: 'github-task' },
         new inquirer.Separator(),
         { name: 'Back to main menu', value: 'back' },
       ],
@@ -164,6 +172,12 @@ export async function showProjectSettingsMenu() {
       break;
     case 'happy':
       await configureHappy(techStack);
+      break;
+    case 'ralph-loop':
+      await configureRalphLoop(techStack);
+      break;
+    case 'github-task':
+      await configureGitHubTask(techStack);
       break;
   }
 
@@ -608,6 +622,168 @@ async function configureHappy(techStack) {
 
   saveTechStack(techStack);
   showSuccess('Happy Mode configuration saved!');
+}
+
+/**
+ * Configure Ralph Loop Settings
+ */
+async function configureRalphLoop(techStack) {
+  console.log('');
+  showHeader('Ralph Loop Configuration');
+
+  console.log(chalk.dim('  Configure Ralph Loop test-fix cycles and occurrence auditing.\n'));
+
+  const current = techStack.ralphLoop || {};
+  const occurrenceAudit = current.occurrenceAudit || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'number',
+      name: 'maxIterations',
+      message: 'Maximum iterations before stopping:',
+      default: current.maxIterations || 10,
+    },
+    {
+      type: 'confirm',
+      name: 'webSearchEnabled',
+      message: 'Enable web search for solutions (every 3rd failure)?',
+      default: current.webSearchEnabled !== false,
+    },
+    {
+      type: 'confirm',
+      name: 'occurrenceAuditEnabled',
+      message: 'Enable Occurrence Auditor (scan for similar patterns after fix)?',
+      default: occurrenceAudit.enabled !== false,
+    },
+    {
+      type: 'list',
+      name: 'auditScope',
+      message: 'Occurrence audit scope:',
+      when: (ans) => ans.occurrenceAuditEnabled,
+      choices: [
+        { name: 'Same directory only', value: 'directory' },
+        { name: 'Entire project (recommended)', value: 'project' },
+        { name: 'Custom glob pattern', value: 'custom' },
+      ],
+      default: occurrenceAudit.scope || 'project',
+    },
+    {
+      type: 'input',
+      name: 'customGlob',
+      message: 'Custom glob pattern (e.g., "src/**/*.ts"):',
+      when: (ans) => ans.auditScope === 'custom',
+      default: occurrenceAudit.customGlob || 'src/**/*.{js,ts,jsx,tsx}',
+    },
+    {
+      type: 'list',
+      name: 'autoApplyThreshold',
+      message: 'Auto-apply patches threshold:',
+      when: (ans) => ans.occurrenceAuditEnabled,
+      choices: [
+        { name: 'Never - always ask (safest)', value: 'never' },
+        { name: '1-2 matches - auto-apply if few', value: '1-2' },
+        { name: '3+ matches - auto-apply if many (use with caution)', value: '3+' },
+      ],
+      default: occurrenceAudit.autoApplyThreshold || 'never',
+    },
+  ]);
+
+  techStack.ralphLoop = {
+    maxIterations: answers.maxIterations,
+    webSearchEnabled: answers.webSearchEnabled,
+    occurrenceAudit: {
+      enabled: answers.occurrenceAuditEnabled,
+      scope: answers.auditScope || 'project',
+      customGlob: answers.customGlob || null,
+      autoApplyThreshold: answers.autoApplyThreshold || 'never',
+    },
+  };
+
+  saveTechStack(techStack);
+  showSuccess('Ralph Loop configuration saved!', [
+    '',
+    `Max iterations: ${answers.maxIterations}`,
+    `Web search: ${answers.webSearchEnabled ? 'Enabled' : 'Disabled'}`,
+    `Occurrence auditor: ${answers.occurrenceAuditEnabled ? 'Enabled' : 'Disabled'}`,
+  ]);
+}
+
+/**
+ * Configure GitHub Task Settings
+ */
+async function configureGitHubTask(techStack) {
+  console.log('');
+  showHeader('GitHub Task Configuration');
+
+  console.log(chalk.dim('  Configure /github-task and /github-task-multiple behavior.\n'));
+
+  const current = techStack.githubTask || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'autoSplitMode',
+      message: 'Auto-split detection for multi-task prompts:',
+      choices: [
+        { name: 'Suggest - show recommendation (recommended)', value: 'suggest' },
+        { name: 'Automatic - auto-split without prompting', value: 'automatic' },
+        { name: 'Disabled - always create single issue', value: 'disabled' },
+      ],
+      default: current.autoSplitMode || 'suggest',
+    },
+    {
+      type: 'list',
+      name: 'defaultPostAction',
+      message: 'After creating multiple issues:',
+      choices: [
+        { name: 'Ask every time', value: 'ask' },
+        { name: 'Always create Phase Dev Plan', value: 'phase-dev' },
+        { name: 'Always create Epic', value: 'epic' },
+        { name: 'Always add to Project Board only', value: 'board' },
+        { name: 'No grouping (standalone issues)', value: 'none' },
+      ],
+      default: current.defaultPostAction || 'ask',
+    },
+    {
+      type: 'list',
+      name: 'parallelAgentModel',
+      message: 'Model for parallel issue creation agents:',
+      choices: [
+        { name: 'Sonnet 4.5 - thorough analysis (recommended)', value: 'sonnet' },
+        { name: 'Haiku - fast, cost-effective', value: 'haiku' },
+      ],
+      default: current.parallelAgentModel || 'sonnet',
+    },
+    {
+      type: 'number',
+      name: 'maxParallelIssues',
+      message: 'Maximum issues to create in parallel:',
+      default: current.maxParallelIssues || 6,
+    },
+    {
+      type: 'confirm',
+      name: 'autoAddToProjectBoard',
+      message: 'Automatically add created issues to Project Board?',
+      default: current.autoAddToProjectBoard !== false,
+    },
+  ]);
+
+  techStack.githubTask = {
+    autoSplitMode: answers.autoSplitMode,
+    defaultPostAction: answers.defaultPostAction,
+    parallelAgentModel: answers.parallelAgentModel,
+    maxParallelIssues: answers.maxParallelIssues,
+    autoAddToProjectBoard: answers.autoAddToProjectBoard,
+    defaultLabels: current.defaultLabels || ['enhancement'],
+  };
+
+  saveTechStack(techStack);
+  showSuccess('GitHub Task configuration saved!', [
+    '',
+    `Auto-split: ${answers.autoSplitMode}`,
+    `Post-creation: ${answers.defaultPostAction}`,
+    `Agent model: ${answers.parallelAgentModel}`,
+  ]);
 }
 
 /**
