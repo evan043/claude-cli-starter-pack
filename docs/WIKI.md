@@ -1,6 +1,6 @@
 # CCASP Wiki - Complete Documentation
 
-**Version 2.2.2** | **For Senior Full-Stack Developers**
+**Version 2.2.3** | **For Senior Full-Stack Developers**
 
 This documentation provides comprehensive technical details for the Claude CLI Advanced Starter Pack (CCASP). It covers architecture, implementation patterns, extension points, and production deployment strategies.
 
@@ -8,19 +8,584 @@ This documentation provides comprehensive technical details for the Claude CLI A
 
 ## Table of Contents
 
-1. [Architecture Deep Dive](#architecture-deep-dive)
-2. [Agent Orchestration Patterns](#agent-orchestration-patterns)
-3. [Hook System Reference](#hook-system-reference)
-4. [Skill Development Guide](#skill-development-guide)
-5. [Template Engine Internals](#template-engine-internals)
-6. [MCP Server Integration](#mcp-server-integration)
-7. [Phased Development System](#phased-development-system)
-8. [Deployment Automation](#deployment-automation)
-9. [Performance & Token Optimization](#performance--token-optimization)
-10. [Extension API](#extension-api)
-11. [Troubleshooting Guide](#troubleshooting-guide)
+### User Guides
+1. [Getting Started with CCASP Wizard](#getting-started-with-ccasp-wizard)
+2. [Creating a New Project with CCASP](#creating-a-new-project-with-ccasp)
+3. [Enabling Vision & Epic System](#enabling-vision--epic-system)
+4. [Using Vision Driver Bot (VDB)](#using-vision-driver-bot-vdb)
+
+### Technical Reference
+5. [Architecture Deep Dive](#architecture-deep-dive)
+6. [Agent Orchestration Patterns](#agent-orchestration-patterns)
+7. [Hook System Reference](#hook-system-reference)
+8. [Skill Development Guide](#skill-development-guide)
+9. [Template Engine Internals](#template-engine-internals)
+10. [MCP Server Integration](#mcp-server-integration)
+11. [Phased Development System](#phased-development-system)
+12. [Deployment Automation](#deployment-automation)
+13. [Performance & Token Optimization](#performance--token-optimization)
+14. [Extension API](#extension-api)
+15. [Troubleshooting Guide](#troubleshooting-guide)
 
 ---
+
+# User Guides
+
+## Getting Started with CCASP Wizard
+
+The CCASP Wizard is a mobile-friendly, vibe-code optimized setup flow that guides you through CCASP installation with minimal typing.
+
+### When to Use the Wizard
+
+Use `ccasp wizard` when:
+- Setting up CCASP for the first time in a project
+- You want a guided, interactive experience
+- You're using a mobile device or prefer numbered menu options
+
+### Running the Wizard
+
+```bash
+# From any project directory
+ccasp wizard
+
+# Or after global install
+npx ccasp wizard
+```
+
+### Wizard Menu Options
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                    CCASP Setup Wizard                          ║
+╠═══════════════════════════════════════════════════════════════╣
+║  1. Quick Start (Auto-detect)   - Scans your project, picks   ║
+║                                   relevant features             ║
+║  2. Full Setup (All features)   - Installs everything          ║
+║  3. GitHub Setup                - Configure GitHub + PM tools  ║
+║  4. Advanced Options            - Templates, releases, removal ║
+║  5. Happy.engineering           - Mobile app integration       ║
+║  6. Exit                                                        ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Quick Start Flow
+
+1. **Select Option 1** → Quick Start
+2. Wizard detects your tech stack (React, Node, Python, etc.)
+3. Shows recommended features based on detection
+4. Installs selected features automatically
+5. Generates `.claude/` folder with commands and hooks
+
+### Post-Wizard Steps
+
+After the wizard completes:
+
+1. **Restart Claude Code CLI** - Required for new commands to appear
+2. **Run `/menu`** - Access the interactive menu for further configuration
+3. **Explore slash commands** - Type `/` to see all available commands
+
+### Advanced Options Submenu
+
+```
+Advanced Options:
+  V. View Available Templates
+  B. Browse Prior Releases
+  R. Remove CCASP from Project
+  X. Return to Main Menu
+```
+
+---
+
+## Creating a New Project with CCASP
+
+This guide covers setting up CCASP from scratch in a new or existing project.
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- (Optional) `gh` CLI for GitHub integration
+- (Optional) Claude Code CLI for AI-powered features
+
+### Installation Methods
+
+#### Method 1: Global Install (Recommended)
+
+```bash
+# Install globally
+npm install -g claude-cli-advanced-starter-pack
+
+# Navigate to your project
+cd /path/to/your-project
+
+# Run the wizard for guided setup
+ccasp wizard
+
+# Or run init directly for faster setup
+ccasp init
+```
+
+#### Method 2: npx (No Install)
+
+```bash
+cd /path/to/your-project
+npx claude-cli-advanced-starter-pack wizard
+```
+
+### The Init Command
+
+The `ccasp init` command is the core deployment mechanism:
+
+```bash
+# Standard init with interactive prompts
+ccasp init
+
+# Force overwrite existing files
+ccasp init --force
+
+# Non-interactive mode (CI/CD friendly)
+ccasp init --skip-prompts
+
+# Dev mode for template testing
+ccasp init --dev
+```
+
+### What Gets Created
+
+After running `ccasp init`, your project gets:
+
+```
+.claude/
+├── commands/              # Slash commands (markdown files)
+│   ├── menu.md            # Interactive menu
+│   ├── deploy-full.md     # Deployment automation
+│   └── ...                # 30+ more commands
+├── agents/                # Custom agent definitions
+│   └── example-agent.md   # Example agent template
+├── skills/                # Skill packages (RAG-enhanced prompts)
+│   └── example-skill/     # Example skill structure
+├── hooks/                 # Enforcement hooks
+│   ├── usage-tracking.js  # Token usage tracker
+│   └── ccasp-update-check.js
+├── docs/                  # Documentation templates
+├── config/                # Configuration files
+│   ├── tech-stack.json    # Auto-detected tech stack
+│   └── ccasp-state.json   # CCASP version state
+├── settings.json          # Claude Code CLI settings
+└── README.md              # Quick reference
+```
+
+### Feature Selection During Init
+
+When running `ccasp init` interactively, you'll be asked about optional features:
+
+| Feature | Description |
+|---------|-------------|
+| **Token Management** | Budget tracking and auto-respawn |
+| **Happy Mode** | Mobile app UI optimizations |
+| **GitHub Integration** | Project board sync, task automation |
+| **Phased Development** | Multi-phase project planning |
+| **Deployment Automation** | Frontend/backend deploy commands |
+| **Tunnel Services** | ngrok/Cloudflare tunnel setup |
+| **Advanced Hooks** | Full 40+ hook library |
+| **Skill Templates** | RAG skill packages |
+| **Refactoring Tools** | Ralph Loop, Golden Master, analysis |
+| **Testing** | E2E test generation |
+| **Auto Stack Agents** | Framework-specific agents |
+| **Project Explorer** | Codebase exploration tools |
+
+### Verifying Installation
+
+```bash
+# Check installed commands
+ls .claude/commands/
+
+# View tech stack detection
+cat .claude/config/tech-stack.json
+
+# Restart Claude Code CLI, then run:
+/menu
+```
+
+### CI/CD Integration
+
+For automated pipelines:
+
+```bash
+# Auto-detect CI environment and skip prompts
+ccasp init --non-interactive
+
+# Run tech stack detection
+ccasp detect-stack
+
+# Verify installation
+test -d .claude && echo "CCASP installed successfully"
+```
+
+---
+
+## Enabling Vision & Epic System
+
+The Vision & Epic System allows you to manage multi-issue development projects with GitHub integration, progress tracking, and automated workflows.
+
+### What is the Epic System?
+
+An **Epic** is a large feature or project broken into multiple phases:
+
+```
+Epic: "Add User Authentication"
+├── Phase 1: Design (planning, diagrams)
+├── Phase 2: Backend (API routes, JWT)
+├── Phase 3: Frontend (login forms, hooks)
+├── Phase 4: Testing (E2E, unit tests)
+└── Phase 5: Deployment (CI/CD, monitoring)
+```
+
+Each phase can have:
+- Tasks and subtasks
+- Dependencies on other phases
+- Complexity ratings (S/M/L)
+- GitHub issue tracking
+
+### Prerequisites
+
+1. **GitHub CLI** - Install and authenticate `gh`
+2. **CCASP with GitHub Integration** - Run `ccasp init` with GitHub features enabled
+
+### Creating Your First Epic
+
+#### Option 1: Using the Slash Command
+
+In Claude Code CLI:
+
+```bash
+/create-github-epic
+
+# Follow the prompts to:
+# 1. Enter epic title
+# 2. Define phases
+# 3. Set complexity for each phase
+# 4. Create GitHub issues (optional)
+```
+
+#### Option 2: Using the Epic Menu
+
+```bash
+/github-epic-menu
+```
+
+This opens an interactive dashboard:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                    GitHub Epic Dashboard                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║  #  │ Epic Name              │ Phases │ Progress │ GitHub      ║
+║─────┼────────────────────────┼────────┼──────────┼─────────────║
+║  1  │ User Authentication    │ 5      │ 40%      │ #42         ║
+║  2  │ Dashboard Redesign     │ 3      │ 0%       │ #45         ║
+╠═══════════════════════════════════════════════════════════════╣
+║  [N] New Epic   [V] View   [S] Sync   [T] Testing Issues      ║
+║  [E] Edit       [R] Resume [D] Delete [B] Back                ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Epic Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `/create-github-epic` | Create a new epic with phases |
+| `/github-epic-menu` | Interactive epic management |
+| `/github-epic-status` | View progress across all epics |
+
+### Epic Data Storage
+
+Epics are stored locally and synced with GitHub:
+
+```
+.claude/github-epics/
+├── user-authentication.json   # Epic definition
+├── dashboard-redesign.json    # Another epic
+└── ...
+
+# Each file contains:
+{
+  "title": "User Authentication",
+  "description": "Full auth system with JWT",
+  "status": "in-progress",
+  "phases": [
+    {
+      "phase_id": "phase-1",
+      "phase_title": "Design",
+      "status": "completed",
+      "complexity": "S"
+    },
+    ...
+  ],
+  "metadata": {
+    "github_epic_number": 42,
+    "completion_percentage": 40
+  }
+}
+```
+
+### Syncing with GitHub
+
+The Epic System integrates with GitHub Issues:
+
+1. **Epic Issue** - Parent issue containing the epic overview
+2. **Phase Issues** - Child issues for each phase (optional)
+3. **Progress Updates** - Automatic comment updates as phases complete
+
+To sync manually:
+```bash
+/github-epic-menu
+# Select [S] Sync
+```
+
+### Working with Phases
+
+Each phase in an epic follows this lifecycle:
+
+```
+pending → in_progress → completed
+            ↓
+         blocked (if dependencies not met)
+```
+
+To update a phase:
+1. Open `/github-epic-menu`
+2. Select the epic
+3. Choose **[V] View** to see phases
+4. Mark phases as complete as you progress
+
+### Testing Integration
+
+Generate testing issues for completed phases:
+
+```bash
+/github-epic-menu
+# Select [T] Testing Issues
+# Choose which phases need testing
+```
+
+This creates GitHub issues with:
+- Test checklists
+- RALPH loop configuration
+- Web research hooks
+
+---
+
+## Using Vision Driver Bot (VDB)
+
+The Vision Driver Bot (VDB) is an autonomous development bot that monitors your Vision/Epic boards and drives development without human intervention.
+
+### What VDB Does
+
+1. **Scans** your epic boards for actionable items
+2. **Queues** tasks by priority
+3. **Executes** tasks using Claude AI
+4. **Reports** progress back to GitHub/boards
+
+### Prerequisites
+
+1. **CCASP v2.2.0+** installed
+2. **GitHub repository** with Actions enabled
+3. **GitHub Secrets** configured:
+   - `ANTHROPIC_API_KEY` - Your Claude API key
+   - `VDB_PAT` - GitHub Personal Access Token (for board access)
+
+### Initializing VDB
+
+```bash
+# From your project root
+ccasp vdb init
+
+# Or with force to overwrite existing config
+ccasp vdb init --force
+```
+
+This creates:
+
+```
+.claude/vdb/
+├── config.json        # VDB configuration
+├── logs/              # Execution logs
+└── summaries/         # Task summaries
+
+.github/workflows/
+└── vision-driver-bot.yml  # GitHub Actions workflow
+```
+
+### VDB Commands
+
+| Command | Description |
+|---------|-------------|
+| `ccasp vdb init` | Initialize VDB in project |
+| `ccasp vdb status` | Show current status and queue |
+| `ccasp vdb scan` | Scan boards for actionable items |
+| `ccasp vdb execute` | Execute next task from queue |
+| `ccasp vdb execute --dry-run` | Preview execution without running |
+| `ccasp vdb queue` | Display task queue |
+| `ccasp vdb stats [days]` | Show execution statistics |
+| `ccasp vdb clear` | Clear task queue |
+
+### VDB Configuration
+
+The main configuration file (`.claude/vdb/config.json`):
+
+```json
+{
+  "version": "1.0.0",
+  "bot": {
+    "name": "Vision Driver Bot",
+    "emoji": "🤖",
+    "commitAuthor": "Vision Driver Bot",
+    "commitEmail": "vdb@users.noreply.github.com"
+  },
+  "boards": {
+    "primary": "github",
+    "github": {
+      "enabled": true,
+      "owner": "your-username",
+      "repo": "your-repo",
+      "projectNumber": null,
+      "labels": {
+        "epic": "epic",
+        "phase": "phase-dev",
+        "vdbManaged": "vdb-managed"
+      }
+    },
+    "local": {
+      "enabled": true,
+      "epicDir": ".claude/github-epics"
+    }
+  },
+  "watcher": {
+    "pollInterval": "*/15 * * * *",
+    "scanFor": {
+      "readyPhases": true,
+      "staleTasks": true,
+      "blockedItems": true
+    },
+    "staleThresholdDays": 3
+  }
+}
+```
+
+### Setting Up GitHub Secrets
+
+1. Go to your repository **Settings → Secrets and variables → Actions**
+2. Add these secrets:
+
+| Secret | Value |
+|--------|-------|
+| `ANTHROPIC_API_KEY` | Your Claude API key from console.anthropic.com |
+| `VDB_PAT` | GitHub PAT with `repo` and `project` scopes |
+
+### How VDB Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     VDB Workflow (Every 15 min)                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. SCAN                                                        │
+│     └─ Check epics for ready phases                             │
+│     └─ Identify stale tasks (>3 days)                          │
+│     └─ Find unassigned work                                     │
+│                                                                  │
+│  2. QUEUE                                                        │
+│     └─ Sort by priority (critical → high → normal)              │
+│     └─ Limit to 5 items per scan                                │
+│                                                                  │
+│  3. EXECUTE                                                      │
+│     └─ Pick highest priority item                               │
+│     └─ Generate Claude prompt                                   │
+│     └─ Run autonomous Claude Code session                       │
+│     └─ Commit changes with VDB signature                        │
+│                                                                  │
+│  4. REPORT                                                       │
+│     └─ Update epic phase status                                 │
+│     └─ Post progress to GitHub issue                            │
+│     └─ Log execution details                                    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Monitoring VDB
+
+#### Check Status
+
+```bash
+ccasp vdb status
+```
+
+Output:
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                     Vision Driver Bot Status                    ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Repository:     your-username/your-repo                        ║
+║  Primary Board:  github                                         ║
+║  Queue:          3 queued, 0 executing, 3 total                 ║
+║  Last Scan:      2026-02-01 12:45:00                            ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+#### View Execution Stats
+
+```bash
+ccasp vdb stats 7
+```
+
+Output:
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                  VDB Statistics (Last 7 Days)                   ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Total Executions:    45                                        ║
+║  Successful:          42 (93.3%)                                ║
+║  Failed:              3                                         ║
+║  Avg Duration:        12.5 minutes                              ║
+║  Phases Completed:    8                                         ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+### Manual VDB Execution
+
+Run VDB manually without waiting for scheduled execution:
+
+```bash
+# Scan for work
+ccasp vdb scan
+
+# Execute next task
+ccasp vdb execute
+
+# Preview without executing
+ccasp vdb execute --dry-run
+```
+
+### VDB Best Practices
+
+1. **Start Small** - Test with a single epic before enabling for all projects
+2. **Monitor First Week** - Check logs and stats frequently initially
+3. **Set Clear Phase Boundaries** - Well-defined phases execute better
+4. **Use Labels** - Apply `vdb-managed` label to issues VDB should track
+5. **Review Commits** - VDB commits include `🤖` in author for easy identification
+
+### Disabling VDB
+
+To stop VDB from running:
+
+1. Delete `.github/workflows/vision-driver-bot.yml`
+2. Or disable the workflow in GitHub Actions UI
+3. Optionally remove `.claude/vdb/` directory
+
+---
+
+# Technical Reference
 
 ## Architecture Deep Dive
 
@@ -1209,6 +1774,7 @@ ccasp validate --path templates/commands/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2.3 | 2026-02-02 | **User Guides**: CCASP Wizard, Creating Projects, Vision/Epic System, VDB usage guides |
 | 2.2.2 | 2026-02-01 | CI fixes: tech-stack.json path corrections, simplified integration tests |
 | 2.2.1 | 2026-02-01 | CI fixes: run detect-stack after init, path corrections |
 | 2.2.0 | 2026-02-01 | **Vision Driver Bot (VDB)**, GitHub Epic System, /init-ccasp-new-project, modular commands |
@@ -1238,4 +1804,4 @@ ccasp validate --path templates/commands/
 
 ---
 
-*Documentation generated for Claude CLI Advanced Starter Pack v2.2.2*
+*Documentation generated for Claude CLI Advanced Starter Pack v2.2.3*
