@@ -1,0 +1,342 @@
+{
+  "claude-settings": {
+    "name": "claude-settings",
+    "capturedAt": "2026-02-01T22:36:45.525Z",
+    "exports": {
+      "DEFAULT_GITHUB_SETTINGS": {
+        "name": "DEFAULT_GITHUB_SETTINGS",
+        "type": "object",
+        "keys": [
+          "repository",
+          "project",
+          "defaults",
+          "workflow",
+          "pr"
+        ]
+      },
+      "PERMISSION_MODES": {
+        "name": "PERMISSION_MODES",
+        "type": "object",
+        "keys": [
+          "bypassPermissions",
+          "acceptEdits",
+          "ask"
+        ]
+      },
+      "configureGitHubSettings": {
+        "name": "configureGitHubSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "returnToMain"
+        ],
+        "length": 1
+      },
+      "configurePermissionMode": {
+        "name": "configurePermissionMode",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "configurePermissions": {
+        "name": "configurePermissions",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "configureTechStackSettings": {
+        "name": "configureTechStackSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "returnToMain"
+        ],
+        "length": 1
+      },
+      "createAgentOnlyLauncher": {
+        "name": "createAgentOnlyLauncher",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "default": {
+        "name": "default",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "generateAgentOnlyPolicy": {
+        "name": "generateAgentOnlyPolicy",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateAgentsJson": {
+        "name": "generateAgentsJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateBashLauncher": {
+        "name": "generateBashLauncher",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateGitHubSettingsUpdater": {
+        "name": "generateGitHubSettingsUpdater",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generatePowerShellLauncher": {
+        "name": "generatePowerShellLauncher",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateWindowsBatch": {
+        "name": "generateWindowsBatch",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "loadGitHubSettings": {
+        "name": "loadGitHubSettings",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "loadTechStack": {
+        "name": "loadTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "runClaudeSettings": {
+        "name": "runClaudeSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "saveGitHubSettings": {
+        "name": "saveGitHubSettings",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "settings"
+        ],
+        "length": 1
+      },
+      "saveTechStack": {
+        "name": "saveTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "viewCurrentSettings": {
+        "name": "viewCurrentSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "claude-audit": {
+    "name": "claude-audit",
+    "capturedAt": "2026-02-01T22:36:45.919Z",
+    "exports": {
+      "ENHANCEMENT_TEMPLATES": {
+        "name": "ENHANCEMENT_TEMPLATES",
+        "type": "object",
+        "keys": [
+          "quickStart",
+          "techStackTable",
+          "keyLocations",
+          "importPatterns",
+          "testingInstructions",
+          "deploymentSection",
+          "referenceLinks",
+          "architectureRules",
+          "criticalRules",
+          "fullTemplate"
+        ]
+      },
+      "runClaudeAudit": {
+        "name": "runClaudeAudit",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "runEnhancement": {
+        "name": "runEnhancement",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "cwd"
+        ],
+        "length": 1
+      },
+      "showClaudeAuditMenu": {
+        "name": "showClaudeAuditMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "menu": {
+    "name": "menu",
+    "capturedAt": "2026-02-01T22:36:45.920Z",
+    "exports": {
+      "showError": {
+        "name": "showError",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title",
+          "message"
+        ],
+        "length": 2
+      },
+      "showHeader": {
+        "name": "showHeader",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title"
+        ],
+        "length": 1
+      },
+      "showInfo": {
+        "name": "showInfo",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "message"
+        ],
+        "length": 1
+      },
+      "showMainMenu": {
+        "name": "showMainMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "showProjectSettingsMenu": {
+        "name": "showProjectSettingsMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "showSuccess": {
+        "name": "showSuccess",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title",
+          "details"
+        ],
+        "length": 1
+      },
+      "showWarning": {
+        "name": "showWarning",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "message"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "explore-mcp": {
+    "name": "explore-mcp",
+    "capturedAt": "2026-02-01T22:36:45.920Z",
+    "exports": {
+      "runExploreMcp": {
+        "name": "runExploreMcp",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "showExploreMcpHelp": {
+        "name": "showExploreMcpHelp",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "showExploreMcpMenu": {
+        "name": "showExploreMcpMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "detect-tech-stack": {
+    "name": "detect-tech-stack",
+    "capturedAt": "2026-02-01T22:36:45.921Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "detectTechStack",
+          "runDetection"
+        ]
+      },
+      "detectTechStack": {
+        "name": "detectTechStack",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "options"
+        ],
+        "length": 1
+      },
+      "runDetection": {
+        "name": "runDetection",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  }
+}

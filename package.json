@@ -1,6 +1,6 @@
 {
   "name": "claude-cli-advanced-starter-pack",
-  "version": "2.2.0",
+  "version": "2.2.2",
   "description": "Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
@@ -14,6 +14,10 @@
     "setup": "node bin/gtask.js setup",
     "postinstall": "node bin/postinstall.js",
     "test": "node --check bin/gtask.js && node --check bin/postinstall.js && echo 'Syntax OK'",
+    "test:golden": "node tests/golden-master/api-contracts.test.js",
+    "test:golden:capture": "node tests/golden-master/api-contracts.test.js capture",
+    "test:golden:verify": "node tests/golden-master/api-contracts.test.js verify",
+    "test:detect": "node tests/golden-master/detect-tech-stack.test.js",
     "lint": "eslint src/",
     "prepublishOnly": "npm run test"
   },
