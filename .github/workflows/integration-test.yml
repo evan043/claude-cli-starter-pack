@@ -51,10 +51,11 @@ jobs:
         env:
           CI: true
 
-      - name: Run ccasp init
+      - name: Run ccasp init and detect-stack
         run: |
           cd /tmp/test-react-app
           ccasp init --force --no-register
+          ccasp detect-stack
         env:
           CI: true
 
@@ -107,10 +108,11 @@ jobs:
         env:
           CI: true
 
-      - name: Run ccasp init
+      - name: Run ccasp init and detect-stack
         run: |
           cd /tmp/test-nextjs-app
           ccasp init --force --no-register
+          ccasp detect-stack
         env:
           CI: true
 
@@ -168,10 +170,11 @@ jobs:
           app.listen(3000);
           EOF
 
-      - name: Run ccasp init
+      - name: Run ccasp init and detect-stack
         run: |
           cd /tmp/test-express-api
           ccasp init --force --no-register
+          ccasp detect-stack
         env:
           CI: true
 
@@ -249,10 +252,11 @@ jobs:
           dependencies = ["fastapi", "uvicorn"]
           EOF
 
-      - name: Run ccasp init
+      - name: Run ccasp init and detect-stack
         run: |
           cd /tmp/test-fastapi
           ccasp init --force --no-register
+          ccasp detect-stack
         env:
           CI: true
 
