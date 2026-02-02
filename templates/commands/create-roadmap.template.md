@@ -72,6 +72,109 @@ Analyze the scope to identify natural phase boundaries:
 - What must be built first?
 - Are there parallel tracks possible?
 
+### Step 2.5: Configure Testing Integration (NEW - If Playwright Configured)
+
+**IMPORTANT:** Before creating phases, check if E2E testing is configured and ask the user about testing strategy.
+
+**Check tech-stack.json for testing configuration:**
+```javascript
+// Read testing config from tech-stack.json
+const testing = techStack.testing || {};
+const e2eFramework = testing.e2e?.framework;
+const playwrightConfigured = e2eFramework === 'playwright';
+```
+
+**If Playwright is configured**, display testing status and ask questions:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  🧪 Testing Configuration Detected                             ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  E2E Framework: Playwright                                    ║
+║  Test Environment: {{testing.environment.defaultMode}}        ║
+║  Ralph Loop: {{testing.ralphLoop.enabled ? "Enabled" : "Disabled"}}
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Ask user about testing approach for this roadmap:**
+
+```
+header: "Testing Strategy"
+question: "How should E2E tests be included in this roadmap?"
+options:
+  - label: "Per-phase testing (Recommended)"
+    description: "Add E2E verification task at the end of each phase"
+  - label: "Final testing only"
+    description: "Single E2E test phase at the end of roadmap"
+  - label: "No E2E testing"
+    description: "Skip automated E2E tests in this roadmap"
+```
+
+**Ask about testing environment:**
+
+```
+header: "Test Environment"
+question: "Where should E2E tests run during this roadmap?"
+options:
+  - label: "Localhost (Recommended for dev)"
+    description: "Test against local dev server with tunnel"
+  - label: "Production"
+    description: "Test against deployed app after each deploy"
+  - label: "Ask each time"
+    description: "Prompt for environment before each test run"
+```
+
+**Ask about Ralph Loop:**
+
+```
+header: "Ralph Loop"
+question: "Enable Ralph Loop for automated test-fix cycles?"
+options:
+  - label: "Yes - auto-fix failing tests (Recommended)"
+    description: "Automatically retry fixes until tests pass"
+  - label: "No - manual testing only"
+    description: "Run tests but don't auto-retry on failure"
+```
+
+**Store testing configuration for roadmap:**
+
+```json
+{
+  "testing_strategy": {
+    "mode": "per-phase",  // "per-phase" | "final-only" | "none"
+    "environment": "localhost",  // "localhost" | "production" | "ask"
+    "ralph_loop": {
+      "enabled": true,
+      "maxIterations": 10
+    },
+    "e2e_framework": "playwright"
+  }
+}
+```
+
+**If testing NOT configured**, show setup reminder:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  ℹ️  E2E Testing Not Configured                                ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Automated E2E testing is not set up for this project.        ║
+║                                                               ║
+║  To enable:                                                   ║
+║    /project-impl → Step 7 (Configure Testing)                 ║
+║  Or:                                                          ║
+║    /menu → Settings → Testing Configuration                   ║
+║                                                               ║
+║  Continuing without automated E2E testing...                  ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ### Step 3: Create Phase Structure
 
 For each phase, define:
@@ -179,7 +282,26 @@ For each phase:
 1. Create `phase-{n}.json` with tasks and validation gates
 2. Generate tasks from phase inputs and outputs
 3. Assign suggested agents based on domain
-4. Set up Ralph Loop testing config
+4. **Include E2E verification task** (if testing_strategy.mode === "per-phase")
+5. Set up Ralph Loop testing config based on roadmap testing_strategy
+
+**If per-phase testing enabled**, add these tasks to end of each phase:
+```json
+{
+  "id": "{{phase}}.E2E-1",
+  "description": "Run E2E verification tests for this phase",
+  "details": "Execute Playwright E2E tests against {{environment}}. Verify all changes from this phase work correctly. Use Ralph Loop if tests fail.",
+  "completed": false,
+  "testing": {
+    "type": "e2e",
+    "environment": "{{testing_strategy.environment}}",
+    "framework": "playwright",
+    "command": "npx playwright test"
+  }
+}
+```
+
+**Phase-Dev-Plan JSON structure:**
 
 ```json
 {
@@ -198,12 +320,36 @@ For each phase:
     "name": "{{phase_title}}",
     "status": "pending",
     "tasks": [
-      { "id": "1.1", "description": "Task 1", "completed": false }
+      { "id": "1.1", "description": "Task 1", "completed": false },
+      {
+        "id": "1.E2E",
+        "description": "Run E2E verification tests",
+        "completed": false,
+        "testing": {
+          "type": "e2e",
+          "environment": "localhost",
+          "framework": "playwright"
+        }
+      }
     ],
-    "success_criteria": ["deliverable 1"]
+    "success_criteria": ["deliverable 1", "E2E tests pass"]
   }],
   "testing_config": {
-    "ralph_loop": { "enabled": true, "testCommand": "npm test" }
+    "e2e": {
+      "framework": "playwright",
+      "environment": "{{testing_strategy.environment}}",
+      "selectors": {
+        "username": "{{testing.selectors.username}}",
+        "password": "{{testing.selectors.password}}",
+        "loginButton": "{{testing.selectors.loginButton}}",
+        "loginSuccess": "{{testing.selectors.loginSuccess}}"
+      }
+    },
+    "ralph_loop": {
+      "enabled": "{{testing_strategy.ralph_loop.enabled}}",
+      "maxIterations": "{{testing_strategy.ralph_loop.maxIterations}}",
+      "testCommand": "npx playwright test"
+    }
   }
 }
 ```

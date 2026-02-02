@@ -139,7 +139,20 @@
             "url": { "type": "string", "description": "Full tunnel URL when active" },
             "subdomain": { "type": "string" },
             "startCommand": { "type": "string" },
-            "adminPort": { "type": "integer", "description": "Tunnel admin API port (e.g., 4040 for ngrok)" }
+            "adminPort": { "type": "integer", "description": "Tunnel admin API port (e.g., 4040 for ngrok)" },
+            "autoStart": { "type": "boolean", "default": false, "description": "Auto-start tunnel when testing" },
+            "port": { "type": "integer", "default": 5173, "description": "Local port to tunnel" }
+          }
+        },
+        "backendProxy": {
+          "type": "object",
+          "description": "Backend proxy configuration for local development",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "target": { "type": "string", "description": "Backend URL to proxy to (e.g., https://backend.railway.app)" },
+            "pathPrefix": { "type": "string", "default": "/api", "description": "URL path prefix to proxy" },
+            "changeOrigin": { "type": "boolean", "default": true },
+            "secure": { "type": "boolean", "default": true }
           }
         },
         "container": {
@@ -202,7 +215,43 @@
           "type": "object",
           "properties": {
             "usernameEnvVar": { "type": "string", "default": "TEST_USER_USERNAME" },
-            "passwordEnvVar": { "type": "string", "default": "TEST_USER_PASSWORD" }
+            "passwordEnvVar": { "type": "string", "default": "TEST_USER_PASSWORD" },
+            "source": {
+              "type": "string",
+              "enum": ["env", "config", "prompt", "none"],
+              "default": "env",
+              "description": "How credentials are sourced"
+            },
+            "autoInject": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether credentials were auto-injected to .env"
+            }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "description": "Test environment configuration",
+          "properties": {
+            "defaultMode": {
+              "type": "string",
+              "enum": ["ask", "localhost", "production"],
+              "default": "ask",
+              "description": "Default test environment selection"
+            },
+            "baseUrl": {
+              "type": "string",
+              "description": "Base URL for testing"
+            }
+          }
+        },
+        "ralphLoop": {
+          "type": "object",
+          "description": "Ralph Loop (auto test-fix cycle) configuration",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "maxIterations": { "type": "integer", "default": 10 },
+            "completionPromise": { "type": "string", "default": "all tests passing" }
           }
         }
       }
