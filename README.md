@@ -75,6 +75,68 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 ---
 
+## See It In Action
+
+<details open>
+<summary><strong>📸 Screenshots Gallery</strong> (click to expand/collapse)</summary>
+
+<br>
+
+<table>
+<tr>
+<td align="center" width="50%">
+<strong>/menu — Interactive Navigation</strong><br><br>
+<a href="./assets/screenshots/menu-command.jpg">
+<img src="./assets/screenshots/menu-command.jpg" alt="CCASP Menu Command" width="400">
+</a>
+<br><em>Single-key navigation, mobile-optimized</em>
+</td>
+<td align="center" width="50%">
+<strong>Setup Wizard — Feature Selection</strong><br><br>
+<a href="./assets/screenshots/setup-wizard.jpg">
+<img src="./assets/screenshots/setup-wizard.jpg" alt="CCASP Setup Wizard" width="400">
+</a>
+<br><em>Choose commands, agents, hooks, skills</em>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<strong>GitHub Project Setup</strong><br><br>
+<a href="./assets/screenshots/github-setup.jpg">
+<img src="./assets/screenshots/github-setup.jpg" alt="GitHub Project Setup" width="400">
+</a>
+<br><em>One-click repo and Project Board sync</em>
+</td>
+<td align="center" width="50%">
+<strong>/claude-audit — Full Analysis Report</strong><br><br>
+<a href="./assets/screenshots/claude-audit-report.jpg">
+<img src="./assets/screenshots/claude-audit-report.jpg" alt="Claude Audit Report" width="400">
+</a>
+<br><em>92/100 score with detailed checks</em>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<strong>Audit Score Breakdown</strong><br><br>
+<a href="./assets/screenshots/audit-score.jpg">
+<img src="./assets/screenshots/audit-score.jpg" alt="Audit Score Breakdown" width="400">
+</a>
+<br><em>Line count, commands, structure validation</em>
+</td>
+<td align="center" width="50%">
+<strong>Actionable Recommendations</strong><br><br>
+<a href="./assets/screenshots/audit-recommendations.jpg">
+<img src="./assets/screenshots/audit-recommendations.jpg" alt="Audit Recommendations" width="400">
+</a>
+<br><em>Priority-ordered improvements</em>
+</td>
+</tr>
+</table>
+
+</details>
+
+---
+
 ## Highlight Features
 
 <table>
