@@ -61,11 +61,11 @@ jobs:
       - name: Verify detection
         run: |
           cd /tmp/test-react-app
-          cat .claude/tech-stack.json
+          cat .claude/config/tech-stack.json
 
           # Verify React was detected
           node -e "
-            const ts = require('./.claude/tech-stack.json');
+            const ts = require('./.claude/config/tech-stack.json');
             if (!ts.frontend?.framework?.includes('React')) {
               console.error('React not detected!');
               process.exit(1);
@@ -117,11 +117,11 @@ jobs:
       - name: Verify detection
         run: |
           cd /tmp/test-nextjs-app
-          cat .claude/tech-stack.json
+          cat .claude/config/tech-stack.json
 
           # Verify Next.js was detected
           node -e "
-            const ts = require('./.claude/tech-stack.json');
+            const ts = require('./.claude/config/tech-stack.json');
             if (!ts.frontend?.framework?.includes('Next')) {
               console.error('Next.js not detected!');
               process.exit(1);
@@ -178,11 +178,11 @@ jobs:
       - name: Verify detection
         run: |
           cd /tmp/test-express-api
-          cat .claude/tech-stack.json
+          cat .claude/config/tech-stack.json
 
           # Verify Express was detected
           node -e "
-            const ts = require('./.claude/tech-stack.json');
+            const ts = require('./.claude/config/tech-stack.json');
             if (!ts.backend?.framework?.includes('Express')) {
               console.error('Express not detected!');
               process.exit(1);
@@ -259,11 +259,11 @@ jobs:
       - name: Verify detection
         run: |
           cd /tmp/test-fastapi
-          cat .claude/tech-stack.json
+          cat .claude/config/tech-stack.json
 
           # Verify Python/FastAPI was detected
           node -e "
-            const ts = require('./.claude/tech-stack.json');
+            const ts = require('./.claude/config/tech-stack.json');
             if (ts.backend?.language !== 'Python') {
               console.error('Python not detected!');
               process.exit(1);
