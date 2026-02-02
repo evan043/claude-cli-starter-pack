@@ -20,6 +20,10 @@
 
 **A professional-grade CLI toolkit for Claude Code CLI — 100+ components including 40 hooks, 34 commands, 18 agent templates, 5 skills, MCP servers, refactoring system, mobile UI, and GitHub integration.**
 
+```bash
+npm install -g claude-cli-advanced-starter-pack
+```
+
 [Getting Started](#quick-start) • [📚 Wiki](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki) • [Documentation](./docs/WIKI.md) • [Contributing](#contributing)
 
 </div>
