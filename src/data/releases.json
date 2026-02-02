@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2.2.3",
+      "date": "2026-02-02",
+      "summary": "Feature: add Vision Driver Bot (VDB) for autonomous development",
+      "highlights": [
+        "add Vision Driver Bot (VDB) for autonomous development",
+        "Fixed: correct tech-stack.json path in CI integration test",
+        "Fixed: simplify integration tests to verify CCASP installation",
+        "Fixed: run detect-stack after init in integration tests"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.2",
       "date": "2026-02-01",
       "summary": "Bug fixes and improvements",
