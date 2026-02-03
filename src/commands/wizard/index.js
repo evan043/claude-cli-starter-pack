@@ -7,6 +7,7 @@
 
 // Re-export helpers
 export {
+  getTemplateCounts,
   createBackup,
   copyDirRecursive,
   findExistingBackups,
@@ -32,6 +33,7 @@ export {
 export {
   runRestore,
   runRemove,
+  runReinstall,
   runAutoInstall,
   runCustomInstall,
   showTemplates,

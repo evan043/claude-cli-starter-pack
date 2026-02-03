@@ -26,6 +26,7 @@ import {
   findExistingBackups,
   showRestartReminder,
   launchClaudeCLI,
+  getTemplateCounts,
 } from './helpers.js';
 
 import {
@@ -483,6 +484,95 @@ export async function runRemove() {
 }
 
 /**
+ * Run reinstall - backup, remove, and fresh install
+ * Useful for cleaning up corrupted installations or resetting to defaults
+ * @returns {boolean} True if reinstall succeeded
+ */
+export async function runReinstall() {
+  console.log(
+    boxen(
+      chalk.bold.cyan('CCASP Reinstall (Clean)\n\n') +
+        chalk.white('This will:\n') +
+        chalk.dim('  1. Create a full backup of your .claude folder\n') +
+        chalk.dim('  2. Remove all CCASP files\n') +
+        chalk.dim('  3. Run a fresh auto-install'),
+      {
+        padding: 1,
+        borderStyle: 'round',
+        borderColor: 'cyan',
+      }
+    )
+  );
+
+  // Confirm with user
+  const { confirmReinstall } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'confirmReinstall',
+      message: chalk.yellow('Proceed with reinstall? (backup will be created)'),
+      default: false,
+    },
+  ]);
+
+  if (!confirmReinstall) {
+    console.log(chalk.dim('\nReinstall cancelled. No changes made.\n'));
+    return false;
+  }
+
+  const claudeDir = join(process.cwd(), '.claude');
+  const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
+  const hasClaudeDir = existsSync(claudeDir);
+  const hasClaudeMd = existsSync(claudeMdPath);
+
+  // Step 1: Create backup
+  if (hasClaudeDir || hasClaudeMd) {
+    const spinner = ora('Creating backup...').start();
+
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const backupDir = join(process.cwd(), '.claude-backup', `reinstall-${timestamp}`);
+      mkdirSync(backupDir, { recursive: true });
+
+      if (hasClaudeDir) {
+        const backupClaudeDir = join(backupDir, '.claude');
+        copyDirRecursive(claudeDir, backupClaudeDir);
+      }
+
+      if (hasClaudeMd) {
+        copyFileSync(claudeMdPath, join(backupDir, 'CLAUDE.md'));
+      }
+
+      spinner.succeed(`Backed up to ${chalk.cyan(backupDir)}`);
+    } catch (error) {
+      spinner.fail('Backup failed');
+      console.error(chalk.red(error.message));
+      return false;
+    }
+
+    // Step 2: Remove existing files
+    const removeSpinner = ora('Removing existing files...').start();
+
+    try {
+      if (hasClaudeDir) {
+        rmSync(claudeDir, { recursive: true, force: true });
+      }
+      if (hasClaudeMd) {
+        rmSync(claudeMdPath, { force: true });
+      }
+      removeSpinner.succeed('Removed existing CCASP files');
+    } catch (error) {
+      removeSpinner.fail('Removal failed');
+      console.error(chalk.red(error.message));
+      return false;
+    }
+  }
+
+  // Step 3: Fresh install
+  console.log(chalk.cyan('\nRunning fresh install...\n'));
+  return await runAutoInstall();
+}
+
+/**
  * Run auto-install - installs ALL features without any prompts
  * This is the recommended path for most users
  * @returns {boolean} True if installation succeeded
@@ -542,15 +632,17 @@ export async function runAutoInstall() {
 
     spinner.succeed('CCASP fully installed!');
 
+    // Get dynamic template counts
+    const counts = getTemplateCounts();
+
     // Show summary
     console.log(
       boxen(
         chalk.bold.green('Auto-Install Complete\n\n') +
           chalk.white('All features installed:\n\n') +
-          `Commands:  ${chalk.cyan('23+')} ${chalk.dim('(GitHub, planning, testing, deploy, refactor...)')}\n` +
-          `Agents:    ${chalk.cyan('4')} ${chalk.dim('(example, creator templates)')}\n` +
-          `Hooks:     ${chalk.cyan('20')} ${chalk.dim('(token, happy, advanced suite...)')}\n` +
-          `Skills:    ${chalk.cyan('4')} ${chalk.dim('(agent-creator, hook-creator, rag-agent...)')}\n` +
+          `Commands:  ${chalk.cyan(counts.commands)} ${chalk.dim('(GitHub, planning, testing, deploy, refactor...)')}\n` +
+          `Hooks:     ${chalk.cyan(counts.hooks)} ${chalk.dim('(token, happy, advanced suite, orchestration...)')}\n` +
+          `Skills:    ${chalk.cyan(counts.skills)} ${chalk.dim('(agent-creator, hook-creator, rag-agent...)')}\n` +
           `Docs:      ${chalk.cyan('4')} ${chalk.dim('(INDEX, README, gotchas, constitution)')}\n\n` +
           chalk.bold('Next Steps:\n') +
           chalk.dim('1. Launch Claude Code CLI\n') +
@@ -559,6 +651,23 @@ export async function runAutoInstall() {
           padding: 1,
           borderStyle: 'round',
           borderColor: 'green',
+        }
+      )
+    );
+
+    // Show autonomous decision logger info
+    console.log(
+      boxen(
+        chalk.cyan.bold('Audit Hook Installed\n\n') +
+          chalk.white('Autonomous Decision Logger creates JSONL audit trail:\n') +
+          chalk.dim('  - Tracks Edit, Write, Bash, Task tool calls\n') +
+          chalk.dim('  - Log: .claude/logs/decisions.jsonl\n') +
+          chalk.dim('  - 10MB rotation, 30-day retention\n\n') +
+          chalk.dim('Configure in .claude/config/hooks-config.json'),
+        {
+          padding: 1,
+          borderStyle: 'round',
+          borderColor: 'cyan',
         }
       )
     );
@@ -1330,6 +1439,7 @@ export async function installHappyEngineering() {
 export default {
   runRestore,
   runRemove,
+  runReinstall,
   runAutoInstall,
   runCustomInstall,
   showTemplates,

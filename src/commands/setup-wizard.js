@@ -30,6 +30,7 @@ import {
   ADVANCED_OPTIONS,
   // Actions
   runRemove,
+  runReinstall,
   runAutoInstall,
   runCustomInstall,
   showTemplates,
@@ -72,7 +73,7 @@ async function showAdvancedOptions() {
         name: 'action',
         message: 'Advanced Options:',
         choices: ADVANCED_OPTIONS,
-        pageSize: 5,
+        pageSize: 4,
       },
     ]);
 
@@ -84,14 +85,6 @@ async function showAdvancedOptions() {
       case 'releases':
         await showPriorReleases();
         break;
-
-      case 'remove': {
-        const removed = await runRemove();
-        if (removed) {
-          inSubmenu = false;
-        }
-        break;
-      }
 
       case 'back':
         inSubmenu = false;
@@ -172,6 +165,12 @@ export async function runSetupWizard(options = {}) {
         running = false;
         break;
 
+      case 'reinstall':
+        // Reinstall: backup, remove, fresh install
+        await runReinstall();
+        running = false;
+        break;
+
       case 'github':
         await runGitHubSetup({});
         // Offer additional PM integrations (Jira, Linear, ClickUp)
@@ -183,6 +182,15 @@ export async function runSetupWizard(options = {}) {
         // Advanced options submenu
         await showAdvancedOptions();
         break;
+
+      case 'uninstall': {
+        // Uninstall: remove CCASP from project
+        const removed = await runRemove();
+        if (removed) {
+          running = false;
+        }
+        break;
+      }
 
       case 'happy':
         // Install Happy.engineering integration

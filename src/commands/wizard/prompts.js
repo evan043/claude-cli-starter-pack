@@ -25,17 +25,27 @@ export const SETUP_OPTIONS = [
     short: 'Custom Install',
   },
   {
-    name: `${chalk.cyan('3.')} GitHub Setup ${chalk.dim('- Connect project board only')}`,
+    name: `${chalk.cyan('3.')} Reinstall (Clean) ${chalk.dim('- Backup, remove, fresh install')}`,
+    value: 'reinstall',
+    short: 'Reinstall',
+  },
+  {
+    name: `${chalk.cyan('4.')} GitHub Setup ${chalk.dim('- Connect project board only')}`,
     value: 'github',
     short: 'GitHub',
   },
   {
-    name: `${chalk.dim('4.')} More Options ${chalk.dim('- Templates, releases, remove')}`,
+    name: `${chalk.dim('5.')} More Options ${chalk.dim('- Templates, releases')}`,
     value: 'more',
     short: 'More',
   },
   {
-    name: `${chalk.magenta('5.')} Install Happy.engineering ${chalk.dim('- Mobile app + hooks')}`,
+    name: `${chalk.red('6.')} Uninstall CCASP ${chalk.dim('- Remove from this project')}`,
+    value: 'uninstall',
+    short: 'Uninstall',
+  },
+  {
+    name: `${chalk.magenta('7.')} Install Happy.engineering ${chalk.dim('- Mobile app + hooks')}`,
     value: 'happy',
     short: 'Happy',
   },
@@ -60,11 +70,6 @@ export const ADVANCED_OPTIONS = [
     name: `${chalk.yellow('2.')} Prior Releases ${chalk.dim('- Add features from past versions')}`,
     value: 'releases',
     short: 'Releases',
-  },
-  {
-    name: `${chalk.yellow('3.')} Remove CCASP ${chalk.dim('- Uninstall from this project')}`,
-    value: 'remove',
-    short: 'Remove',
   },
   {
     name: `${chalk.dim('0.')} Back`,

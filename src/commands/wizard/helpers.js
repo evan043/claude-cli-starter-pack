@@ -9,6 +9,50 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { existsSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'fs';
 import { join, basename, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Get dynamic counts of available templates
+ * @returns {Object} Object with commands, hooks, and skills counts
+ */
+export function getTemplateCounts() {
+  const templatesDir = join(__dirname, '..', '..', '..', 'templates');
+  let commands = 0;
+  let hooks = 0;
+  let skills = 0;
+
+  try {
+    const commandsDir = join(templatesDir, 'commands');
+    if (existsSync(commandsDir)) {
+      commands = readdirSync(commandsDir).filter(f => f.endsWith('.template.md')).length;
+    }
+  } catch {
+    // Use default
+  }
+
+  try {
+    const hooksDir = join(templatesDir, 'hooks');
+    if (existsSync(hooksDir)) {
+      hooks = readdirSync(hooksDir).filter(f => f.endsWith('.template.js')).length;
+    }
+  } catch {
+    // Use default
+  }
+
+  try {
+    const skillsDir = join(templatesDir, 'skills');
+    if (existsSync(skillsDir)) {
+      skills = readdirSync(skillsDir).filter(f => !f.startsWith('.')).length;
+    }
+  } catch {
+    // Use default
+  }
+
+  return { commands, hooks, skills };
+}
 
 /**
  * Create backup of a file before overwriting
@@ -253,6 +297,7 @@ export async function launchClaudeCLI() {
 }
 
 export default {
+  getTemplateCounts,
   createBackup,
   copyDirRecursive,
   findExistingBackups,
