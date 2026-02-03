@@ -5,17 +5,20 @@ model: haiku
 
 # /deploy-full - Full-Stack Deployment
 
-Deploy both backend and frontend in parallel for fastest deployment.
+Deploy all services in parallel for fastest deployment.
 
 {{#if deployment.backend.platform}}
 {{#if deployment.frontend.platform}}
 
 ## Deployment Targets
 
-| Component | Platform | URL |
-|-----------|----------|-----|
-| Backend | {{deployment.backend.platform}} | {{deployment.backend.productionUrl}} |
-| Frontend | {{deployment.frontend.platform}} | {{deployment.frontend.productionUrl}} |
+| Component | Platform | Service | URL |
+|-----------|----------|---------|-----|
+| Backend (Primary) | {{deployment.backend.platform}} | {{deployment.backend.serviceName}} | {{deployment.backend.productionUrl}} |
+{{#if deployment.backendSecondary.platform}}
+| Backend (Secondary) | {{deployment.backendSecondary.platform}} | {{deployment.backendSecondary.serviceName}} | {{deployment.backendSecondary.productionUrl}} |
+{{/if}}
+| Frontend | {{deployment.frontend.platform}} | {{deployment.frontend.project}} | {{deployment.frontend.productionUrl}} |
 
 ## Pre-deployment Checklist
 
@@ -27,8 +30,8 @@ git status
 git branch --show-current
 
 # 3. Run tests
-{{#if testing.e2e.testCommand}}
-{{testing.e2e.testCommand}}
+{{#if testing.unit.testCommand}}
+{{testing.unit.testCommand}}
 {{else}}
 npm test
 {{/if}}
@@ -36,10 +39,10 @@ npm test
 
 ---
 
-## Backend Deployment
+## Backend Deployment (Primary: {{deployment.backend.serviceName}})
 
 {{#if (eq deployment.backend.platform "railway")}}
-### Railway
+### Railway ({{deployment.backend.serviceName}})
 
 Using Railway MCP server for deployment:
 
@@ -118,6 +121,98 @@ ssh {{deployment.backend.selfHostedConfig.sshUser}}@{{deployment.backend.selfHos
 
 ---
 
+{{#if deployment.backendSecondary.platform}}
+## Backend Deployment (Secondary: {{deployment.backendSecondary.serviceName}})
+
+{{#if (eq deployment.backendSecondary.platform "railway")}}
+### Railway ({{deployment.backendSecondary.serviceName}})
+
+Using Railway MCP server for deployment:
+
+```javascript
+// Trigger deployment via Railway MCP
+mcp__railway-mcp-server__deployment_trigger({
+  projectId: "{{deployment.backendSecondary.projectId}}",
+  serviceId: "{{deployment.backendSecondary.serviceId}}",
+  environmentId: "{{deployment.backendSecondary.environmentId}}"
+})
+```
+
+Monitor deployment:
+```javascript
+mcp__railway-mcp-server__deployment_logs({
+  projectId: "{{deployment.backendSecondary.projectId}}",
+  serviceId: "{{deployment.backendSecondary.serviceId}}"
+})
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "heroku")}}
+### Heroku (Secondary)
+
+```bash
+# Push to Heroku secondary app
+git push heroku-secondary {{versionControl.defaultBranch}}
+
+# Check logs
+heroku logs --tail --app {{deployment.backendSecondary.appName}}
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "render")}}
+### Render (Secondary)
+
+```bash
+curl -X POST "https://api.render.com/v1/services/{{deployment.backendSecondary.serviceId}}/deploys" \
+  -H "Authorization: Bearer $RENDER_API_KEY"
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "fly")}}
+### Fly.io (Secondary)
+
+```bash
+fly deploy --config {{deployment.backendSecondary.configFile}}
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "vercel")}}
+### Vercel (Secondary)
+
+```bash
+vercel --prod --cwd {{deployment.backendSecondary.directory}}
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "self-hosted")}}
+### Self-Hosted (Secondary)
+
+```bash
+ssh {{deployment.backendSecondary.selfHostedConfig.sshUser}}@{{deployment.backendSecondary.selfHostedConfig.sshHost}} -p {{deployment.backendSecondary.selfHostedConfig.sshPort}} \
+  'cd {{deployment.backendSecondary.selfHostedConfig.appPath}} && git pull && {{deployment.backendSecondary.selfHostedConfig.deployScript}}'
+```
+{{/if}}
+
+{{#if (eq deployment.backendSecondary.platform "docker")}}
+### Docker (Secondary)
+
+```bash
+# Build and push image
+docker build -t {{deployment.backendSecondary.imageName}}:latest {{deployment.backendSecondary.directory}}
+docker push {{deployment.backendSecondary.imageName}}:latest
+
+# Deploy (platform-specific)
+{{#if deployment.backendSecondary.dockerCompose}}
+docker-compose -f {{deployment.backendSecondary.dockerCompose}} up -d
+{{/if}}
+```
+{{/if}}
+
+---
+{{/if}}
+
+---
+
 ## Frontend Deployment
 
 {{#if (eq deployment.frontend.platform "cloudflare")}}
@@ -125,11 +220,11 @@ ssh {{deployment.backend.selfHostedConfig.sshUser}}@{{deployment.backend.selfHos
 
 ```bash
 # Clean and build
-rm -rf {{frontend.distDir}}
-{{frontend.buildCommand}}
+rm -rf {{deployment.frontend.outputDir}}
+{{deployment.frontend.buildCommand}}
 
 # Deploy
-npx wrangler pages deploy {{frontend.distDir}} --project-name={{deployment.frontend.projectName}}
+npx wrangler pages deploy {{deployment.frontend.outputDir}} --project-name={{deployment.frontend.project}}
 ```
 {{/if}}
 
@@ -146,10 +241,10 @@ vercel --prod
 
 ```bash
 # Build
-{{frontend.buildCommand}}
+{{deployment.frontend.buildCommand}}
 
 # Deploy
-netlify deploy --prod --dir={{frontend.distDir}}
+netlify deploy --prod --dir={{deployment.frontend.outputDir}}
 ```
 {{/if}}
 
@@ -158,7 +253,7 @@ netlify deploy --prod --dir={{frontend.distDir}}
 
 ```bash
 # Build and deploy (assumes gh-pages package)
-{{frontend.buildCommand}}
+{{deployment.frontend.buildCommand}}
 npm run deploy
 ```
 {{/if}}
@@ -176,11 +271,19 @@ git push origin {{versionControl.defaultBranch}}
 
 ## Verification
 
-### Backend Health Check
+### Backend Health Check (Primary)
 
 ```bash
-curl {{deployment.backend.productionUrl}}{{backend.healthEndpoint}}
+curl {{deployment.backend.productionUrl}}{{deployment.backend.healthEndpoint}}
 ```
+
+{{#if deployment.backendSecondary.platform}}
+### Backend Health Check (Secondary)
+
+```bash
+curl {{deployment.backendSecondary.productionUrl}}{{deployment.backendSecondary.healthEndpoint}}
+```
+{{/if}}
 
 ### Frontend Verification
 
@@ -192,18 +295,14 @@ curl {{deployment.backend.productionUrl}}{{backend.healthEndpoint}}
 ### E2E Smoke Test (Optional)
 
 ```bash
-{{#if testing.e2e.testCommand}}
-{{testing.e2e.testCommand}} --grep "smoke"
-{{else}}
 npx playwright test --grep "smoke"
-{{/if}}
 ```
 
 ---
 
 ## Rollback Procedures
 
-### Backend Rollback
+### Backend Rollback (Primary)
 
 {{#if (eq deployment.backend.platform "railway")}}
 ```javascript
@@ -228,13 +327,65 @@ git push origin {{versionControl.defaultBranch}}
 ```
 {{/if}}
 
+{{#if deployment.backendSecondary.platform}}
+### Backend Rollback (Secondary)
+
+{{#if (eq deployment.backendSecondary.platform "railway")}}
+```javascript
+mcp__railway-mcp-server__deployment_list({
+  projectId: "{{deployment.backendSecondary.projectId}}",
+  serviceId: "{{deployment.backendSecondary.serviceId}}"
+})
+
+mcp__railway-mcp-server__deployment_rollback({
+  projectId: "{{deployment.backendSecondary.projectId}}",
+  serviceId: "{{deployment.backendSecondary.serviceId}}",
+  deploymentId: "<previous-deployment-id>"
+})
+```
+{{else}}
+```bash
+git revert HEAD
+git push origin {{versionControl.defaultBranch}}
+```
+{{/if}}
+{{/if}}
+
 ### Frontend Rollback
 
 ```bash
 # Revert to previous build
 git revert HEAD
-{{frontend.buildCommand}}
-{{deployment.frontend.deployCommand}}
+{{deployment.frontend.buildCommand}}
+npx wrangler pages deploy {{deployment.frontend.outputDir}} --project-name={{deployment.frontend.project}}
+```
+
+---
+
+## Parallel Deployment Command
+
+To deploy all services in parallel, use:
+
+```bash
+# Deploy all backends and frontend simultaneously
+# Backend Primary (Railway MCP)
+# Backend Secondary (if configured)
+# Frontend (Cloudflare)
+```
+
+**Recommended approach:** Use the Task tool to spawn parallel deployment agents:
+
+```javascript
+// Deploy backend primary
+Task({ subagent_type: "l2-deployment-specialist", prompt: "Deploy backend primary to Railway" })
+
+{{#if deployment.backendSecondary.platform}}
+// Deploy backend secondary (in parallel)
+Task({ subagent_type: "l2-deployment-specialist", prompt: "Deploy backend secondary" })
+{{/if}}
+
+// Deploy frontend (in parallel)
+Task({ subagent_type: "l2-deployment-specialist", prompt: "Deploy frontend to Cloudflare" })
 ```
 
 {{else}}
@@ -243,7 +394,7 @@ git revert HEAD
 
 Frontend deployment platform is not configured.
 
-Run `/menu` → Project Settings → Deployment Platforms to configure.
+Run `/ccasp-setup` → Deployment Configuration to configure.
 
 {{/if}}
 {{else}}
@@ -252,10 +403,10 @@ Run `/menu` → Project Settings → Deployment Platforms to configure.
 
 Backend deployment platform is not configured.
 
-Run `/menu` → Project Settings → Deployment Platforms to configure.
+Run `/ccasp-setup` → Deployment Configuration to configure.
 
 {{/if}}
 
 ---
 
-*Generated from tech-stack.json template*
+*Generated from tech-stack.json - CCASP v2.0*
