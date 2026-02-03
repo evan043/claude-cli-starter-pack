@@ -382,58 +382,6 @@ npx claude-cli-advanced-starter-pack init
 
 [Full v2.2.0 Release Notes →](https://github.com/evan043/claude-cli-advanced-starter-pack/releases/tag/v2.2.0)
 
-### v2.0.0
-**Neovim Plugin** — Dec 2024
-- **nvim-ccasp**: Multi-agent grid, control panel, Telescope integration
-- **Dashboard**: Token usage, installed components overview
-- **Statusline**: lualine components for agent status
-
-[Full v2.0.0 Release Notes →](https://github.com/evan043/claude-cli-advanced-starter-pack/releases/tag/v2.0.0)
-
-### v1.8.30
-**Happy.engineering Mobile UI** — Dec 2024
-- Auto-detection via environment variables
-- 40-char max width, card-based layouts
-- Word-aware wrapping, box-drawing characters
-
-### v1.8.29
-**PR Merge Workflow** — Dec 2024
-- 9-phase interactive merge with safety checkpoints
-- Automatic stash, rollback, blocker resolution
-- Contributor messaging before merge
-
-### v1.8.28
-**Smart Update System** — Dec 2024
-- Protects customizations during updates
-- Auto-repair outdated hooks
-- `/update-smart` command
-
-### v1.8.27
-**Roadmap Orchestration** — Nov 2024
-- Manual builder and GitHub import modes
-- Dependency graphs with cycle detection
-- Phase-dev integration
-
-### v1.8.24
-**Agent Orchestration System** — Nov 2024
-- L1 Orchestrator → L2 Specialist → L3 Worker hierarchy
-- 11 new enforcement hooks
-- PROGRESS.json auto-updates
-- GitHub issue sync
-
-### v1.8.19
-**Refactoring System** — Oct 2024
-- `/ralph`: Continuous test-fix loops
-- `/golden-master`: Characterization tests
-- `/refactor-workflow`: Guided 8-step refactoring
-- 4 new hooks: ralph-loop-enforcer, refactor-verify, etc.
-
-### v1.8.16
-**Auto-Generated Agents** — Oct 2024
-- 18 framework-specific agent templates
-- Stack detection → agent generation
-- Delegation hooks: task-classifier, agent-delegator
-
 [View All Releases →](https://github.com/evan043/claude-cli-advanced-starter-pack/releases)
 
 ---
