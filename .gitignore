@@ -51,3 +51,4 @@ build/
 
 # Temp files
 npm-output.txt
+.claude-backup/
