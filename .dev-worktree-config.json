@@ -1,0 +1,12 @@
+{
+  "worktrees": [
+    {
+      "name": "ccasp-dev",
+      "path": "F:\\1 - Benefits-Outreach-360 (Web)\\tools\\ccasp-dev",
+      "branch": "ccasp-dev",
+      "createdAt": "2026-02-02T23:17:35.130Z",
+      "privateRemote": false
+    }
+  ],
+  "activeWorktree": "ccasp-dev"
+}

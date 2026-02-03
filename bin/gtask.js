@@ -409,6 +409,7 @@ program
   .option('--cleanup [name]', 'Remove worktree and restore npm version')
   .option('--private', 'Push worktree branch to private remote')
   .option('--force', 'Skip confirmation prompts')
+  .option('--scan', 'Scan connected projects for customizations')
   .action(async (options) => {
     await runDevDeploy(options);
   });
