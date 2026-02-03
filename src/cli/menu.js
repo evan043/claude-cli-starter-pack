@@ -43,7 +43,11 @@ import {
   checkPendingRestore,
   getDeployCommand,
   launchAgentOnlySession,
+  getDevModeSyncStatus,
+  formatDevModeSyncBanner,
+  executeWorktreeSync,
 } from './menu/index.js';
+import { isDevMode } from '../utils/dev-mode-state.js';
 
 // Re-export display functions for backwards compatibility
 export { showHeader, showSuccess, showError, showWarning, showInfo };
@@ -1164,22 +1168,49 @@ export async function showMainMenu() {
   }
   console.log(chalk.dim(`  v${getVersion()}`));
 
-  // Check for updates (uses 1-hour cache)
-  try {
-    const updateCheck = await performVersionCheck(process.cwd(), false);
-    if (updateCheck.updateAvailable && updateCheck.shouldNotify) {
-      const banner = formatUpdateBanner(updateCheck);
-      if (banner) {
-        console.log(chalk.yellow(banner));
+  // Dev mode: Show worktree sync banner instead of npm update banner
+  const inDevMode = isDevMode();
+  if (inDevMode) {
+    try {
+      const syncStatus = await getDevModeSyncStatus();
+      const syncBanner = formatDevModeSyncBanner(syncStatus);
+      if (syncBanner) {
+        console.log(syncBanner);
       }
+    } catch {
+      // Silently ignore sync status failures
     }
-  } catch {
-    // Silently ignore update check failures
+  } else {
+    // Normal mode: Check for npm updates (uses 1-hour cache)
+    try {
+      const updateCheck = await performVersionCheck(process.cwd(), false);
+      if (updateCheck.updateAvailable && updateCheck.shouldNotify) {
+        const banner = formatUpdateBanner(updateCheck);
+        if (banner) {
+          console.log(chalk.yellow(banner));
+        }
+      }
+    } catch {
+      // Silently ignore update check failures
+    }
   }
 
   console.log('');
 
-  const choices = [
+  // Build choices dynamically - add dev mode sync option if active
+  const choices = [];
+
+  // Add worktree sync option at top when in dev mode
+  if (inDevMode) {
+    choices.push({
+      name: `${chalk.yellow('W)')} ${chalk.bold('Sync from Worktree')}     Update project from dev worktree`,
+      value: 'worktree-sync',
+      short: 'Worktree Sync',
+    });
+    choices.push(new inquirer.Separator());
+  }
+
+  choices.push(
     {
       name: `${chalk.green('1)')} ${chalk.bold('Create New Task')}        Create issue with codebase analysis`,
       value: 'create',
@@ -1284,8 +1315,8 @@ export async function showMainMenu() {
       name: `${chalk.dim('Q)')} ${chalk.bold('Exit')}`,
       value: 'exit',
       short: 'Exit',
-    },
-  ];
+    }
+  );
 
   const { action } = await inquirer.prompt([
     {
@@ -1300,6 +1331,11 @@ export async function showMainMenu() {
   console.log('');
 
   switch (action) {
+    case 'worktree-sync':
+      await handleWorktreeSync();
+      await returnToMenu();
+      break;
+
     case 'create':
       if (!configured) {
         console.log(
@@ -1480,6 +1516,77 @@ export async function showMainMenu() {
       console.log(chalk.dim('Goodbye!'));
       process.exit(0);
   }
+}
+
+/**
+ * Handle worktree sync from menu
+ */
+async function handleWorktreeSync() {
+  console.log('');
+  console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════════════╗'));
+  console.log(chalk.cyan('║') + chalk.bold('                       WORKTREE SYNC                                          ') + chalk.cyan('║'));
+  console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
+  console.log('');
+
+  // First, show preview (dry run)
+  console.log(chalk.dim('  Analyzing sync actions...\n'));
+
+  const previewResult = await executeWorktreeSync({ dryRun: true });
+
+  if (previewResult.error) {
+    console.log(chalk.red(`  ✗ ${previewResult.error}\n`));
+    return;
+  }
+
+  console.log(previewResult.formatted);
+  console.log('');
+
+  // Count files that would be updated
+  const { results } = previewResult;
+  const willUpdate = results.executed.length;
+  const willSkip = results.skipped.length;
+
+  if (willUpdate === 0) {
+    console.log(chalk.green('  ✓ Project is already up to date with worktree.\n'));
+    return;
+  }
+
+  // Ask for confirmation
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'Proceed with sync?',
+      choices: [
+        { name: `Yes, sync ${willUpdate} file(s)`, value: 'sync' },
+        { name: 'Force sync (overwrite customizations)', value: 'force' },
+        { name: 'Cancel', value: 'cancel' }
+      ]
+    }
+  ]);
+
+  if (action === 'cancel') {
+    console.log(chalk.dim('\n  Sync cancelled.\n'));
+    return;
+  }
+
+  // Execute sync
+  console.log('');
+  console.log(chalk.dim('  Syncing files...\n'));
+
+  const syncResult = await executeWorktreeSync({
+    dryRun: false,
+    force: action === 'force'
+  });
+
+  if (syncResult.error) {
+    console.log(chalk.red(`  ✗ ${syncResult.error}\n`));
+    return;
+  }
+
+  console.log(syncResult.formatted);
+  console.log('');
+  console.log(chalk.green('  ✓ Sync complete. Restart Claude Code CLI to see command changes.\n'));
 }
 
 /**

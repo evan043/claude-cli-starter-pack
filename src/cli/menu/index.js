@@ -28,6 +28,9 @@ export {
   showDevModeIndicator,
   checkPendingRestore,
   getDeployCommand,
+  getDevModeSyncStatus,
+  formatDevModeSyncBanner,
+  executeWorktreeSync,
 } from './helpers.js';
 
 // Agent launch logic

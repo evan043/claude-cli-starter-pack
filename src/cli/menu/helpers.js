@@ -10,6 +10,7 @@ import inquirer from 'inquirer';
 import { loadTechStack, saveTechStack } from '../../utils.js';
 import { isDevMode, getDevModeInfo, hasPendingRestore, loadDevState, clearPendingProjects } from '../../utils/dev-mode-state.js';
 import { restoreProject, getLatestBackup } from '../../utils/project-backup.js';
+import { loadRegistry } from '../../utils/global-registry.js';
 import { DEV_MODE_BANNER } from './constants.js';
 
 /**
@@ -186,4 +187,122 @@ export function getDeployCommand(type, answers) {
     }
   }
   return null;
+}
+
+/**
+ * Get worktree sync status for the menu banner
+ * @returns {Object|null} Sync status or null if not in dev mode
+ */
+export async function getDevModeSyncStatus() {
+  if (!isDevMode()) {
+    return null;
+  }
+
+  const devInfo = getDevModeInfo();
+  if (!devInfo || !devInfo.worktreePath) {
+    return null;
+  }
+
+  const registry = loadRegistry();
+  if (!registry.projects || registry.projects.length === 0) {
+    return null;
+  }
+
+  try {
+    // Dynamically import to avoid circular dependency
+    const { getAllProjectsSyncStatus } = await import('../../utils/smart-sync.js');
+    const statuses = await getAllProjectsSyncStatus(devInfo.worktreePath, registry.projects);
+
+    // Aggregate status across all projects
+    let totalCanUpdate = 0;
+    let totalWillPreserve = 0;
+    let totalNew = 0;
+
+    for (const status of statuses) {
+      totalCanUpdate += status.canUpdate || 0;
+      totalWillPreserve += status.willPreserve || 0;
+      if (status.hasNew) totalNew++;
+    }
+
+    return {
+      projectCount: statuses.length,
+      canUpdate: totalCanUpdate,
+      willPreserve: totalWillPreserve,
+      hasNew: totalNew > 0,
+      worktreePath: devInfo.worktreePath
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Format dev mode sync banner for menu display
+ * @param {Object} syncStatus - Status from getDevModeSyncStatus
+ * @returns {string|null} Formatted banner or null
+ */
+export function formatDevModeSyncBanner(syncStatus) {
+  if (!syncStatus) {
+    return null;
+  }
+
+  const lines = [];
+  lines.push('');
+  lines.push(chalk.cyan('┌────────────────────────────────────────────────────────────┐'));
+  lines.push(chalk.cyan('│') + chalk.bold.yellow(' 📦 Worktree Sync Available') + ' '.repeat(33) + chalk.cyan('│'));
+
+  if (syncStatus.canUpdate > 0) {
+    const updateLine = ` ${syncStatus.canUpdate} files can be updated`;
+    const preserveLine = syncStatus.willPreserve > 0
+      ? `, ${syncStatus.willPreserve} customizations preserved`
+      : '';
+    const fullLine = updateLine + preserveLine;
+    lines.push(chalk.cyan('│') + chalk.dim(fullLine.padEnd(60)) + chalk.cyan('│'));
+  }
+
+  lines.push(chalk.cyan('│') + chalk.dim(' Run /dev-mode-deploy-to-projects or press [W] to sync'.padEnd(60)) + chalk.cyan('│'));
+  lines.push(chalk.cyan('└────────────────────────────────────────────────────────────┘'));
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
+ * Execute worktree sync for current project
+ * @param {Object} options - Sync options
+ * @param {boolean} options.dryRun - Preview only
+ * @param {boolean} options.force - Force overwrite
+ * @returns {Object} Sync results
+ */
+export async function executeWorktreeSync(options = {}) {
+  if (!isDevMode()) {
+    return { error: 'Dev mode is not active' };
+  }
+
+  const devInfo = getDevModeInfo();
+  if (!devInfo || !devInfo.worktreePath) {
+    return { error: 'Could not determine worktree path' };
+  }
+
+  const projectPath = process.cwd();
+  if (!existsSync(join(projectPath, '.claude'))) {
+    return { error: 'No .claude directory found in current project' };
+  }
+
+  try {
+    const { executeSyncActions, formatSyncResults } = await import('../../utils/smart-sync.js');
+    const results = await executeSyncActions(projectPath, devInfo.worktreePath, {
+      dryRun: options.dryRun || false,
+      force: options.force || false,
+      preserveCustomizations: !options.force
+    });
+
+    return {
+      success: true,
+      results,
+      formatted: formatSyncResults(results)
+    };
+  } catch (error) {
+    return { error: error.message };
+  }
 }

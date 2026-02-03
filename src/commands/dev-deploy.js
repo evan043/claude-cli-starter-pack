@@ -34,6 +34,17 @@ import {
   getDevModeInfo
 } from '../utils/dev-mode-state.js';
 import { backupProject, getLatestBackup, restoreProject } from '../utils/project-backup.js';
+import {
+  compareProjectToWorktree,
+  compareAllProjects,
+  formatComparisonResult,
+  getSummaryStats
+} from '../utils/project-diff.js';
+import {
+  executeSyncActions,
+  formatSyncResults,
+  getWorktreeSyncStatus
+} from '../utils/smart-sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -284,17 +295,23 @@ async function deployWorktreeLocally(worktreePath) {
     }
   }
 
-  // Step 4: Update registered projects
+  // Step 4: Update registered projects using smart sync
   console.log(chalk.dim('  [4/4] Updating registered projects...'));
-  await updateRegisteredProjects(worktreePath);
+  await updateRegisteredProjects(worktreePath, { force: false });
 
   return true;
 }
 
 /**
  * Update all registered projects with the local version
+ * Uses smart sync by default (preserves user customizations)
+ * @param {string} worktreePath - Path to CCASP worktree
+ * @param {Object} options - Update options
+ * @param {boolean} options.force - Force overwrite (ignore customizations)
+ * @param {boolean} options.legacyMode - Use legacy init-based update
  */
-async function updateRegisteredProjects(worktreePath) {
+async function updateRegisteredProjects(worktreePath, options = {}) {
+  const { force = false, legacyMode = false } = options;
   const registry = loadRegistry();
 
   if (registry.projects.length === 0) {
@@ -304,10 +321,16 @@ async function updateRegisteredProjects(worktreePath) {
 
   console.log(chalk.dim(`       Found ${registry.projects.length} registered project(s)`));
 
+  // Use smart sync by default
+  if (!legacyMode) {
+    console.log(chalk.dim(`       Using smart sync (${force ? 'force mode' : 'preserving customizations'})`));
+  }
+
   let updated = 0;
   let skipped = 0;
   let failed = 0;
   let backedUp = 0;
+  let preserved = 0;
 
   for (const project of registry.projects) {
     if (!existsSync(project.path)) {
@@ -337,26 +360,62 @@ async function updateRegisteredProjects(worktreePath) {
         console.log(chalk.green(`       ✓ Backed up (${backup.fileCount} files)`));
       }
 
-      // Run ccasp init in dev mode to refresh commands
-      const originalCwd = process.cwd();
-      process.chdir(project.path);
+      if (legacyMode) {
+        // Legacy mode: Run ccasp init (overwrites everything)
+        const originalCwd = process.cwd();
+        process.chdir(project.path);
 
-      // Import and run init with dev flag
-      const { runInit } = await import('./init.js');
-      await runInit({ dev: true, force: true, skipPrompts: true, noRegister: true });
+        const { runInit } = await import('./init.js');
+        await runInit({ dev: true, force: true, skipPrompts: true, noRegister: true });
 
-      process.chdir(originalCwd);
-      updated++;
+        process.chdir(originalCwd);
+        updated++;
+      } else {
+        // Smart sync mode: Preserve user customizations
+        const syncResult = await executeSyncActions(
+          project.path,
+          worktreePath,
+          {
+            dryRun: false,
+            force: force,
+            preserveCustomizations: !force
+          }
+        );
+
+        const syncedCount = syncResult.executed.length;
+        const preservedCount = syncResult.skipped.filter(
+          f => f.category === 'customized'
+        ).length;
+
+        if (syncedCount > 0) {
+          console.log(chalk.green(`       ✓ Synced ${project.name}: ${syncedCount} file(s)`));
+          updated++;
+        }
+
+        if (preservedCount > 0) {
+          console.log(chalk.yellow(`         Preserved ${preservedCount} customization(s)`));
+          preserved += preservedCount;
+        }
+
+        if (syncResult.errors.length > 0) {
+          console.log(chalk.red(`         ${syncResult.errors.length} error(s)`));
+        }
+      }
     } catch (err) {
+      console.log(chalk.red(`       ✗ Failed ${project.name}: ${err.message}`));
       failed++;
     }
   }
 
+  console.log('');
   if (backedUp > 0) {
     console.log(chalk.green(`       ✓ Backed up ${backedUp} project(s)`));
   }
   if (updated > 0) {
     console.log(chalk.green(`       ✓ Updated ${updated} project(s)`));
+  }
+  if (preserved > 0) {
+    console.log(chalk.yellow(`       ✓ Preserved ${preserved} customization(s) across projects`));
   }
   if (skipped > 0) {
     console.log(chalk.dim(`       Skipped ${skipped} project(s) (not found)`));
@@ -459,6 +518,102 @@ function showWorktreeList() {
 }
 
 /**
+ * Scan connected projects for customizations
+ */
+async function scanProjectCustomizations() {
+  console.log(chalk.cyan('\n  ╔══════════════════════════════════════════════════════════════╗'));
+  console.log(chalk.cyan('  ║') + chalk.bold.white('           Project Customization Scanner                      ') + chalk.cyan('║'));
+  console.log(chalk.cyan('  ╚══════════════════════════════════════════════════════════════╝\n'));
+
+  // Check if dev mode is active
+  if (!isDevMode()) {
+    console.log(chalk.yellow('  ⚠️  Dev mode is not active.\n'));
+    console.log(chalk.dim('  This command scans connected projects for customizations'));
+    console.log(chalk.dim('  that could be imported back into CCASP.\n'));
+    console.log(chalk.dim('  Activate dev mode first:'));
+    console.log(chalk.cyan('    ccasp dev-deploy --create <name>'));
+    console.log(chalk.cyan('    ccasp dev-deploy\n'));
+    return;
+  }
+
+  const devInfo = getDevModeInfo();
+  if (!devInfo || !devInfo.worktreePath) {
+    console.log(chalk.red('  ✗ Could not determine worktree path'));
+    return;
+  }
+
+  console.log(chalk.dim(`  Worktree: ${devInfo.worktreePath}`));
+  console.log(chalk.dim(`  Scanning ${devInfo.projectCount} connected project(s)...\n`));
+
+  try {
+    const comparisons = await compareAllProjects(devInfo.worktreePath);
+
+    if (comparisons.length === 0) {
+      console.log(chalk.yellow('  No connected projects found with .claude/ directories.\n'));
+      return;
+    }
+
+    const stats = getSummaryStats(comparisons);
+
+    // Summary header
+    console.log(chalk.bold('  ──────────────────────────────────────'));
+    console.log(chalk.bold('  Summary'));
+    console.log(chalk.bold('  ──────────────────────────────────────\n'));
+
+    console.log(`  Projects scanned: ${chalk.cyan(stats.projectCount)}`);
+    console.log(`  Projects with customizations: ${chalk.cyan(stats.projectsWithCustomizations)}`);
+    console.log(`  Custom files (not in CCASP): ${chalk.green(stats.totalCustomFiles)}`);
+    console.log(`  Modified files (differ from CCASP): ${chalk.yellow(stats.totalModifiedFiles)}`);
+    console.log('');
+
+    // Show details for each project with customizations
+    for (const comparison of comparisons) {
+      if (comparison.customFiles.length === 0 && comparison.modifiedFiles.length === 0) {
+        continue;
+      }
+
+      console.log(chalk.bold(`  ──────────────────────────────────────`));
+      console.log(chalk.bold(`  ${comparison.projectName}`));
+      console.log(chalk.bold(`  ──────────────────────────────────────\n`));
+
+      if (comparison.customFiles.length > 0) {
+        console.log(chalk.green('  Custom Files (not in CCASP):'));
+        for (const file of comparison.customFiles) {
+          console.log(chalk.dim(`    • ${file.relativePath}`));
+          console.log(chalk.dim(`      ${file.description}`));
+        }
+        console.log('');
+      }
+
+      if (comparison.modifiedFiles.length > 0) {
+        console.log(chalk.yellow('  Modified Files (differ from CCASP):'));
+        for (const file of comparison.modifiedFiles) {
+          const diffStr = file.linesAdded || file.linesRemoved
+            ? `+${file.linesAdded}/-${file.linesRemoved} lines`
+            : '';
+          console.log(chalk.dim(`    • ${file.relativePath} ${diffStr}`));
+          console.log(chalk.dim(`      ${file.description}`));
+        }
+        console.log('');
+      }
+    }
+
+    // Next steps
+    if (stats.totalCustomFiles > 0 || stats.totalModifiedFiles > 0) {
+      console.log(chalk.bold('  ──────────────────────────────────────'));
+      console.log(chalk.bold('  Next Steps'));
+      console.log(chalk.bold('  ──────────────────────────────────────\n'));
+
+      console.log(chalk.dim('  To import customizations before merging:'));
+      console.log(chalk.cyan('    /dev-mode-merge → [1] Scan → [I] Import\n'));
+    }
+
+  } catch (error) {
+    console.log(chalk.red(`  ✗ Scan failed: ${error.message}\n`));
+  }
+}
+
+/**
  * Main dev-deploy function
  */
 export async function runDevDeploy(options = {}) {
@@ -473,6 +628,12 @@ export async function runDevDeploy(options = {}) {
   // Handle --list
   if (options.list) {
     showWorktreeList();
+    return;
+  }
+
+  // Handle --scan
+  if (options.scan) {
+    await scanProjectCustomizations();
     return;
   }
 
