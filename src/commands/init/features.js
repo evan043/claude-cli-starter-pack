@@ -208,6 +208,13 @@ export const AVAILABLE_COMMANDS = [
     required: true,
   },
   {
+    name: 'menu-happy',
+    description: 'Mobile-optimized menu for Happy CLI (40-char width)',
+    category: 'Navigation',
+    selected: true,
+    required: true,
+  },
+  {
     name: 'ccasp-panel',
     description: 'Launch control panel in new terminal (agents, skills, hooks, MCP)',
     category: 'Navigation',
