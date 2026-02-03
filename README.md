@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.2.4   •  Production Ready                         ║
+║                          v2.2.5   •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -351,6 +351,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Version | Released |
 |---------|---------|----------|
+| [Dev Mode Smart Sync](#dev-mode-smart-sync) | [v2.2.5](#v225) | Feb 2025 |
 | [E2E Testing Integration](#e2e-testing-integration) | [v2.2.4](#v224) | Feb 2025 |
 | [Vision Driver Bot](#vision-driver-bot-vdb) | [v2.2.0](#v220) | Jan 2025 |
 | [GitHub Epic System](#github-epic-system) | [v2.2.0](#v220) | Jan 2025 |
@@ -365,6 +366,15 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.2.5
+**Dev Mode Smart Sync & Wizard UX** — Feb 2025
+- **Smart Sync for Dev Mode**: New `smart-sync.js` utility preserves user customizations when syncing from worktree
+- **Menu Worktree Sync**: `[W] Sync from Worktree` option appears during dev mode with sync status banner
+- **`/dev-mode-deploy-to-projects`**: New slash command with `--dry-run`, `--force`, `--project` options
+- **`/menu-happy`**: Dedicated mobile menu command (40-char width) — auto-detection removed from `/menu`
+- **Wizard UX Improvements**: Reinstall option, accurate template counts, better mismatch handling (#64)
+- **Hook Migration**: Hooks migrated from `.js` to `.cjs` for CommonJS compatibility
 
 ### v2.2.4
 **E2E Testing Integration & Happy Mode Fix** — Feb 2025
