@@ -2,7 +2,6 @@
 name: l2-deployment-specialist
 description: L2 Deployment specialist for CI/CD, Docker, cloud platforms, and infrastructure tasks
 tools: Read, Bash, Glob, Grep
-model: sonnet
 permissionMode: default
 level: L2
 domain: deployment

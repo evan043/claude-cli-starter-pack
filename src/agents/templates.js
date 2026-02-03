@@ -238,7 +238,6 @@ export function generateAgentTemplate(config) {
     description,
     level = 'L2',
     tools = ['Read', 'Grep', 'Glob'],
-    model = 'sonnet',
     specialization = '',
     whenToUse = [],
     workflow = [],
@@ -261,7 +260,6 @@ name: ${name}
 description: ${description}
 level: ${level}
 tools: ${toolsList}
-model: ${model}
 ---
 
 # ${name}
@@ -491,7 +489,6 @@ name: ${name}-orchestrator
 description: L1 Orchestrator for ${description}
 level: L1
 tools: Task, Read, Grep, Glob
-model: sonnet
 capabilities:
   - token_monitoring
   - context_compaction
@@ -651,18 +648,15 @@ export const AGENT_LEVELS = {
     name: 'L1 - Orchestrator',
     description: 'Routes and coordinates L2 specialists',
     tokenLimit: 'Full context',
-    model: 'sonnet or opus',
   },
   L2: {
     name: 'L2 - Specialist',
     description: 'Deep domain expertise',
     tokenLimit: '1-8K tokens',
-    model: 'sonnet',
   },
   L3: {
     name: 'L3 - Worker',
     description: 'Parallel atomic tasks',
     tokenLimit: '500 tokens',
-    model: 'haiku',
   },
 };

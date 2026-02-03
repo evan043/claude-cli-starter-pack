@@ -16,31 +16,26 @@ const AGENT_CONFIGS = {
   L2: {
     frontend: {
       subagentType: 'general-purpose',
-      model: 'sonnet',
       tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'],
       description: 'L2 Frontend Specialist',
     },
     backend: {
       subagentType: 'general-purpose',
-      model: 'sonnet',
       tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'],
       description: 'L2 Backend Specialist',
     },
     testing: {
       subagentType: 'general-purpose',
-      model: 'sonnet',
       tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'],
       description: 'L2 Testing Specialist',
     },
     deployment: {
       subagentType: 'general-purpose',
-      model: 'sonnet',
       tools: ['Read', 'Bash', 'Glob', 'Grep'],
       description: 'L2 Deployment Specialist',
     },
     general: {
       subagentType: 'general-purpose',
-      model: 'sonnet',
       tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash'],
       description: 'L2 General Specialist',
     },
@@ -48,19 +43,16 @@ const AGENT_CONFIGS = {
   L3: {
     search: {
       subagentType: 'Explore',
-      model: 'haiku',
       tools: ['Read', 'Glob', 'Grep'],
       description: 'L3 Search Worker',
     },
     analyze: {
       subagentType: 'Explore',
-      model: 'haiku',
       tools: ['Read', 'Glob', 'Grep'],
       description: 'L3 Analysis Worker',
     },
     execute: {
       subagentType: 'Bash',
-      model: 'haiku',
       tools: ['Bash'],
       description: 'L3 Execution Worker',
     },
@@ -174,7 +166,6 @@ ERROR: Description of the error
     domain,
     taskId: task.id,
     subagentType: config.subagentType,
-    model: config.model,
     description: `${config.description}: ${task.title.slice(0, 50)}`,
     prompt,
     spawnedAt: new Date().toISOString(),
@@ -214,7 +205,6 @@ DATA: [Your findings or results]
     subtaskId: subtask.id,
     parentAgentId,
     subagentType: config.subagentType,
-    model: config.model,
     description: `${config.description}: ${subtask.description.slice(0, 30)}`,
     prompt,
     spawnedAt: new Date().toISOString(),

@@ -2,7 +2,6 @@
 name: phase-orchestrator
 description: Primary L1 orchestrator for phase development execution. Use this agent to coordinate L2 specialists and L3 workers for complex multi-phase projects.
 tools: Task, Read, Write, Edit, Bash, Glob, Grep, TodoWrite
-model: sonnet
 permissionMode: acceptEdits
 level: L1
 domain: orchestration

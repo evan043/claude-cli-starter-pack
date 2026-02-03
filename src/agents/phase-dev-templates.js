@@ -605,7 +605,6 @@ name: ${projectSlug}-phase-executor
 description: Autonomous phase executor for ${projectName}
 level: L1
 tools: Task, Read, Write, Edit, Grep, Glob, Bash
-model: sonnet
 capabilities:
   - token_monitoring
   - context_compaction

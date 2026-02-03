@@ -2,7 +2,6 @@
 name: l2-frontend-specialist
 description: L2 Frontend specialist for React, Vue, Angular, CSS, and UI component tasks
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
 permissionMode: acceptEdits
 level: L2
 domain: frontend

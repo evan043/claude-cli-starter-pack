@@ -12,7 +12,6 @@ import { v4 as uuidv4 } from 'uuid';
 const L3_WORKER_TYPES = {
   search: {
     subagentType: 'Explore',
-    model: 'haiku',
     tools: ['Read', 'Grep', 'Glob'],
     description: 'Search worker',
     promptTemplate: (task) => `
@@ -37,7 +36,6 @@ FILES_FOUND: [count]
 
   analyze: {
     subagentType: 'Explore',
-    model: 'haiku',
     tools: ['Read', 'Glob'],
     description: 'Analysis worker',
     promptTemplate: (task) => `
@@ -64,7 +62,6 @@ ANALYSIS_COMPLETE: true
 
   count: {
     subagentType: 'Explore',
-    model: 'haiku',
     tools: ['Grep', 'Glob'],
     description: 'Count worker',
     promptTemplate: (task) => `
@@ -90,7 +87,6 @@ COUNT_COMPLETE: true
 
   extract: {
     subagentType: 'Explore',
-    model: 'haiku',
     tools: ['Read'],
     description: 'Extract worker',
     promptTemplate: (task) => `
@@ -115,7 +111,6 @@ EXTRACT_COMPLETE: true
 
   validate: {
     subagentType: 'Bash',
-    model: 'haiku',
     tools: ['Bash'],
     description: 'Validation worker',
     promptTemplate: (task) => `
@@ -142,7 +137,6 @@ VALIDATE_COMPLETE: true
 
   lint: {
     subagentType: 'Bash',
-    model: 'haiku',
     tools: ['Bash'],
     description: 'Lint worker',
     promptTemplate: (task) => `
@@ -201,7 +195,7 @@ export function generateL3Worker(taskType, taskDetails, options = {}) {
     type: taskType,
     level: 'L3',
     subagentType: workerType.subagentType,
-    model: options.model || workerType.model,
+    model: options.model,
     tools: workerType.tools,
     description: `${workerType.description}: ${taskDetails.description || taskDetails.query || taskDetails.target || 'task'}`.slice(0, 50),
     prompt: workerType.promptTemplate(task),

@@ -2,7 +2,6 @@
 name: l3-worker
 description: Atomic task executor with minimal context. Read-only by default. Used for parallel subtask execution.
 tools: Read, Grep, Glob
-model: haiku
 permissionMode: default
 level: L3
 maxTokens: 500

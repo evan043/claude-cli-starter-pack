@@ -2,7 +2,6 @@
 name: l2-testing-specialist
 description: L2 Testing specialist for unit tests, integration tests, E2E tests, and test infrastructure
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
 permissionMode: acceptEdits
 level: L2
 domain: testing

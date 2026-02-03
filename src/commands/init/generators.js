@@ -49,7 +49,6 @@ export function generateMenuCommand(projectName, installedCommands, installedAge
 
   return `---
 description: Interactive project menu - Quick access to all commands, agents, skills, and tools
-model: haiku
 ---
 
 # ${projectName} - Interactive Menu
@@ -108,7 +107,6 @@ tools:
   - Grep
   - Glob
   - Bash
-model: sonnet
 ---
 
 # ${agentName} Agent

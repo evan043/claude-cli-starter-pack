@@ -2,7 +2,6 @@
 name: l2-specialist
 description: Base L2 domain specialist that receives delegated tasks from L1 orchestrator and reports completion
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
 permissionMode: acceptEdits
 level: L2
 domain: general

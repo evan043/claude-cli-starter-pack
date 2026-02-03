@@ -2,7 +2,6 @@
 name: l2-backend-specialist
 description: L2 Backend specialist for API, database, authentication, and server-side tasks
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
 permissionMode: acceptEdits
 level: L2
 domain: backend
