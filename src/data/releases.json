@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "version": "2.2.6",
+      "date": "2026-02-03",
+      "summary": "Feature: add smart sync with customization preservation",
+      "highlights": [
+        "add smart sync with customization preservation",
+        "add /menu-happy command, remove auto-detection from /menu",
+        "improve UX with reinstall option, fix template counts and mismatches (#64)"
+      ],
+      "newFeatures": {
+        "commands": [],
+        "agents": [],
+        "skills": [],
+        "hooks": [],
+        "other": []
+      },
+      "breaking": [],
+      "deprecated": []
+    },
+    {
       "version": "2.2.5",
       "date": "2026-02-02",
       "summary": "Feature: implement CCASP v2.3 roadmap features (#48, #61, #62)",
