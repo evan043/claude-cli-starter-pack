@@ -338,37 +338,21 @@ npx claude-cli-advanced-starter-pack init
 
 ### 🚀 Coming Soon
 
-| Feature | Status | Target |
-|---------|--------|--------|
-| **Jira Integration** | 🔨 In Development | v2.3 |
-| **Linear Sync** | 🔨 In Development | v2.3 |
-| **ClickUp Integration** | 📋 Planned | v2.4 |
-| **Vision Driver Bot (VDB) v2** | 🔨 In Development | v2.3 |
-| **Autonomous Lint Fixing** | 🔨 In Development | v2.3 |
-| **Multi-Repo Orchestration** | 📋 Planned | v2.5 |
-
-### 🎯 Recently Shipped
-
-| Feature | Version | Released |
-|---------|---------|----------|
-| [Dev Mode Smart Sync](#dev-mode-smart-sync) | [v2.2.5](#v225) | Feb 2025 |
-| [E2E Testing Integration](#e2e-testing-integration) | [v2.2.4](#v224) | Feb 2025 |
-| [Vision Driver Bot](#vision-driver-bot-vdb) | [v2.2.0](#v220) | Jan 2025 |
-| [GitHub Epic System](#github-epic-system) | [v2.2.0](#v220) | Jan 2025 |
-| [Neovim Plugin (nvim-ccasp)](#neovim-plugin) | [v2.0.0](#v200) | Dec 2024 |
-| [Happy.engineering Mobile UI](#happyengineering-mobile-ui) | [v1.8.30](#v1830) | Dec 2024 |
-| [PR Merge Workflow](#pr-merge-workflow) | [v1.8.29](#v1829) | Dec 2024 |
-| [Roadmap Orchestration](#roadmap-orchestration) | [v1.8.27](#v1827) | Nov 2024 |
-| [Agent Orchestration System](#agent-orchestration) | [v1.8.24](#v1824) | Nov 2024 |
-| [Refactoring System](#refactoring-system) | [v1.8.19](#v1819) | Oct 2024 |
-| [Auto-Generated Agents](#auto-generated-agents) | [v1.8.16](#v1816) | Oct 2024 |
+| Feature | Status |
+|---------|--------|
+| **Jira Integration** | 🔨 In Development |
+| **Linear Sync** | 🔨 In Development |
+| **ClickUp Integration** | 📋 Planned |
+| **Vision Driver Bot (VDB) v2** | 🔨 In Development |
+| **Autonomous Lint Fixing** | 🔨 In Development |
+| **Multi-Repo Orchestration** | 📋 Planned |
 
 ---
 
 ## Version History
 
 ### v2.2.5
-**Dev Mode Smart Sync & Wizard UX** — Feb 2025
+**Dev Mode Smart Sync & Wizard UX** — Feb 2026
 - **Smart Sync for Dev Mode**: New `smart-sync.js` utility preserves user customizations when syncing from worktree
 - **Menu Worktree Sync**: `[W] Sync from Worktree` option appears during dev mode with sync status banner
 - **`/dev-mode-deploy-to-projects`**: New slash command with `--dry-run`, `--force`, `--project` options
