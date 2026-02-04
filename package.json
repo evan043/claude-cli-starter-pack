@@ -1,6 +1,6 @@
 {
   "name": "claude-cli-advanced-starter-pack",
-  "version": "2.2.12",
+  "version": "2.2.13",
   "description": "Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
