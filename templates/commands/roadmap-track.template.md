@@ -6,12 +6,37 @@ You are a roadmap execution specialist. Help users track progress, execute phase
 
 ### Step 1: Load Roadmap State
 
-Load the roadmap and execution state:
+Load the roadmap and execution state from the **consolidated structure**:
 
 ```javascript
+// NEW CONSOLIDATED STRUCTURE (preferred):
+// Load from .claude/roadmaps/{slug}/ROADMAP.json
+// Load phase plans from .claude/roadmaps/{slug}/phase-*.json
+// Load execution state from .claude/roadmaps/{slug}/EXECUTION_STATE.json
+
+// LEGACY STRUCTURE (fallback):
 // Load from .claude/roadmaps/{slug}.json
-// Load execution state from .claude/phase-plans/{slug}/EXECUTION_STATE.json
 // Load phase plans from .claude/phase-plans/{slug}/phase-*.json
+
+// Check both locations - prefer consolidated structure
+function loadRoadmapState(slug) {
+  const consolidatedPath = `.claude/roadmaps/${slug}/ROADMAP.json`;
+  const legacyPath = `.claude/roadmaps/${slug}.json`;
+
+  if (existsSync(consolidatedPath)) {
+    return {
+      roadmapPath: consolidatedPath,
+      phasePlansDir: `.claude/roadmaps/${slug}/`,
+      structure: 'consolidated'
+    };
+  }
+
+  return {
+    roadmapPath: legacyPath,
+    phasePlansDir: `.claude/phase-plans/${slug}/`,
+    structure: 'legacy'
+  };
+}
 ```
 
 ### Step 2: Display Execution Dashboard
@@ -214,6 +239,83 @@ Track and display:
 - `/roadmap-edit` - Modify structure
 - `/phase-track` - Track individual phase in detail
 - `/ralph` - Test-fix loop for testing phases
+
+---
+
+## Dynamic Command Cleanup on Completion
+
+**IMPORTANT:** When a roadmap reaches 100% completion, offer to clean up the dynamic command.
+
+### Completion Detection
+
+```javascript
+// When all phases are completed
+if (completedPhases === totalPhases && percentage === 100) {
+  const dynamicCommandPath = `.claude/commands/roadmap-${slug}.md`;
+
+  // Display completion message
+  console.log(`
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  🎉 ROADMAP COMPLETE!                                                      ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║                                                                             ║
+║  ${roadmap.title}                                                          ║
+║                                                                             ║
+║  All ${totalPhases} phases completed                                       ║
+║  Total tasks: ${completedTasks}/${totalTasks}                              ║
+║                                                                             ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  CLEANUP OPTIONS                                                            ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║                                                                             ║
+║  [1] Remove dynamic command: /roadmap-${slug}                              ║
+║  [2] Archive roadmap files                                                  ║
+║  [3] Keep everything (do nothing)                                          ║
+║                                                                             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+  `);
+}
+```
+
+### Cleanup Actions
+
+**Option 1: Remove Dynamic Command**
+```bash
+rm .claude/commands/roadmap-{slug}.md
+```
+
+**Option 2: Archive Roadmap**
+```bash
+# Create archive directory
+mkdir -p .claude/roadmaps/_archived/
+
+# Move roadmap directory to archive
+mv .claude/roadmaps/{slug}/ .claude/roadmaps/_archived/{slug}-{date}/
+
+# Remove dynamic command
+rm .claude/commands/roadmap-{slug}.md
+```
+
+**Option 3: Keep Everything**
+- Roadmap remains accessible via `/roadmap-status {slug}`
+- Dynamic command `/roadmap-{slug}` stays available
+- Useful if you may resume or reference the roadmap later
+
+### Auto-Cleanup Prompt
+
+When completing the final phase via `/roadmap-track {slug} finish`:
+
+```
+header: "Roadmap Complete"
+question: "All phases complete! What would you like to do with the roadmap?"
+options:
+  - label: "Remove dynamic command"
+    description: "Delete /roadmap-{slug} command, keep roadmap files"
+  - label: "Archive roadmap"
+    description: "Move to _archived/, remove command"
+  - label: "Keep everything"
+    description: "Leave roadmap and command in place"
+```
 
 ---
 

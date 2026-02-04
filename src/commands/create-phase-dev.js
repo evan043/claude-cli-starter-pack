@@ -350,7 +350,7 @@ async function runAutonomousMode(options) {
   // Show summary (but skip interactive menu in autonomous mode)
   console.log(chalk.green('\n✅ Plan generated successfully'));
   console.log(chalk.dim(`\nTo start: /phase-dev-${projectSlug}`));
-  console.log(chalk.dim(`Progress: .claude/docs/${projectSlug}/PROGRESS.json`));
+  console.log(chalk.dim(`Progress: .claude/phase-dev/${projectSlug}/PROGRESS.json`));
 
   return { config, results };
 }
@@ -454,17 +454,18 @@ function showPhaseDevHelp() {
   console.log(chalk.white.bold('Generated Files:'));
   console.log(
     chalk.dim(`
-  .claude/docs/{slug}/
+  .claude/phase-dev/{slug}/
     PROGRESS.json        - Task tracking and state
     EXECUTIVE_SUMMARY.md - Project overview
     API_ENDPOINTS.md     - Backend endpoints (if backend detected)
     DATABASE_SCHEMA.md   - Database schema (adapts to your DB)
+    exploration/         - L2 exploration documents
 
   .claude/agents/{slug}-phase-executor-agent.md
     RAG agent for autonomous execution
 
   .claude/commands/phase-dev-{slug}.md
-    Interactive slash command
+    Dynamic slash command (removed when completed)
 `)
   );
 

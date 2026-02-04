@@ -9,7 +9,7 @@ You are a roadmap planning specialist using the CCASP Roadmap Orchestration Fram
 **CRITICAL:** Every roadmap MUST create ALL of these files. Skipping ANY file is a failure.
 
 ### Exploration Documentation (REQUIRED FIRST)
-Before creating ROADMAP.json, you MUST create these 6 files in `.claude/exploration/{slug}/`:
+Before creating ROADMAP.json, you MUST create these 6 files in `.claude/roadmaps/{slug}/exploration/`:
 
 | File | Purpose | Required |
 |------|---------|----------|
@@ -20,17 +20,18 @@ Before creating ROADMAP.json, you MUST create these 6 files in `.claude/explorat
 | `PHASE_BREAKDOWN.md` | Full phase/task detail | ✅ YES |
 | `findings.json` | Machine-readable data | ✅ YES |
 
-### Roadmap Files (AFTER Exploration)
+### Roadmap Files (AFTER Exploration) - NEW CONSOLIDATED STRUCTURE
 | File | Purpose | Required |
 |------|---------|----------|
-| `.claude/roadmaps/{slug}.json` | Main roadmap definition | ✅ YES |
-| `.claude/phase-plans/{slug}/phase-*.json` | Per-phase plans | ✅ YES |
-| `.claude/commands/roadmap-{slug}-run.md` | Execution command | ✅ YES |
+| `.claude/roadmaps/{slug}/ROADMAP.json` | Main roadmap definition | ✅ YES |
+| `.claude/roadmaps/{slug}/phase-*.json` | Per-phase plans (same dir) | ✅ YES |
+| `.claude/roadmaps/{slug}/exploration/` | Exploration docs (same dir) | ✅ YES |
+| `.claude/commands/roadmap-{slug}.md` | Dynamic execution command | ✅ YES |
 
 ### ⛔ STOP - Validation Checkpoint
 Before proceeding past Step 3, verify ALL exploration files exist:
 ```bash
-ls -la .claude/exploration/{slug}/
+ls -la .claude/roadmaps/{slug}/exploration/
 # Must show: EXPLORATION_SUMMARY.md, CODE_SNIPPETS.md, REFERENCE_FILES.md,
 #            AGENT_DELEGATION.md, PHASE_BREAKDOWN.md, findings.json
 ```
@@ -240,7 +241,7 @@ options:
 
 2. **Create Exploration Directory:**
    ```bash
-   mkdir -p .claude/exploration/{slug}
+   mkdir -p .claude/roadmaps/{slug}/exploration
    ```
 
 3. **Write ALL 6 Exploration Files** (use Write tool for each):
@@ -396,12 +397,12 @@ options:
 
 4. **Verification Checkpoint** - STOP and verify ALL 6 files exist before continuing:
    ```
-   ✓ .claude/exploration/{slug}/EXPLORATION_SUMMARY.md
-   ✓ .claude/exploration/{slug}/CODE_SNIPPETS.md
-   ✓ .claude/exploration/{slug}/REFERENCE_FILES.md
-   ✓ .claude/exploration/{slug}/AGENT_DELEGATION.md
-   ✓ .claude/exploration/{slug}/PHASE_BREAKDOWN.md
-   ✓ .claude/exploration/{slug}/findings.json
+   ✓ .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md
+   ✓ .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md
+   ✓ .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md
+   ✓ .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md
+   ✓ .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md
+   ✓ .claude/roadmaps/{slug}/exploration/findings.json
    ```
 
 **⛔ DO NOT proceed to Step 3 until ALL 6 exploration files are created.**
@@ -745,30 +746,122 @@ If any step fails:
 | Rule | Implementation | MANDATORY |
 |------|----------------|-----------|
 | L2 Exploration FIRST | Create all 6 exploration files BEFORE ROADMAP.json | ✅ YES |
-| No roadmap without exploration | `.claude/exploration/{slug}/` must exist with 6 files | ✅ YES |
-| No roadmap without JSON artifact | Always writes `.claude/roadmaps/{slug}.json` | ✅ YES |
-| Every phase maps to phase-dev-plan | Auto-generates `.claude/phase-plans/{slug}/phase-*.json` | ✅ YES |
+| No roadmap without exploration | `.claude/roadmaps/{slug}/exploration/` must exist with 6 files | ✅ YES |
+| Consolidated structure | All files in `.claude/roadmaps/{slug}/` | ✅ YES |
+| Dynamic command created | Creates `/roadmap-{slug}` command | ✅ YES |
+| Every phase maps to phase-dev-plan | Auto-generates `.claude/roadmaps/{slug}/phase-*.json` | ✅ YES |
 | User selects issues via table | Mode B displays numbered table for selection | ✅ YES |
 | Single-phase recommendation | Recommends `/create-phase-dev` for small scope | ⚠️ Warning |
 
 ### ⛔ FAILURE CONDITIONS - DO NOT PROCEED IF:
-- Exploration directory doesn't exist: `.claude/exploration/{slug}/`
+- Exploration directory doesn't exist: `.claude/roadmaps/{slug}/exploration/`
 - Any of the 6 exploration files are missing
 - ROADMAP.json is created before exploration files
 - Phase breakdown in PHASE_BREAKDOWN.md doesn't match ROADMAP.json
 
 ### Validation Checklist (Run Before Completion)
 ```
-[ ] .claude/exploration/{slug}/EXPLORATION_SUMMARY.md exists
-[ ] .claude/exploration/{slug}/CODE_SNIPPETS.md exists
-[ ] .claude/exploration/{slug}/REFERENCE_FILES.md exists
-[ ] .claude/exploration/{slug}/AGENT_DELEGATION.md exists
-[ ] .claude/exploration/{slug}/PHASE_BREAKDOWN.md exists
-[ ] .claude/exploration/{slug}/findings.json exists
-[ ] .claude/roadmaps/{slug}.json exists
-[ ] .claude/phase-plans/{slug}/ has phase-*.json for each phase
-[ ] .claude/commands/roadmap-{slug}-run.md exists
+[ ] .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md exists
+[ ] .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md exists
+[ ] .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md exists
+[ ] .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md exists
+[ ] .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md exists
+[ ] .claude/roadmaps/{slug}/exploration/findings.json exists
+[ ] .claude/roadmaps/{slug}/ROADMAP.json exists
+[ ] .claude/roadmaps/{slug}/ has phase-*.json for each phase
+[ ] .claude/commands/roadmap-{slug}.md exists (dynamic command)
 ```
+
+---
+
+## Step 9: Create Dynamic Slash Command (MANDATORY)
+
+**IMPORTANT:** After creating the roadmap, you MUST generate a dynamic slash command.
+
+### Dynamic Command Template
+
+Create file `.claude/commands/roadmap-{slug}.md`:
+
+```markdown
+# /roadmap-{slug} - {title}
+
+Execute and track the **{title}** roadmap.
+
+## Quick Reference
+
+| Property | Value |
+|----------|-------|
+| Roadmap ID | {roadmap_id} |
+| Phases | {phase_count} |
+| Status | {status} |
+| Created | {created_date} |
+
+## Actions
+
+### View Status
+Show current progress and next available tasks:
+\`\`\`
+/roadmap-status {slug}
+\`\`\`
+
+### Start/Continue Execution
+Begin or resume working on this roadmap:
+\`\`\`
+/roadmap-track {slug} start
+\`\`\`
+
+### Execute Next Phase
+Start the next available phase:
+\`\`\`
+/roadmap-track {slug} next
+\`\`\`
+
+## Phase Summary
+
+{phase_list_markdown}
+
+## Files Location
+
+All roadmap files are in: `.claude/roadmaps/{slug}/`
+- `ROADMAP.json` - Main roadmap definition
+- `phase-*.json` - Phase plans
+- `exploration/` - Analysis and reference documents
+
+## Testing Configuration
+
+{{#if testing.e2e.framework}}
+- E2E Framework: {{testing.e2e.framework}}
+- Environment: {testing_environment}
+- Ralph Loop: {ralph_enabled}
+{{else}}
+- E2E testing not configured
+{{/if}}
+
+## Cleanup
+
+When this roadmap is complete, remove this command:
+\`\`\`bash
+rm .claude/commands/roadmap-{slug}.md
+\`\`\`
+
+---
+*Dynamic command generated by /create-roadmap*
+```
+
+### Command Naming Convention
+
+| Roadmap Type | Command Name | Example |
+|--------------|--------------|---------|
+| Feature roadmap | `/roadmap-{feature-slug}` | `/roadmap-user-auth` |
+| Refactor roadmap | `/roadmap-{component}-refactor` | `/roadmap-dashboard-refactor` |
+| Migration roadmap | `/roadmap-{migration-slug}` | `/roadmap-v2-migration` |
+
+### Auto-Removal on Completion
+
+When a roadmap reaches 100% completion:
+1. The `/roadmap-track` command detects completion
+2. Prompts: "Roadmap complete! Remove dynamic command /roadmap-{slug}?"
+3. If confirmed, deletes `.claude/commands/roadmap-{slug}.md`
 
 ---
 

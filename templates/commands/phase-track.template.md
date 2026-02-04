@@ -19,13 +19,24 @@ View and update progress on phased development plans.
 
 ## Available Projects
 
-Scan `.claude/docs/` for active phased development projects:
+Scan for active phased development projects in **both structures**:
 
 ```bash
-# Find all PROGRESS.json files
+# NEW CONSOLIDATED STRUCTURE (preferred):
+# Roadmaps with phases in: .claude/roadmaps/{slug}/phase-*.json
+
+# LEGACY STRUCTURE (fallback):
+# Phase plans in: .claude/phase-plans/{slug}/
+# Progress files in: .claude/docs/*/PROGRESS.json
+
+# Find all phase plans (new structure)
+find .claude/roadmaps -name "phase-*.json" -type f 2>/dev/null
+
+# Find legacy PROGRESS.json files
 find .claude/docs -name "PROGRESS.json" -type f 2>/dev/null
 
 # Or on Windows
+dir /s /b .claude\roadmaps\phase-*.json
 dir /s /b .claude\docs\PROGRESS.json
 ```
 

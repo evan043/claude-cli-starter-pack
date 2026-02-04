@@ -148,6 +148,53 @@ export const CREDENTIAL_SOURCES = {
 };
 
 /**
+ * Get environment configuration - prioritizes tunnel URL over localhost
+ *
+ * Order of preference:
+ * 1. Explicitly provided baseUrl in options
+ * 2. Tunnel URL from tech-stack.json (if tunnel service is configured and has URL)
+ * 3. Localhost with configured port
+ */
+function getEnvironmentConfig(options = {}) {
+  const techStack = loadTechStackJson();
+  const tunnel = techStack?.devEnvironment?.tunnel;
+
+  // Check for active tunnel configuration
+  const hasTunnel = tunnel && tunnel.service !== 'none' && tunnel.url;
+
+  // Determine base URL
+  let baseUrl = options.baseUrl;
+  let envType = options.envType || 'localhost';
+
+  if (!baseUrl) {
+    if (hasTunnel) {
+      // Prefer tunnel URL for E2E testing
+      baseUrl = tunnel.url;
+      envType = tunnel.service; // ngrok, localtunnel, cloudflare-tunnel, etc.
+    } else {
+      // Fallback to localhost
+      const port = techStack?.frontend?.port || options.port || 5173;
+      baseUrl = `http://localhost:${port}`;
+      envType = 'localhost';
+    }
+  }
+
+  return {
+    type: envType,
+    baseUrl: baseUrl,
+    port: options.port || techStack?.frontend?.port || 5173,
+    requiresSetup: options.requiresSetup || [],
+    // Include tunnel info for commands that need it
+    tunnel: {
+      service: tunnel?.service || 'none',
+      url: tunnel?.url || null,
+      subdomain: tunnel?.subdomain || null,
+      isActive: hasTunnel,
+    },
+  };
+}
+
+/**
  * Testing configuration structure (compatible with tech-stack.json `testing` section)
  *
  * This structure maps to tech-stack.json testing fields:
@@ -190,13 +237,8 @@ export function createTestingConfig(options = {}) {
       source: options.credentialSource || 'env',
     },
 
-    // Environment configuration
-    environment: {
-      type: options.envType || 'localhost',
-      baseUrl: options.baseUrl || 'http://localhost:5173',
-      port: options.port || 5173,
-      requiresSetup: options.requiresSetup || [],
-    },
+    // Environment configuration - prioritizes tunnel URL over localhost
+    environment: getEnvironmentConfig(options),
 
     // Testing mode (ralph loop, manual, minimal)
     mode: options.mode || 'manual',

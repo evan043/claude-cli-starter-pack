@@ -14,17 +14,128 @@ import { COMPLEXITY } from './schema.js';
 
 /**
  * Default phase-plans directory
+ * NOTE: This is the legacy location. New roadmaps store phase plans in .claude/roadmaps/{slug}/
  */
 const PHASE_PLANS_DIR = '.claude/phase-plans';
 
 /**
+ * Load tech-stack.json to get testing and tunnel configuration
+ */
+function loadTechStack(cwd = process.cwd()) {
+  const paths = [
+    join(cwd, '.claude', 'config', 'tech-stack.json'),
+    join(cwd, '.claude', 'tech-stack.json'),
+    join(cwd, 'tech-stack.json'),
+  ];
+
+  for (const techStackPath of paths) {
+    if (existsSync(techStackPath)) {
+      try {
+        return JSON.parse(readFileSync(techStackPath, 'utf8'));
+      } catch {
+        continue;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Get testing environment URL - prefers tunnel URL over localhost
+ */
+function getTestingBaseUrl(techStack, options = {}) {
+  // If explicitly provided in options, use that
+  if (options.baseUrl) {
+    return options.baseUrl;
+  }
+
+  // Check for configured tunnel URL first (preferred for E2E testing)
+  const tunnel = techStack?.devEnvironment?.tunnel;
+  if (tunnel && tunnel.service !== 'none' && tunnel.url) {
+    return tunnel.url;
+  }
+
+  // Check testing configuration for baseUrl
+  if (techStack?.testing?.e2e?.baseUrl) {
+    return techStack.testing.e2e.baseUrl;
+  }
+
+  if (techStack?.testing?.environment?.baseUrl) {
+    return techStack.testing.environment.baseUrl;
+  }
+
+  // Fallback to localhost with configured port
+  const port = techStack?.frontend?.port || options.port || 5173;
+  return `http://localhost:${port}`;
+}
+
+/**
+ * Generate testing configuration from tech-stack.json
+ * Prefers tunnel URL over localhost for E2E testing
+ */
+function generateTestingConfig(options = {}, cwd = process.cwd()) {
+  const techStack = loadTechStack(cwd);
+  const baseUrl = getTestingBaseUrl(techStack, options);
+  const tunnel = techStack?.devEnvironment?.tunnel;
+  const testing = techStack?.testing || {};
+
+  // Determine environment type
+  let envType = 'localhost';
+  if (tunnel && tunnel.service !== 'none' && tunnel.url) {
+    envType = tunnel.service; // ngrok, localtunnel, cloudflare-tunnel, etc.
+  } else if (baseUrl && !baseUrl.includes('localhost')) {
+    envType = 'production';
+  }
+
+  return {
+    ralph_loop: {
+      enabled: options.ralphLoopEnabled ?? true,
+      testCommand: testing.e2e?.testCommand || 'npx playwright test',
+      maxIterations: options.maxIterations || 10,
+      autoStart: options.ralphAutoStart || false,
+    },
+    e2e_framework: testing.e2e?.framework || options.e2eFramework || null,
+    environment: {
+      type: envType,
+      baseUrl: baseUrl,
+      tunnelService: tunnel?.service || 'none',
+      tunnelUrl: tunnel?.url || null,
+    },
+    selectors: testing.selectors || {
+      username: '[data-testid="username-input"]',
+      password: '[data-testid="password-input"]',
+      loginButton: '[data-testid="login-submit"]',
+      loginSuccess: '[data-testid="dashboard"]',
+    },
+    credentials: {
+      usernameEnvVar: testing.credentials?.usernameEnvVar || 'TEST_USER_USERNAME',
+      passwordEnvVar: testing.credentials?.passwordEnvVar || 'TEST_USER_PASSWORD',
+    },
+  };
+}
+
+/**
  * Get the phase plans directory for a roadmap
+ * Supports both new consolidated structure and legacy structure
+ *
+ * New structure: .claude/roadmaps/{slug}/ (phase files alongside ROADMAP.json)
+ * Legacy structure: .claude/phase-plans/{slug}/
  *
  * @param {string} roadmapSlug - Roadmap slug
  * @param {string} cwd - Current working directory
+ * @param {boolean} useConsolidated - Use new consolidated structure (default: true)
  * @returns {string} Path to phase plans directory
  */
-export function getPhasePlansDir(roadmapSlug, cwd = process.cwd()) {
+export function getPhasePlansDir(roadmapSlug, cwd = process.cwd(), useConsolidated = true) {
+  // Check if roadmap is using new consolidated structure
+  const consolidatedRoadmapPath = join(cwd, '.claude/roadmaps', roadmapSlug, 'ROADMAP.json');
+
+  if (useConsolidated || existsSync(consolidatedRoadmapPath)) {
+    // New structure: phase files live in same dir as ROADMAP.json
+    return join(cwd, '.claude/roadmaps', roadmapSlug);
+  }
+
+  // Legacy structure
   return join(cwd, PHASE_PLANS_DIR, roadmapSlug);
 }
 
@@ -33,10 +144,11 @@ export function getPhasePlansDir(roadmapSlug, cwd = process.cwd()) {
  *
  * @param {string} roadmapSlug - Roadmap slug
  * @param {string} cwd - Current working directory
+ * @param {boolean} useConsolidated - Use new consolidated structure (default: true)
  * @returns {string} Path to directory
  */
-export function ensurePhasePlansDir(roadmapSlug, cwd = process.cwd()) {
-  const dir = getPhasePlansDir(roadmapSlug, cwd);
+export function ensurePhasePlansDir(roadmapSlug, cwd = process.cwd(), useConsolidated = true) {
+  const dir = getPhasePlansDir(roadmapSlug, cwd, useConsolidated);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -49,9 +161,10 @@ export function ensurePhasePlansDir(roadmapSlug, cwd = process.cwd()) {
  * @param {Object} phase - Phase from roadmap
  * @param {Object} roadmap - Parent roadmap
  * @param {Object} options - Generation options
+ * @param {string} cwd - Current working directory
  * @returns {Object} Generated plan
  */
-export function generatePhasePlan(phase, roadmap, options = {}) {
+export function generatePhasePlan(phase, roadmap, options = {}, cwd = process.cwd()) {
   const complexity = phase.complexity || 'M';
   const complexityInfo = COMPLEXITY[complexity];
 
@@ -124,16 +237,8 @@ export function generatePhasePlan(phase, roadmap, options = {}) {
       resolved: false, // Will be checked at runtime
     },
 
-    // Testing config
-    testing_config: {
-      ralph_loop: {
-        enabled: true,
-        testCommand: 'npm test',
-        maxIterations: 10,
-        autoStart: false,
-      },
-      e2e_framework: options.e2eFramework || null,
-    },
+    // Testing config - reads from tech-stack.json with tunnel URL preference
+    testing_config: generateTestingConfig(options, cwd),
 
     // Timestamps
     created_at: new Date().toISOString(),
@@ -240,7 +345,7 @@ export async function generateAllPhasePlans(roadmapName, options = {}, cwd = pro
 
   for (const phase of roadmap.phases || []) {
     try {
-      const plan = generatePhasePlan(phase, roadmap, options);
+      const plan = generatePhasePlan(phase, roadmap, options, cwd);
       const planPath = join(phasePlansDir, `${phase.phase_id}.json`);
 
       writeFileSync(planPath, JSON.stringify(plan, null, 2));

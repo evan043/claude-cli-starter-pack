@@ -70,8 +70,9 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
     spinner.text = 'Agent registry found - enabling agent assignments...';
   }
 
-  // Define output directories
-  const docsDir = join(cwd, '.claude', 'docs', projectSlug);
+  // Define output directories - NEW CONSOLIDATED STRUCTURE
+  // Phase-dev files now live in .claude/phase-dev/{slug}/
+  const docsDir = join(cwd, '.claude', 'phase-dev', projectSlug);
   const agentsDir = join(cwd, '.claude', 'agents');
   const commandsDir = join(cwd, '.claude', 'commands');
   const hooksDir = join(cwd, '.claude', 'hooks', 'tools');

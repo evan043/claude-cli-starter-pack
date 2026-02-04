@@ -20,8 +20,40 @@ import {
 
 /**
  * Default roadmap storage directory
+ * New structure: .claude/roadmaps/{slug}/ contains:
+ *   - ROADMAP.json (main definition)
+ *   - phase-*.json (phase plans)
+ *   - exploration/ (exploration docs)
  */
 const DEFAULT_ROADMAP_DIR = '.claude/roadmaps';
+
+/**
+ * Check if using new consolidated directory structure
+ * New structure: .claude/roadmaps/{slug}/ROADMAP.json
+ * Legacy structure: .claude/roadmaps/{slug}.json
+ */
+function isConsolidatedStructure(roadmapSlug, cwd = process.cwd()) {
+  const consolidatedPath = join(cwd, DEFAULT_ROADMAP_DIR, roadmapSlug, 'ROADMAP.json');
+  return existsSync(consolidatedPath);
+}
+
+/**
+ * Get the consolidated roadmap directory for a slug
+ */
+export function getRoadmapDir(roadmapSlug, cwd = process.cwd()) {
+  return join(cwd, DEFAULT_ROADMAP_DIR, roadmapSlug);
+}
+
+/**
+ * Ensure roadmap directory exists (for new consolidated structure)
+ */
+export function ensureRoadmapDir(roadmapSlug, cwd = process.cwd()) {
+  const dir = getRoadmapDir(roadmapSlug, cwd);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
 
 /**
  * Get the roadmaps directory path
@@ -49,18 +81,43 @@ export function ensureRoadmapsDir(cwd = process.cwd()) {
 
 /**
  * Get the path to a specific roadmap file
+ * Supports both new consolidated structure and legacy flat structure
+ *
+ * New structure: .claude/roadmaps/{slug}/ROADMAP.json
+ * Legacy structure: .claude/roadmaps/{slug}.json
  *
  * @param {string} roadmapName - Roadmap name or slug
  * @param {string} cwd - Current working directory
+ * @param {boolean} preferConsolidated - Prefer new consolidated structure for new roadmaps
  * @returns {string} Path to roadmap JSON file
  */
-export function getRoadmapPath(roadmapName, cwd = process.cwd()) {
+export function getRoadmapPath(roadmapName, cwd = process.cwd(), preferConsolidated = true) {
   const slug = generateSlug(roadmapName);
-  return join(getRoadmapsDir(cwd), `${slug}.json`);
+
+  // Check for new consolidated structure first
+  const consolidatedPath = join(getRoadmapsDir(cwd), slug, 'ROADMAP.json');
+  if (existsSync(consolidatedPath)) {
+    return consolidatedPath;
+  }
+
+  // Check for legacy flat structure
+  const legacyPath = join(getRoadmapsDir(cwd), `${slug}.json`);
+  if (existsSync(legacyPath)) {
+    return legacyPath;
+  }
+
+  // For new roadmaps, return consolidated path if preferred
+  if (preferConsolidated) {
+    return consolidatedPath;
+  }
+
+  // Default to legacy path for backwards compatibility
+  return legacyPath;
 }
 
 /**
  * List all roadmaps in the project
+ * Supports both new consolidated structure and legacy flat structure
  *
  * @param {string} cwd - Current working directory
  * @returns {Array} Array of roadmap objects with path info
@@ -73,24 +130,54 @@ export function listRoadmaps(cwd = process.cwd()) {
   }
 
   const roadmaps = [];
+  const seenSlugs = new Set();
 
   try {
-    const files = readdirSync(roadmapsDir);
+    const entries = readdirSync(roadmapsDir, { withFileTypes: true });
 
-    for (const file of files) {
-      if (file.endsWith('.json') && file !== 'README.json') {
-        const filePath = join(roadmapsDir, file);
+    for (const entry of entries) {
+      // New consolidated structure: {slug}/ROADMAP.json
+      if (entry.isDirectory() && entry.name !== 'README') {
+        const consolidatedPath = join(roadmapsDir, entry.name, 'ROADMAP.json');
+        if (existsSync(consolidatedPath)) {
+          try {
+            const content = readFileSync(consolidatedPath, 'utf8');
+            const roadmap = JSON.parse(content);
+            seenSlugs.add(roadmap.slug || entry.name);
+            roadmaps.push({
+              ...roadmap,
+              _path: consolidatedPath,
+              _filename: 'ROADMAP.json',
+              _directory: entry.name,
+              _structure: 'consolidated',
+            });
+          } catch (e) {
+            console.error(chalk.dim(`Skipping invalid roadmap: ${entry.name}/ROADMAP.json`));
+          }
+        }
+      }
+
+      // Legacy flat structure: {slug}.json
+      if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'README.json') {
+        const filePath = join(roadmapsDir, entry.name);
         try {
           const content = readFileSync(filePath, 'utf8');
           const roadmap = JSON.parse(content);
+          const slug = roadmap.slug || entry.name.replace('.json', '');
+
+          // Skip if we already found this roadmap in consolidated structure
+          if (seenSlugs.has(slug)) {
+            continue;
+          }
+
           roadmaps.push({
             ...roadmap,
             _path: filePath,
-            _filename: file,
+            _filename: entry.name,
+            _structure: 'legacy',
           });
         } catch (e) {
-          // Skip invalid JSON files
-          console.error(chalk.dim(`Skipping invalid roadmap file: ${file}`));
+          console.error(chalk.dim(`Skipping invalid roadmap file: ${entry.name}`));
         }
       }
     }
@@ -145,12 +232,17 @@ export function loadRoadmap(roadmapName, cwd = process.cwd()) {
 
 /**
  * Save a roadmap to disk
+ * Uses new consolidated structure: .claude/roadmaps/{slug}/ROADMAP.json
  *
  * @param {Object} roadmap - Roadmap object
  * @param {string} cwd - Current working directory
+ * @param {Object} options - Save options
+ * @param {boolean} options.useConsolidated - Use new consolidated structure (default: true)
  * @returns {Object} Result { success: boolean, path: string, error?: string }
  */
-export function saveRoadmap(roadmap, cwd = process.cwd()) {
+export function saveRoadmap(roadmap, cwd = process.cwd(), options = {}) {
+  const { useConsolidated = true } = options;
+
   // Validate first
   const validation = validateRoadmap(roadmap);
   if (!validation.valid) {
@@ -164,11 +256,19 @@ export function saveRoadmap(roadmap, cwd = process.cwd()) {
   // Update metadata
   updateRoadmapMetadata(roadmap);
 
-  // Ensure directory exists
-  ensureRoadmapsDir(cwd);
+  const slug = generateSlug(roadmap.slug || roadmap.title);
 
-  // Get path
-  const roadmapPath = getRoadmapPath(roadmap.slug || roadmap.title, cwd);
+  // Determine path based on structure preference
+  let roadmapPath;
+  if (useConsolidated) {
+    // New consolidated structure: .claude/roadmaps/{slug}/ROADMAP.json
+    const roadmapDir = ensureRoadmapDir(slug, cwd);
+    roadmapPath = join(roadmapDir, 'ROADMAP.json');
+  } else {
+    // Legacy flat structure: .claude/roadmaps/{slug}.json
+    ensureRoadmapsDir(cwd);
+    roadmapPath = join(getRoadmapsDir(cwd), `${slug}.json`);
+  }
 
   try {
     // Remove internal properties before saving

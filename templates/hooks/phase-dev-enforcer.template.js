@@ -20,28 +20,43 @@ const CONFIG = {
 
 /**
  * Find active phase dev project
+ * Checks both new structure (.claude/phase-dev/) and legacy (.claude/docs/)
  */
 function findActiveProject() {
+  // NEW STRUCTURE: .claude/phase-dev/{slug}/PROGRESS.json
+  const phaseDevDir = path.join(process.cwd(), '.claude/phase-dev');
+  // LEGACY STRUCTURE: .claude/docs/{slug}/PROGRESS.json
   const docsDir = path.join(process.cwd(), '.claude/docs');
 
-  if (!fs.existsSync(docsDir)) {
+  // Check new structure first
+  const dirsToCheck = [];
+  if (fs.existsSync(phaseDevDir)) {
+    dirsToCheck.push({ dir: phaseDevDir, structure: 'phase-dev' });
+  }
+  if (fs.existsSync(docsDir)) {
+    dirsToCheck.push({ dir: docsDir, structure: 'legacy' });
+  }
+
+  if (dirsToCheck.length === 0) {
     return null;
   }
 
-  // Look for PROGRESS.json files
-  const subdirs = fs.readdirSync(docsDir);
+  for (const { dir, structure } of dirsToCheck) {
+    // Look for PROGRESS.json files
+    const subdirs = fs.readdirSync(dir);
 
-  for (const subdir of subdirs) {
-    const progressPath = path.join(docsDir, subdir, 'PROGRESS.json');
-    if (fs.existsSync(progressPath)) {
-      try {
-        const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
-        // Return first active (non-completed) project
-        if (progress.status !== 'completed') {
-          return { path: progressPath, data: progress, slug: subdir };
+    for (const subdir of subdirs) {
+      const progressPath = path.join(dir, subdir, 'PROGRESS.json');
+      if (fs.existsSync(progressPath)) {
+        try {
+          const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+          // Return first active (non-completed) project
+          if (progress.status !== 'completed') {
+            return { path: progressPath, data: progress, slug: subdir, structure };
+          }
+        } catch (error) {
+          // Skip invalid files
         }
-      } catch (error) {
-        // Skip invalid files
       }
     }
   }
