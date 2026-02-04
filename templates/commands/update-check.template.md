@@ -1,5 +1,5 @@
 ---
-description: Check for CCASP updates and add new features to your project
+description: Check for CCASP updates and sync all template files
 model: sonnet
 allowed-tools:
   - Read
@@ -12,366 +12,365 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /update-check - CCASP Update Manager
+# /update-check - CCASP Update & Sync
 
-Check for Claude CLI Advanced Starter Pack updates and manage new features.
+Comprehensive sync of ALL CCASP template files to your project.
 
-## Quick Menu
+---
 
-| Key | Action | Description |
-|-----|--------|-------------|
-| **1** | Check for Updates | Check npm registry for new versions |
-| **2** | Add New Features | Install features from recent updates |
-| **3** | Prior Releases | Review and enable features from older versions |
-| **4** | View Changelog | See what changed in each release |
-| **A** | Smart Update | Protect customizations, merge new features carefully |
-| **B** | Full Overwrite | Replace all .claude/ assets (preserves tech-stack.json) |
-| **P** | Planning Mode | Audit new features before adding them |
-| **X** | Back to /menu | Return to main menu |
+## Quick Actions
+
+| Key | Action |
+|-----|--------|
+| **S** | Sync All - Add new files, skip customized ones |
+| **V** | View Changes - See what will be added/skipped |
+| **F** | Force Sync - Replace ALL files (backup created) |
+| **X** | Exit |
+
+---
+
+## How It Works
+
+1. **Scans ALL template directories** (not just commands/hooks)
+2. **Detects customizations** via file hash comparison
+3. **Skips customized files** automatically
+4. **Adds ALL new files** that don't exist locally
+
+### File Categories Synced
+
+| Category | Source | Destination |
+|----------|--------|-------------|
+| Commands | `templates/commands/*.template.md` | `.claude/commands/*.md` |
+| Agents | `templates/agents/**/*.md` | `.claude/agents/*.md` |
+| Skills | `templates/skills/*/` | `.claude/skills/*/` |
+| Hooks | `templates/hooks/*.template.js` | `.claude/hooks/*.js` |
+| Docs | `templates/docs/*.md` | `.claude/docs/*.md` |
+| Patterns | `templates/patterns/*.md` | `.claude/docs/patterns/*.md` |
 
 ---
 
 ## Instructions for Claude
 
-When invoked, perform a version check and display the menu.
+### Step 1: Get Package Location and Version
 
-### Step 1: Check Current State
-
-Read the current state files:
 ```bash
-# Check installed version
-cat node_modules/claude-cli-advanced-starter-pack/package.json 2>/dev/null | grep version
-# Or check global install
-npm list -g claude-cli-advanced-starter-pack 2>/dev/null | grep claude-cli-advanced-starter-pack
+# Find CCASP package location
+CCASP_PATH=$(npm root -g)/claude-cli-advanced-starter-pack
+# Or for local install
+CCASP_PATH=./node_modules/claude-cli-advanced-starter-pack
+
+# Get versions
+INSTALLED=$(cat $CCASP_PATH/package.json 2>/dev/null | grep '"version"' | head -1)
+LATEST=$(npm view claude-cli-advanced-starter-pack version 2>/dev/null)
 ```
 
-Read `.claude/config/ccasp-state.json` if it exists:
-```json
-{
-  "lastCheckTimestamp": 1706644800000,
-  "lastCheckResult": { "latestVersion": "1.0.5" },
-  "lastSeenVersion": "1.0.4",
-  "dismissedVersions": [],
-  "installedFeatures": ["menu", "e2e-test", "create-agent"],
-  "skippedFeatures": ["roadmap-sync"]
-}
+Display version status:
+```
+CCASP Update Check
+==================
+Installed: v2.2.12
+Latest:    v2.2.12 ✓ (up to date)
 ```
 
-### Step 2: Check for Updates
+Or if update available:
+```
+CCASP Update Check
+==================
+Installed: v2.2.11
+Latest:    v2.2.12 ← UPDATE AVAILABLE
 
-Run npm to check latest version:
+Run: npm update -g claude-cli-advanced-starter-pack
+```
+
+### Step 2: Scan All Template Files
+
+Scan these directories in the CCASP package:
+
+```javascript
+const TEMPLATE_DIRS = {
+  commands: {
+    source: 'templates/commands/',
+    dest: '.claude/commands/',
+    pattern: '*.template.md',
+    transform: (name) => name.replace('.template.md', '.md')
+  },
+  agents: {
+    source: 'templates/agents/',
+    dest: '.claude/agents/',
+    pattern: '**/*.md',
+    transform: (name) => name // Keep as-is
+  },
+  skills: {
+    source: 'templates/skills/',
+    dest: '.claude/skills/',
+    pattern: '*/',
+    transform: (name) => name // Directory copy
+  },
+  hooks: {
+    source: 'templates/hooks/',
+    dest: '.claude/hooks/',
+    pattern: '*.template.js',
+    transform: (name) => name.replace('.template.js', '.js')
+  },
+  docs: {
+    source: 'templates/docs/',
+    dest: '.claude/docs/',
+    pattern: '*.md',
+    transform: (name) => name.replace('.template.md', '.md')
+  },
+  patterns: {
+    source: 'templates/patterns/',
+    dest: '.claude/docs/patterns/',
+    pattern: '*.md',
+    transform: (name) => name
+  }
+};
+```
+
+### Step 3: Detect Customizations via Hash Comparison
+
+For each file that exists BOTH locally and in templates:
+
 ```bash
-npm view claude-cli-advanced-starter-pack version
+# Get MD5 hash of local file
+LOCAL_HASH=$(md5sum .claude/commands/menu.md | cut -d' ' -f1)
+
+# Get MD5 hash of template (after transform)
+# Process template to remove .template extension comparison
+TEMPLATE_HASH=$(md5sum $CCASP_PATH/templates/commands/menu.template.md | cut -d' ' -f1)
+
+# If hashes differ, file is customized
+if [ "$LOCAL_HASH" != "$TEMPLATE_HASH" ]; then
+  echo "CUSTOMIZED: menu.md"
+fi
 ```
 
-Compare with installed version. If update available, display:
+**Note:** Some templates have placeholders like `{{projectName}}`. For these, compare structure not exact content. Mark as customized if user added significant content beyond placeholder replacement.
+
+### Step 4: Build Sync Plan
+
+Categorize all files into:
+
+1. **NEW** - Template exists, local file doesn't → Will be added
+2. **UNCHANGED** - Hashes match → Will be skipped (no action needed)
+3. **CUSTOMIZED** - Hashes differ → Will be skipped (preserved)
+4. **LOCAL_ONLY** - Local file exists, no template → Preserved (user created)
+
+### Step 5: Display Sync Plan
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║  🆕 UPDATE AVAILABLE                                           ║
-║  v1.0.4 → v1.0.5                                               ║
-╠════════════════════════════════════════════════════════════════╣
-║  What's New in v1.0.5:                                         ║
-║  • Agent-powered project implementation                        ║
-║  • Version tracking with update notifications                  ║
-║  • Prior releases menu for feature management                  ║
-║                                                                ║
-║  New Features:                                                 ║
-║  • /project-impl - Agent-powered setup & configuration         ║
-║  • /update-check - Check updates and add features              ║
-╠════════════════════════════════════════════════════════════════╣
-║  To Update:                                                    ║
-║  npm update -g claude-cli-advanced-starter-pack                ║
-╚════════════════════════════════════════════════════════════════╝
+CCASP Sync Plan
+===============
+
+NEW (will be added):
+  Commands:  3 files
+    + /research-competitor
+    + /tunnel-start
+    + /tunnel-stop
+
+  Agents:    2 files
+    + github-issue-sync-worker.md
+    + orchestrator.md
+
+  Hooks:     1 file
+    + progress-sync.js
+
+CUSTOMIZED (will be skipped):
+  Commands:  5 files
+    ~ /create-task-list (modified)
+    ~ /menu (modified)
+    ~ /pr-merge (modified)
+    ~ /phase-dev-plan (modified)
+    ~ /deploy-full (modified)
+
+UNCHANGED: 42 files (no action needed)
+LOCAL ONLY: 3 files (preserved)
+
+Summary: 6 files to add, 5 customized (skipped), 42 unchanged
 ```
 
-### Step 3: Display Menu and Get Selection
+### Step 6: Ask for Confirmation
 
 Use AskUserQuestion:
+
 ```
 What would you like to do?
 
-1. Check for Updates - Check npm for new versions
-2. Add New Features - Install features from recent updates
-3. Prior Releases - Review features from older versions
-4. View Changelog - See release history
-A. Smart Update - Protect customizations, merge carefully
-B. Full Overwrite - Replace all assets (backup created)
-P. Planning Mode - Audit features before adding
-X. Back to /menu
+Options:
+- Sync (add 6 new files, skip customized)
+- View details (see full file list)
+- Force sync (replace ALL files, backup created)
+- Exit
 ```
 
----
+### Step 7: Execute Sync
 
-## Option 1: Check for Updates
+**For "Sync" option:**
 
-1. Run: `npm view claude-cli-advanced-starter-pack version`
-2. Compare with current version
-3. If update available:
-   - Show version comparison
-   - List highlights from releases.json
-   - Show update command
-   - Offer to add new features after update
-4. If up to date:
-   - Show "You're on the latest version!"
-   - Offer to review available features not yet installed
-
----
-
-## Option 2: Add New Features
-
-1. Read `.claude/config/ccasp-state.json` for installed/skipped features
-2. Read `.claude/commands/` to see what commands exist
-3. Compare against available features in releases.json
-4. Show features available to add:
-
-```
-╔════════════════════════════════════════════════════════════════╗
-║  Available Features to Add                                     ║
-╠════════════════════════════════════════════════════════════════╣
-║  Commands:                                                     ║
-║  [ ] /project-impl - Agent-powered project implementation      ║
-║  [ ] /roadmap-sync - Sync roadmaps with GitHub                 ║
-║  [ ] /claude-settings - Configure permissions and modes        ║
-║                                                                ║
-║  Optional Features:                                            ║
-║  [ ] Token Management - Monitor API token usage                ║
-║  [ ] Happy Mode - Mobile app integration                       ║
-║  [ ] Tunnel Services - ngrok/localtunnel for mobile testing    ║
-╚════════════════════════════════════════════════════════════════╝
-```
-
-5. Use AskUserQuestion to let user select features
-6. For each selected feature:
-   - Read the template from templates/commands/
-   - Write to .claude/commands/
-   - Update ccasp-state.json
-7. Show summary of what was added
-
----
-
-## Option 3: Prior Releases
-
-1. Load releases.json data
-2. Show release history:
-
-```
-╔════════════════════════════════════════════════════════════════╗
-║  CCASP Release History                                         ║
-╠════════════════════════════════════════════════════════════════╣
-║  v1.0.5 (2025-01-30) - Agent-powered implementation            ║
-║  v1.0.4 (2025-01-29) - Settings schema update                  ║
-║  v1.0.3 (2025-01-28) - Backup and uninstall wizard             ║
-║  v1.0.2 (2025-01-27) - Template fallback and fixes             ║
-║  v1.0.1 (2025-01-26) - Documentation improvements              ║
-║  v1.0.0 (2025-01-25) - Initial release                         ║
-╚════════════════════════════════════════════════════════════════╝
-
-Select a version to see details and available features: [1-6]
-```
-
-3. Show details for selected version:
-   - Summary
-   - Highlights
-   - New features with descriptions
-   - Option to add any features from that release
-
----
-
-## Option 4: View Changelog
-
-Display formatted changelog from releases.json:
-
-```markdown
-# CCASP Changelog
-
-## v1.0.5 (2025-01-30)
-**Agent-powered project implementation**
-
-### Highlights
-- New /project-impl command for agent-powered setup
-- Version tracking with update notifications
-- Prior releases menu for feature management
-
-### New Commands
-- `/project-impl` - Agent-powered project implementation
-- `/update-check` - Check updates and add features
-
----
-
-## v1.0.4 (2025-01-29)
-**Settings schema update**
-...
-```
-
----
-
-## Option P: Planning Mode
-
-For users who want to audit new features before adding them:
-
-1. Show available features with detailed descriptions
-2. Enter plan mode to:
-   - Explore the template files
-   - Review what changes will be made
-   - Check for conflicts with existing commands
-   - Understand feature dependencies
-3. Create an implementation plan
-4. Ask user to approve before making changes
-5. Exit plan mode and implement approved changes
-
-**Planning Mode Flow:**
-```
-1. Explore: Read template files for selected features
-2. Analyze: Check for conflicts or dependencies
-3. Plan: Create step-by-step implementation plan
-4. Review: Present plan to user
-5. Approve: User confirms or modifies
-6. Implement: Execute approved changes
-```
-
----
-
-## Option A: Smart Update (Protect Customizations)
-
-This mode preserves your customizations while adding new features.
-
-**What gets preserved:**
-- All files in `.claude/commands/` that you've modified
-- Custom skills in `.claude/skills/`
-- Custom agents in `.claude/agents/`
-- Custom hooks in `.claude/hooks/`
-- `.claude/config/tech-stack.json` (your project configuration)
-- `.claude/settings.json` and `.claude/settings.local.json`
-
-**What gets updated:**
-- New commands that don't exist yet
-- New skills, agents, hooks that don't exist yet
-- System files like INDEX.md (merged carefully)
-
-**Process:**
-1. Scan `.claude/config/usage-tracking.json` for customized assets
-2. For each customized asset, compare with new template
-3. Show diff and offer: Keep Local | Use New | Merge Manually
-4. Create backups in `.claude/backups/` before any changes
-5. Deploy only non-conflicting new content
-
-**Example:**
-```
-╔════════════════════════════════════════════════════════════════╗
-║  Smart Update - Protecting Customizations                      ║
-╠════════════════════════════════════════════════════════════════╣
-║  Customized assets detected (will be preserved):               ║
-║    • /create-task-list (modified)                              ║
-║    • /github-update (modified)                                 ║
-║                                                                ║
-║  New assets to add:                                            ║
-║    • /pr-merge (new in v1.8.27)                                ║
-║    • agent-orchestrator skill (new in v1.8.26)                 ║
-║                                                                ║
-║  Proceed with Smart Update? [Y/n]                              ║
-╚════════════════════════════════════════════════════════════════╝
-```
-
----
-
-## Option B: Full Overwrite (Replace All Assets)
-
-This mode replaces all .claude/ assets with fresh templates from CCASP.
-
-**What gets replaced:**
-- All `.claude/commands/*.md` files
-- All `.claude/skills/*/` directories
-- All `.claude/agents/*.md` files
-- All `.claude/hooks/*.js` files
-- `.claude/commands/INDEX.md`
-- `.claude/docs/` directory
-
-**What is preserved:**
-- `.claude/config/tech-stack.json` (your project configuration)
-- `.claude/config/ccasp-state.json` (update tracking)
-- `.claude/config/usage-tracking.json` (usage history)
-- `.claude/settings.json` and `.claude/settings.local.json`
-- `.claude/backups/` directory
-
-**Process:**
-1. Create timestamped backup of entire `.claude/` folder in `.claude/backups/`
-2. Run `ccasp init --force` to redeploy all assets
-3. Restore config files from backup
-4. Update ccasp-state.json with new version
-
-**Warning:**
-```
-⚠️  FULL OVERWRITE will replace ALL customized commands, skills, agents, and hooks.
-Your customizations will be lost (backup created).
-
-Only use this if:
-- You want a clean slate
-- Your customizations are outdated
-- You're troubleshooting issues
-
-Backup location: .claude/backups/YYYY-MM-DD_HHMMSS/
-```
-
-**Execution:**
 ```bash
-# This runs in the terminal
-cd <project-directory>
+# Create directories if needed
+mkdir -p .claude/commands .claude/agents .claude/skills .claude/hooks .claude/docs/patterns
+
+# Copy each NEW file
+for file in $NEW_FILES; do
+  cp "$CCASP_PATH/templates/$source" ".claude/$dest"
+  echo "Added: $dest"
+done
+
+# Update INDEX.md with new commands
+# (Append new command entries, don't overwrite)
+```
+
+**For "Force Sync" option:**
+
+```bash
+# Create backup first
+BACKUP_DIR=".claude/backups/$(date +%Y-%m-%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+cp -r .claude/commands "$BACKUP_DIR/"
+cp -r .claude/agents "$BACKUP_DIR/"
+cp -r .claude/skills "$BACKUP_DIR/"
+cp -r .claude/hooks "$BACKUP_DIR/"
+echo "Backup created: $BACKUP_DIR"
+
+# Preserve config files
+cp .claude/config/*.json "$BACKUP_DIR/config/" 2>/dev/null
+cp .claude/settings*.json "$BACKUP_DIR/" 2>/dev/null
+
+# Run full init
 ccasp init --force
+
+# Restore config
+cp "$BACKUP_DIR/config/"*.json .claude/config/ 2>/dev/null
+cp "$BACKUP_DIR/settings"*.json .claude/ 2>/dev/null
+
+echo "Force sync complete. Backup at: $BACKUP_DIR"
+```
+
+### Step 8: Post-Sync Summary
+
+```
+Sync Complete
+=============
+Added:     6 files
+Skipped:   5 files (customized)
+Unchanged: 42 files
+
+New commands available:
+  /research-competitor - Competitive analysis
+  /tunnel-start - Start tunnel service
+  /tunnel-stop - Stop tunnel service
+
+RESTART REQUIRED: Exit and restart Claude Code to use new commands.
 ```
 
 ---
 
-## Feature Installation Process
+## Customization Detection Logic
 
-When adding a feature:
+### Hash-Based Detection (Primary)
 
-### For Commands:
-1. Check if template exists: `templates/commands/{name}.template.md`
-2. Check if command already exists: `.claude/commands/{name}.md`
-3. If exists, ask: Skip, Overwrite, or Backup & Overwrite
-4. Copy template to `.claude/commands/{name}.md`
-5. Update INDEX.md
-6. Update ccasp-state.json
+```javascript
+function isCustomized(localPath, templatePath) {
+  // File doesn't exist locally - not customized, it's NEW
+  if (!existsSync(localPath)) return false;
 
-### For Hooks:
-1. Check template in `templates/hooks/`
-2. Copy to `.claude/hooks/`
-3. Update settings.json hooks configuration
+  // File doesn't exist in template - LOCAL_ONLY
+  if (!existsSync(templatePath)) return 'local_only';
 
-### For Optional Features:
-1. Update `.claude/config/tech-stack.json`
-2. Deploy associated commands/hooks
-3. Show post-configuration instructions if needed
+  // Compare file hashes
+  const localHash = md5(readFileSync(localPath));
+  const templateHash = md5(readFileSync(templatePath));
+
+  return localHash !== templateHash;
+}
+```
+
+### Template Placeholder Handling
+
+Some templates contain placeholders that get replaced during init:
+- `{{projectName}}` → actual project name
+- `{{techStack}}` → detected tech stack
+- `${CWD}` → current working directory
+
+For these files, use **structural comparison**:
+1. Strip all placeholder values
+2. Compare remaining structure
+3. If structure matches, consider UNCHANGED
+4. If user added new sections, consider CUSTOMIZED
 
 ---
 
-## State Management
+## File-Specific Notes
 
-Update `.claude/config/ccasp-state.json` after each operation:
+### Commands
+- Remove `.template` from filename
+- Most are self-contained, no placeholders
+- INDEX.md should be MERGED not replaced
+
+### Agents
+- Nested directory structure (agents/frontend/react.md)
+- Flatten to .claude/agents/ or preserve structure based on project config
+
+### Skills
+- Entire directory (skill.md + skill.json + assets/)
+- Copy directory recursively
+- Check skill.json for customization
+
+### Hooks
+- Remove `.template` from filename
+- Some have PROJECT_ROOT placeholders
+- Must update settings.json to register
+
+### Docs
+- Reference documentation
+- Usually safe to overwrite unless user added content
+
+---
+
+## Error Handling
+
+### Package Not Found
+```
+Error: CCASP package not found.
+Install with: npm install -g claude-cli-advanced-starter-pack
+```
+
+### Permission Denied
+```
+Error: Cannot write to .claude/ directory.
+Check permissions or run with appropriate access.
+```
+
+### Partial Failure
+```
+Sync partially complete:
+  Added: 4/6 files
+  Failed: 2 files
+    - agents/orchestrator.md (permission denied)
+    - hooks/progress-sync.js (already locked)
+
+Retry failed files? [Y/n]
+```
+
+---
+
+## State Tracking
+
+Update `.claude/config/ccasp-state.json` after sync:
 
 ```json
 {
-  "lastCheckTimestamp": 1706644800000,
-  "lastCheckResult": {
-    "latestVersion": "1.0.5"
-  },
-  "lastSeenVersion": "1.0.5",
-  "dismissedVersions": [],
-  "installedFeatures": [
-    "menu",
-    "e2e-test",
-    "create-agent",
-    "project-impl"
-  ],
-  "skippedFeatures": [
-    "roadmap-sync"
-  ],
-  "installHistory": [
+  "lastSyncTimestamp": "2026-02-04T12:00:00Z",
+  "lastSyncVersion": "2.2.12",
+  "filesAdded": ["research-competitor.md", "tunnel-start.md"],
+  "filesSkipped": ["create-task-list.md", "menu.md"],
+  "customizedFiles": [
     {
-      "feature": "project-impl",
-      "version": "1.0.5",
-      "installedAt": "2025-01-30T12:00:00Z"
+      "path": ".claude/commands/create-task-list.md",
+      "localHash": "abc123...",
+      "templateHash": "def456...",
+      "detectedAt": "2026-02-04T12:00:00Z"
     }
   ]
 }
@@ -381,36 +380,17 @@ Update `.claude/config/ccasp-state.json` after each operation:
 
 ## Terminal Alternative
 
-These operations can also be run from the terminal:
-
 ```bash
-# Check for updates
-npm outdated -g claude-cli-advanced-starter-pack
+# Quick sync (same as option S)
+ccasp sync
 
-# Update package
-npm update -g claude-cli-advanced-starter-pack
+# Force sync (same as option F)
+ccasp init --force
 
-# Run wizard to add features
-ccasp wizard
+# Check what would be synced (dry run)
+ccasp sync --dry-run
 ```
 
 ---
 
-## After Installation Reminder
-
-After adding new features, remind user:
-
-```
-⚠️  RESTART REQUIRED
-
-New commands have been added to .claude/commands/.
-To use them, restart your Claude Code session:
-
-1. Exit (Ctrl+C or /exit)
-2. Restart: claude or claude .
-3. New commands will be available
-```
-
----
-
-*Part of Claude CLI Advanced Starter Pack*
+*Part of Claude CLI Advanced Starter Pack v2.2.12+*
