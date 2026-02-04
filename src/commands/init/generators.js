@@ -334,7 +334,7 @@ module.exports = async function ccaspUpdateCheck(context) {
 }
 
 /**
- * Generate settings.json with CCASP update check hook and usage tracking
+ * Generate settings.json with CCASP update check hook, usage tracking, and GitHub progress sync
  */
 export function generateSettingsJson(projectName) {
   return JSON.stringify(
@@ -363,6 +363,15 @@ export function generateSettingsJson(projectName) {
               {
                 type: 'command',
                 command: 'node .claude/hooks/usage-tracking.js',
+              },
+            ],
+          },
+          {
+            matcher: 'TodoWrite',
+            hooks: [
+              {
+                type: 'command',
+                command: 'node .claude/hooks/github-progress-hook.cjs',
               },
             ],
           },

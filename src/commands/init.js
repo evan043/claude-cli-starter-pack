@@ -1040,24 +1040,41 @@ export async function runInit(options = {}) {
           continue;
         }
 
-        // Try to load from templates/hooks/ folder
-        const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.js`);
+        // Try to load from templates/hooks/ folder (support both .js and .cjs extensions)
+        const templatePathJs = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.js`);
+        const templatePathCjs = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.cjs`);
+        const templatePath = existsSync(templatePathCjs) ? templatePathCjs : templatePathJs;
+        const outputExt = existsSync(templatePathCjs) ? '.cjs' : '.js';
+        const outputPath = join(hooksDir, `${hookName}${outputExt}`);
+
         if (existsSync(templatePath)) {
+          // Check if output already exists (could be .js or .cjs)
+          const hookExistsJs = existsSync(join(hooksDir, `${hookName}.js`));
+          const hookExistsCjs = existsSync(join(hooksDir, `${hookName}.cjs`));
+          const hookExistsAny = hookExistsJs || hookExistsCjs;
+
           // Create backup if overwriting existing hook
-          if (hookExists && overwrite) {
-            const backupPath = createBackup(hookPath);
+          if (hookExistsAny && overwrite) {
+            const existingPath = hookExistsCjs ? join(hooksDir, `${hookName}.cjs`) : join(hooksDir, `${hookName}.js`);
+            const backupPath = createBackup(existingPath);
             if (backupPath) {
-              backedUpFiles.push({ original: hookPath, backup: backupPath });
+              backedUpFiles.push({ original: existingPath, backup: backupPath });
             }
           }
-          const hookContent = readFileSync(templatePath, 'utf8');
-          writeFileSync(hookPath, hookContent, 'utf8');
-          deployedHooks.push(hookName);
-          const action = hookExists ? 'Updated' : 'Created';
-          console.log(chalk.green(`  ✓ ${action} hooks/${hookName}.js`));
+
+          // Skip if exists and not overwriting
+          if (hookExistsAny && !overwrite) {
+            console.log(chalk.blue(`  ○ hooks/${hookName}${outputExt} exists (preserved)`));
+          } else {
+            const hookContent = readFileSync(templatePath, 'utf8');
+            writeFileSync(outputPath, hookContent, 'utf8');
+            deployedHooks.push(hookName);
+            const action = hookExistsAny ? 'Updated' : 'Created';
+            console.log(chalk.green(`  ✓ ${action} hooks/${hookName}${outputExt}`));
+          }
         } else {
           failedHooks.push({ name: hookName, error: 'No template found' });
-          console.log(chalk.yellow(`  ⚠ Skipped hooks/${hookName}.js (no template)`));
+          console.log(chalk.yellow(`  ⚠ Skipped hooks/${hookName}${outputExt} (no template)`));
         }
       } catch (error) {
         failedHooks.push({ name: hookName, error: error.message });
