@@ -56,7 +56,7 @@ Comprehensive sync of ALL CCASP template files to your project.
 
 ## Instructions for Claude
 
-### Step 0: Check for Sync Marker (CRITICAL)
+### Step 0: Check for Sync Marker and Auto-Upgrade (CRITICAL)
 
 **FIRST**, check if the sync marker file exists locally:
 
@@ -65,29 +65,27 @@ ls .claude/commands/__ccasp-sync-marker.md 2>/dev/null
 ```
 
 **If the marker file is MISSING:**
-- The project was initialized with an older CCASP version (< v2.2.16)
-- The local `/update-check` command only scans 6 categories instead of 11
-- **YOU MUST run `ccasp init` to get the updated command with full 11-category support**
 
-Display this warning if marker is missing:
+Display this message:
 ```
-⚠️  OUTDATED SYNC CONFIGURATION DETECTED
+⚠️  Upgrading to full 11-category sync...
 
-Your project was initialized with an older CCASP version that only
-syncs 6 file categories. The current version syncs 11 categories.
-
-Missing categories:
-  - commands-dev/
-  - scripts/
-  - github/ISSUE_TEMPLATE/
-  - workflows/
-  - mcp/
-
-ACTION REQUIRED: Run 'ccasp init' to update your sync configuration.
-This will preserve your existing customizations.
+Your project was initialized with an older CCASP version.
+Running 'ccasp init' to enable all template categories.
 ```
 
-Then **STOP** and tell the user to run `ccasp init` before proceeding.
+Then **automatically run** `ccasp init`:
+
+```bash
+ccasp init
+```
+
+After init completes, display:
+```
+✓ Upgrade complete! Now scanning all 11 categories.
+```
+
+Then continue with Step 1.
 
 ---
 
