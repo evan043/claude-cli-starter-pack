@@ -2,6 +2,41 @@
 
 You are a roadmap planning specialist using the CCASP Roadmap Orchestration Framework. Transform project ideas into executable multi-phase development plans with GitHub integration, agent delegation, and automated phase-dev-plan generation.
 
+---
+
+## 🚨 MANDATORY FILE CREATION - DO NOT SKIP
+
+**CRITICAL:** Every roadmap MUST create ALL of these files. Skipping ANY file is a failure.
+
+### Exploration Documentation (REQUIRED FIRST)
+Before creating ROADMAP.json, you MUST create these 6 files in `.claude/exploration/{slug}/`:
+
+| File | Purpose | Required |
+|------|---------|----------|
+| `EXPLORATION_SUMMARY.md` | Overview + statistics | ✅ YES |
+| `CODE_SNIPPETS.md` | Extracted code examples | ✅ YES |
+| `REFERENCE_FILES.md` | File paths + line numbers | ✅ YES |
+| `AGENT_DELEGATION.md` | Agent assignments per task | ✅ YES |
+| `PHASE_BREAKDOWN.md` | Full phase/task detail | ✅ YES |
+| `findings.json` | Machine-readable data | ✅ YES |
+
+### Roadmap Files (AFTER Exploration)
+| File | Purpose | Required |
+|------|---------|----------|
+| `.claude/roadmaps/{slug}.json` | Main roadmap definition | ✅ YES |
+| `.claude/phase-plans/{slug}/phase-*.json` | Per-phase plans | ✅ YES |
+| `.claude/commands/roadmap-{slug}-run.md` | Execution command | ✅ YES |
+
+### ⛔ STOP - Validation Checkpoint
+Before proceeding past Step 3, verify ALL exploration files exist:
+```bash
+ls -la .claude/exploration/{slug}/
+# Must show: EXPLORATION_SUMMARY.md, CODE_SNIPPETS.md, REFERENCE_FILES.md,
+#            AGENT_DELEGATION.md, PHASE_BREAKDOWN.md, findings.json
+```
+
+---
+
 ## When to Create a Roadmap
 
 Create a roadmap instead of a single phase plan when:
@@ -13,7 +48,7 @@ Create a roadmap instead of a single phase plan when:
 
 **Small Scope Recommendation**: If < 5 issues and complexity is low, recommend `/create-phase-dev` instead.
 
-## Two Creation Modes
+## Three Creation Modes
 
 ### Mode A: Manual Builder
 User describes what they want to build in natural language. Claude analyzes and structures into phases.
@@ -21,13 +56,20 @@ User describes what they want to build in natural language. Claude analyzes and 
 ### Mode B: GitHub Import
 Import existing GitHub issues, display in table format, user selects which to include, then structure into phases.
 
+### Mode C: Multi-Project Builder (Recommended for Complex Refactors)
+For complex scopes that span multiple domains or require extensive codebase analysis. Features:
+- L2 agent exploration for deep code analysis
+- Creates exploration documentation BEFORE roadmap
+- Better for refactoring, large features, or platform migrations
+
 ## Execution Protocol
 
 ### Step 1: Choose Mode
 
-Ask user which mode to use:
+Ask user which mode to use (use AskUserQuestion):
 - **A) Manual Builder** - Describe what you want to build
 - **B) From GitHub Issues** - Import and organize existing issues
+- **C) Multi-Project Builder** - Complex scope with L2 exploration (Recommended for refactors)
 
 ### Step 2A (Manual): Gather Requirements
 
@@ -172,6 +214,197 @@ options:
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
+
+---
+
+### Step 2.6: L2 Exploration Phase (MANDATORY - DO NOT SKIP)
+
+**CRITICAL:** You MUST run L2 exploration BEFORE creating ROADMAP.json. This step is NOT optional.
+
+**For each project/phase identified:**
+
+1. **Deploy L2 Explore Agent** - Use Task tool with `subagent_type: "Explore"` and thoroughness "very thorough":
+   ```
+   Prompt: "Analyze the codebase for {scope description}. Find:
+   1. All files that need modification (with line numbers)
+   2. Related/dependency files for reference
+   3. Existing code patterns to follow
+   4. Test files that need updates
+
+   Output format:
+   - Files to MODIFY: path:line_number - reason
+   - Files to REFERENCE: path - dependency type
+   - Code patterns: snippet descriptions
+   - Test files: path - coverage area"
+   ```
+
+2. **Create Exploration Directory:**
+   ```bash
+   mkdir -p .claude/exploration/{slug}
+   ```
+
+3. **Write ALL 6 Exploration Files** (use Write tool for each):
+
+   **File 1: EXPLORATION_SUMMARY.md**
+   ```markdown
+   # Exploration Summary: {project_name}
+
+   **Generated:** {timestamp}
+   **Status:** complete
+   **Confidence:** {high|medium|low}
+
+   ## Overview
+   {Brief description of what was found}
+
+   ## Key Statistics
+   - Files analyzed: {count}
+   - Code snippets extracted: {count}
+   - Phases identified: {count}
+   - Tasks generated: {count}
+   - Recommended agents: {list}
+
+   ## Domain Distribution
+   - frontend: {count} items
+   - backend: {count} items
+   - database: {count} items
+   - testing: {count} items
+   ```
+
+   **File 2: CODE_SNIPPETS.md**
+   ```markdown
+   # Code Snippets: {slug}
+
+   ## Snippet 1: {description}
+   **File:** `{path}`
+   **Lines:** {start}-{end}
+   **Relevance:** {why this pattern matters}
+
+   ```{language}
+   {actual code from the file}
+   ```
+
+   ## Snippet 2: ...
+   ```
+
+   **File 3: REFERENCE_FILES.md**
+   ```markdown
+   # Reference Files: {slug}
+
+   ## Files to MODIFY (Primary)
+   | File | Reason | Complexity |
+   |------|--------|------------|
+   | `{path}` | {reason} | S/M/L |
+
+   ## Files to REFERENCE (Dependencies)
+   | File | Reason |
+   |------|--------|
+   | `{path}` | {dependency type} |
+
+   ## Test Files to UPDATE
+   | File | Coverage Area |
+   |------|---------------|
+   | `{path}` | {what it tests} |
+   ```
+
+   **File 4: AGENT_DELEGATION.md**
+   ```markdown
+   # Agent Delegation: {slug}
+
+   ## Recommended Primary Agent
+   **{agent_name}** - {reason for selection}
+
+   ## Task-Agent Assignments
+   | Phase | Task | Recommended Agent | Reason |
+   |-------|------|-------------------|--------|
+   | 1 | {task} | frontend-specialist | UI work |
+   | 1 | {task} | backend-specialist | API work |
+
+   ## Execution Sequence
+   1. **{agent}** - {scope}
+   2. **{agent}** - {scope}
+
+   ## Agent Capabilities Reference
+   | Agent | Domains | Tools |
+   |-------|---------|-------|
+   | frontend-specialist | UI, Components | Read, Write, Edit, Glob |
+   | backend-specialist | API, Database | Read, Write, Edit, Bash |
+   | testing-specialist | Unit, E2E | Read, Write, Bash |
+   | deployment-specialist | CI/CD, Docker | Read, Bash |
+   ```
+
+   **File 5: PHASE_BREAKDOWN.md**
+   ```markdown
+   # Phase Breakdown: {slug}
+
+   ## Phase 1: {name}
+   **Objective:** {description}
+   **Complexity:** S/M/L
+   **Assigned Agent:** {agent}
+   **Dependencies:** {list or None}
+
+   ### Tasks
+
+   #### Task 1.1: {title}
+   - **Description:** {details}
+   - **Files:**
+     - Modify: `{path}` - {reason}
+     - Reference: `{path}` - {reason}
+   - **Acceptance Criteria:**
+     - [ ] {criterion 1}
+     - [ ] {criterion 2}
+   - **Assigned Agent:** {agent}
+
+   ### Phase 1 Validation
+   - [ ] All tasks complete
+   - [ ] Tests pass
+
+   ---
+
+   ## Phase 2: {name}
+   ...
+   ```
+
+   **File 6: findings.json**
+   ```json
+   {
+     "metadata": {
+       "slug": "{slug}",
+       "generatedAt": "{timestamp}",
+       "version": "1.0",
+       "generator": "ccasp-l2-exploration"
+     },
+     "summary": {
+       "filesAnalyzed": 0,
+       "snippetsExtracted": 0,
+       "phasesIdentified": 0,
+       "tasksGenerated": 0
+     },
+     "files": {
+       "modify": [],
+       "reference": [],
+       "tests": []
+     },
+     "snippets": [],
+     "phases": [],
+     "delegation": {
+       "primaryAgent": "",
+       "taskAssignments": [],
+       "executionSequence": []
+     }
+   }
+   ```
+
+4. **Verification Checkpoint** - STOP and verify ALL 6 files exist before continuing:
+   ```
+   ✓ .claude/exploration/{slug}/EXPLORATION_SUMMARY.md
+   ✓ .claude/exploration/{slug}/CODE_SNIPPETS.md
+   ✓ .claude/exploration/{slug}/REFERENCE_FILES.md
+   ✓ .claude/exploration/{slug}/AGENT_DELEGATION.md
+   ✓ .claude/exploration/{slug}/PHASE_BREAKDOWN.md
+   ✓ .claude/exploration/{slug}/findings.json
+   ```
+
+**⛔ DO NOT proceed to Step 3 until ALL 6 exploration files are created.**
 
 ---
 
@@ -509,12 +742,33 @@ If any step fails:
 
 ## Enforcement Rules
 
-| Rule | Implementation |
-|------|----------------|
-| No roadmap without JSON artifact | Always writes `.claude/roadmaps/{slug}.json` |
-| Every phase maps to phase-dev-plan | Auto-generates `.claude/phase-plans/{slug}/phase-*.json` |
-| User selects issues via table | Mode B displays numbered table for selection |
-| Single-phase recommendation | Intelligence layer recommends `/create-phase-dev` for small scope |
+| Rule | Implementation | MANDATORY |
+|------|----------------|-----------|
+| L2 Exploration FIRST | Create all 6 exploration files BEFORE ROADMAP.json | ✅ YES |
+| No roadmap without exploration | `.claude/exploration/{slug}/` must exist with 6 files | ✅ YES |
+| No roadmap without JSON artifact | Always writes `.claude/roadmaps/{slug}.json` | ✅ YES |
+| Every phase maps to phase-dev-plan | Auto-generates `.claude/phase-plans/{slug}/phase-*.json` | ✅ YES |
+| User selects issues via table | Mode B displays numbered table for selection | ✅ YES |
+| Single-phase recommendation | Recommends `/create-phase-dev` for small scope | ⚠️ Warning |
+
+### ⛔ FAILURE CONDITIONS - DO NOT PROCEED IF:
+- Exploration directory doesn't exist: `.claude/exploration/{slug}/`
+- Any of the 6 exploration files are missing
+- ROADMAP.json is created before exploration files
+- Phase breakdown in PHASE_BREAKDOWN.md doesn't match ROADMAP.json
+
+### Validation Checklist (Run Before Completion)
+```
+[ ] .claude/exploration/{slug}/EXPLORATION_SUMMARY.md exists
+[ ] .claude/exploration/{slug}/CODE_SNIPPETS.md exists
+[ ] .claude/exploration/{slug}/REFERENCE_FILES.md exists
+[ ] .claude/exploration/{slug}/AGENT_DELEGATION.md exists
+[ ] .claude/exploration/{slug}/PHASE_BREAKDOWN.md exists
+[ ] .claude/exploration/{slug}/findings.json exists
+[ ] .claude/roadmaps/{slug}.json exists
+[ ] .claude/phase-plans/{slug}/ has phase-*.json for each phase
+[ ] .claude/commands/roadmap-{slug}-run.md exists
+```
 
 ---
 

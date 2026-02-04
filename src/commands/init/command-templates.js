@@ -134,6 +134,34 @@ options:
 
 Create comprehensive, executable development plans that maximize success probability.
 
+---
+
+## 🚨 MANDATORY FILE CREATION - DO NOT SKIP
+
+**CRITICAL:** Every phase-dev-plan MUST create ALL of these files. Skipping ANY file is a failure.
+
+### Exploration Documentation (REQUIRED FIRST - Step 2)
+Before creating PROGRESS.json, you MUST create these 6 files in \`.claude/exploration/{slug}/\`:
+
+| File | Purpose | Required |
+|------|---------|----------|
+| \`EXPLORATION_SUMMARY.md\` | Overview + statistics | ✅ YES |
+| \`CODE_SNIPPETS.md\` | Extracted code examples | ✅ YES |
+| \`REFERENCE_FILES.md\` | File paths + line numbers | ✅ YES |
+| \`AGENT_DELEGATION.md\` | Agent assignments per task | ✅ YES |
+| \`PHASE_BREAKDOWN.md\` | Full phase/task detail | ✅ YES |
+| \`findings.json\` | Machine-readable data | ✅ YES |
+
+### Plan Files (AFTER Exploration - Step 3+)
+| File | Purpose | Required |
+|------|---------|----------|
+| \`.claude/docs/{slug}/PROGRESS.json\` | State tracking | ✅ YES |
+| \`.claude/docs/{slug}/EXECUTIVE_SUMMARY.md\` | Overview | ✅ YES |
+| \`.claude/commands/{slug}-executor.md\` | Phase executor agent | ✅ YES |
+| \`.claude/commands/{slug}.md\` | Interactive command | ✅ YES |
+
+---
+
 ## Why Phased Development?
 
 - Breaks complex tasks into manageable chunks
@@ -141,26 +169,49 @@ Create comprehensive, executable development plans that maximize success probabi
 - Clear checkpoints for progress tracking
 - Rollback points if issues arise
 
-## Generated Artifacts
+## Execution Protocol
 
-1. **PROGRESS.json** - State tracking and phase management
-2. **EXECUTIVE_SUMMARY.md** - Project overview and phase breakdown
-3. **Phase Executor Agent** - Autonomous phase execution
-4. **Slash Command** - Interactive phase navigation
+### Step 1: Gather Requirements
+Use AskUserQuestion to collect:
+1. **Project name** (human-readable)
+2. **Project slug** (kebab-case)
+3. **Description** (what to build)
+4. **Scale** (S/M/L)
 
-## Instructions
+### Step 2: L2 Exploration (MANDATORY - DO NOT SKIP)
 
-When invoked:
-1. Gather project requirements
-2. Analyze codebase for affected areas
-3. Determine appropriate scale (S/M/L)
-4. Generate phase breakdown with:
-   - Clear objectives
-   - Success criteria
-   - Estimated complexity
-   - Dependencies
-5. Create all artifacts in .claude/docs/<project-slug>/
-6. Generate executable slash command
+**CRITICAL:** You MUST run L2 exploration BEFORE creating plan files.
+
+1. **Deploy Explore Agent** - Use Task tool with \`subagent_type: "Explore"\` thoroughness "very thorough"
+2. **Create Exploration Directory:** \`mkdir -p .claude/exploration/{slug}\`
+3. **Write ALL 6 Exploration Files** in \`.claude/exploration/{slug}/\`:
+   - EXPLORATION_SUMMARY.md (overview + statistics)
+   - CODE_SNIPPETS.md (code examples from codebase)
+   - REFERENCE_FILES.md (files to modify/reference)
+   - AGENT_DELEGATION.md (agent assignments)
+   - PHASE_BREAKDOWN.md (full phase/task detail)
+   - findings.json (machine-readable)
+
+4. **Verification Checkpoint** - STOP and verify ALL 6 files exist before continuing
+
+**⛔ DO NOT proceed to Step 3 until ALL 6 exploration files exist.**
+
+### Step 3: Generate Phase Breakdown
+Based on exploration findings, create phases with clear objectives, success criteria, and agent assignments.
+
+### Step 4: Create Plan Artifacts
+Create \`.claude/docs/{slug}/PROGRESS.json\` and \`EXECUTIVE_SUMMARY.md\`
+
+### Step 5: Generate Executable Commands
+Create \`.claude/commands/{slug}-executor.md\` and \`.claude/commands/{slug}.md\`
+
+## Enforcement Rules
+
+| Rule | Mandatory |
+|------|-----------|
+| L2 Exploration FIRST | ✅ YES |
+| All 6 exploration files created | ✅ YES |
+| PROGRESS.json after exploration | ✅ YES |
 `,
 
   'create-agent': () => `---
