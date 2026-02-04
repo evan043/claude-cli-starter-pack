@@ -490,3 +490,381 @@ export async function promptEnhancements() {
 
   return enhancements;
 }
+
+/**
+ * Prompt for workflow configuration (branch, issue, worktree)
+ * @param {Object} options - Current options
+ * @returns {Object} Workflow configuration
+ */
+export async function promptWorkflowOptions(options = {}) {
+  console.log(chalk.cyan.bold('\n🔀 Workflow Options\n'));
+  console.log(chalk.dim('Configure how this plan integrates with your workflow.\n'));
+
+  const { enableWorkflow } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableWorkflow',
+      message: 'Configure workflow integration (branch/issue/worktree)?',
+      default: false,
+    },
+  ]);
+
+  if (!enableWorkflow) {
+    return {
+      github_issue: { enabled: false },
+      branch: { enabled: false },
+      worktree: { enabled: false },
+      project_board: { enabled: false },
+    };
+  }
+
+  // GitHub Issue configuration
+  const githubIssueConfig = await promptGitHubIssueConfig();
+
+  // Branch configuration
+  const branchConfig = await promptBranchConfig(options);
+
+  // Worktree configuration (advanced)
+  const worktreeConfig = await promptWorktreeConfig(options);
+
+  // Project Board configuration
+  const projectBoardConfig = await promptProjectBoardConfig();
+
+  return {
+    github_issue: githubIssueConfig,
+    branch: branchConfig,
+    worktree: worktreeConfig,
+    project_board: projectBoardConfig,
+  };
+}
+
+/**
+ * Prompt for GitHub Issue configuration
+ */
+async function promptGitHubIssueConfig() {
+  const { createIssue } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'createIssue',
+      message: 'Create GitHub issue for this plan?',
+      default: false,
+    },
+  ]);
+
+  if (!createIssue) {
+    return { enabled: false };
+  }
+
+  const { autoClose, updateOnTaskComplete } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'autoClose',
+      message: 'Auto-close issue when plan completes?',
+      default: true,
+    },
+    {
+      type: 'confirm',
+      name: 'updateOnTaskComplete',
+      message: 'Update issue checkboxes as tasks complete?',
+      default: true,
+    },
+  ]);
+
+  return {
+    enabled: true,
+    issue_number: null, // Will be set after creation
+    issue_url: null,
+    auto_close: autoClose,
+    update_on_task_complete: updateOnTaskComplete,
+  };
+}
+
+/**
+ * Prompt for branch configuration
+ */
+async function promptBranchConfig(options) {
+  const { createBranch } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'createBranch',
+      message: 'Create feature branch for this plan?',
+      default: false,
+    },
+  ]);
+
+  if (!createBranch) {
+    return { enabled: false };
+  }
+
+  const { branchName, baseBranch } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'branchName',
+      message: 'Branch name:',
+      default: options.projectSlug
+        ? `feat/${options.projectSlug}`
+        : 'feat/phase-dev-plan',
+      validate: (input) => {
+        if (!/^[a-z0-9][a-z0-9/_-]*$/.test(input)) {
+          return 'Branch names should be kebab-case (e.g., feat/my-feature)';
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'baseBranch',
+      message: 'Base branch:',
+      default: 'main',
+    },
+  ]);
+
+  return {
+    enabled: true,
+    branch_name: branchName,
+    base_branch: baseBranch,
+    auto_create: true,
+  };
+}
+
+/**
+ * Prompt for worktree configuration
+ */
+async function promptWorktreeConfig(options) {
+  const { useWorktree } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'useWorktree',
+      message: 'Use git worktree for isolated development? (advanced)',
+      default: false,
+    },
+  ]);
+
+  if (!useWorktree) {
+    return { enabled: false };
+  }
+
+  const { worktreePath } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'worktreePath',
+      message: 'Worktree path:',
+      default: options.projectSlug
+        ? `../${options.projectSlug}-worktree`
+        : '../phase-dev-worktree',
+    },
+  ]);
+
+  return {
+    enabled: true,
+    worktree_path: worktreePath,
+    auto_create: true,
+  };
+}
+
+/**
+ * Prompt for project board configuration
+ */
+async function promptProjectBoardConfig() {
+  const { useProjectBoard } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'useProjectBoard',
+      message: 'Sync with GitHub Project Board?',
+      default: false,
+    },
+  ]);
+
+  if (!useProjectBoard) {
+    return { enabled: false };
+  }
+
+  const { projectNumber } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'projectNumber',
+      message: 'Project board number:',
+      validate: (input) => {
+        if (!input || isNaN(parseInt(input))) {
+          return 'Enter a valid project number';
+        }
+        return true;
+      },
+    },
+  ]);
+
+  return {
+    enabled: true,
+    project_number: parseInt(projectNumber),
+    column_mapping: {
+      pending: 'Todo',
+      in_progress: 'In Progress',
+      completed: 'Done',
+    },
+  };
+}
+
+/**
+ * Prompt for Ralph Loop testing configuration
+ * @param {Object} architecture - Detected architecture
+ * @returns {Object} Testing configuration
+ */
+export async function promptTestingConfig(architecture = {}) {
+  console.log(chalk.cyan.bold('\n🧪 Testing Configuration\n'));
+  console.log(chalk.dim('Configure automated testing (Ralph Loop) for your plan.\n'));
+
+  // Determine default test command from architecture
+  const defaultTestCommand = determineDefaultTestCommand(architecture);
+
+  const { enableRalphLoop } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableRalphLoop',
+      message: 'Enable Ralph Loop (iterative test-fix cycle)?',
+      default: !!architecture.testing?.e2e || !!architecture.testing?.framework,
+    },
+  ]);
+
+  if (!enableRalphLoop) {
+    return {
+      ralph_loop: {
+        enabled: false,
+        testCommand: defaultTestCommand,
+        maxIterations: 10,
+        autoStart: false,
+      },
+    };
+  }
+
+  const ralphConfig = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'testCommand',
+      message: 'Test command:',
+      default: defaultTestCommand,
+    },
+    {
+      type: 'number',
+      name: 'maxIterations',
+      message: 'Max fix iterations per test failure:',
+      default: 10,
+      validate: (input) => input > 0 || 'Must be at least 1',
+    },
+    {
+      type: 'confirm',
+      name: 'autoStart',
+      message: 'Auto-start tests after each phase?',
+      default: false,
+    },
+    {
+      type: 'confirm',
+      name: 'validateAfterEachPhase',
+      message: 'Run validation after each phase completes?',
+      default: true,
+    },
+  ]);
+
+  return {
+    ralph_loop: {
+      enabled: true,
+      testCommand: ralphConfig.testCommand,
+      maxIterations: ralphConfig.maxIterations,
+      autoStart: ralphConfig.autoStart,
+      validateAfterEachPhase: ralphConfig.validateAfterEachPhase,
+    },
+    e2e_framework: architecture.testing?.e2e || null,
+    unit_framework: architecture.testing?.unit || architecture.testing?.framework || null,
+  };
+}
+
+/**
+ * Determine default test command from architecture
+ */
+function determineDefaultTestCommand(architecture) {
+  const testing = architecture.testing || {};
+
+  // E2E takes priority
+  if (testing.e2e === 'playwright') {
+    return 'npx playwright test';
+  }
+  if (testing.e2e === 'cypress') {
+    return 'npx cypress run';
+  }
+
+  // Unit test frameworks
+  if (testing.framework === 'vitest') {
+    return 'npm run test';
+  }
+  if (testing.framework === 'jest') {
+    return 'npm test';
+  }
+
+  // Python
+  if (architecture.backend?.language === 'python') {
+    return 'pytest';
+  }
+
+  // Go
+  if (architecture.backend?.language === 'go') {
+    return 'go test ./...';
+  }
+
+  // Default
+  return 'npm test';
+}
+
+/**
+ * Prompt for L2 exploration options
+ * @returns {Object} L2 exploration configuration
+ */
+export async function promptL2ExplorationOptions() {
+  console.log(chalk.cyan.bold('\n🔍 L2 Exploration Options\n'));
+  console.log(chalk.dim('Configure parallel agent exploration of your codebase.\n'));
+
+  const { enableExploration } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'enableExploration',
+      message: 'Enable L2 codebase exploration?',
+      default: true,
+    },
+  ]);
+
+  if (!enableExploration) {
+    return { enabled: false };
+  }
+
+  const { explorationDepth, includeTests, maxSnippets } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'explorationDepth',
+      message: 'Exploration depth:',
+      choices: [
+        { name: 'Quick - Fast scan, key files only', value: 'quick' },
+        { name: 'Standard - Balanced coverage (recommended)', value: 'standard' },
+        { name: 'Deep - Thorough analysis, more snippets', value: 'deep' },
+      ],
+      default: 'standard',
+    },
+    {
+      type: 'confirm',
+      name: 'includeTests',
+      message: 'Include test files in exploration?',
+      default: true,
+    },
+    {
+      type: 'number',
+      name: 'maxSnippets',
+      message: 'Maximum code snippets to extract:',
+      default: 30,
+      validate: (input) => input > 0 || 'Must be at least 1',
+    },
+  ]);
+
+  return {
+    enabled: true,
+    explorationDepth,
+    includeTests,
+    maxSnippets,
+  };
+}

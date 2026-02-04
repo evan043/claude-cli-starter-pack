@@ -1,6 +1,6 @@
 # /dev-mode-deploy-to-projects
 
-Sync CCASP worktree changes to registered projects with smart customization preservation.
+Sync ALL modified CCASP worktree files to registered projects - source code, templates, hooks, and commands.
 
 ## Usage
 
@@ -12,50 +12,38 @@ Sync CCASP worktree changes to registered projects with smart customization pres
 
 | Option | Description |
 |--------|-------------|
-| `--all` | Sync all registered projects |
-| `--project <name>` | Sync specific project by name |
 | `--dry-run` | Preview changes without applying |
-| `--force` | Overwrite all files (ignore customizations) |
+| `--force` | Overwrite all files (skip customization check) |
+| `--project <name>` | Sync specific project by name |
 
-## Smart Sync Behavior
+## What Gets Synced
 
-The sync algorithm categorizes each file:
+This command syncs **ALL** modified/new files from the worktree, not just templates:
 
-| Category | Action | Description |
+| Category | Source | Destination |
 |----------|--------|-------------|
-| **UNCHANGED** | Update | File matches worktree template - safe to update |
-| **CUSTOMIZED** | Preserve | File differs from template - user changes preserved |
-| **USER_CREATED** | Keep | File not in templates - user's custom file kept |
-| **NEW** | Add | Template not in project - added to project |
+| **Source files** | `src/**/*.js` | `src/**/*.js` |
+| **CLI entry** | `bin/*.js` | `bin/*.js` |
+| **Command templates** | `templates/commands/*.template.md` | `.claude/commands/*.md` |
+| **Hook templates** | `templates/hooks/*.template.js` | `templates/hooks/*.js` |
+| **Config files** | `config/**/*` | `config/**/*` |
+| **Other modified** | Any other changed files | Same relative path |
 
 ## Examples
 
-### Preview sync for all projects
+### Preview what would sync
 ```
 /dev-mode-deploy-to-projects --dry-run
 ```
 
-### Sync a specific project
+### Sync all projects
 ```
-/dev-mode-deploy-to-projects --project "My Project"
-```
-
-### Force sync (overwrite customizations)
-```
-/dev-mode-deploy-to-projects --force
+/dev-mode-deploy-to-projects
 ```
 
-## Output Format
-
+### Sync specific project
 ```
-Project: Benefits-Outreach-360
-├── Updated: 12 files (unchanged from worktree)
-├── Preserved: 3 files (user customizations)
-│   └── menu.md (+15/-3 lines)
-│   └── deploy-full.md (+8/-0 lines)
-├── Added: 2 new files
-│   └── new-command.md
-└── Kept: 1 user-created file
+/dev-mode-deploy-to-projects --project "Plan Design"
 ```
 
 ---
@@ -64,117 +52,109 @@ Project: Benefits-Outreach-360
 
 <command-name>dev-mode-deploy-to-projects</command-name>
 
-When the user invokes `/dev-mode-deploy-to-projects`, follow this workflow:
+When the user invokes `/dev-mode-deploy-to-projects`, execute the fast sync command:
 
-### Step 1: Verify Dev Mode
+### Step 1: Run the Sync Command
 
-Check if CCASP dev mode is active:
+Execute the `ccasp dev-sync` CLI command which handles everything automatically:
 
-```javascript
-// Check ~/.claude/ccasp-dev-state.json
-const devState = loadDevState();
-if (!devState.isDevMode) {
-  // Error: Dev mode not active
-  console.log("Dev mode is not active. Run 'ccasp dev-deploy' first.");
-  return;
-}
+```bash
+# Basic sync - syncs all modified/new files to all registered projects
+ccasp dev-sync
+
+# With dry-run to preview
+ccasp dev-sync --dry-run
+
+# Force overwrite
+ccasp dev-sync --force
+
+# Specific project
+ccasp dev-sync --project "Project Name"
 ```
 
-If not active, inform the user and suggest running `ccasp dev-deploy`.
+### Step 2: Parse User Options
 
-### Step 2: Parse Options
+If the user provided options with the slash command, pass them through:
 
-Parse the command options:
-- `--all`: Sync all registered projects
-- `--project <name>`: Sync specific project
-- `--dry-run`: Preview only
-- `--force`: Overwrite customizations
+- `--dry-run` → `ccasp dev-sync --dry-run`
+- `--force` → `ccasp dev-sync --force`
+- `--project "Name"` → `ccasp dev-sync --project "Name"`
 
-### Step 3: Load Projects
+### Step 3: Display Results
 
-Get projects to sync:
+The CLI command will output:
+- List of changed files (modified + new)
+- Projects being synced
+- Per-project file counts
+- Final summary
 
-```javascript
-import { loadRegistry } from 'ccasp/utils/global-registry.js';
+Example output:
+```
+🔄 Dev Mode Sync
 
-const registry = loadRegistry();
-let projectsToSync = registry.projects;
+  Worktree: F:\tools\ccasp-dev-2
 
-// Filter if --project specified
-if (options.project) {
-  projectsToSync = projectsToSync.filter(p =>
-    p.name.toLowerCase().includes(options.project.toLowerCase())
-  );
-}
+Scanning for changes...
+  Found 15 modified, 4 new files
+
+Files to sync:
+  Source files:      12
+  Command templates:  1
+  Hook templates:     0
+  Other files:        6
+
+Projects to sync (3):
+  • Plan Design Calculator
+  • ccasp-dev
+  • claude-cli-advanced-starter-pack
+
+📁 Plan Design Calculator
+   ├── Source: 12 files
+   ├── Commands: 1 deployed
+   ├── Hooks: 0 deployed
+   └── Other: 6 files
+   ✓ Total: 19 files synced
+
+... (repeat for each project)
+
+══════════════════════════════════════════════════
+  SYNC COMPLETE
+══════════════════════════════════════════════════
+  Projects: 3
+  Files synced: 57
+
+  Restart Claude Code CLI to see command changes.
 ```
 
-### Step 4: Analyze Sync Actions
+### What the Sync Command Does
 
-For each project, analyze what actions are needed:
+The `ccasp dev-sync` command (in `src/commands/dev-mode-sync.js`):
 
-```javascript
-import { analyzeSyncActions } from 'ccasp/utils/smart-sync.js';
+1. **Verifies dev mode** - Checks `~/.claude/ccasp-dev-state.json`
+2. **Gets changed files** - Runs `git status --porcelain` in worktree
+3. **Categorizes files** - Source, templates, hooks, other
+4. **Loads projects** - From `~/.claude/ccasp-registry.json`
+5. **Syncs files** - Copies each file to each project
+6. **Deploys templates** - Strips `.template` suffix for commands
 
-for (const project of projectsToSync) {
-  const analysis = await analyzeSyncActions(project.path, devState.worktreePath);
+### Excluded Files
 
-  // Display analysis summary
-  console.log(`Project: ${project.name}`);
-  console.log(`  Can update: ${analysis.summary.update} files`);
-  console.log(`  Will preserve: ${analysis.summary.preserve} files`);
-  console.log(`  Will add: ${analysis.summary.add} files`);
-}
-```
-
-### Step 5: Execute Sync (unless --dry-run)
-
-If not dry-run, execute the sync:
-
-```javascript
-import { executeSyncActions, formatSyncResults } from 'ccasp/utils/smart-sync.js';
-
-for (const project of projectsToSync) {
-  const results = await executeSyncActions(
-    project.path,
-    devState.worktreePath,
-    {
-      dryRun: options.dryRun,
-      force: options.force,
-      preserveCustomizations: !options.force
-    }
-  );
-
-  console.log(formatSyncResults(results));
-}
-```
-
-### Step 6: Report Results
-
-Display comprehensive report:
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║                    SYNC COMPLETE                             ║
-╚══════════════════════════════════════════════════════════════╝
-
-Projects synced: 3
-Total files updated: 45
-Customizations preserved: 8
-New files added: 5
-
-Restart Claude Code CLI in each project to see command changes.
-```
+These files are automatically excluded from sync:
+- `.ccasp-dev/` - Worktree-specific hooks
+- `.dev-worktree-config.json` - Worktree config
+- `node_modules/` - Dependencies
+- `.git/` - Git internals
 
 ### Error Handling
 
-- If project path doesn't exist, skip with warning
-- If project has no `.claude/` directory, skip with warning
-- If worktree path is invalid, abort with error
-- Log all errors but continue with other projects
+- If dev mode not active: Shows error with instructions to run `ccasp dev-deploy`
+- If no changes found: Shows "No modified or new files to sync"
+- If project doesn't exist: Skips with warning
+- If file copy fails: Logs error, continues with other files
 
 ### Notes
 
-- Always backup projects before major changes (handled by dev-deploy)
-- User customizations are NEVER overwritten unless `--force` is used
-- New templates are always added (they don't conflict)
-- CLI restart required for command changes to take effect
+- The sync is fast (~1-2 seconds for typical changes)
+- Command templates are automatically deployed as slash commands
+- Source files are copied preserving directory structure
+- Restart Claude Code CLI to see slash command changes

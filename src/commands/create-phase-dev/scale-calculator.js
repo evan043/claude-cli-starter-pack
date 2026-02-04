@@ -94,35 +94,156 @@ export function calculateProjectScale(scope) {
  */
 function generatePhases(templates, scope) {
   return templates.map((template, idx) => {
-    // Generate tasks from task templates
-    const tasks = template.taskTemplates.map((taskTitle) => ({
-      title: taskTitle,
-      description: `Implement: ${taskTitle.toLowerCase()}`,
-      status: 'pending',
-      files: [],
-      acceptanceCriteria: generateAcceptanceCriteria(taskTitle),
-    }));
+    const phaseNum = idx + 1;
+
+    // Generate tasks from task templates with enhanced fields
+    const tasks = template.taskTemplates.map((taskTitle, taskIdx) => {
+      const taskId = `${phaseNum}.${taskIdx + 1}`;
+
+      return {
+        id: taskId,
+        title: taskTitle,
+        // TaskCreate compatibility fields
+        subject: taskTitle,
+        activeForm: generateActiveForm(taskTitle),
+        description: `Implement: ${taskTitle.toLowerCase()}`,
+        status: 'pending',
+        files: [],
+        acceptanceCriteria: generateAcceptanceCriteria(taskTitle),
+        // Specificity scoring (4-dimension)
+        specificity: calculateTaskSpecificity(taskTitle, []),
+        // Task dependencies
+        blocks: [],
+        blockedBy: taskIdx > 0 ? [`${phaseNum}.${taskIdx}`] : (idx > 0 ? [`${idx}.${templates[idx - 1].taskTemplates.length}`] : []),
+        // Agent assignment (will be populated by L2 exploration)
+        assignedAgent: null,
+      };
+    });
 
     // Add scope-specific tasks
     if (idx === 0 && scope.integrations !== 'none') {
+      const intTaskId = `${phaseNum}.${tasks.length + 1}`;
       tasks.push({
+        id: intTaskId,
         title: 'Set up external integrations',
+        subject: 'Set up external integrations',
+        activeForm: 'Setting up external integrations',
         description: 'Configure required API connections',
         status: 'pending',
         files: [],
         acceptanceCriteria: ['API connections configured', 'Integration tested'],
+        specificity: calculateTaskSpecificity('Set up external integrations', []),
+        blocks: [],
+        blockedBy: tasks.length > 0 ? [`${phaseNum}.${tasks.length}`] : [],
+        assignedAgent: null,
       });
     }
 
     return {
+      id: phaseNum,
       name: template.name,
       description: template.description,
       tasks,
       prerequisites: idx > 0 ? [`Phase ${idx} complete`] : [],
       validationCriteria: generateValidationCriteria(template.name, idx),
       tests: [],
+      // Phase-level fields
+      complexity: estimatePhaseComplexity(tasks.length),
+      assignedAgent: null,
+      dependencies: idx > 0 ? [`phase-${idx}`] : [],
     };
   });
+}
+
+/**
+ * Generate active form for TaskCreate (present continuous)
+ * @param {string} title - Task title in imperative form
+ * @returns {string} Present continuous form
+ */
+function generateActiveForm(title) {
+  if (!title) return 'Working on task';
+
+  const words = title.split(' ');
+  const verb = words[0].toLowerCase();
+
+  const verbMap = {
+    'set': 'Setting',
+    'add': 'Adding',
+    'create': 'Creating',
+    'implement': 'Implementing',
+    'build': 'Building',
+    'configure': 'Configuring',
+    'fix': 'Fixing',
+    'update': 'Updating',
+    'write': 'Writing',
+    'run': 'Running',
+    'test': 'Testing',
+    'deploy': 'Deploying',
+    'wire': 'Wiring',
+    'integrate': 'Integrating',
+    'refactor': 'Refactoring',
+    'optimize': 'Optimizing',
+    'design': 'Designing',
+    'plan': 'Planning',
+    'define': 'Defining',
+  };
+
+  const activeVerb = verbMap[verb] || (verb.endsWith('e')
+    ? `${verb.slice(0, -1)}ing`
+    : `${verb}ing`).charAt(0).toUpperCase() + (verb.endsWith('e')
+    ? `${verb.slice(0, -1)}ing`
+    : `${verb}ing`).slice(1);
+
+  words[0] = activeVerb;
+  return words.join(' ');
+}
+
+/**
+ * Calculate task specificity score (4-dimension)
+ * @param {string} title - Task title
+ * @param {Array} files - Related files
+ * @returns {Object} Specificity breakdown
+ */
+function calculateTaskSpecificity(title, files) {
+  const titleLength = title?.length || 0;
+
+  // Specificity: How well-defined is the task? (30%)
+  const specificityScore = Math.min(100, titleLength * 3 + 20);
+
+  // Scope: How constrained is the work? (25%)
+  const scopeScore = files.length > 0 ? Math.min(100, files.length * 25 + 30) : 40;
+
+  // Technical Depth: How much detail is provided? (25%)
+  const depthScore = titleLength > 30 ? 70 : titleLength > 15 ? 50 : 30;
+
+  // Reproducibility: Could another agent do this? (20%)
+  const reproducibilityScore = titleLength > 20 && files.length > 0 ? 75 : 45;
+
+  const score = Math.round(
+    specificityScore * 0.30 +
+    scopeScore * 0.25 +
+    depthScore * 0.25 +
+    reproducibilityScore * 0.20
+  );
+
+  return {
+    score,
+    breakdown: {
+      specificity: Math.round(specificityScore),
+      scope: Math.round(scopeScore),
+      technicalDepth: Math.round(depthScore),
+      reproducibility: Math.round(reproducibilityScore),
+    },
+  };
+}
+
+/**
+ * Estimate phase complexity from task count
+ */
+function estimatePhaseComplexity(taskCount) {
+  if (taskCount <= 3) return 'S';
+  if (taskCount <= 6) return 'M';
+  return 'L';
 }
 
 /**

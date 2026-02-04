@@ -125,13 +125,17 @@ Merge Steps:
 [2] Import customizations → worktree
     (Run step 1 first)
 
-[3] Preview all changes
+[3] Sync ALL changes to projects
+    Deploy source + templates to registered projects
+    (Uses: ccasp dev-sync)
+
+[4] Preview all changes
     Show diff: worktree vs main
 
-[4] Merge to main
+[5] Merge to main
     (After reviewing changes)
 
-[5] Run tests first
+[6] Run tests first
     npm test
 
 ──────────────────────────────────────
@@ -256,7 +260,50 @@ and will be included in the merge to main.
 [B] Back to merge menu
 ```
 
-#### Option 3: Preview Changes
+#### Option 3: Sync ALL Changes to Projects
+
+This deploys ALL modified/new files from the worktree to registered projects using the fast `ccasp dev-sync` command:
+
+```bash
+# Preview what will sync
+ccasp dev-sync --dry-run
+
+# Execute sync
+ccasp dev-sync
+```
+
+This syncs:
+- **Source files**: `src/**/*.js`, `bin/*.js`, `config/**/*`
+- **Command templates**: `templates/commands/*.template.md` → `.claude/commands/*.md`
+- **Hook templates**: `templates/hooks/*.template.js`
+- **All other modified files**: Preserving relative paths
+
+Display results:
+```
+┌────────────────────────────────────┐
+│ Sync to Projects                   │
+└────────────────────────────────────┘
+
+🔄 Dev Mode Sync
+
+Scanning for changes...
+  Found 15 modified, 4 new files
+
+Projects to sync (3):
+  • Plan Design Calculator
+  • ccasp-dev
+  • claude-cli-advanced-starter-pack
+
+══════════════════════════════════════════════════
+  SYNC COMPLETE
+══════════════════════════════════════════════════
+  Projects: 3
+  Files synced: 57
+
+[B] Back to merge menu
+```
+
+#### Option 4: Preview Changes
 
 Show diff between worktree and main:
 
@@ -291,7 +338,7 @@ File Summary:
 [B] Back to merge menu
 ```
 
-#### Option 4: Merge to Main
+#### Option 5: Merge to Main
 
 This is the main merge flow with automatic dev mode exit:
 
@@ -392,7 +439,7 @@ Update them to the new npm version:
 [D] Done
 ```
 
-#### Option 5: Run Tests First
+#### Option 6: Run Tests First
 
 ```bash
 npm test

@@ -615,3 +615,340 @@ export function suggestAgents(phase) {
 
   return agentSuggestions[domain] || agentSuggestions.general;
 }
+
+// ============================================================
+// MULTI-PROJECT PATTERNS (Mode C)
+// ============================================================
+
+/**
+ * Detect if scope should be decomposed into multiple projects
+ * @param {Array} items - Array of issues/tasks
+ * @returns {Object} Analysis result with project recommendations
+ */
+export function detectMultiProjectPatterns(items) {
+  if (!items || items.length === 0) {
+    return {
+      shouldDecompose: false,
+      reason: 'No items to analyze',
+      projects: [],
+    };
+  }
+
+  // Group items by domain
+  const groups = groupRelatedItems(items);
+
+  // Check for multi-project indicators
+  const indicators = {
+    multiDomain: groups.length >= 3,
+    largeDomains: groups.filter(g => g.items.length >= 5).length >= 2,
+    independentWorkflows: hasIndependentWorkflows(items, groups),
+    complexitySpread: hasSignificantComplexitySpread(items),
+    explicitProjects: hasExplicitProjectMarkers(items),
+  };
+
+  const score = Object.values(indicators).filter(Boolean).length;
+  const shouldDecompose = score >= 2;
+
+  // Generate project recommendations if decomposition is warranted
+  let projects = [];
+  if (shouldDecompose) {
+    projects = generateProjectRecommendations(items, groups);
+  }
+
+  return {
+    shouldDecompose,
+    score,
+    indicators,
+    reason: shouldDecompose
+      ? `Multi-project decomposition recommended: ${score}/5 indicators met`
+      : 'Single roadmap sufficient',
+    projects,
+    groups,
+  };
+}
+
+/**
+ * Check if groups have independent workflows (minimal overlap)
+ */
+function hasIndependentWorkflows(items, groups) {
+  if (groups.length < 2) return false;
+
+  // Check file overlap between groups
+  const filesByGroup = groups.map(g => {
+    const files = new Set();
+    g.items.forEach(item => {
+      (item.files || item.source_files || []).forEach(f => files.add(f));
+    });
+    return files;
+  });
+
+  // Count overlapping files between groups
+  let overlapCount = 0;
+  for (let i = 0; i < filesByGroup.length; i++) {
+    for (let j = i + 1; j < filesByGroup.length; j++) {
+      const intersection = [...filesByGroup[i]].filter(f => filesByGroup[j].has(f));
+      overlapCount += intersection.length;
+    }
+  }
+
+  // Low overlap indicates independent workflows
+  const totalFiles = filesByGroup.reduce((sum, s) => sum + s.size, 0);
+  return totalFiles > 0 && (overlapCount / totalFiles) < 0.2;
+}
+
+/**
+ * Check if items have significant complexity spread
+ */
+function hasSignificantComplexitySpread(items) {
+  const complexities = items.map(item => estimateComplexity({
+    description: item.body || item.description || '',
+    goal: item.title || '',
+    files: item.files || [],
+  }));
+
+  const hasSmall = complexities.includes('S');
+  const hasMedium = complexities.includes('M');
+  const hasLarge = complexities.includes('L');
+
+  // All three complexity levels present
+  return hasSmall && hasMedium && hasLarge;
+}
+
+/**
+ * Check for explicit project markers in items
+ */
+function hasExplicitProjectMarkers(items) {
+  const markers = ['project:', 'epic:', 'feature:', 'module:', 'subsystem:'];
+
+  for (const item of items) {
+    const text = `${item.title || ''} ${item.body || ''}`.toLowerCase();
+    if (markers.some(m => text.includes(m))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Generate project recommendations from analysis
+ * @param {Array} items - All items
+ * @param {Array} groups - Domain groups
+ * @returns {Array} Recommended projects
+ */
+function generateProjectRecommendations(items, groups) {
+  const projects = [];
+  let projectNumber = 1;
+
+  // Create a project for each significant domain group
+  for (const group of groups) {
+    if (group.items.length < 2) continue;
+
+    const complexity = estimateComplexity({
+      issues: group.items,
+      description: group.keywords.join(' '),
+    });
+
+    projects.push({
+      project_id: `project-${projectNumber}`,
+      project_title: formatProjectTitle(group.domain, group.keywords),
+      description: `Implementation of ${group.domain} components`,
+      domain: group.domain,
+      complexity,
+      items: group.items.map(i => i.id || i.number),
+      itemCount: group.items.length,
+      keywords: group.keywords.slice(0, 5),
+      project_number: projectNumber,
+    });
+
+    projectNumber++;
+  }
+
+  // Handle remaining uncategorized items
+  const assignedItems = new Set(projects.flatMap(p => p.items));
+  const remainingItems = items.filter(i => !assignedItems.has(i.id || i.number));
+
+  if (remainingItems.length > 0) {
+    projects.push({
+      project_id: `project-${projectNumber}`,
+      project_title: 'Additional Tasks',
+      description: 'Remaining tasks and integration work',
+      domain: 'general',
+      complexity: 'S',
+      items: remainingItems.map(i => i.id || i.number),
+      itemCount: remainingItems.length,
+      keywords: [],
+      project_number: projectNumber,
+    });
+  }
+
+  return projects;
+}
+
+/**
+ * Format a project title from domain and keywords
+ */
+function formatProjectTitle(domain, keywords) {
+  const domainTitles = {
+    frontend: 'Frontend UI',
+    backend: 'Backend API',
+    database: 'Data Layer',
+    testing: 'Testing Suite',
+    deployment: 'Deployment & CI/CD',
+    documentation: 'Documentation',
+    general: 'General',
+  };
+
+  const base = domainTitles[domain] || 'Implementation';
+
+  // Add a keyword if available
+  const keyword = keywords.find(k => k.length > 4 && !DOMAIN_KEYWORDS[domain]?.includes(k));
+  if (keyword) {
+    return `${base}: ${keyword.charAt(0).toUpperCase() + keyword.slice(1)}`;
+  }
+
+  return `${base} Implementation`;
+}
+
+/**
+ * Analyze a project for L2 agent delegation
+ * @param {Object} project - Project to analyze
+ * @returns {Object} L2 delegation recommendations
+ */
+export function analyzeProjectForL2Delegation(project) {
+  const domain = project.domain || 'general';
+  const complexity = project.complexity || 'M';
+
+  // Determine primary agent based on domain
+  const domainAgentMap = {
+    frontend: 'frontend-specialist',
+    backend: 'backend-specialist',
+    database: 'backend-specialist',
+    testing: 'testing-specialist',
+    deployment: 'deployment-specialist',
+    documentation: 'general-implementation-agent',
+    general: 'general-implementation-agent',
+  };
+
+  const primaryAgent = domainAgentMap[domain];
+
+  // Determine L2 agent types to spawn
+  const l2AgentTypes = ['code_snippets', 'reference_files', 'agent_delegation'];
+
+  // Add json_structure for complex projects
+  if (complexity === 'L' || (project.phases?.length || 0) > 3) {
+    l2AgentTypes.push('json_structure');
+  }
+
+  // Generate task assignments (preliminary)
+  const taskAssignments = [];
+  if (project.phases) {
+    for (const phase of project.phases) {
+      const phaseDomain = getPrimaryDomain(`${phase.name} ${phase.objective || ''}`) || domain;
+      const phaseAgent = domainAgentMap[phaseDomain] || primaryAgent;
+
+      for (const task of (phase.tasks || [])) {
+        taskAssignments.push({
+          phase: `P${phase.id}`,
+          task: task.id,
+          agent: phaseAgent,
+          reason: `Domain match: ${phaseDomain}`,
+        });
+      }
+    }
+  }
+
+  return {
+    primaryAgent,
+    primaryAgentReason: `Project domain is ${domain}`,
+    l2AgentTypes,
+    taskAssignments,
+    executionSequence: [{
+      agent: primaryAgent,
+      scope: `Full project: ${project.project_title}`,
+    }],
+  };
+}
+
+/**
+ * Identify independent tracks that can run in parallel
+ * @param {Array} groups - Domain groups
+ * @param {Map} dependencies - Dependency map
+ * @returns {Array} Groups of independent tracks
+ */
+export function identifyIndependentTracks(groups, dependencies) {
+  if (!groups || groups.length < 2) {
+    return [{ tracks: groups || [], canParallelize: false }];
+  }
+
+  const independentTracks = [];
+  const processedGroups = new Set();
+
+  // Build dependency graph between groups
+  const groupDependencies = new Map();
+
+  for (const group of groups) {
+    groupDependencies.set(group.domain, new Set());
+
+    for (const item of group.items) {
+      const itemId = item.id || item.number;
+      const itemDeps = dependencies.get(itemId) || [];
+
+      for (const depId of itemDeps) {
+        // Find which group the dependency belongs to
+        for (const otherGroup of groups) {
+          if (otherGroup === group) continue;
+          if (otherGroup.items.some(i => (i.id || i.number) === depId)) {
+            groupDependencies.get(group.domain).add(otherGroup.domain);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Find groups with no dependencies (can start immediately)
+  const noDeps = groups.filter(g => groupDependencies.get(g.domain).size === 0);
+
+  if (noDeps.length > 1) {
+    independentTracks.push({
+      tracks: noDeps,
+      canParallelize: true,
+      reason: 'No inter-group dependencies',
+    });
+    noDeps.forEach(g => processedGroups.add(g.domain));
+  }
+
+  // Find groups with same dependencies (can run in parallel after deps complete)
+  const byDependencies = new Map();
+
+  for (const group of groups) {
+    if (processedGroups.has(group.domain)) continue;
+
+    const depsKey = JSON.stringify([...groupDependencies.get(group.domain)].sort());
+    if (!byDependencies.has(depsKey)) {
+      byDependencies.set(depsKey, []);
+    }
+    byDependencies.get(depsKey).push(group);
+  }
+
+  for (const [depsKey, groupList] of byDependencies.entries()) {
+    if (groupList.length > 1) {
+      independentTracks.push({
+        tracks: groupList,
+        canParallelize: true,
+        sharedDependencies: JSON.parse(depsKey),
+        reason: 'Same dependencies - can run after they complete',
+      });
+    } else if (groupList.length === 1) {
+      independentTracks.push({
+        tracks: groupList,
+        canParallelize: false,
+        dependencies: JSON.parse(depsKey),
+        reason: 'Has unique dependencies',
+      });
+    }
+  }
+
+  return independentTracks;
+}
