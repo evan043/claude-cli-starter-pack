@@ -41,11 +41,16 @@ Comprehensive sync of ALL CCASP template files to your project.
 | Category | Source | Destination |
 |----------|--------|-------------|
 | Commands | `templates/commands/*.template.md` | `.claude/commands/*.md` |
+| Commands (Dev) | `templates/commands-dev/*.template.md` | `.claude/commands/*.md` |
 | Agents | `templates/agents/**/*.md` | `.claude/agents/*.md` |
 | Skills | `templates/skills/*/` | `.claude/skills/*/` |
 | Hooks | `templates/hooks/*.template.js` | `.claude/hooks/*.js` |
 | Docs | `templates/docs/*.md` | `.claude/docs/*.md` |
 | Patterns | `templates/patterns/*.md` | `.claude/docs/patterns/*.md` |
+| Scripts | `templates/scripts/*.js` | `.claude/scripts/*.js` |
+| GitHub Templates | `templates/github/ISSUE_TEMPLATE/` | `.github/ISSUE_TEMPLATE/` |
+| Workflows | `templates/workflows/*.yml` | `.github/workflows/*.yml` |
+| MCP | `templates/mcp/*.js` | `.claude/mcp/*.js` |
 
 ---
 
@@ -94,6 +99,12 @@ const TEMPLATE_DIRS = {
     pattern: '*.template.md',
     transform: (name) => name.replace('.template.md', '.md')
   },
+  commandsDev: {
+    source: 'templates/commands-dev/',
+    dest: '.claude/commands/',
+    pattern: '*.template.md',
+    transform: (name) => name.replace('.template.md', '.md')
+  },
   agents: {
     source: 'templates/agents/',
     dest: '.claude/agents/',
@@ -122,6 +133,30 @@ const TEMPLATE_DIRS = {
     source: 'templates/patterns/',
     dest: '.claude/docs/patterns/',
     pattern: '*.md',
+    transform: (name) => name
+  },
+  scripts: {
+    source: 'templates/scripts/',
+    dest: '.claude/scripts/',
+    pattern: '*.js',
+    transform: (name) => name
+  },
+  githubTemplates: {
+    source: 'templates/github/ISSUE_TEMPLATE/',
+    dest: '.github/ISSUE_TEMPLATE/',
+    pattern: '*.yml',
+    transform: (name) => name
+  },
+  workflows: {
+    source: 'templates/workflows/',
+    dest: '.github/workflows/',
+    pattern: '*.yml',
+    transform: (name) => name
+  },
+  mcp: {
+    source: 'templates/mcp/',
+    dest: '.claude/mcp/',
+    pattern: '*.js',
     transform: (name) => name
   }
 };
@@ -209,7 +244,7 @@ Options:
 
 ```bash
 # Create directories if needed
-mkdir -p .claude/commands .claude/agents .claude/skills .claude/hooks .claude/docs/patterns
+mkdir -p .claude/commands .claude/agents .claude/skills .claude/hooks .claude/docs/patterns .claude/scripts .claude/mcp .github/ISSUE_TEMPLATE .github/workflows
 
 # Copy each NEW file
 for file in $NEW_FILES; do
