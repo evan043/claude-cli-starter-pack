@@ -703,7 +703,9 @@ export async function runInit(options = {}) {
 
   // Always include required commands AND feature-specific commands
   const requiredCommands = AVAILABLE_COMMANDS.filter(c => c.required).map(c => c.name);
-  const finalCommands = [...new Set([...requiredCommands, ...selectedCommands, ...featureCommands])];
+  // Critical commands for upgrade system - always include these
+  const criticalCommands = ['update-check', '__ccasp-sync-marker'];
+  const finalCommands = [...new Set([...requiredCommands, ...criticalCommands, ...selectedCommands, ...featureCommands])];
 
   if (finalCommands.length === 0) {
     showWarning('No commands selected. Nothing to install.');
@@ -971,10 +973,15 @@ export async function runInit(options = {}) {
     ? readdirSync(hooksDir).filter(f => f.endsWith('.js')).map(f => f.replace('.js', ''))
     : [];
 
+  // Critical commands that should ALWAYS be updated (never skipped)
+  // These are essential for the upgrade/sync system to work
+  const alwaysUpdateCommands = ['update-check', '__ccasp-sync-marker'];
+
   for (const cmdName of finalCommands) {
     try {
       // Skip commands that were marked to skip in smart merge
-      if (shouldSkipCommand(cmdName)) {
+      // EXCEPT for critical commands that must always be updated
+      if (shouldSkipCommand(cmdName) && !alwaysUpdateCommands.includes(cmdName)) {
         continue;
       }
 
