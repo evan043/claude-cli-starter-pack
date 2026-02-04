@@ -202,7 +202,62 @@ Based on exploration findings, create phases with clear objectives, success crit
 ### Step 4: Create Plan Artifacts
 Create \`.claude/docs/{slug}/PROGRESS.json\` and \`EXECUTIVE_SUMMARY.md\`
 
-### Step 5: Generate Executable Commands
+### Step 5: Create GitHub Issue (MANDATORY)
+
+After creating PROGRESS.json, create a tracked GitHub issue:
+
+1. **Generate issue body** with CCASP-META header:
+   \`\`\`markdown
+   <!-- CCASP-META
+   source: /phase-dev-plan
+   slug: {slug}
+   progress_file: .claude/docs/{slug}/PROGRESS.json
+   issue_type: feature
+   created_at: {timestamp}
+   -->
+
+   ## {Plan Name}
+
+   {Plan description and overview}
+
+   ---
+
+   ## 📁 Source & Generated Files
+
+   **Created from:** \`/phase-dev-plan\` → Project: \`{slug}\`
+
+   | File | Type | Path |
+   |------|------|------|
+   | Progress Tracking | JSON | \`.claude/docs/{slug}/PROGRESS.json\` |
+   | Executive Summary | MD | \`.claude/docs/{slug}/EXECUTIVE_SUMMARY.md\` |
+   | Exploration Summary | MD | \`.claude/exploration/{slug}/EXPLORATION_SUMMARY.md\` |
+   | Code Snippets | MD | \`.claude/exploration/{slug}/CODE_SNIPPETS.md\` |
+   | Reference Files | MD | \`.claude/exploration/{slug}/REFERENCE_FILES.md\` |
+   | Agent Delegation | MD | \`.claude/exploration/{slug}/AGENT_DELEGATION.md\` |
+   | Phase Breakdown | MD | \`.claude/exploration/{slug}/PHASE_BREAKDOWN.md\` |
+   | Findings | JSON | \`.claude/exploration/{slug}/findings.json\` |
+
+   ---
+
+   ## Implementation Plan
+
+   {Include phases, tasks, and acceptance criteria}
+   \`\`\`
+
+2. **Create issue using gh CLI:**
+   \`\`\`bash
+   gh issue create --title "{Plan Name}" --body "$(cat issue-body.md)" --label "phase-dev-plan"
+   \`\`\`
+
+3. **Store issue number in PROGRESS.json:**
+   Add \`github_issue\` field with the created issue number
+
+4. **Add to project board** (if configured):
+   \`\`\`bash
+   gh project item-add <project-number> --owner <owner> --url <issue-url>
+   \`\`\`
+
+### Step 6: Generate Executable Commands
 Create \`.claude/commands/{slug}-executor.md\` and \`.claude/commands/{slug}.md\`
 
 ## Enforcement Rules
@@ -212,6 +267,8 @@ Create \`.claude/commands/{slug}-executor.md\` and \`.claude/commands/{slug}.md\
 | L2 Exploration FIRST | ✅ YES |
 | All 6 exploration files created | ✅ YES |
 | PROGRESS.json after exploration | ✅ YES |
+| GitHub issue created with CCASP-META | ✅ YES |
+| Issue number stored in PROGRESS.json | ✅ YES |
 `,
 
   'create-agent': () => `---

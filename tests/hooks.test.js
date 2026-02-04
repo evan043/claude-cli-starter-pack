@@ -458,6 +458,450 @@ ok(!validateCompletionReport(noSignal).valid, 'Missing signal should fail');
 
 console.log('  ✓ Completion validation passed\n');
 
+// ============================================================
+// Test 11: Progress Sync - File Path Matching
+// ============================================================
+
+console.log('Test 11: Progress Sync - File Path Matching...');
+
+function isProgressFile(filePath) {
+  if (!filePath) return false;
+
+  const normalized = filePath.replace(/\\/g, '/');
+  return normalized.endsWith('/PROGRESS.json') || normalized === 'PROGRESS.json';
+}
+
+// Should match PROGRESS.json files
+ok(isProgressFile('PROGRESS.json'), 'Root PROGRESS.json should match');
+ok(isProgressFile('.claude/roadmaps/phase-1/PROGRESS.json'), 'Nested PROGRESS.json should match');
+ok(isProgressFile('C:\\Users\\Dev\\project\\PROGRESS.json'), 'Windows path should match');
+ok(isProgressFile('/home/user/project/plans/PROGRESS.json'), 'Unix path should match');
+
+// Should NOT match other files
+ok(!isProgressFile('progress.json'), 'Lowercase should not match');
+ok(!isProgressFile('PROGRESS.txt'), 'Wrong extension should not match');
+ok(!isProgressFile('PROGRESS.json.bak'), 'Backup file should not match');
+ok(!isProgressFile('package.json'), 'Other JSON files should not match');
+ok(!isProgressFile('src/components/Progress.json'), 'Different filename should not match');
+ok(!isProgressFile(null), 'Null should not match');
+ok(!isProgressFile(''), 'Empty string should not match');
+
+console.log('  ✓ File path matching passed\n');
+
+// ============================================================
+// Test 12: Progress Sync - Debounce Logic
+// ============================================================
+
+console.log('Test 12: Progress Sync - Debounce Logic...');
+
+const mockSyncStateCache = new Map();
+
+function checkDebounce(progressFile, debounceMs = 5000) {
+  const now = Date.now();
+  const lastSync = mockSyncStateCache.get(progressFile);
+
+  if (!lastSync) {
+    return true; // First sync for this file
+  }
+
+  const elapsed = now - lastSync;
+  return elapsed >= debounceMs;
+}
+
+function updateDebounceState(progressFile) {
+  mockSyncStateCache.set(progressFile, Date.now());
+}
+
+// Test first sync (no debounce record)
+ok(checkDebounce('test.json', 5000), 'First sync should pass debounce check');
+
+// Test sync within debounce period (should fail)
+updateDebounceState('test.json');
+ok(!checkDebounce('test.json', 5000), 'Sync within debounce period should fail');
+
+// Test sync after debounce period (should pass)
+// Simulate time passing by manually updating the cache
+mockSyncStateCache.set('test.json', Date.now() - 6000); // 6 seconds ago
+ok(checkDebounce('test.json', 5000), 'Sync after debounce period should pass');
+
+// Test different debounce periods
+mockSyncStateCache.set('test2.json', Date.now() - 3000); // 3 seconds ago
+ok(!checkDebounce('test2.json', 5000), '3s elapsed < 5s debounce should fail');
+ok(checkDebounce('test2.json', 2000), '3s elapsed > 2s debounce should pass');
+
+// Test multiple files tracked independently
+updateDebounceState('file1.json');
+updateDebounceState('file2.json');
+ok(!checkDebounce('file1.json', 5000), 'File 1 should be debounced');
+ok(!checkDebounce('file2.json', 5000), 'File 2 should be debounced');
+
+console.log('  ✓ Debounce logic passed\n');
+
+// ============================================================
+// Test 13: Progress Sync - Change Detection
+// ============================================================
+
+console.log('Test 13: Progress Sync - Change Detection...');
+
+function detectChanges(oldProgress, newProgress) {
+  const changes = [];
+
+  if (!newProgress) {
+    return changes;
+  }
+
+  // Check for plan completion
+  if (newProgress.status === 'completed' && oldProgress?.status !== 'completed') {
+    changes.push({
+      type: 'plan_complete',
+      planId: newProgress.plan_id,
+      planName: newProgress.plan_name,
+    });
+  }
+
+  // Iterate through phases
+  for (const newPhase of newProgress.phases || []) {
+    const oldPhase = oldProgress?.phases?.find(p => p.phase_id === newPhase.phase_id);
+
+    // Check for phase completion
+    if (newPhase.status === 'completed' && oldPhase?.status !== 'completed') {
+      changes.push({
+        type: 'phase_advance',
+        phaseId: newPhase.phase_id,
+        phaseName: newPhase.name,
+      });
+    }
+
+    // Check for task changes within phase
+    for (const newTask of newPhase.tasks || []) {
+      const oldTask = oldPhase?.tasks?.find(t => t.id === newTask.id);
+
+      // Task completion
+      if (newTask.status === 'completed' && oldTask?.status !== 'completed') {
+        changes.push({
+          type: 'task_complete',
+          taskId: newTask.id,
+          taskTitle: newTask.title,
+          phaseId: newPhase.phase_id,
+        });
+      }
+
+      // Task blocked
+      if (newTask.status === 'blocked' && oldTask?.status !== 'blocked') {
+        changes.push({
+          type: 'blocker',
+          taskId: newTask.id,
+          taskTitle: newTask.title,
+          blocker: newTask.blocker || 'No details provided',
+        });
+      }
+
+      // Task failed
+      if (newTask.status === 'failed' && oldTask?.status !== 'failed') {
+        changes.push({
+          type: 'task_failed',
+          taskId: newTask.id,
+          taskTitle: newTask.title,
+        });
+      }
+    }
+  }
+
+  return changes;
+}
+
+// Test task completion detection
+const mockOldProgress = {
+  status: 'in_progress',
+  plan_id: 'plan-1',
+  phases: [{
+    phase_id: 'P1',
+    name: 'Phase 1',
+    status: 'in_progress',
+    tasks: [
+      { id: 'P1.1', title: 'Task 1', status: 'in_progress' },
+      { id: 'P1.2', title: 'Task 2', status: 'pending' }
+    ]
+  }]
+};
+
+const mockNewProgressTaskComplete = {
+  status: 'in_progress',
+  plan_id: 'plan-1',
+  phases: [{
+    phase_id: 'P1',
+    name: 'Phase 1',
+    status: 'in_progress',
+    tasks: [
+      { id: 'P1.1', title: 'Task 1', status: 'completed' },
+      { id: 'P1.2', title: 'Task 2', status: 'pending' }
+    ]
+  }]
+};
+
+const taskCompleteChanges = detectChanges(mockOldProgress, mockNewProgressTaskComplete);
+strictEqual(taskCompleteChanges.length, 1, 'Should detect 1 change');
+strictEqual(taskCompleteChanges[0].type, 'task_complete');
+strictEqual(taskCompleteChanges[0].taskId, 'P1.1');
+
+// Test phase completion detection
+const mockNewProgressPhaseComplete = {
+  status: 'in_progress',
+  plan_id: 'plan-1',
+  phases: [{
+    phase_id: 'P1',
+    name: 'Phase 1',
+    status: 'completed',
+    tasks: [
+      { id: 'P1.1', title: 'Task 1', status: 'completed' },
+      { id: 'P1.2', title: 'Task 2', status: 'completed' }
+    ]
+  }]
+};
+
+const phaseCompleteChanges = detectChanges(mockOldProgress, mockNewProgressPhaseComplete);
+const phaseAdvance = phaseCompleteChanges.find(c => c.type === 'phase_advance');
+ok(phaseAdvance, 'Should detect phase_advance');
+strictEqual(phaseAdvance.phaseId, 'P1');
+
+// Test blocker detection
+const mockNewProgressBlocked = {
+  status: 'in_progress',
+  plan_id: 'plan-1',
+  phases: [{
+    phase_id: 'P1',
+    name: 'Phase 1',
+    status: 'in_progress',
+    tasks: [
+      { id: 'P1.1', title: 'Task 1', status: 'blocked', blocker: 'Waiting for API key' },
+      { id: 'P1.2', title: 'Task 2', status: 'pending' }
+    ]
+  }]
+};
+
+const blockerChanges = detectChanges(mockOldProgress, mockNewProgressBlocked);
+strictEqual(blockerChanges.length, 1);
+strictEqual(blockerChanges[0].type, 'blocker');
+strictEqual(blockerChanges[0].blocker, 'Waiting for API key');
+
+// Test plan completion detection
+const mockNewProgressPlanComplete = {
+  status: 'completed',
+  plan_id: 'plan-1',
+  plan_name: 'Test Plan',
+  phases: [{
+    phase_id: 'P1',
+    name: 'Phase 1',
+    status: 'completed',
+    tasks: [
+      { id: 'P1.1', title: 'Task 1', status: 'completed' },
+      { id: 'P1.2', title: 'Task 2', status: 'completed' }
+    ]
+  }]
+};
+
+const planCompleteChanges = detectChanges(mockOldProgress, mockNewProgressPlanComplete);
+const planComplete = planCompleteChanges.find(c => c.type === 'plan_complete');
+ok(planComplete, 'Should detect plan_complete');
+strictEqual(planComplete.planId, 'plan-1');
+
+// Test no changes detected
+const noChanges = detectChanges(mockOldProgress, mockOldProgress);
+strictEqual(noChanges.length, 0, 'Identical progress should detect no changes');
+
+// Test null progress
+const nullChanges = detectChanges(mockOldProgress, null);
+strictEqual(nullChanges.length, 0, 'Null progress should detect no changes');
+
+console.log('  ✓ Change detection passed\n');
+
+// ============================================================
+// Test 14: Progress Sync - shouldSync Logic
+// ============================================================
+
+console.log('Test 14: Progress Sync - shouldSync Logic...');
+
+function shouldSync(changes, config) {
+  if (!changes || changes.length === 0) {
+    return false;
+  }
+
+  if (!config || !config.enabled) {
+    return false;
+  }
+
+  // Check if any change type matches enabled triggers
+  const triggers = config.triggers || {};
+
+  for (const change of changes) {
+    switch (change.type) {
+      case 'task_complete':
+        if (triggers.onTaskComplete) return true;
+        break;
+      case 'phase_advance':
+        if (triggers.onPhaseComplete) return true;
+        break;
+      case 'blocker':
+        if (triggers.onBlocker) return true;
+        break;
+      case 'plan_complete':
+        if (triggers.onPlanComplete) return true;
+        break;
+      case 'task_failed':
+        if (triggers.onTaskFailed) return true;
+        break;
+    }
+  }
+
+  return false;
+}
+
+const enabledConfig = {
+  enabled: true,
+  triggers: {
+    onTaskComplete: true,
+    onPhaseComplete: true,
+    onBlocker: true,
+    onPlanComplete: true,
+    onTaskFailed: true,
+  }
+};
+
+const disabledConfig = {
+  enabled: false,
+  triggers: {
+    onTaskComplete: true,
+    onPhaseComplete: true,
+  }
+};
+
+const selectiveConfig = {
+  enabled: true,
+  triggers: {
+    onTaskComplete: true,
+    onPhaseComplete: false,
+    onBlocker: false,
+  }
+};
+
+// Test with enabled config
+const taskCompleteChange = [{ type: 'task_complete', taskId: 'P1.1' }];
+ok(shouldSync(taskCompleteChange, enabledConfig), 'Should sync task_complete with enabled config');
+
+// Test with disabled config
+ok(!shouldSync(taskCompleteChange, disabledConfig), 'Should NOT sync when config disabled');
+
+// Test with selective triggers
+ok(shouldSync(taskCompleteChange, selectiveConfig), 'Should sync task_complete with selective config');
+
+const phaseAdvanceChange = [{ type: 'phase_advance', phaseId: 'P1' }];
+ok(!shouldSync(phaseAdvanceChange, selectiveConfig), 'Should NOT sync phase_advance when trigger disabled');
+
+const blockerChange = [{ type: 'blocker', taskId: 'P1.1' }];
+ok(!shouldSync(blockerChange, selectiveConfig), 'Should NOT sync blocker when trigger disabled');
+
+// Test with no changes
+ok(!shouldSync([], enabledConfig), 'Should NOT sync with no changes');
+
+// Test with null changes
+ok(!shouldSync(null, enabledConfig), 'Should NOT sync with null changes');
+
+// Test with null config
+ok(!shouldSync(taskCompleteChange, null), 'Should NOT sync with null config');
+
+// Test multiple changes - should return true if ANY trigger matches
+const multipleChanges = [
+  { type: 'task_complete', taskId: 'P1.1' },
+  { type: 'phase_advance', phaseId: 'P1' }
+];
+ok(shouldSync(multipleChanges, selectiveConfig), 'Should sync if ANY change type is enabled');
+
+console.log('  ✓ shouldSync logic passed\n');
+
+// ============================================================
+// Test 15: Progress Sync - Worker Spawn Structure
+// ============================================================
+
+console.log('Test 15: Progress Sync - Worker Spawn Structure...');
+
+function spawnSyncWorker(issueNumber, progressFile, changes, projectRoot) {
+  const changeSummary = changes.map(c => {
+    switch (c.type) {
+      case 'task_complete':
+        return `- Task completed: ${c.taskId} (${c.taskTitle})`;
+      case 'phase_advance':
+        return `- Phase completed: ${c.phaseName} (${c.phaseId})`;
+      case 'blocker':
+        return `- Task blocked: ${c.taskId} - ${c.blocker}`;
+      case 'plan_complete':
+        return `- Plan completed: ${c.planName}`;
+      default:
+        return `- Change: ${c.type}`;
+    }
+  }).join('\n');
+
+  const workerPrompt = `
+You are a GitHub Issue Sync Worker (L3). Your task is to sync progress updates to a GitHub issue.
+
+**Context:**
+- Issue Number: #${issueNumber}
+- Progress File: ${progressFile}
+
+**Changes Detected:**
+${changeSummary}
+`.trim();
+
+  return {
+    tool: 'Task',
+    params: {
+      subagent_type: 'l3-worker',
+      agent_name: 'github-issue-sync-worker',
+      description: `Sync GitHub issue #${issueNumber} with progress updates`,
+      prompt: workerPrompt,
+      run_in_background: true,
+      metadata: {
+        issueNumber,
+        progressFile,
+        changeCount: changes.length,
+        changeTypes: changes.map(c => c.type),
+      },
+    },
+  };
+}
+
+const testChanges = [
+  { type: 'task_complete', taskId: 'P1.1', taskTitle: 'Setup database' },
+  { type: 'phase_advance', phaseId: 'P1', phaseName: 'Foundation' }
+];
+
+const workerResult = spawnSyncWorker(123, '/path/to/PROGRESS.json', testChanges, '/project/root');
+
+// Test Task structure
+strictEqual(workerResult.tool, 'Task', 'Should use Task tool');
+ok(workerResult.params, 'Should have params object');
+
+// Test subagent configuration
+strictEqual(workerResult.params.subagent_type, 'l3-worker', 'Should be L3 worker');
+strictEqual(workerResult.params.agent_name, 'github-issue-sync-worker', 'Should use correct agent name');
+strictEqual(workerResult.params.run_in_background, true, 'Should run in background');
+
+// Test description
+ok(workerResult.params.description.includes('#123'), 'Description should include issue number');
+
+// Test prompt includes context
+ok(workerResult.params.prompt.includes('#123'), 'Prompt should include issue number');
+ok(workerResult.params.prompt.includes('/path/to/PROGRESS.json'), 'Prompt should include progress file path');
+ok(workerResult.params.prompt.includes('Task completed: P1.1'), 'Prompt should include task changes');
+ok(workerResult.params.prompt.includes('Phase completed: Foundation'), 'Prompt should include phase changes');
+
+// Test metadata
+ok(workerResult.params.metadata, 'Should have metadata');
+strictEqual(workerResult.params.metadata.issueNumber, 123, 'Metadata should include issue number');
+strictEqual(workerResult.params.metadata.changeCount, 2, 'Metadata should include change count');
+deepStrictEqual(workerResult.params.metadata.changeTypes, ['task_complete', 'phase_advance'], 'Metadata should include change types');
+
+console.log('  ✓ Worker spawn structure passed\n');
+
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('✓ All hook integration tests passed!');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

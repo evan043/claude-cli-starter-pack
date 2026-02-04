@@ -160,6 +160,43 @@ LINT_COMPLETE: true
 \`\`\`
 `.trim(),
   },
+
+  'github-issue-sync': {
+    subagentType: 'Bash',
+    tools: ['Read', 'Bash'],
+    description: 'GitHub Issue Sync Worker',
+    promptTemplate: (task) => `
+You are an L3 GitHub Issue Sync Worker. Update GitHub issue with current progress.
+
+TASK: github-issue-sync
+ISSUE_NUMBER: ${task.issueNumber}
+PROGRESS_FILE: ${task.progressFile}
+CHANGES_SUMMARY: ${task.changesSummary || 'Progress update'}
+
+Actions:
+1. Read current issue body from GitHub
+2. Update checkboxes for completed tasks
+3. Update completion percentage in status line
+4. Add execution log comment if milestone reached
+
+Use gh CLI commands:
+- gh issue view ${task.issueNumber} --json body
+- gh issue edit ${task.issueNumber} --body "..."
+- gh issue comment ${task.issueNumber} --body "..."
+
+Return results in this exact format:
+\`\`\`
+L3_RESULT: ${task.id}
+STATUS: completed
+DATA:
+- Issue number: ${task.issueNumber}
+- Checkboxes updated: [N]
+- Completion: [N]%
+- Comments added: [N]
+SYNC_COMPLETE: true
+\`\`\`
+`.trim(),
+  },
 };
 
 /**
@@ -244,6 +281,7 @@ export function generateL3WorkersForTask(parentTask, subtasks) {
       else if (subtask.fields) type = 'extract';
       else if (subtask.command && subtask.expected) type = 'validate';
       else if (subtask.command && subtask.command.includes('lint')) type = 'lint';
+      else if (subtask.issueNumber || subtask.progressFile) type = 'github-issue-sync';
       else type = 'search'; // default
     }
 

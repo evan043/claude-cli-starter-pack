@@ -200,21 +200,88 @@ For each phase:
 
 When GitHub integration is detected:
 
-1. **Create Epic Issue** using the epic template
+1. **Create Epic Issue** with CCASP-META header
    - Title: `[Epic] {epic_name}`
-   - Body: Business objective, success criteria, phases, progress tracking
+   - Body structure:
+     ```html
+     <!-- CCASP-META
+     source: /create-github-epic
+     slug: {epic-slug}
+     issue_type: feature
+     progress_file: .claude/github-epics/{slug}.json
+     created_at: {timestamp}
+     -->
+
+     ## Business Objective
+     {business_objective}
+
+     ## Success Criteria
+     - {criterion1}
+     - {criterion2}
+
+     ## Phases
+     {phase_checklist}
+
+     ## Generated Files
+     - Epic Definition: `.claude/github-epics/{slug}.json`
+     - Phase Plans: `.claude/phase-plans/{slug}/phase-*.json`
+     {exploration_files_if_any}
+
+     ## Progress Tracking
+     {mermaid_dependency_graph}
+     ```
    - Labels: `epic`, `roadmap`
 
-2. **Create Child Issues** for each phase
-   - Title: `[Phase] {phase_name}`
-   - Body: Phase objectives, tasks, dependencies
+2. **Create Child Issues** for each phase with CCASP-META
+   - Title: `[Phase {n}] {phase_name}`
+   - Body structure:
+     ```html
+     <!-- CCASP-META
+     source: /create-github-epic
+     slug: {epic-slug}
+     phase: {phase-number}
+     task: phase-{n}
+     parent_issue: #{epic-issue-number}
+     issue_type: {detected-type}
+     progress_file: .claude/phase-plans/{slug}/phase-{n}.json
+     created_at: {timestamp}
+     -->
+
+     Part of #{epic-issue-number}
+
+     ## Phase Objective
+     {phase_goal}
+
+     ## Tasks
+     {task_checklist}
+
+     ## Dependencies
+     {dependencies_list}
+
+     ## Generated Files
+     - Phase Plan: `.claude/phase-plans/{slug}/phase-{n}.json`
+     {exploration_files_if_any}
+     ```
    - Labels: `phase-dev`, `epic:{slug}`
+   - Issue type detection:
+     - Detect from task content keywords (test/testing → test, doc/docs → docs, ci/deploy → deployment)
+     - Default to `feature` if detection inconclusive
    - Reference parent epic: `Part of #{{epicNumber}}`
 
 3. **Add Progress Tracking**
    - Mermaid dependency graph in epic body
    - Checkbox list for phases
    - Completion percentage auto-updated
+
+**Issue Type Detection Rules:**
+- Epic issues → always `feature`
+- Phase/milestone issues → always `feature`
+- Task issues → detect from content:
+  - Keywords: test, spec, e2e, unit → `test`
+  - Keywords: doc, readme, guide → `docs`
+  - Keywords: deploy, ci, pipeline → `deployment`
+  - Keywords: fix, bug, error → `bug`
+  - Default → `feature`
 
 ### Step 8: Set Up Testing Issue Generation
 
@@ -330,6 +397,10 @@ If any step fails:
 | User selects issues via table | Mode B displays numbered table for selection |
 | Testing issues for completed phases | Auto-creates one testing issue per completed phase |
 | Agent hooks enabled | Progress tracking and checkbox updates automated |
+| All GitHub issues include CCASP-META | Epic and child issues have HTML comment with metadata |
+| Epic issues link to generated files | Include paths to epic JSON, phase plans, exploration files |
+| Child issues reference parent | Include `Part of #{epic-number}` and `parent_issue` in metadata |
+| Issue types auto-detected | Analyze task content to assign appropriate issue_type |
 
 ---
 

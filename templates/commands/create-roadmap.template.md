@@ -647,13 +647,69 @@ When GitHub integration is detected:
 1. **Create Epic Issue** for the roadmap
    - Title: `[Roadmap] {roadmap_name}`
    - Body: Mermaid dependency graph, phase list, progress tracking
+   - **Issue Type:** Feature (use Feature type template)
+   - **CCASP-META:** Include metadata at top of body
+   - **Generated Files:** Include section with roadmap artifacts
    - Labels: `roadmap`, `epic`
 
+   **CCASP-META format for epic:**
+   ```html
+   <!-- CCASP-META
+   source: /create-roadmap
+   slug: {roadmap-slug}
+   issue_type: feature
+   progress_file: .claude/roadmaps/{slug}/ROADMAP.json
+   created_at: {timestamp}
+   -->
+   ```
+
+   **Generated Files section for epic:**
+   | File | Type | Path |
+   |------|------|------|
+   | ROADMAP.json | JSON | .claude/roadmaps/{slug}/ROADMAP.json |
+   | Exploration Summary | MD | .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md |
+   | Code Snippets | MD | .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md |
+   | Reference Files | MD | .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md |
+   | Agent Delegation | MD | .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md |
+   | Phase Breakdown | MD | .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md |
+   | Findings | JSON | .claude/roadmaps/{slug}/exploration/findings.json |
+
 2. **Create Child Issues** for each phase
-   - Title: `[Phase] {phase_name}`
+   - Title: `[Phase {n}] {phase_name}`
    - Body: Phase objectives, tasks, dependencies
+   - **Issue Type:** Detect based on phase content
+     - If phase name/description contains "setup", "foundation", "scaffold" → `feature`
+     - If phase name/description contains "test", "qa", "verification", "validation" → `testing`
+     - If phase name/description contains "refactor", "cleanup", "migration", "modernize" → `refactor`
+     - If phase name/description contains "fix", "bug", "issue" → `bug`
+     - Default → `feature`
+   - **CCASP-META:** Include metadata at top of body
+   - **Generated Files:** Include section with phase artifacts
    - Labels: `phase-dev`, `roadmap:{slug}`
    - Reference parent epic: `Part of #{{epicNumber}}`
+
+   **CCASP-META format for phase issues:**
+   ```html
+   <!-- CCASP-META
+   source: /create-roadmap
+   slug: {roadmap-slug}
+   phase: {phase-number}
+   parent_issue: #{epic-issue-number}
+   issue_type: {detected-type}
+   progress_file: .claude/roadmaps/{slug}/phase-{phase-number}.json
+   created_at: {timestamp}
+   -->
+   ```
+
+   **Generated Files section for phase issues:**
+   | File | Type | Path |
+   |------|------|------|
+   | Phase Plan | JSON | .claude/roadmaps/{slug}/phase-{n}.json |
+   | Exploration Summary | MD | .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md |
+   | Code Snippets | MD | .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md |
+   | Reference Files | MD | .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md |
+   | Agent Delegation | MD | .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md |
+   | Phase Breakdown | MD | .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md |
 
 3. **Add to Project Board** (if configured)
    - Create milestone for each phase

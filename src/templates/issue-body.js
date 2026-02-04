@@ -4,8 +4,33 @@
  * Generates comprehensive GitHub issue bodies with codebase analysis
  */
 
+import {
+  getIssueType,
+  getTypeSections,
+  getTypeAcceptanceCriteria,
+} from './issue-types.js';
+import { generateCCSAPMeta } from './issue-metadata.js';
+import { generateFilesSection, generateFilesList } from './generated-files-section.js';
+
 /**
  * Generate a comprehensive issue body
+ * @param {Object} data - Issue data
+ * @param {string} [data.issueType='feature'] - One of: feature, refactor, bug, testing
+ * @param {Array<{name: string, type: string, path: string}>} [data.generatedFiles] - Files to display in Generated Files section
+ * @param {Object} [data.metadata] - CCASP-META fields (source, slug, phase, task, progressFile)
+ * @param {string} data.description - Problem statement/description
+ * @param {string} [data.expectedBehavior] - Expected behavior (for bugs)
+ * @param {string} [data.actualBehavior] - Actual behavior (for bugs)
+ * @param {Array<string>} [data.acceptanceCriteria] - Acceptance criteria (uses type defaults if empty)
+ * @param {Object} [data.codeAnalysis] - Code analysis details
+ * @param {Object} [data.apiStatus] - API status details
+ * @param {Array<string>} [data.references] - Reference documents
+ * @param {Array<Object>} [data.todoList] - Todo items
+ * @param {Array<Object>} [data.testScenarios] - Test scenarios
+ * @param {string} [data.priority] - Issue priority
+ * @param {Array<string>} [data.labels] - GitHub labels
+ * @param {Object} [data.agentRecommendation] - Agent recommendation details
+ * @returns {string} Formatted issue body markdown
  */
 export function generateIssueBody(data) {
   const {
@@ -21,12 +46,40 @@ export function generateIssueBody(data) {
     priority,
     labels = [],
     agentRecommendation = null,
+    issueType = 'feature',
+    generatedFiles = null,
+    metadata = null,
   } = data;
 
   const sections = [];
 
+  // CCASP-META at the very top (if provided)
+  if (metadata) {
+    try {
+      const metaBlock = generateCCSAPMeta({
+        source: metadata.source,
+        slug: metadata.slug,
+        phase: metadata.phase,
+        task: metadata.task,
+        progressFile: metadata.progressFile,
+        issueType: metadata.issueType || issueType,
+        createdAt: metadata.createdAt,
+        lastSynced: metadata.lastSynced,
+      });
+      sections.push(metaBlock);
+    } catch (error) {
+      console.error('Error generating CCASP-META:', error.message);
+    }
+  }
+
   // Problem Statement
   sections.push(`## Problem Statement\n\n${description}`);
+
+  // Type-specific sections
+  const typeSpecificSection = generateTypeSpecificSection(issueType, data);
+  if (typeSpecificSection) {
+    sections.push(typeSpecificSection);
+  }
 
   // Expected vs Actual (for bugs)
   if (expectedBehavior || actualBehavior) {
@@ -36,9 +89,13 @@ export function generateIssueBody(data) {
 **Actual**: ${actualBehavior || 'N/A'}`);
   }
 
-  // Acceptance Criteria
-  if (acceptanceCriteria.length > 0) {
-    const criteria = acceptanceCriteria
+  // Acceptance Criteria (use type-specific defaults if none provided)
+  const finalCriteria = acceptanceCriteria.length > 0
+    ? acceptanceCriteria
+    : getTypeAcceptanceCriteria(issueType);
+
+  if (finalCriteria.length > 0) {
+    const criteria = finalCriteria
       .map((c) => `- [ ] ${c}`)
       .join('\n');
     sections.push(`## Acceptance Criteria\n\n${criteria}`);
@@ -75,11 +132,106 @@ export function generateIssueBody(data) {
     sections.push(generateAgentRecommendationSection(agentRecommendation));
   }
 
+  // Generated Files Section (before footer)
+  if (generatedFiles && generatedFiles.length > 0) {
+    const filesSection = generateFilesSection(generatedFiles, {
+      source: metadata?.source || '/phase-dev-plan',
+      project: metadata?.slug || 'project',
+      phase: metadata?.phase ? `Phase ${metadata.phase}` : null,
+    });
+    sections.push(filesSection);
+  }
+
   // Metadata footer
   sections.push(`---
 *Created by GitHub Task Kit*`);
 
   return sections.join('\n\n---\n\n');
+}
+
+/**
+ * Generate type-specific sections based on issue type
+ * @param {string} issueType - One of: feature, refactor, bug, testing
+ * @param {Object} data - Issue data containing type-specific fields
+ * @returns {string|null} Markdown section or null if no type-specific content
+ */
+function generateTypeSpecificSection(issueType, data) {
+  const type = getIssueType(issueType);
+  const sections = type.sections || [];
+  const parts = [];
+
+  // Feature-specific sections
+  if (issueType === 'feature') {
+    if (data.userStory) {
+      parts.push(`## User Story\n\n${data.userStory}`);
+    }
+    if (data.apiContract) {
+      parts.push(`## API Contract\n\n${data.apiContract}`);
+    }
+    if (data.implementationPlan) {
+      parts.push(`## Implementation Plan\n\n${data.implementationPlan}`);
+    }
+  }
+
+  // Refactor-specific sections
+  if (issueType === 'refactor') {
+    if (data.currentState) {
+      parts.push(`## Current State\n\n${data.currentState}`);
+    }
+    if (data.targetState) {
+      parts.push(`## Target State\n\n${data.targetState}`);
+    }
+    if (data.codeSmells) {
+      parts.push(`## Code Smells\n\n${data.codeSmells}`);
+    }
+    if (data.affectedFiles && data.affectedFiles.length > 0) {
+      const fileList = data.affectedFiles.map((f) => `- \`${f}\``).join('\n');
+      parts.push(`## Affected Files\n\n${fileList}`);
+    }
+    if (data.migrationSteps) {
+      parts.push(`## Migration Steps\n\n${data.migrationSteps}`);
+    }
+    if (data.riskAssessment) {
+      parts.push(`## Risk Assessment\n\n${data.riskAssessment}`);
+    }
+  }
+
+  // Bug-specific sections
+  if (issueType === 'bug') {
+    if (data.rootCause) {
+      parts.push(`## Root Cause\n\n${data.rootCause}`);
+    }
+    if (data.evidence) {
+      parts.push(`## Evidence\n\n${data.evidence}`);
+    }
+    if (data.solutionOptions) {
+      parts.push(`## Solution Options\n\n${data.solutionOptions}`);
+    }
+    if (data.regressionTests) {
+      parts.push(`## Regression Tests\n\n${data.regressionTests}`);
+    }
+  }
+
+  // Testing-specific sections
+  if (issueType === 'testing') {
+    if (data.testScope) {
+      parts.push(`## Test Scope\n\n${data.testScope}`);
+    }
+    if (data.coverageGaps) {
+      parts.push(`## Coverage Gaps\n\n${data.coverageGaps}`);
+    }
+    if (data.testScenariosMatrix) {
+      parts.push(`## Test Scenarios Matrix\n\n${data.testScenariosMatrix}`);
+    }
+    if (data.testDataRequirements) {
+      parts.push(`## Test Data Requirements\n\n${data.testDataRequirements}`);
+    }
+    if (data.environmentSetup) {
+      parts.push(`## Environment Setup\n\n${data.environmentSetup}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join('\n\n---\n\n') : null;
 }
 
 /**
@@ -383,6 +535,7 @@ export function getAgentRecommendation(registry, description, labels = [], files
 
 /**
  * Default acceptance criteria suggestions based on issue type
+ * @deprecated Use getTypeAcceptanceCriteria from issue-types.js instead
  */
 export function suggestAcceptanceCriteria(issueType, keywords = []) {
   const suggestions = {
@@ -413,3 +566,33 @@ export function suggestAcceptanceCriteria(issueType, keywords = []) {
 
   return suggestions[issueType] || suggestions.feature;
 }
+
+// Re-export useful functions from new modules for convenience
+export {
+  getIssueType,
+  getTypeSections,
+  getTypeLabels,
+  getTypeAcceptanceCriteria,
+  getRequiredFields,
+  validateIssueData,
+  getAvailableTypes,
+  isValidType,
+} from './issue-types.js';
+
+export {
+  generateCCSAPMeta,
+  parseCCSAPMeta,
+  updateCCSAPMeta,
+  hasCCSAPMeta,
+  extractCCSAPMetaBlock,
+} from './issue-metadata.js';
+
+export {
+  generateFilesSection,
+  generateFilesList,
+  generateCompactFilesSection,
+  generateGroupedFilesSection,
+  generateFileLinksSection,
+  formatFilePath,
+  createFileObject,
+} from './generated-files-section.js';

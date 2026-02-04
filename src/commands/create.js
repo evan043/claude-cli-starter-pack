@@ -18,10 +18,11 @@ import { generateIssueBody, generateSimpleIssueBody, suggestAcceptanceCriteria }
  */
 const LABEL_CATEGORIES = {
   type: [
-    { name: 'bug', description: 'Something isn\'t working' },
     { name: 'feature', description: 'New functionality' },
-    { name: 'feature-update', description: 'Enhancement to existing feature' },
     { name: 'refactor', description: 'Code improvement without behavior change' },
+    { name: 'bug', description: 'Something isn\'t working' },
+    { name: 'testing', description: 'Test coverage and quality' },
+    { name: 'feature-update', description: 'Enhancement to existing feature' },
     { name: 'documentation', description: 'Documentation only' },
   ],
   stack: [
@@ -97,6 +98,7 @@ export async function runCreate(options) {
         testScenarios: generateTestScenarios(taskData),
         priority: taskData.priority,
         labels: taskData.labels,
+        issueType: taskData.issueType || 'feature', // Pass issue type
       })
     : generateSimpleIssueBody({
         description: taskData.description,
@@ -217,6 +219,7 @@ async function gatherTaskDetails(options, config) {
     acceptanceCriteria: [],
     expectedBehavior: '',
     actualBehavior: '',
+    issueType: options.issueType || 'feature', // Default to feature for backwards compatibility
   };
 
   // Batch mode - parse from options
@@ -256,6 +259,7 @@ async function gatherTaskDetails(options, config) {
     },
   ]);
   data.labels.push(issueType);
+  data.issueType = issueType; // Store for generateIssueBody()
 
   // Description
   console.log('');
