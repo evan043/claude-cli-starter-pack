@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.2.5   •  Production Ready                         ║
+║                          v2.2.18  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -33,6 +33,115 @@ npx claude-cli-advanced-starter-pack init
 [Quick Start](#quick-start) • [What You Get](#what-you-get) • [📚 Wiki](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki) • [Roadmap](#roadmap)
 
 </div>
+
+---
+
+<div align="center">
+
+## 🚀 v2.2.18 Feature Update — Intelligent Planning & GitHub Sync
+
+</div>
+
+> **Feb 2026** — CCASP now provides a complete planning-to-execution pipeline with automatic GitHub synchronization, making complex multi-phase development dramatically more effective.
+
+### What's New
+
+<table>
+<tr>
+<td width="50%">
+
+#### 📊 Graduated Task/Phase/Roadmap Architecture
+**Three planning scales, one unified system:**
+- **Tasks** → `/create-task-list` for single features
+- **Phases** → `/phase-dev-plan` for multi-step implementations
+- **Roadmaps** → `/create-roadmap` for epics spanning phases
+
+All three generate the **same 6-file exploration structure**, enabling consistent agent delegation and progress tracking.
+
+</td>
+<td width="50%">
+
+#### 🔄 Hook-Based GitHub Auto-Sync
+**PROGRESS.json changes trigger automatic GitHub updates:**
+- Checkboxes auto-update as tasks complete
+- Completion % refreshes in real-time
+- Background L3 worker syncs without blocking work
+- Execution logs posted on phase milestones
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+#### 📝 Type-Specific Issue Templates
+**4 intelligent templates optimized for each workflow:**
+- **Feature** — User Story, API Contract, Implementation Plan
+- **Refactor** — Current vs Target State, Code Smells
+- **Bug** — Problem/Expected, Root Cause, Evidence
+- **Testing** — Test Scope, Coverage Gaps, Scenarios Matrix
+
+</td>
+<td width="50%">
+
+#### 🧠 CCASP-META Machine-Parseable Structure
+**Every GitHub issue includes hidden metadata for automation:**
+```html
+<!-- CCASP-META
+source: /phase-dev-plan
+slug: auth-system
+progress_file: .claude/docs/auth-system/PROGRESS.json
+-->
+```
+Enables agents to find and update issues programmatically.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+#### 📁 Mandatory L2 Exploration Files
+**6 files generated BEFORE any GitHub issue:**
+1. `EXPLORATION_SUMMARY.md` — Executive overview
+2. `CODE_SNIPPETS.md` — Patterns to follow
+3. `REFERENCE_FILES.md` — Files to modify
+4. `AGENT_DELEGATION.md` — L2 specialist assignments
+5. `PHASE_BREAKDOWN.md` — Detailed task specs
+6. `findings.json` — Machine-readable data
+
+L2 specialists read these files for full context.
+
+</td>
+<td width="50%">
+
+#### 🔄 11-Category Template Sync
+**`/update-check` now syncs ALL template categories:**
+1. Commands
+2. Commands-Dev
+3. Agents
+4. Skills
+5. Hooks (42 total, including `.cjs` support)
+6. Docs
+7. Patterns
+8. Scripts
+9. GitHub Issue Templates
+10. Workflows
+11. MCP configs
+
+Critical commands auto-update on every init.
+
+</td>
+</tr>
+</table>
+
+### Upgrade Now
+
+```bash
+# Update to v2.2.18
+npm update -g claude-cli-advanced-starter-pack
+
+# Sync all new features to your project
+ccasp init
+```
 
 ---
 
@@ -350,6 +459,75 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.2.18
+**Critical Commands & Self-Healing Updates** — Feb 2026
+- **Critical Commands**: `update-check` and `__ccasp-sync-marker` now ALWAYS update during `ccasp init`
+- **Self-Healing Updates**: `/update-check` can now update itself, fixing the bootstrap problem
+- **Auto-Upgrade Detection**: Missing sync marker triggers automatic `ccasp init` for full 11-category sync
+- **Backwards Compatibility**: Older projects automatically upgraded to new sync system
+
+### v2.2.17
+**Auto-Run Init on Outdated Projects** — Feb 2026
+- **Automatic Upgrade**: `/update-check` now runs `ccasp init` when sync marker missing
+- **Zero-Touch Migration**: Users don't need to know about the upgrade — it just works
+
+### v2.2.16
+**Sync Marker System** — Feb 2026
+- **New File**: `__ccasp-sync-marker.md` detects if project has full 11-category sync
+- **Version Detection**: Marker indicates v2.2.16+ capabilities
+- **Upgrade Path**: Clear messaging when older versions detected
+
+### v2.2.15
+**Hook File Extension Support** — Feb 2026
+- **`.cjs` Support**: Hooks now support `.cjs` extension for CommonJS compatibility
+- **github-progress-hook.cjs**: New hook registered for TodoWrite matcher
+- **Settings Registration**: Automatic hook registration during init
+
+### v2.2.14
+**Full Template Category Sync** — Feb 2026
+- **11 Categories**: `/update-check` now scans ALL template directories
+- **New Categories**: commands-dev, scripts, github/ISSUE_TEMPLATE, workflows, mcp
+- **Complete Coverage**: No more missing files after updates
+
+### v2.2.13
+**Simplified Update Check** — Feb 2026
+- **Comprehensive Sync**: `/update-check` redesigned for complete file synchronization
+- **Hash Comparison**: Detects customized files and skips them automatically
+- **Smart Merge**: Preserves user modifications while adding new features
+
+### v2.2.12
+**Enhanced Issue Templates with Hook-Based Sync** — Feb 2026
+- **Type-Specific Templates**: 4 templates (Feature, Refactor, Bug, Testing)
+- **CCASP-META**: Machine-parseable HTML comments for agent updates
+- **Generated Files Section**: All issues link to source documentation
+- **Hook Infrastructure**: PostToolUse hook detects PROGRESS.json changes
+- **L3 Sync Worker**: Background agent updates GitHub issues automatically
+- **5-Phase Implementation**: Complete architecture from templates to testing
+
+### v2.2.11
+**Consolidated Roadmap Architecture** — Feb 2026
+- **Unified Architecture**: Task/Phase/Roadmap share same exploration file structure
+- **Tunnel URL Support**: Development tunnel URLs integrated into deployment workflow
+- **Consistent Planning**: All three scales generate 6-file exploration documents
+
+### v2.2.10
+**Menu Display Fix** — Feb 2026
+- **ASCII Box Menu**: Clean display with consistent formatting
+- **Display Instructions**: Better guidance in `/menu` command
+
+### v2.2.9
+**Mandatory L2 Exploration Files** — Feb 2026
+- **Enforcement**: L2 specialists MUST create exploration files before implementation
+- **6-File Standard**: EXPLORATION_SUMMARY, CODE_SNIPPETS, REFERENCE_FILES, AGENT_DELEGATION, PHASE_BREAKDOWN, findings.json
+- **Quality Gates**: Slash commands validate exploration docs exist
+
+### v2.2.8
+**Graduated Task/Phase/Roadmap Architecture** — Feb 2026
+- **Three Planning Scales**: Tasks, Phases, and Roadmaps with unified structure
+- **L2 Exploration System**: Specialists receive full context through generated docs
+- **Fast Dev-Sync**: Quick synchronization for development workflows
+- **Worktree Integration**: Improved dev mode with git worktree support
 
 ### v2.2.5
 **Dev Mode Smart Sync & Wizard UX** — Feb 2026
