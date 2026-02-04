@@ -1,9 +1,10 @@
 /**
  * Create Roadmap Command
  *
- * Main orchestrator for roadmap creation. Supports two modes:
+ * Main orchestrator for roadmap creation. Supports three modes:
  * - Mode A: Manual builder from natural language description
  * - Mode B: GitHub issue import with table selection
+ * - Mode C: Multi-Project builder for complex scopes with L2 exploration
  */
 
 import chalk from 'chalk';
@@ -41,6 +42,7 @@ import {
 } from '../roadmap/github-integration.js';
 import { batchNormalize } from '../roadmap/issue-normalizer.js';
 import { generateAllPhasePlans } from '../roadmap/phase-generator.js';
+import { runMultiProjectBuilder } from '../roadmap/multi-project-builder.js';
 
 /**
  * Run create-roadmap command
@@ -84,6 +86,11 @@ export async function runCreateRoadmap(options = {}) {
           value: 'github',
           short: 'GitHub',
         },
+        {
+          name: `${chalk.magenta('C)')} Multi-Project Builder - Complex scope with L2 exploration`,
+          value: 'multiproject',
+          short: 'Multi-Project',
+        },
         new inquirer.Separator(),
         {
           name: `${chalk.dim('?)')} Help - Learn about roadmap planning`,
@@ -107,6 +114,8 @@ export async function runCreateRoadmap(options = {}) {
 
   if (mode === 'manual') {
     return await runManualBuilder(options);
+  } else if (mode === 'multiproject') {
+    return await runMultiProjectBuilder(options);
   } else {
     return await runGitHubImport(options);
   }
@@ -680,6 +689,22 @@ function showRoadmapHelp() {
   • Long duration (> 2 weeks)
 `));
 
+  console.log(chalk.white.bold('Roadmap Modes:'));
+  console.log(chalk.dim(`
+  ${chalk.green('A) Manual Builder')}
+     Describe what you want to build and Claude structures it into phases.
+     Best for: New features, greenfield projects, clear requirements.
+
+  ${chalk.cyan('B) GitHub Import')}
+     Import existing GitHub issues and organize them into a roadmap.
+     Best for: Backlog organization, sprint planning, issue triage.
+
+  ${chalk.magenta('C) Multi-Project Builder')}
+     Complex scope decomposed into multiple independent projects.
+     Features L2 agent exploration for code analysis and file references.
+     Best for: Large refactors, multi-domain features, platform migrations.
+`));
+
   console.log(chalk.white.bold('Phase Patterns:'));
   console.log(chalk.dim(`
   Foundation Pattern (new features):
@@ -694,7 +719,7 @@ function showRoadmapHelp() {
 
   console.log(chalk.white.bold('Commands:'));
   console.log(chalk.dim(`
-  /create-roadmap          Create new roadmap
+  /create-roadmap          Create new roadmap (Modes A, B, or C)
   /roadmap-status          View roadmap progress
   /roadmap-edit            Edit phases and structure
   /roadmap-track           Track execution

@@ -26,6 +26,11 @@ import {
   generateTestDefinitions,
   generatePhaseDevEnforcerHook,
 } from '../../agents/phase-dev-templates.js';
+import { runL2Exploration } from './l2-orchestrator.js';
+import { saveAllExplorationDocs, explorationDocsExist, loadExplorationDocs } from '../../utils/exploration-docs.js';
+import { checkGhCli, getRepoInfo } from '../../roadmap/github-integration.js';
+import { generatePhaseBreakdownMarkdown } from '../../utils/exploration-docs.js';
+import { execSync } from 'child_process';
 
 /**
  * Load agent registry if available
@@ -333,6 +338,288 @@ function getTimestampDefault(databaseType) {
     default:
       return 'DEFAULT NOW()';
   }
+}
+
+/**
+ * Generate documentation with L2 exploration integration
+ * @param {Object} config - Project configuration
+ * @param {Array} enhancements - Enabled enhancements
+ * @param {Object} options - Additional options
+ * @returns {Object} Generation results with exploration data
+ */
+export async function generatePhaseDevDocumentationWithL2(config, enhancements = [], options = {}) {
+  const spinner = ora('Generating documentation with L2 exploration...').start();
+  const cwd = process.cwd();
+  const { projectSlug } = config;
+
+  let l2Exploration = null;
+
+  // Run L2 exploration if parallel enhancement is enabled
+  if (enhancements.includes('parallel') || options.runL2Exploration) {
+    spinner.text = 'Running L2 codebase exploration...';
+
+    try {
+      l2Exploration = await runL2Exploration(config, {
+        spinner,
+        cwd,
+        forceRefresh: options.forceRefresh,
+      });
+
+      // Update config with exploration findings
+      if (l2Exploration && l2Exploration.phases) {
+        config.phases = l2Exploration.phases;
+        config.l2Exploration = {
+          explorationPath: `.claude/exploration/${projectSlug}`,
+          filesAnalyzed: l2Exploration.summary?.filesAnalyzed || 0,
+          snippetsExtracted: l2Exploration.summary?.snippetsExtracted || 0,
+          confidence: l2Exploration.summary?.confidence || 'medium',
+          primaryAgent: l2Exploration.delegation?.primaryAgent || null,
+          domains: l2Exploration.summary?.domains || {},
+        };
+      }
+    } catch (error) {
+      spinner.warn(`L2 exploration failed: ${error.message}`);
+      // Continue without exploration data
+    }
+  }
+
+  // Generate standard documentation
+  spinner.text = 'Generating phase documentation...';
+  const results = await generatePhaseDevDocumentation(config, enhancements);
+
+  // Add exploration info to results
+  results.l2Exploration = l2Exploration;
+  results.explorationPath = l2Exploration ? `.claude/exploration/${projectSlug}` : null;
+
+  return results;
+}
+
+/**
+ * Update PROGRESS.json with exploration findings
+ * @param {string} progressPath - Path to PROGRESS.json
+ * @param {Object} explorationFindings - L2 exploration findings
+ */
+export async function updateProgressWithExploration(progressPath, explorationFindings) {
+  if (!existsSync(progressPath)) {
+    throw new Error(`PROGRESS.json not found: ${progressPath}`);
+  }
+
+  const progress = JSON.parse(readFileSync(progressPath, 'utf8'));
+
+  // Update phases with file references from exploration
+  if (explorationFindings.phases) {
+    progress.phases = progress.phases.map((phase, idx) => {
+      const explorationPhase = explorationFindings.phases[idx];
+      if (!explorationPhase) return phase;
+
+      return {
+        ...phase,
+        tasks: phase.tasks.map((task, taskIdx) => {
+          const explorationTask = explorationPhase.tasks?.[taskIdx];
+          if (!explorationTask) return task;
+
+          return {
+            ...task,
+            files: explorationTask.files || task.files,
+            specificity: explorationTask.specificity || task.specificity,
+            assignedAgent: explorationTask.assignedAgent || task.assignedAgent,
+            codePatternRef: explorationTask.codePatternRef || task.codePatternRef,
+          };
+        }),
+        assignedAgent: explorationPhase.assignedAgent || phase.assignedAgent,
+      };
+    });
+  }
+
+  // Update L2 exploration metadata
+  progress.l2Exploration = {
+    enabled: true,
+    explorationPath: explorationFindings.explorationPath || null,
+    filesAnalyzed: explorationFindings.summary?.filesAnalyzed || 0,
+    snippetsExtracted: explorationFindings.summary?.snippetsExtracted || 0,
+    confidence: explorationFindings.summary?.confidence || 'medium',
+    primaryAgent: explorationFindings.delegation?.primaryAgent || null,
+    domains: explorationFindings.summary?.domains || {},
+    lastUpdated: new Date().toISOString(),
+  };
+
+  writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf8');
+  return progress;
+}
+
+/**
+ * Create GitHub issue for phase-dev plan
+ * @param {Object} config - Project configuration
+ * @param {Object} explorationData - L2 exploration data (optional)
+ * @returns {Object} Created issue info
+ */
+export async function createPhaseDevGitHubIssue(config, explorationData = null) {
+  // Check gh CLI
+  const ghCheck = checkGhCli();
+  if (!ghCheck.available || !ghCheck.authenticated) {
+    return { success: false, error: ghCheck.error || 'gh CLI not available' };
+  }
+
+  const repoInfo = getRepoInfo();
+  if (!repoInfo) {
+    return { success: false, error: 'Could not determine repository' };
+  }
+
+  const { projectName, projectSlug, description, phases, architecture } = config;
+
+  // Generate issue body with full phase/task breakdown
+  const body = generatePhaseDevIssueBody(config, explorationData);
+
+  try {
+    // Create the issue
+    const result = execSync(
+      `gh issue create --title "${escapeShell(`📋 Phase Dev: ${projectName}`)}" --body "${escapeShell(body)}"`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+
+    // Parse issue URL from output
+    const urlMatch = result.match(/https:\/\/github\.com\/[^\s]+/);
+    const issueUrl = urlMatch ? urlMatch[0] : null;
+    const numberMatch = issueUrl?.match(/\/issues\/(\d+)/);
+    const issueNumber = numberMatch ? parseInt(numberMatch[1]) : null;
+
+    return {
+      success: true,
+      url: issueUrl,
+      number: issueNumber,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Generate GitHub issue body with full phase/task breakdown
+ */
+function generatePhaseDevIssueBody(config, explorationData) {
+  const { projectName, projectSlug, description, phases, architecture, scale } = config;
+  const totalTasks = phases.reduce((sum, p) => sum + (p.tasks?.length || 0), 0);
+
+  let body = `## ${projectName}
+
+**Slug:** \`${projectSlug}\`
+**Scale:** ${scale || 'M'}
+**Phases:** ${phases.length}
+**Total Tasks:** ${totalTasks}
+**Exploration Docs:** \`.claude/exploration/${projectSlug}/\`
+
+### Description
+${description || 'No description provided.'}
+
+---
+
+## Architecture
+${architecture?.summary || 'Not specified'}
+
+`;
+
+  // Add exploration findings if available
+  if (explorationData) {
+    body += `## Codebase Analysis
+
+### Key Statistics
+- Files analyzed: ${explorationData.summary?.filesAnalyzed || 0}
+- Code snippets extracted: ${explorationData.summary?.snippetsExtracted || 0}
+- Confidence: ${explorationData.summary?.confidence || 'medium'}
+
+### Recommended Primary Agent
+**${explorationData.delegation?.primaryAgent || 'general-implementation-agent'}** - ${explorationData.delegation?.primaryAgentReason || 'Best fit for project'}
+
+`;
+  }
+
+  // Add full phase breakdown
+  body += `---
+
+## Phase Breakdown
+
+`;
+
+  phases.forEach((phase, phaseIdx) => {
+    const phaseNum = phaseIdx + 1;
+    const tasks = phase.tasks || [];
+
+    body += `### Phase ${phaseNum}: ${phase.name}
+**Objective:** ${phase.objective || phase.description || 'Not specified'}
+**Complexity:** ${phase.complexity || 'M'}
+**Agent:** ${phase.assignedAgent || 'TBD'}
+**Dependencies:** ${formatDependencies(phase.dependencies)}
+
+#### Tasks
+`;
+
+    tasks.forEach((task, taskIdx) => {
+      const taskId = task.id || `${phaseNum}.${taskIdx + 1}`;
+      const criteria = task.acceptanceCriteria || task.acceptance_criteria || [];
+
+      body += `- [ ] **${taskId}** ${task.title}
+`;
+
+      if (task.files && task.files.length > 0) {
+        body += `  - Files: ${task.files.map(f => `\`${f.path || f}\``).slice(0, 3).join(', ')}
+`;
+      }
+      if (task.assignedAgent) {
+        body += `  - Agent: ${task.assignedAgent}
+`;
+      }
+      if (criteria.length > 0) {
+        body += `  - Criteria: ${criteria.slice(0, 2).join(', ')}
+`;
+      }
+    });
+
+    body += `
+#### Phase ${phaseNum} Validation
+`;
+    const validationCriteria = phase.validationCriteria || ['All tasks complete', 'No blocking issues'];
+    validationCriteria.forEach(c => {
+      body += `- [ ] ${c}
+`;
+    });
+
+    body += `
+---
+
+`;
+  });
+
+  body += `## Execution Checklist
+- [ ] Review exploration docs in \`.claude/exploration/${projectSlug}/\`
+- [ ] Start Phase 1
+${phases.map((p, i) => `- [ ] Complete Phase ${i + 1} validation`).join('\n')}
+- [ ] Final testing
+- [ ] Close this issue with summary
+
+---
+*Exploration docs: \`.claude/exploration/${projectSlug}/\`*
+*Generated by CCASP Phase-Dev Planning*
+`;
+
+  return body;
+}
+
+/**
+ * Format dependencies for display
+ */
+function formatDependencies(deps) {
+  if (!deps || deps.length === 0) return 'None';
+  return deps.join(', ');
+}
+
+/**
+ * Escape shell characters
+ */
+function escapeShell(str) {
+  return str.replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$');
 }
 
 /**

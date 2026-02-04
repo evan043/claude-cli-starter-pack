@@ -41,6 +41,7 @@ import { runUninstall } from '../src/commands/uninstall.js';
 import { runGlobalUninstall } from '../src/commands/global-uninstall.js';
 import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
 import { runDevDeploy } from '../src/commands/dev-deploy.js';
+import devModeSync from '../src/commands/dev-mode-sync.js';
 import { runModelMode } from '../src/commands/model-mode.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
@@ -412,6 +413,17 @@ program
   .option('--scan', 'Scan connected projects for customizations')
   .action(async (options) => {
     await runDevDeploy(options);
+  });
+
+// Dev sync - sync worktree changes to all projects
+program
+  .command('dev-sync')
+  .description('Sync ALL modified files from worktree to registered projects')
+  .option('--dry-run', 'Preview changes without applying')
+  .option('--force', 'Overwrite all files (skip customization check)')
+  .option('--project <name>', 'Sync specific project by name')
+  .action(async (options) => {
+    await devModeSync(options);
   });
 
 // Model mode - configure agent model defaults
