@@ -53,7 +53,41 @@ description: Interactive project menu - Quick access to all commands, agents, sk
 
 # ${projectName} - Interactive Menu
 
-> Installed by Claude CLI Advanced Starter Pack v${getVersion()} on ${date}
+**DISPLAY INSTRUCTION:** You MUST display this ENTIRE menu verbatim in a code block. Do NOT summarize. Do NOT paraphrase. Show the FULL ASCII menu below.
+
+\`\`\`
+╔═══════════════════════════════════════════════════════════════╗
+║  ${projectName.substring(0, 50).padEnd(50)}             ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  QUICK KEYS (type single character):                          ║
+║  ─────────────────────────────────────────────────────────    ║
+║  [1] TOP TASK    - Start #1 from Project Board                ║
+║  [2] NEXT TASK   - Pick next task                             ║
+║  [3] COMMIT      - git status + staged commit                 ║
+║  [4] BOARD       - /github-project-menu                       ║
+║  [5] ROADMAP     - /create-roadmap or /roadmap-status         ║
+║  [M] DEPLOY      - /deploy-full (frontend + backend)          ║
+║  [O] E2E TESTS   - /e2e-test                                  ║
+║  [T] TASK LIST   - /create-task-list                          ║
+║  [A] AUDIT       - /claude-audit                              ║
+║  [X] SETTINGS    - Configuration options                      ║
+║                                                               ║
+║  COMMANDS BY CATEGORY:                                        ║
+║  ─────────────────────────────────────────────────────────    ║
+║  Planning:    /phase-dev-plan  /create-roadmap  /roadmap-status║
+║  GitHub:      /github-task-start  /github-project-menu        ║
+║  Testing:     /e2e-test  /ralph  /create-smoke-test           ║
+║  Refactor:    /refactor-workflow  /refactor-analyze           ║
+║  Deploy:      /deploy-full                                    ║
+║  Claude:      /create-agent  /create-hook  /create-skill      ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+\`\`\`
+
+Type a key (1-5, M, O, T, A, X) or a command name, or describe what you need.
+
+---
 
 ## Quick Access Keys
 
@@ -64,7 +98,7 @@ Reply with a **single character** for quick navigation:
 | **1** | TOP TASK | Start #1 from Project Board |
 | **2** | NEXT TASK | Pick next task |
 | **3** | Commit | git status + staged commit |
-| **4** | GitHub Board | /github-update |
+| **4** | GitHub Board | /github-project-menu |
 | **5** | Roadmap | /create-roadmap or /roadmap-status |
 | **M** | Deploy | /deploy-full |
 | **O** | E2E Tests | /e2e-test |
