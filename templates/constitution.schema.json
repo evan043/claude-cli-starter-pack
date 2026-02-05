@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "constitution.schema.json",
+  "title": "AI Constitution",
+  "description": "Schema for AI Constitution code style and architecture preferences",
+  "type": "object",
+  "required": ["version", "project_name", "sections"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the constitution format"
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project name for personalization"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp when constitution was created"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp of last update"
+    },
+    "enforcement": {
+      "type": "object",
+      "description": "Hook enforcement configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether hook enforcement is active"
+        },
+        "sampling_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.05,
+          "description": "Fraction of edits to check (0.05 = 5% = 1-in-20)"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["Edit", "Write", "Bash"]
+          },
+          "default": ["Edit", "Write"],
+          "description": "Tools to enforce constitution on"
+        },
+        "sensitive_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["password", "secret", "credential", "api_key", "token"],
+          "description": "Patterns that bypass sampling (always checked)"
+        }
+      }
+    },
+    "word_limits": {
+      "type": "object",
+      "description": "Word limits per section to prevent context overflow",
+      "properties": {
+        "code_style": { "type": "integer", "default": 200 },
+        "architecture": { "type": "integer", "default": 250 },
+        "security": { "type": "integer", "default": 150 },
+        "performance": { "type": "integer", "default": 150 },
+        "git": { "type": "integer", "default": 100 },
+        "dependencies": { "type": "integer", "default": 100 },
+        "custom": { "type": "integer", "default": 200 }
+      }
+    },
+    "sections": {
+      "type": "object",
+      "description": "Constitution sections with rules",
+      "required": ["code_style"],
+      "properties": {
+        "code_style": { "$ref": "#/$defs/section" },
+        "architecture": { "$ref": "#/$defs/section" },
+        "security": { "$ref": "#/$defs/section" },
+        "performance": { "$ref": "#/$defs/section" },
+        "git": { "$ref": "#/$defs/section" },
+        "dependencies": { "$ref": "#/$defs/section" },
+        "custom": { "$ref": "#/$defs/section" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/section" }
+    }
+  },
+  "$defs": {
+    "section": {
+      "type": "object",
+      "description": "A constitution section containing rules",
+      "required": ["title", "rules"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Human-readable section title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of this section's purpose"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this section is enforced"
+        },
+        "rules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rule" },
+          "description": "List of rules in this section"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "description": "A single constitution rule",
+      "required": ["id", "description"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,4}-\\d{3}$",
+          "description": "Unique rule identifier (e.g., CS-001, ARCH-002)"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "What this rule enforces"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["error", "warning", "info"],
+          "default": "warning",
+          "description": "How violations are reported"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this rule is active"
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Why this rule exists"
+        },
+        "examples": {
+          "type": "object",
+          "properties": {
+            "good": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Examples of compliant code"
+            },
+            "bad": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Examples of violations"
+            }
+          }
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["frontend", "backend", "testing", "deployment", "all"]
+          },
+          "default": ["all"],
+          "description": "Which domains this rule applies to"
+        },
+        "file_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns for files this rule applies to"
+        },
+        "auto_fix": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether Claude should auto-refactor violations"
+        }
+      }
+    }
+  }
+}

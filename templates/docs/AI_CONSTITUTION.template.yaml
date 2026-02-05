@@ -1,0 +1,231 @@
+# AI Constitution for {{project.name}}
+# Code style and architecture preferences for Claude Code CLI
+# Generated: {{date}}
+
+version: "1.0.0"
+project_name: "{{project.name}}"
+
+# Hook enforcement settings
+enforcement:
+  enabled: true
+  sampling_rate: 0.05  # 5% = 1-in-20 checks
+  tools:
+    - Edit
+    - Write
+  sensitive_patterns:
+    - password
+    - secret
+    - credential
+    - api_key
+    - token
+    - private_key
+
+# Word limits per section (prevent context overflow)
+word_limits:
+  code_style: 200
+  architecture: 250
+  security: 150
+  performance: 150
+  git: 100
+  dependencies: 100
+  custom: 200
+
+sections:
+  # ============================================
+  # CODE STYLE - How code should be written
+  # ============================================
+  code_style:
+    title: "Code Style"
+    description: "Formatting, naming, and structure preferences"
+    enabled: true
+    rules:
+      - id: "CS-001"
+        description: "Use TypeScript with strict mode for all new files"
+        severity: error
+        rationale: "Type safety prevents runtime errors"
+        domains: [frontend, backend]
+        file_patterns: ["*.ts", "*.tsx"]
+
+      - id: "CS-002"
+        description: "Prefer async/await over Promise chains or callbacks"
+        severity: warning
+        rationale: "Improves readability and error handling"
+        auto_fix: true
+
+      - id: "CS-003"
+        description: "Use descriptive variable names (no single letters except loops)"
+        severity: warning
+        rationale: "Self-documenting code reduces need for comments"
+        examples:
+          good: ["const userEmail = data.email"]
+          bad: ["const e = data.email"]
+
+      - id: "CS-004"
+        description: "Keep functions under 50 lines; extract when longer"
+        severity: info
+        rationale: "Smaller functions are easier to test and maintain"
+
+      - id: "CS-005"
+        description: "Use early returns to reduce nesting depth"
+        severity: warning
+        rationale: "Flatter code is easier to follow"
+        auto_fix: true
+
+  # ============================================
+  # ARCHITECTURE - Structural patterns
+  # ============================================
+  architecture:
+    title: "Architecture"
+    description: "Layers, patterns, and structural requirements"
+    enabled: true
+    rules:
+      - id: "ARCH-001"
+        description: "All database access must go through repository layer"
+        severity: error
+        rationale: "Separation of concerns, testability"
+        domains: [backend]
+        file_patterns: ["**/repositories/**", "**/models/**"]
+
+      - id: "ARCH-002"
+        description: "Business logic in service layer, not controllers/routes"
+        severity: error
+        rationale: "Controllers should only handle HTTP concerns"
+        domains: [backend]
+
+      - id: "ARCH-003"
+        description: "UI components must not contain business logic"
+        severity: warning
+        rationale: "Keep components pure and reusable"
+        domains: [frontend]
+        file_patterns: ["**/components/**"]
+
+      - id: "ARCH-004"
+        description: "Use dependency injection for services"
+        severity: info
+        rationale: "Enables testing and loose coupling"
+        domains: [backend]
+
+  # ============================================
+  # SECURITY - Non-negotiable security rules
+  # ============================================
+  security:
+    title: "Security"
+    description: "Security requirements that must always be enforced"
+    enabled: true
+    rules:
+      - id: "SEC-001"
+        description: "Never hardcode secrets, credentials, or API keys"
+        severity: error
+        rationale: "Secrets in code are a security vulnerability"
+        auto_fix: false
+
+      - id: "SEC-002"
+        description: "Validate and sanitize all user input"
+        severity: error
+        rationale: "Prevents injection attacks"
+        domains: [backend, frontend]
+
+      - id: "SEC-003"
+        description: "Use parameterized queries for database operations"
+        severity: error
+        rationale: "Prevents SQL injection"
+        domains: [backend]
+
+      - id: "SEC-004"
+        description: "Never expose stack traces or internal errors to users"
+        severity: error
+        rationale: "Information leakage aids attackers"
+        domains: [backend]
+
+  # ============================================
+  # PERFORMANCE - Efficiency requirements
+  # ============================================
+  performance:
+    title: "Performance"
+    description: "Performance thresholds and optimization patterns"
+    enabled: true
+    rules:
+      - id: "PERF-001"
+        description: "Use pagination for list endpoints (max 100 items)"
+        severity: warning
+        rationale: "Unbounded queries cause memory issues"
+        domains: [backend]
+
+      - id: "PERF-002"
+        description: "Lazy load heavy components and routes"
+        severity: info
+        rationale: "Improves initial load time"
+        domains: [frontend]
+
+      - id: "PERF-003"
+        description: "Cache expensive computations with appropriate TTL"
+        severity: info
+        rationale: "Reduces redundant work"
+
+      - id: "PERF-004"
+        description: "Avoid N+1 queries; use eager loading or batching"
+        severity: warning
+        rationale: "N+1 queries degrade performance exponentially"
+        domains: [backend]
+
+  # ============================================
+  # GIT - Version control standards
+  # ============================================
+  git:
+    title: "Git Workflow"
+    description: "Commit messages and branching standards"
+    enabled: true
+    rules:
+      - id: "GIT-001"
+        description: "Use conventional commit format: type(scope): description"
+        severity: warning
+        rationale: "Enables automated changelog generation"
+        examples:
+          good: ["feat(auth): add password reset flow"]
+          bad: ["fixed stuff", "WIP"]
+
+      - id: "GIT-002"
+        description: "One logical change per commit"
+        severity: info
+        rationale: "Atomic commits enable clean reverts"
+
+      - id: "GIT-003"
+        description: "Never force push to main/master"
+        severity: error
+        rationale: "Protects shared branch history"
+
+  # ============================================
+  # DEPENDENCIES - Package management
+  # ============================================
+  dependencies:
+    title: "Dependencies"
+    description: "Package and dependency management rules"
+    enabled: true
+    rules:
+      - id: "DEP-001"
+        description: "Always commit lock files (package-lock.json, yarn.lock)"
+        severity: error
+        rationale: "Ensures reproducible builds"
+
+      - id: "DEP-002"
+        description: "No packages with known critical vulnerabilities"
+        severity: error
+        rationale: "Security baseline requirement"
+
+      - id: "DEP-003"
+        description: "Justify new dependencies in commit message"
+        severity: info
+        rationale: "Prevents dependency bloat"
+
+  # ============================================
+  # CUSTOM - Project-specific rules
+  # ============================================
+  custom:
+    title: "Project-Specific"
+    description: "Custom rules for this project"
+    enabled: true
+    rules: []
+    # Add project-specific rules here:
+    # - id: "CUST-001"
+    #   description: "Your custom rule"
+    #   severity: warning
