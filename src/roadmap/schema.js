@@ -10,6 +10,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Roadmap JSON Schema Definition
+ *
+ * NEW ARCHITECTURE (Epic-Hierarchy):
+ * - Roadmap coordinates MULTIPLE phase-dev-plans (not phases directly)
+ * - Each phase-dev-plan has its own PROGRESS.json
+ * - Roadmap tracks plan completion via references
+ * - Legacy format supported for backwards compatibility
  */
 export const ROADMAP_SCHEMA = {
   roadmap_id: 'string (uuid)',
@@ -19,6 +25,44 @@ export const ROADMAP_SCHEMA = {
   updated: 'ISO8601',
   source: 'manual | github-issues | github-project',
   status: 'planning | active | paused | completed',
+  milestone: 'string (optional)',
+
+  // Parent reference (for epic-hierarchy)
+  parent_epic: {
+    epic_id: 'string (uuid)',
+    epic_slug: 'string',
+    epic_path: 'string',
+  },
+
+  // NEW: Phase-dev-plan references (replaces direct phase tracking)
+  phase_dev_plan_refs: [
+    {
+      slug: 'string (kebab-case)',
+      path: 'string (.claude/phase-plans/{slug}/PROGRESS.json)',
+      title: 'string',
+      status: 'pending | in_progress | completed | blocked',
+      completion_percentage: 'number (0-100)',
+      created: 'ISO8601',
+      updated: 'ISO8601',
+    },
+  ],
+
+  // Cross-plan dependencies
+  cross_plan_dependencies: [
+    {
+      dependent_slug: 'string',
+      depends_on_slug: 'string',
+      reason: 'string',
+    },
+  ],
+
+  // Metadata
+  metadata: {
+    plan_count: 'number',
+    overall_completion_percentage: 'number (0-100)',
+  },
+
+  // LEGACY: Direct phase tracking (deprecated, for backwards compatibility)
   phases: [
     {
       phase_id: 'string',
@@ -77,6 +121,8 @@ export function createRoadmap(options = {}) {
     title = 'Untitled Roadmap',
     description = '',
     source = ROADMAP_SOURCE.manual,
+    milestone = null,
+    parent_epic = null,
   } = options;
 
   const now = new Date().toISOString();
@@ -92,11 +138,30 @@ export function createRoadmap(options = {}) {
     updated: now,
     source,
     status: 'planning',
+    milestone,
+
+    // Parent epic reference
+    parent_epic: parent_epic || null,
+
+    // NEW: Phase-dev-plan references
+    phase_dev_plan_refs: [],
+
+    // Cross-plan dependencies
+    cross_plan_dependencies: [],
+
+    // LEGACY: Direct phases (for backwards compatibility)
     phases: [],
+
     metadata: {
+      // NEW: Plan-based metrics
+      plan_count: 0,
+      overall_completion_percentage: 0,
+
+      // LEGACY: Phase-based metrics
       total_phases: 0,
       completed_phases: 0,
       completion_percentage: 0,
+
       github_integrated: false,
       last_github_sync: null,
     },
@@ -372,6 +437,273 @@ export function generateSlug(title) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+// ============================================================
+// PHASE-DEV-PLAN REFERENCE MANAGEMENT (Epic-Hierarchy)
+// ============================================================
+
+/**
+ * Create a phase-dev-plan reference
+ *
+ * @param {Object} options - Plan reference options
+ * @returns {Object} New plan reference object
+ */
+export function createPlanReference(options = {}) {
+  const {
+    slug,
+    title = 'Untitled Plan',
+    status = 'pending',
+    completion_percentage = 0,
+  } = options;
+
+  if (!slug) {
+    throw new Error('Plan reference requires a slug');
+  }
+
+  const now = new Date().toISOString();
+
+  return {
+    slug,
+    path: `.claude/phase-plans/${slug}/PROGRESS.json`,
+    title,
+    status,
+    completion_percentage,
+    created: now,
+    updated: now,
+  };
+}
+
+/**
+ * Add a phase-dev-plan reference to a roadmap
+ *
+ * @param {Object} roadmap - Roadmap object (mutated)
+ * @param {Object} planRef - Plan reference to add
+ * @returns {Object} Updated roadmap
+ */
+export function addPlanReference(roadmap, planRef) {
+  if (!roadmap.phase_dev_plan_refs) {
+    roadmap.phase_dev_plan_refs = [];
+  }
+
+  // Check for duplicate slug
+  const existingIndex = roadmap.phase_dev_plan_refs.findIndex(ref => ref.slug === planRef.slug);
+  if (existingIndex !== -1) {
+    // Update existing reference
+    roadmap.phase_dev_plan_refs[existingIndex] = planRef;
+  } else {
+    // Add new reference
+    roadmap.phase_dev_plan_refs.push(planRef);
+  }
+
+  // Update metadata
+  roadmap.metadata.plan_count = roadmap.phase_dev_plan_refs.length;
+  roadmap.updated = new Date().toISOString();
+
+  return roadmap;
+}
+
+/**
+ * Remove a phase-dev-plan reference from a roadmap
+ *
+ * @param {Object} roadmap - Roadmap object (mutated)
+ * @param {string} planSlug - Slug of plan to remove
+ * @returns {Object} Updated roadmap
+ */
+export function removePlanReference(roadmap, planSlug) {
+  if (!roadmap.phase_dev_plan_refs) {
+    return roadmap;
+  }
+
+  roadmap.phase_dev_plan_refs = roadmap.phase_dev_plan_refs.filter(ref => ref.slug !== planSlug);
+  roadmap.metadata.plan_count = roadmap.phase_dev_plan_refs.length;
+  roadmap.updated = new Date().toISOString();
+
+  // Remove related dependencies
+  if (roadmap.cross_plan_dependencies) {
+    roadmap.cross_plan_dependencies = roadmap.cross_plan_dependencies.filter(
+      dep => dep.dependent_slug !== planSlug && dep.depends_on_slug !== planSlug
+    );
+  }
+
+  return roadmap;
+}
+
+/**
+ * Update a plan reference's completion status
+ *
+ * @param {Object} roadmap - Roadmap object (mutated)
+ * @param {string} planSlug - Slug of plan to update
+ * @param {Object} updates - Fields to update (status, completion_percentage)
+ * @returns {Object} Updated roadmap
+ */
+export function updatePlanReference(roadmap, planSlug, updates) {
+  if (!roadmap.phase_dev_plan_refs) {
+    roadmap.phase_dev_plan_refs = [];
+  }
+
+  const planIndex = roadmap.phase_dev_plan_refs.findIndex(ref => ref.slug === planSlug);
+  if (planIndex === -1) {
+    throw new Error(`Plan reference not found: ${planSlug}`);
+  }
+
+  const planRef = roadmap.phase_dev_plan_refs[planIndex];
+  Object.assign(planRef, updates);
+  planRef.updated = new Date().toISOString();
+
+  roadmap.updated = new Date().toISOString();
+
+  return roadmap;
+}
+
+/**
+ * Calculate overall completion from all plan references
+ *
+ * @param {Object} roadmap - Roadmap object
+ * @returns {number} Overall completion percentage (0-100)
+ */
+export function calculateOverallCompletion(roadmap) {
+  if (!roadmap.phase_dev_plan_refs || roadmap.phase_dev_plan_refs.length === 0) {
+    // Fallback to legacy phase-based calculation
+    return calculateCompletion(roadmap);
+  }
+
+  const totalPlans = roadmap.phase_dev_plan_refs.length;
+  const totalCompletion = roadmap.phase_dev_plan_refs.reduce(
+    (sum, ref) => sum + (ref.completion_percentage || 0),
+    0
+  );
+
+  return Math.round(totalCompletion / totalPlans);
+}
+
+/**
+ * Add a cross-plan dependency
+ *
+ * @param {Object} roadmap - Roadmap object (mutated)
+ * @param {string} dependentSlug - Slug of plan that depends
+ * @param {string} dependsOnSlug - Slug of plan it depends on
+ * @param {string} reason - Reason for dependency
+ * @returns {Object} Updated roadmap
+ */
+export function addCrossPlanDependency(roadmap, dependentSlug, dependsOnSlug, reason = '') {
+  if (!roadmap.cross_plan_dependencies) {
+    roadmap.cross_plan_dependencies = [];
+  }
+
+  // Check for duplicate
+  const exists = roadmap.cross_plan_dependencies.some(
+    dep => dep.dependent_slug === dependentSlug && dep.depends_on_slug === dependsOnSlug
+  );
+
+  if (!exists) {
+    roadmap.cross_plan_dependencies.push({
+      dependent_slug: dependentSlug,
+      depends_on_slug: dependsOnSlug,
+      reason,
+    });
+  }
+
+  roadmap.updated = new Date().toISOString();
+
+  return roadmap;
+}
+
+/**
+ * Check if a plan's dependencies are satisfied
+ *
+ * @param {Object} roadmap - Roadmap object
+ * @param {string} planSlug - Slug of plan to check
+ * @returns {Object} { satisfied: boolean, missing: string[] }
+ */
+export function checkPlanDependencies(roadmap, planSlug) {
+  if (!roadmap.cross_plan_dependencies || roadmap.cross_plan_dependencies.length === 0) {
+    return { satisfied: true, missing: [] };
+  }
+
+  const dependencies = roadmap.cross_plan_dependencies.filter(
+    dep => dep.dependent_slug === planSlug
+  );
+
+  if (dependencies.length === 0) {
+    return { satisfied: true, missing: [] };
+  }
+
+  const missing = [];
+
+  for (const dep of dependencies) {
+    const dependsOnPlan = roadmap.phase_dev_plan_refs?.find(ref => ref.slug === dep.depends_on_slug);
+    if (!dependsOnPlan || dependsOnPlan.status !== 'completed') {
+      missing.push(dep.depends_on_slug);
+    }
+  }
+
+  return {
+    satisfied: missing.length === 0,
+    missing,
+  };
+}
+
+/**
+ * Migrate legacy roadmap format to new epic-hierarchy format
+ *
+ * Converts direct phase tracking to phase-dev-plan references.
+ * This is a one-way migration for backwards compatibility.
+ *
+ * @param {Object} roadmap - Legacy roadmap object
+ * @returns {Object} Migrated roadmap
+ */
+export function migrateLegacyRoadmap(roadmap) {
+  // Check if already migrated
+  if (roadmap.phase_dev_plan_refs && roadmap.phase_dev_plan_refs.length > 0) {
+    return roadmap; // Already in new format
+  }
+
+  // Check if has legacy phases
+  if (!roadmap.phases || roadmap.phases.length === 0) {
+    return roadmap; // Nothing to migrate
+  }
+
+  console.log(`Migrating legacy roadmap: ${roadmap.title}`);
+
+  // Initialize new fields
+  roadmap.phase_dev_plan_refs = roadmap.phase_dev_plan_refs || [];
+  roadmap.cross_plan_dependencies = roadmap.cross_plan_dependencies || [];
+
+  // Convert each phase to a phase-dev-plan reference
+  for (const phase of roadmap.phases) {
+    const planSlug = generateSlug(phase.phase_title);
+    const planRef = createPlanReference({
+      slug: planSlug,
+      title: phase.phase_title,
+      status: phase.status,
+      completion_percentage: phase.metadata?.completed_tasks && phase.metadata?.total_tasks
+        ? Math.round((phase.metadata.completed_tasks / phase.metadata.total_tasks) * 100)
+        : 0,
+    });
+
+    roadmap.phase_dev_plan_refs.push(planRef);
+
+    // Convert phase dependencies to cross-plan dependencies
+    if (phase.dependencies && phase.dependencies.length > 0) {
+      for (const depPhaseId of phase.dependencies) {
+        const depPhase = roadmap.phases.find(p => p.phase_id === depPhaseId);
+        if (depPhase) {
+          const depSlug = generateSlug(depPhase.phase_title);
+          addCrossPlanDependency(roadmap, planSlug, depSlug, 'Migrated from phase dependency');
+        }
+      }
+    }
+  }
+
+  // Update metadata
+  roadmap.metadata.plan_count = roadmap.phase_dev_plan_refs.length;
+  roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+
+  // Keep legacy phases for reference, but mark as deprecated
+  roadmap._legacy_phases_deprecated = true;
+
+  return roadmap;
 }
 
 // ============================================================

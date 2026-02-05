@@ -45,6 +45,7 @@ export function generateProgressJson(config) {
     ralphLoop = null,
     l2Exploration = null,
     workflow = null,
+    parentContext = null,
   } = config;
 
   const timestamp = new Date().toISOString();
@@ -95,6 +96,14 @@ export function generateProgressJson(config) {
         agentsAvailable: !!agentRegistry,
         l2ExplorationEnabled: !!l2Exploration,
       },
+      parent_context: parentContext ? {
+        type: parentContext.type,
+        id: parentContext.id,
+        slug: parentContext.slug,
+        title: parentContext.title,
+        roadmap_id: parentContext.roadmap_id || null,
+        epic_id: parentContext.epic_id || null,
+      } : null,
       tech_stack: {
         frontend: architecture.frontend || null,
         backend: architecture.backend || null,

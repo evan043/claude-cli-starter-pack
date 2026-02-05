@@ -16,6 +16,14 @@ import {
   generateSlug,
   calculateCompletion,
   getNextAvailablePhases,
+  createPlanReference,
+  addPlanReference,
+  removePlanReference,
+  updatePlanReference,
+  calculateOverallCompletion,
+  addCrossPlanDependency,
+  checkPlanDependencies,
+  migrateLegacyRoadmap,
 } from './schema.js';
 
 /**
@@ -198,6 +206,9 @@ export function listRoadmaps(cwd = process.cwd()) {
 /**
  * Load a roadmap by name/slug
  *
+ * Supports backwards compatibility: automatically migrates legacy format
+ * to new epic-hierarchy format if needed.
+ *
  * @param {string} roadmapName - Roadmap name or slug
  * @param {string} cwd - Current working directory
  * @returns {Object|null} Roadmap object or null if not found
@@ -221,8 +232,12 @@ export function loadRoadmap(roadmapName, cwd = process.cwd()) {
 
   try {
     const content = readFileSync(roadmapPath, 'utf8');
-    const roadmap = JSON.parse(content);
+    let roadmap = JSON.parse(content);
     roadmap._path = roadmapPath;
+
+    // Backwards compatibility: migrate legacy format
+    roadmap = migrateLegacyRoadmap(roadmap);
+
     return roadmap;
   } catch (e) {
     console.error(chalk.red(`Error loading roadmap: ${e.message}`));
@@ -765,4 +780,243 @@ This directory contains project roadmaps created with CCASP.
   } catch (e) {
     // Ignore write errors
   }
+}
+
+// ============================================================
+// PHASE-DEV-PLAN REFERENCE MANAGEMENT (Epic-Hierarchy)
+// ============================================================
+
+/**
+ * Add a phase-dev-plan reference to a roadmap
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {Object} planRefOptions - Plan reference options { slug, title, status, completion_percentage }
+ * @param {string} cwd - Current working directory
+ * @returns {Object} Result { success: boolean, planRef: Object, error?: string }
+ */
+export function addPhaseDevPlanRef(roadmapName, planRefOptions, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap) {
+    return {
+      success: false,
+      planRef: null,
+      error: `Roadmap not found: ${roadmapName}`,
+    };
+  }
+
+  try {
+    const planRef = createPlanReference(planRefOptions);
+    addPlanReference(roadmap, planRef);
+
+    const saveResult = saveRoadmap(roadmap, cwd);
+
+    return {
+      success: saveResult.success,
+      planRef: saveResult.success ? planRef : null,
+      error: saveResult.error,
+    };
+  } catch (e) {
+    return {
+      success: false,
+      planRef: null,
+      error: e.message,
+    };
+  }
+}
+
+/**
+ * Remove a phase-dev-plan reference from a roadmap
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {string} planSlug - Slug of plan to remove
+ * @param {string} cwd - Current working directory
+ * @returns {Object} Result { success: boolean, error?: string }
+ */
+export function removePhaseDevPlanRef(roadmapName, planSlug, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap) {
+    return {
+      success: false,
+      error: `Roadmap not found: ${roadmapName}`,
+    };
+  }
+
+  removePlanReference(roadmap, planSlug);
+
+  const saveResult = saveRoadmap(roadmap, cwd);
+
+  return {
+    success: saveResult.success,
+    error: saveResult.error,
+  };
+}
+
+/**
+ * Update a phase-dev-plan reference's status/completion
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {string} planSlug - Slug of plan to update
+ * @param {Object} updates - Fields to update { status, completion_percentage }
+ * @param {string} cwd - Current working directory
+ * @returns {Object} Result { success: boolean, planRef: Object, error?: string }
+ */
+export function updatePhaseDevPlanRef(roadmapName, planSlug, updates, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap) {
+    return {
+      success: false,
+      planRef: null,
+      error: `Roadmap not found: ${roadmapName}`,
+    };
+  }
+
+  try {
+    updatePlanReference(roadmap, planSlug, updates);
+
+    // Recalculate overall completion
+    roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+
+    // Update roadmap status
+    const allComplete = roadmap.phase_dev_plan_refs.every(ref => ref.status === 'completed');
+    if (allComplete) {
+      roadmap.status = 'completed';
+    } else if (roadmap.phase_dev_plan_refs.some(ref => ref.status === 'in_progress')) {
+      roadmap.status = 'active';
+    }
+
+    const saveResult = saveRoadmap(roadmap, cwd);
+
+    const planRef = roadmap.phase_dev_plan_refs.find(ref => ref.slug === planSlug);
+
+    return {
+      success: saveResult.success,
+      planRef: saveResult.success ? planRef : null,
+      error: saveResult.error,
+    };
+  } catch (e) {
+    return {
+      success: false,
+      planRef: null,
+      error: e.message,
+    };
+  }
+}
+
+/**
+ * Sync a plan reference from its PROGRESS.json file
+ *
+ * Reads the PROGRESS.json for a plan and updates the roadmap reference
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {string} planSlug - Slug of plan to sync
+ * @param {string} cwd - Current working directory
+ * @returns {Object} Result { success: boolean, planRef: Object, error?: string }
+ */
+export function syncPhaseDevPlanRef(roadmapName, planSlug, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap) {
+    return {
+      success: false,
+      planRef: null,
+      error: `Roadmap not found: ${roadmapName}`,
+    };
+  }
+
+  const planRef = roadmap.phase_dev_plan_refs?.find(ref => ref.slug === planSlug);
+  if (!planRef) {
+    return {
+      success: false,
+      planRef: null,
+      error: `Plan reference not found: ${planSlug}`,
+    };
+  }
+
+  // Load PROGRESS.json
+  const progressPath = join(cwd, planRef.path);
+  if (!existsSync(progressPath)) {
+    return {
+      success: false,
+      planRef: null,
+      error: `PROGRESS.json not found: ${progressPath}`,
+    };
+  }
+
+  try {
+    const progressContent = readFileSync(progressPath, 'utf8');
+    const progress = JSON.parse(progressContent);
+
+    // Update reference from progress
+    const updates = {
+      status: progress.status || 'pending',
+      completion_percentage: progress.completion_percentage || 0,
+    };
+
+    return updatePhaseDevPlanRef(roadmapName, planSlug, updates, cwd);
+  } catch (e) {
+    return {
+      success: false,
+      planRef: null,
+      error: `Failed to sync plan reference: ${e.message}`,
+    };
+  }
+}
+
+/**
+ * Add a cross-plan dependency to a roadmap
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {string} dependentSlug - Slug of plan that depends
+ * @param {string} dependsOnSlug - Slug of plan it depends on
+ * @param {string} reason - Reason for dependency
+ * @param {string} cwd - Current working directory
+ * @returns {Object} Result { success: boolean, error?: string }
+ */
+export function addCrossPlanDep(roadmapName, dependentSlug, dependsOnSlug, reason, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap) {
+    return {
+      success: false,
+      error: `Roadmap not found: ${roadmapName}`,
+    };
+  }
+
+  addCrossPlanDependency(roadmap, dependentSlug, dependsOnSlug, reason);
+
+  const saveResult = saveRoadmap(roadmap, cwd);
+
+  return {
+    success: saveResult.success,
+    error: saveResult.error,
+  };
+}
+
+/**
+ * Get next available phase-dev-plans (dependencies satisfied)
+ *
+ * @param {string} roadmapName - Roadmap name or slug
+ * @param {string} cwd - Current working directory
+ * @returns {Array} Array of plan references that can be started
+ */
+export function getNextAvailablePlans(roadmapName, cwd = process.cwd()) {
+  const roadmap = loadRoadmap(roadmapName, cwd);
+
+  if (!roadmap || !roadmap.phase_dev_plan_refs) {
+    return [];
+  }
+
+  return roadmap.phase_dev_plan_refs.filter(planRef => {
+    // Already completed or in progress
+    if (planRef.status === 'completed' || planRef.status === 'in_progress') {
+      return false;
+    }
+
+    // Check dependencies
+    const depCheck = checkPlanDependencies(roadmap, planRef.slug);
+    return depCheck.satisfied;
+  });
 }

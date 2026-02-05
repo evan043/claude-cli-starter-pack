@@ -94,6 +94,12 @@ async function showWhatsNextMenu(config) {
       short: 'Start Phase 1',
     },
     {
+      name: `${chalk.green.bold('A)')} Run ALL Phases (autonomous, sequential)`,
+      value: 'run-all-phases',
+      short: 'Run All Phases',
+    },
+    new inquirer.Separator(),
+    {
       name: `${chalk.cyan('2)')} View PROGRESS.json`,
       value: 'view-progress',
       short: 'View Progress',
@@ -139,6 +145,10 @@ async function showWhatsNextMenu(config) {
       await showPhaseStartInstructions(config, 1);
       return true;
 
+    case 'run-all-phases':
+      await showRunAllPhasesInstructions(config);
+      return false; // Exit menu to begin autonomous execution
+
     case 'view-progress':
       await viewProgressJson(config);
       return true;
@@ -162,6 +172,55 @@ async function showWhatsNextMenu(config) {
     default:
       return false;
   }
+}
+
+/**
+ * Show run all phases instructions
+ */
+async function showRunAllPhasesInstructions(config) {
+  const { projectName, projectSlug, phases } = config;
+
+  console.log(chalk.green.bold('\n🚀 RUN ALL PHASES - AUTONOMOUS MODE\n'));
+  console.log(chalk.cyan('═'.repeat(50)));
+
+  console.log(chalk.white.bold('\nPhases to execute sequentially:'));
+  phases.forEach((phase, i) => {
+    console.log(`  ${chalk.yellow(`Phase ${i + 1}:`)} ${phase.name}`);
+    console.log(chalk.dim(`    Tasks: ${phase.tasks.length}`));
+  });
+  console.log('');
+
+  console.log(chalk.white.bold('What will happen:'));
+  console.log('  1. Each phase executes in order (1 → 2 → 3 → ...)');
+  console.log('  2. All tasks within each phase are completed');
+  console.log('  3. PROGRESS.json is updated after each phase');
+  console.log('  4. Execution continues until all phases complete');
+  console.log('  5. You can interrupt at any time with Ctrl+C');
+  console.log('');
+
+  console.log(chalk.yellow.bold('To begin autonomous execution, tell Claude:\n'));
+  console.log(chalk.cyan(`  "Run all phases of ${projectName} autonomously"`));
+  console.log(chalk.dim('  or'));
+  console.log(chalk.cyan(`  "/phase-dev-${projectSlug} run-all"`));
+  console.log('');
+
+  console.log(chalk.white.bold('Alternative: Use the phase-orchestrator agent:\n'));
+  console.log(chalk.cyan(`  "Deploy phase-orchestrator agent to execute ${projectName}"`));
+  console.log('');
+
+  console.log(chalk.dim('─'.repeat(50)));
+  console.log(chalk.dim('Tip: Autonomous mode works best for well-defined plans'));
+  console.log(chalk.dim('with clear task boundaries. Review your plan first if'));
+  console.log(chalk.dim('there are ambiguous or open-ended tasks.'));
+  console.log('');
+
+  await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'continue',
+      message: chalk.dim('Press Enter to exit and begin...'),
+    },
+  ]);
 }
 
 /**

@@ -117,6 +117,24 @@ Marks a task as completed and updates metrics.
 
 Generates a markdown progress report.
 
+### Run All Phases (Autonomous Mode)
+
+```
+/phase-track <project-slug> --run-all
+```
+
+Executes ALL remaining phases sequentially and autonomously:
+- Starts from current phase (or Phase 1 if none active)
+- Completes all tasks in each phase before moving to next
+- Updates PROGRESS.json after each task completion
+- Continues until all phases complete or an error occurs
+- Can be interrupted with Ctrl+C at any time
+
+**Ideal for:**
+- Well-defined plans with clear task boundaries
+- Overnight or unattended execution
+- When you want Claude to handle the entire implementation
+
 ## Progress Visualization
 
 ```

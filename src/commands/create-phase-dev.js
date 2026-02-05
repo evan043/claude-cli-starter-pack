@@ -26,16 +26,23 @@ import { showPostCompletionHandler } from './create-phase-dev/post-completion.js
  * Run the create-phase-dev command
  *
  * @param {Object} options - CLI options
+ * @param {Object} parentContext - Optional parent context (roadmap/epic)
  */
-export async function runCreatePhaseDev(options = {}) {
+export async function runCreatePhaseDev(options = {}, parentContext = null) {
   showHeader('Phased Development Plan Generator');
 
   console.log(chalk.dim('Create comprehensive development plans with 95%+ success probability.'));
   console.log(chalk.dim('Generates documentation, RAG agents, and enforcement hooks.\n'));
 
+  // Display parent context if provided
+  if (parentContext) {
+    console.log(chalk.cyan(`Parent Context: ${parentContext.type} - ${parentContext.title}`));
+    console.log(chalk.dim(`  ${parentContext.type}_id: ${parentContext.id}\n`));
+  }
+
   // Check for autonomous mode
   if (options.autonomous) {
-    return await runAutonomousMode(options);
+    return await runAutonomousMode(options, parentContext);
   }
 
   // Step 0A: Enhancement options
@@ -58,7 +65,7 @@ export async function runCreatePhaseDev(options = {}) {
 
   // Check for forced scale
   if (options.scale) {
-    return await runWithForcedScale(options, enhancements, checkpoint);
+    return await runWithForcedScale(options, enhancements, checkpoint, parentContext);
   }
 
   // Steps 1-5: Interactive wizard
@@ -71,6 +78,11 @@ export async function runCreatePhaseDev(options = {}) {
 
   // Adjust for enhancements
   const config = adjustForEnhancements(wizardResult, enhancements);
+
+  // Add parent context if provided
+  if (parentContext) {
+    config.parentContext = parentContext;
+  }
 
   // Add backend configuration
   config.backendConfig = generateBackendConfig(config.architecture);
@@ -95,7 +107,7 @@ export async function runCreatePhaseDev(options = {}) {
 /**
  * Run with forced scale (skip wizard but still auto-detect stack)
  */
-async function runWithForcedScale(options, enhancements, checkpoint) {
+async function runWithForcedScale(options, enhancements, checkpoint, parentContext = null) {
   console.log(chalk.yellow(`\n⚡ Using forced scale: ${options.scale.toUpperCase()}\n`));
 
   // Import codebase analyzer
@@ -255,6 +267,11 @@ async function runWithForcedScale(options, enhancements, checkpoint) {
     enhancements
   );
 
+  // Add parent context if provided
+  if (parentContext) {
+    config.parentContext = parentContext;
+  }
+
   config.backendConfig = generateBackendConfig(architecture);
 
   // Generate documentation
@@ -271,7 +288,7 @@ async function runWithForcedScale(options, enhancements, checkpoint) {
 /**
  * Run in autonomous mode (auto-detect stack, minimal prompts)
  */
-async function runAutonomousMode(options) {
+async function runAutonomousMode(options, parentContext = null) {
   console.log(chalk.yellow('\n⚡ Autonomous mode: auto-detecting stack\n'));
 
   if (!options.name) {
@@ -338,6 +355,11 @@ async function runAutonomousMode(options) {
     },
     enhancements
   );
+
+  // Add parent context if provided
+  if (parentContext) {
+    config.parentContext = parentContext;
+  }
 
   config.backendConfig = generateBackendConfig(architecture);
 

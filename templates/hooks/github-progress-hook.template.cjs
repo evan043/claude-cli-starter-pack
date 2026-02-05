@@ -3,12 +3,14 @@
  *
  * Automatically updates GitHub issues as tasks are completed.
  * Monitors TodoWrite calls and syncs progress to linked GitHub issues.
+ * Now hierarchy-aware: detects parent roadmap/epic from PROGRESS.json parent_context.
  *
  * Event: PostToolUse
  * Matcher: TodoWrite
  *
  * This hook reads from stdin (Claude Code passes tool info there)
  * and updates the linked GitHub issue with progress comments.
+ * Also updates parent roadmap/epic issues when in hierarchy context.
  */
 
 const { execSync } = require('child_process');
@@ -157,6 +159,180 @@ function findLinkedIssue(todos, progress) {
 }
 
 /**
+ * Find PROGRESS.json in current directory or parent directories
+ */
+function findProgressJson() {
+  let currentDir = process.cwd();
+  const maxDepth = 5;
+  let depth = 0;
+
+  while (depth < maxDepth) {
+    const progressPath = path.join(currentDir, 'PROGRESS.json');
+    if (fs.existsSync(progressPath)) {
+      return progressPath;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      break; // Reached root
+    }
+    currentDir = parentDir;
+    depth++;
+  }
+
+  return null;
+}
+
+/**
+ * Load hierarchy context from PROGRESS.json
+ */
+function loadHierarchyContext() {
+  const progressPath = findProgressJson();
+  if (!progressPath) {
+    return null;
+  }
+
+  try {
+    const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+    const context = {
+      plan: {
+        slug: progress.plan_id || progress.project?.slug,
+        name: progress.project?.name,
+        github_issue: progress.github_issue,
+      },
+      roadmap: null,
+      epic: null,
+    };
+
+    // Check for parent context
+    if (progress.parent_context) {
+      if (progress.parent_context.type === 'roadmap') {
+        const roadmapPath = path.isAbsolute(progress.parent_context.path)
+          ? progress.parent_context.path
+          : path.join(path.dirname(progressPath), progress.parent_context.path);
+
+        if (fs.existsSync(roadmapPath)) {
+          const roadmap = JSON.parse(fs.readFileSync(roadmapPath, 'utf8'));
+          context.roadmap = {
+            slug: roadmap.slug,
+            title: roadmap.title,
+            github_issue: roadmap.metadata?.github_epic_number,
+          };
+
+          // Check for parent epic
+          if (roadmap.parent_epic) {
+            const epicPath = path.isAbsolute(roadmap.parent_epic.epic_path)
+              ? roadmap.parent_epic.epic_path
+              : path.join(path.dirname(roadmapPath), roadmap.parent_epic.epic_path);
+
+            if (fs.existsSync(epicPath)) {
+              const epic = JSON.parse(fs.readFileSync(epicPath, 'utf8'));
+              context.epic = {
+                slug: epic.slug,
+                title: epic.title,
+                github_issue: epic.github_epic_number,
+              };
+            }
+          }
+        }
+      } else if (progress.parent_context.type === 'epic') {
+        const epicPath = path.isAbsolute(progress.parent_context.path)
+          ? progress.parent_context.path
+          : path.join(path.dirname(progressPath), progress.parent_context.path);
+
+        if (fs.existsSync(epicPath)) {
+          const epic = JSON.parse(fs.readFileSync(epicPath, 'utf8'));
+          context.epic = {
+            slug: epic.slug,
+            title: epic.title,
+            github_issue: epic.github_epic_number,
+          };
+        }
+      }
+    }
+
+    return context;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Update parent issues with child progress
+ */
+function updateParentIssues(context, completedCount, totalCount, config) {
+  if (!context) {
+    return;
+  }
+
+  const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const progressBar = '█'.repeat(Math.floor(percentage / 10)) + '░'.repeat(10 - Math.floor(percentage / 10));
+
+  // Update roadmap issue if exists
+  if (context.roadmap?.github_issue) {
+    try {
+      const roadmapComment = `### Child Plan Progress Update
+
+**Plan:** ${context.plan.name || context.plan.slug}
+${progressBar} ${percentage}% (${completedCount}/${totalCount} tasks)
+
+---
+*Auto-updated by Claude Code github-progress-hook*`;
+
+      const cacheDir = path.join(process.cwd(), '.claude', 'hooks', 'cache');
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
+      const tmpFile = path.join(cacheDir, 'tmp-roadmap-comment.md');
+      fs.writeFileSync(tmpFile, roadmapComment, 'utf8');
+
+      execSync(
+        `gh issue comment ${context.roadmap.github_issue} --repo ${config.owner}/${config.repo} --body-file "${tmpFile}"`,
+        { stdio: 'pipe' }
+      );
+
+      try { fs.unlinkSync(tmpFile); } catch {}
+
+      console.log(`[github-progress] Updated roadmap issue #${context.roadmap.github_issue}`);
+    } catch {
+      // Silent fail
+    }
+  }
+
+  // Update epic issue if exists
+  if (context.epic?.github_issue) {
+    try {
+      const breadcrumb = context.roadmap
+        ? `${context.roadmap.title} > ${context.plan.name || context.plan.slug}`
+        : context.plan.name || context.plan.slug;
+
+      const epicComment = `### Deep Progress Update
+
+**Path:** ${breadcrumb}
+${progressBar} ${percentage}% (${completedCount}/${totalCount} tasks)
+
+---
+*Auto-updated by Claude Code github-progress-hook*`;
+
+      const cacheDir = path.join(process.cwd(), '.claude', 'hooks', 'cache');
+      const tmpFile = path.join(cacheDir, 'tmp-epic-comment.md');
+      fs.writeFileSync(tmpFile, epicComment, 'utf8');
+
+      execSync(
+        `gh issue comment ${context.epic.github_issue} --repo ${config.owner}/${config.repo} --body-file "${tmpFile}"`,
+        { stdio: 'pipe' }
+      );
+
+      try { fs.unlinkSync(tmpFile); } catch {}
+
+      console.log(`[github-progress] Updated epic issue #${context.epic.github_issue}`);
+    } catch {
+      // Silent fail
+    }
+  }
+}
+
+/**
  * Main function - reads from stdin and processes TodoWrite
  */
 async function main() {
@@ -229,6 +405,12 @@ async function main() {
   if (completedCount > previousCompleted) {
     // Update GitHub issue
     updateGitHubIssue(progress.linkedIssue, completedCount, totalCount, latestTask, config);
+
+    // Load hierarchy context and update parent issues
+    const hierarchyContext = loadHierarchyContext();
+    if (hierarchyContext) {
+      updateParentIssues(hierarchyContext, completedCount, totalCount, config);
+    }
 
     // Update progress tracking
     progress.completedTasks = completedTodos.map(t => t.content);

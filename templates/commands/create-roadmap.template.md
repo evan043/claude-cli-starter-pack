@@ -2,6 +2,13 @@
 
 You are a roadmap planning specialist using the CCASP Roadmap Orchestration Framework. Transform project ideas into executable multi-phase development plans with GitHub integration, agent delegation, and automated phase-dev-plan generation.
 
+**NEW EPIC-HIERARCHY ARCHITECTURE:**
+- Roadmap coordinates MULTIPLE phase-dev-plans (not phases directly)
+- Each phase-dev-plan has its own PROGRESS.json
+- Roadmap tracks plan completion via references in phase_dev_plan_refs[]
+- Analyze scope to determine HOW MANY phase-dev-plans are needed
+- Support for parent epic context via --parent-epic flag
+
 ---
 
 ## 🚨 MANDATORY FILE CREATION - DO NOT SKIP
@@ -460,9 +467,33 @@ Analyze selected scope/issues using the intelligence layer:
 - **M (Medium)**: 10-30 tasks, 2-3 domains, 8-16 hours
 - **L (Large)**: 30+ tasks, 3+ domains, 24-40 hours
 
-### Step 4: Generate ROADMAP.json
+### Step 4: Analyze Scope & Determine Phase-Dev-Plans
 
-Create the roadmap file at `.claude/roadmaps/{slug}.json`:
+**CRITICAL:** Analyze the scope to determine HOW MANY phase-dev-plans are needed.
+
+**Ask yourself:**
+- How many distinct domains/areas does this cover? (frontend, backend, database, testing, deployment)
+- Are there natural breakpoints where work can be parallelized?
+- What is the logical grouping of tasks into independently-executable plans?
+
+**Common patterns:**
+- **Single-domain feature**: 1 phase-dev-plan (e.g., "Add user profile page")
+- **Full-stack feature**: 2-3 phase-dev-plans (e.g., /auth-backend, /auth-frontend, /auth-testing)
+- **Complex refactor**: 3-5 phase-dev-plans (e.g., /dashboard-ui, /dashboard-api, /dashboard-data, /dashboard-tests, /dashboard-docs)
+- **Platform migration**: 4-6 phase-dev-plans (e.g., /migration-prep, /migration-backend, /migration-frontend, /migration-validation, /migration-cleanup)
+
+**Determine plan slugs:**
+```
+Example: "Add authentication system"
+Plan slugs:
+  - auth-backend (API + database)
+  - auth-frontend (UI components)
+  - auth-testing (E2E tests)
+```
+
+### Step 5: Generate ROADMAP.json (NEW ARCHITECTURE)
+
+Create the roadmap file at `.claude/roadmaps/{slug}/ROADMAP.json`:
 
 ```json
 {
@@ -474,31 +505,48 @@ Create the roadmap file at `.claude/roadmaps/{slug}.json`:
   "updated": "{{timestamp}}",
   "source": "manual | github-issues | github-project",
   "status": "planning | active | paused | completed",
-  "phases": [
+
+  // NEW: Parent epic reference (if --parent-epic flag used)
+  "parent_epic": {
+    "epic_id": "{{parent-epic-id}}",
+    "epic_slug": "{{parent-epic-slug}}",
+    "epic_path": ".claude/epics/{{parent-epic-slug}}/EPIC.json"
+  },
+
+  // NEW: Phase-dev-plan references (replaces direct phase tracking)
+  "phase_dev_plan_refs": [
     {
-      "phase_id": "phase-1",
-      "phase_title": "{{phaseName}}",
-      "goal": "{{phaseDescription}}",
-      "inputs": {
-        "issues": ["#45", "#46"],
-        "docs": ["path/to/doc.md"],
-        "prompts": ["user requirements"]
-      },
-      "outputs": ["deliverable descriptions"],
-      "agents_assigned": ["frontend-react-specialist"],
-      "dependencies": [],
-      "complexity": "S | M | L",
+      "slug": "auth-backend",
+      "path": ".claude/phase-plans/auth-backend/PROGRESS.json",
+      "title": "Authentication Backend",
       "status": "pending",
-      "phase_dev_config": {
-        "scale": "{{scale}}",
-        "progress_json_path": ".claude/phase-plans/{{slug}}/phase-1.json"
-      }
+      "completion_percentage": 0,
+      "created": "{{timestamp}}",
+      "updated": "{{timestamp}}"
+    },
+    {
+      "slug": "auth-frontend",
+      "path": ".claude/phase-plans/auth-frontend/PROGRESS.json",
+      "title": "Authentication Frontend",
+      "status": "pending",
+      "completion_percentage": 0,
+      "created": "{{timestamp}}",
+      "updated": "{{timestamp}}"
     }
   ],
+
+  // Cross-plan dependencies (e.g., frontend depends on backend)
+  "cross_plan_dependencies": [
+    {
+      "dependent_slug": "auth-frontend",
+      "depends_on_slug": "auth-backend",
+      "reason": "Frontend needs backend API endpoints to be ready"
+    }
+  ],
+
   "metadata": {
-    "total_phases": {{phaseCount}},
-    "completed_phases": 0,
-    "completion_percentage": 0,
+    "plan_count": 2,
+    "overall_completion_percentage": 0,
     "github_integrated": false,
     "github_epic_number": null,
     "last_github_sync": null
@@ -506,18 +554,81 @@ Create the roadmap file at `.claude/roadmaps/{slug}.json`:
 }
 ```
 
-### Step 5: Generate Phase-Dev-Plans
+**IMPORTANT:** Use the refactored schema functions:
+```javascript
+import { createRoadmap, addPlanReference, createPlanReference, addCrossPlanDependency, calculateOverallCompletion } from 'src/roadmap/schema.js';
 
-For each phase in the roadmap, create a phase-dev-plan JSON:
+// Create roadmap with parent epic context if provided
+const roadmap = createRoadmap({
+  title: "Authentication System",
+  description: "Add authentication to the app",
+  parent_epic: parentEpic ? {
+    epic_id: parentEpic.epic_id,
+    epic_slug: parentEpic.slug,
+    epic_path: `.claude/epics/${parentEpic.slug}/EPIC.json`
+  } : null
+});
 
-**Storage Location:** `.claude/phase-plans/{roadmap-slug}/`
+// Add plan references
+const backendPlanRef = createPlanReference({
+  slug: 'auth-backend',
+  title: 'Authentication Backend',
+  status: 'pending',
+  completion_percentage: 0
+});
+addPlanReference(roadmap, backendPlanRef);
 
-For each phase:
-1. Create `phase-{n}.json` with tasks and validation gates
-2. Generate tasks from phase inputs and outputs
-3. Assign suggested agents based on domain
-4. **Include E2E verification task** (if testing_strategy.mode === "per-phase")
-5. Set up Ralph Loop testing config based on roadmap testing_strategy
+const frontendPlanRef = createPlanReference({
+  slug: 'auth-frontend',
+  title: 'Authentication Frontend',
+  status: 'pending',
+  completion_percentage: 0
+});
+addPlanReference(roadmap, frontendPlanRef);
+
+// Add dependencies
+addCrossPlanDependency(roadmap, 'auth-frontend', 'auth-backend', 'Frontend needs backend API endpoints');
+```
+
+### Step 6: Offer to Spawn Phase-Dev-Plans
+
+**IMPORTANT:** After creating ROADMAP.json, offer to spawn /phase-dev-plan for each plan slug.
+
+Display a menu:
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Roadmap Created: {title}                                      ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Phase-Dev-Plans to Create:                                   ║
+║  1. auth-backend - Authentication Backend                     ║
+║  2. auth-frontend - Authentication Frontend                   ║
+║  3. auth-testing - E2E Tests                                  ║
+║                                                               ║
+║  Would you like to:                                           ║
+║  A) Spawn all phase-dev-plans now (Recommended)               ║
+║  B) Spawn individual plans                                    ║
+║  C) Skip for now (create plans manually later)                ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**If user chooses A or B:**
+
+For each plan, invoke:
+```
+/phase-dev-plan --parent-roadmap .claude/roadmaps/{roadmap-slug}/ROADMAP.json --slug {plan-slug} --title "{plan-title}" --description "{plan-description}"
+```
+
+**Pass parent context:**
+- `--parent-roadmap` flag with path to ROADMAP.json
+- Plan slug and title derived from analysis
+- Description from exploration findings
+
+**Track progress:**
+- Each /phase-dev-plan will create `.claude/phase-plans/{plan-slug}/PROGRESS.json`
+- PROGRESS.json includes parent_context pointing back to roadmap
+- When plan completes, it reports back via src/phase-dev/completion-reporter.js
 
 **If per-phase testing enabled**, add these tasks to end of each phase:
 ```json
@@ -640,81 +751,79 @@ Roadmaps automatically enable agent orchestration for coordinated execution:
    - Completion report format
    - Error handling procedures
 
-### Step 6: Create GitHub Issues (if enabled)
+### Step 6: Create GitHub Issues (MANDATORY - Use issue-hierarchy-manager.js)
 
-When GitHub integration is detected:
+**IMPORTANT:** Use the GitHub Issue Hierarchy Manager to ensure all parent issues exist.
 
-1. **Create Epic Issue** for the roadmap
+```javascript
+import { ensureHierarchyIssues } from './src/github/issue-hierarchy-manager.js';
+
+// After creating ROADMAP.json, ensure GitHub issues exist
+const result = await ensureHierarchyIssues(projectRoot, 'roadmap', roadmapSlug);
+
+if (result.success) {
+  console.log(`✅ GitHub issues created/verified`);
+
+  if (result.created.length > 0) {
+    console.log(`Auto-created parent issues: ${result.created.join(', ')}`);
+  }
+
+  if (result.roadmap) {
+    console.log(`Roadmap Issue: #${result.roadmap.issueNumber}`);
+  }
+
+  if (result.epic) {
+    console.log(`Parent Epic Issue: #${result.epic.issueNumber}`);
+  }
+} else {
+  console.warn(`⚠️ GitHub issue creation failed: ${result.error}`);
+}
+```
+
+**What this does:**
+
+1. **Ensures Roadmap Issue Exists (Standalone or Hierarchical)**
    - Title: `[Roadmap] {roadmap_name}`
-   - Body: Mermaid dependency graph, phase list, progress tracking
-   - **Issue Type:** Feature (use Feature type template)
-   - **CCASP-META:** Include metadata at top of body
-   - **Generated Files:** Include section with roadmap artifacts
-   - Labels: `roadmap`, `epic`
+   - Body: CCASP-META header + overview + phase-dev-plan list
+   - Labels: `roadmap`
+   - Stores issue number in `ROADMAP.json` → `metadata.github_epic_number`
+   - **Works without `parent_epic`** for standalone roadmaps
 
-   **CCASP-META format for epic:**
-   ```html
-   <!-- CCASP-META
-   source: /create-roadmap
-   slug: {roadmap-slug}
-   issue_type: feature
-   progress_file: .claude/roadmaps/{slug}/ROADMAP.json
-   created_at: {timestamp}
-   -->
-   ```
+2. **Auto-Creates Parent Epic Issue (if missing and parent exists)**
+   - If roadmap has `parent_epic` reference
+   - Checks if `parent_epic.github_epic_number` exists
+   - If not, creates epic issue with proper CCASP-META
+   - Updates EPIC.json with issue number
+   - **Skipped for standalone roadmaps** (no `parent_epic`)
 
-   **Generated Files section for epic:**
-   | File | Type | Path |
-   |------|------|------|
-   | ROADMAP.json | JSON | .claude/roadmaps/{slug}/ROADMAP.json |
-   | Exploration Summary | MD | .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md |
-   | Code Snippets | MD | .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md |
-   | Reference Files | MD | .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md |
-   | Agent Delegation | MD | .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md |
-   | Phase Breakdown | MD | .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md |
-   | Findings | JSON | .claude/roadmaps/{slug}/exploration/findings.json |
+3. **Adds Breadcrumb Navigation (if parent exists)**
+   - Links parent epic in roadmap issue body
+   - Format: `**Part of Epic:** [#123](url)`
+   - **Standalone roadmaps**: No breadcrumb, just roadmap issue
 
-2. **Create Child Issues** for each phase
-   - Title: `[Phase {n}] {phase_name}`
-   - Body: Phase objectives, tasks, dependencies
-   - **Issue Type:** Detect based on phase content
-     - If phase name/description contains "setup", "foundation", "scaffold" → `feature`
-     - If phase name/description contains "test", "qa", "verification", "validation" → `testing`
-     - If phase name/description contains "refactor", "cleanup", "migration", "modernize" → `refactor`
-     - If phase name/description contains "fix", "bug", "issue" → `bug`
-     - Default → `feature`
-   - **CCASP-META:** Include metadata at top of body
-   - **Generated Files:** Include section with phase artifacts
-   - Labels: `phase-dev`, `roadmap:{slug}`
-   - Reference parent epic: `Part of #{{epicNumber}}`
+**CCASP-META format (handled by issue-hierarchy-manager.js):**
+```html
+<!-- CCASP-META
+source: /create-roadmap
+slug: {roadmap-slug}
+issue_type: roadmap
+progress_file: .claude/roadmaps/{slug}/ROADMAP.json
+parent_type: epic
+parent_slug: {epic-slug}
+created_at: {timestamp}
+-->
+```
 
-   **CCASP-META format for phase issues:**
-   ```html
-   <!-- CCASP-META
-   source: /create-roadmap
-   slug: {roadmap-slug}
-   phase: {phase-number}
-   parent_issue: #{epic-issue-number}
-   issue_type: {detected-type}
-   progress_file: .claude/roadmaps/{slug}/phase-{phase-number}.json
-   created_at: {timestamp}
-   -->
-   ```
-
-   **Generated Files section for phase issues:**
-   | File | Type | Path |
-   |------|------|------|
-   | Phase Plan | JSON | .claude/roadmaps/{slug}/phase-{n}.json |
-   | Exploration Summary | MD | .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md |
-   | Code Snippets | MD | .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md |
-   | Reference Files | MD | .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md |
-   | Agent Delegation | MD | .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md |
-   | Phase Breakdown | MD | .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md |
-
-3. **Add to Project Board** (if configured)
-   - Create milestone for each phase
-   - Set status to "Todo"
-   - Set priority based on phase order
+**Generated Files section (auto-included):**
+| File | Type | Path |
+|------|------|------|
+| Roadmap Definition | JSON | .claude/roadmaps/{slug}/ROADMAP.json |
+| Exploration Summary | MD | .claude/roadmaps/{slug}/exploration/EXPLORATION_SUMMARY.md |
+| Code Snippets | MD | .claude/roadmaps/{slug}/exploration/CODE_SNIPPETS.md |
+| Reference Files | MD | .claude/roadmaps/{slug}/exploration/REFERENCE_FILES.md |
+| Agent Delegation | MD | .claude/roadmaps/{slug}/exploration/AGENT_DELEGATION.md |
+| Phase Breakdown | MD | .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md |
+| Findings | JSON | .claude/roadmaps/{slug}/exploration/findings.json |
 
 ### Step 7: Generate Documentation
 
@@ -742,7 +851,31 @@ graph LR
 - API contracts
 - Code snippets showing patterns
 
-### Step 8: Display Summary
+### Step 8: Track Roadmap Completion
+
+**Completion tracking via child PROGRESS.json files:**
+
+When a phase-dev-plan completes:
+1. src/phase-dev/completion-reporter.js sends PHASE_DEV_COMPLETE notification
+2. Update the plan reference in ROADMAP.json:
+   ```javascript
+   updatePlanReference(roadmap, planSlug, {
+     status: 'completed',
+     completion_percentage: 100
+   });
+   ```
+3. Recalculate overall completion:
+   ```javascript
+   roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+   ```
+4. Save updated ROADMAP.json
+
+**When all plans complete:**
+- Roadmap status becomes 'completed'
+- If roadmap has parent_epic, report ROADMAP_COMPLETE to epic
+- Display completion summary
+
+### Step 9: Display Summary
 
 After creation, display:
 
@@ -752,18 +885,25 @@ After creation, display:
 ╠═══════════════════════════════════════════════════════════════════════╣
 ║                                                                         ║
 ║  Roadmap: {{roadmap_name}}                                              ║
-║  Phases: {{phaseCount}}                                                 ║
-║  Total Tasks: {{taskCount}}                                             ║
-║  Location: .claude/docs/roadmaps/{{slug}}/                              ║
+║  Phase-Dev-Plans: {{planCount}}                                         ║
+║  Location: .claude/roadmaps/{{slug}}/ROADMAP.json                       ║
 ║                                                                         ║
+{{#if parent_epic}}
+║  Parent Epic: {{parent_epic.title}} ({{parent_epic.slug}})              ║
+{{/if}}
 {{#if githubIssue}}
 ║  GitHub Epic: #{{epicNumber}} ({{epicUrl}})                             ║
 ║  Child Issues: {{childCount}} created                                   ║
 {{/if}}
 ║                                                                         ║
+║  Phase-Dev-Plans:                                                       ║
+{{#each phase_dev_plan_refs}}
+║  - {{slug}} ({{status}})                                                ║
+{{/each}}
+║                                                                         ║
 ║  Next Steps:                                                            ║
-║  1. Review ROADMAP_OVERVIEW.md                                          ║
-║  2. Start Phase 1: /phase-track {{slug}}/phase-1                        ║
+║  1. Review exploration files in .claude/roadmaps/{{slug}}/exploration/  ║
+║  2. Spawn phase-dev-plans (if not done): /phase-dev-plan --parent-...   ║
 ║  3. Track overall progress: /roadmap-status {{slug}}                    ║
 ║                                                                         ║
 ╚═══════════════════════════════════════════════════════════════════════╝
@@ -779,6 +919,7 @@ If invoked with arguments:
 - `/create-roadmap --from-project {number}` - Import from GitHub Project Board
 - `/create-roadmap --from-tasks` - Create roadmap from existing task list
 - `/create-roadmap --split` - Split a complex phase plan into roadmap
+- `/create-roadmap --parent-epic {epic-slug}` - Create roadmap as child of an epic (reads .claude/epics/{slug}/EPIC.json)
 
 ## Error Handling
 
@@ -797,7 +938,7 @@ If any step fails:
 - `/create-phase-dev` - Create single phase development plan
 - `/github-update` - Sync with GitHub Project Board
 
-## Enforcement Rules
+## Enforcement Rules (Epic-Hierarchy Architecture)
 
 | Rule | Implementation | MANDATORY |
 |------|----------------|-----------|
@@ -805,15 +946,23 @@ If any step fails:
 | No roadmap without exploration | `.claude/roadmaps/{slug}/exploration/` must exist with 6 files | ✅ YES |
 | Consolidated structure | All files in `.claude/roadmaps/{slug}/` | ✅ YES |
 | Dynamic command created | Creates `/roadmap-{slug}` command | ✅ YES |
-| Every phase maps to phase-dev-plan | Auto-generates `.claude/roadmaps/{slug}/phase-*.json` | ✅ YES |
+| Analyze scope for plan count | Determine HOW MANY phase-dev-plans needed | ✅ YES |
+| Use phase_dev_plan_refs[] | Store plan references, not direct phases | ✅ YES |
+| Use refactored schema functions | addPlanReference(), calculateOverallCompletion() | ✅ YES |
+| Offer to spawn plans | Display menu to invoke /phase-dev-plan for each | ✅ YES |
+| Track via PROGRESS.json | Each plan reports back when complete | ✅ YES |
+| Parent epic support | Accept --parent-epic flag and store reference | ✅ YES |
 | User selects issues via table | Mode B displays numbered table for selection | ✅ YES |
-| Single-phase recommendation | Recommends `/create-phase-dev` for small scope | ⚠️ Warning |
+| Single-phase recommendation | Recommends `/phase-dev-plan` for small scope | ⚠️ Warning |
 
 ### ⛔ FAILURE CONDITIONS - DO NOT PROCEED IF:
 - Exploration directory doesn't exist: `.claude/roadmaps/{slug}/exploration/`
 - Any of the 6 exploration files are missing
 - ROADMAP.json is created before exploration files
-- Phase breakdown in PHASE_BREAKDOWN.md doesn't match ROADMAP.json
+- Plan count not analyzed (must determine how many plans needed)
+- Using legacy phases[] instead of phase_dev_plan_refs[]
+- Not using refactored schema.js functions
+- Parent epic slug provided but EPIC.json doesn't exist
 
 ### Validation Checklist (Run Before Completion)
 ```
@@ -824,8 +973,11 @@ If any step fails:
 [ ] .claude/roadmaps/{slug}/exploration/PHASE_BREAKDOWN.md exists
 [ ] .claude/roadmaps/{slug}/exploration/findings.json exists
 [ ] .claude/roadmaps/{slug}/ROADMAP.json exists
-[ ] .claude/roadmaps/{slug}/ has phase-*.json for each phase
+[ ] ROADMAP.json uses phase_dev_plan_refs[] (NEW architecture)
+[ ] Each plan slug is valid and unique
+[ ] Cross-plan dependencies are defined if needed
 [ ] .claude/commands/roadmap-{slug}.md exists (dynamic command)
+[ ] If --parent-epic used, parent_epic reference is stored
 ```
 
 ---

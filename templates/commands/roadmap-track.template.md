@@ -1,45 +1,72 @@
-# Roadmap Track - Execution and Progress Tracking
+# Roadmap Track - Multi-Plan Execution Coordinator
 
-You are a roadmap execution specialist. Help users track progress, execute phases, and manage roadmap lifecycle.
+You are a roadmap execution coordinator. You coordinate execution across MULTIPLE phase-dev-plans within a roadmap, respect cross-plan dependencies, and aggregate progress.
+
+## NEW ARCHITECTURE (Epic-Hierarchy)
+
+Roadmap now coordinates MULTIPLE phase-dev-plans instead of direct phases:
+
+```
+Roadmap: User Authentication
+  ├─ Phase-Dev-Plan: auth-backend (PROGRESS.json)
+  │   ├─ Phase 1: Database Schema
+  │   ├─ Phase 2: API Endpoints
+  │   └─ Phase 3: Middleware
+  ├─ Phase-Dev-Plan: auth-frontend (PROGRESS.json)
+  │   ├─ Phase 1: Login UI
+  │   ├─ Phase 2: Token Management
+  │   └─ Phase 3: Protected Routes
+  └─ Phase-Dev-Plan: auth-testing (PROGRESS.json)
+      ├─ Phase 1: Unit Tests
+      └─ Phase 2: E2E Tests
+```
+
+**Key Changes:**
+- Roadmap tracks **phase-dev-plan references**, not direct phases
+- Each plan has its own PROGRESS.json
+- Cross-plan dependencies (e.g., frontend waits for backend)
+- Roadmap completion = average of all plan completions
 
 ## Execution Protocol
 
 ### Step 1: Load Roadmap State
 
-Load the roadmap and execution state from the **consolidated structure**:
+Load the roadmap and all plan references:
 
 ```javascript
-// NEW CONSOLIDATED STRUCTURE (preferred):
-// Load from .claude/roadmaps/{slug}/ROADMAP.json
-// Load phase plans from .claude/roadmaps/{slug}/phase-*.json
-// Load execution state from .claude/roadmaps/{slug}/EXECUTION_STATE.json
-
-// LEGACY STRUCTURE (fallback):
-// Load from .claude/roadmaps/{slug}.json
-// Load phase plans from .claude/phase-plans/{slug}/phase-*.json
-
-// Check both locations - prefer consolidated structure
+// Load roadmap from consolidated structure
 function loadRoadmapState(slug) {
-  const consolidatedPath = `.claude/roadmaps/${slug}/ROADMAP.json`;
-  const legacyPath = `.claude/roadmaps/${slug}.json`;
+  const roadmapPath = `.claude/roadmaps/${slug}/ROADMAP.json`;
 
-  if (existsSync(consolidatedPath)) {
-    return {
-      roadmapPath: consolidatedPath,
-      phasePlansDir: `.claude/roadmaps/${slug}/`,
-      structure: 'consolidated'
-    };
+  if (!existsSync(roadmapPath)) {
+    throw new Error(`Roadmap not found: ${roadmapPath}`);
+  }
+
+  const roadmap = JSON.parse(readFileSync(roadmapPath, 'utf8'));
+
+  // Load all plan PROGRESS.json files
+  const planStates = [];
+  for (const planRef of roadmap.phase_dev_plan_refs) {
+    const progressPath = planRef.path;
+    if (existsSync(progressPath)) {
+      const progress = JSON.parse(readFileSync(progressPath, 'utf8'));
+      planStates.push({
+        slug: planRef.slug,
+        ref: planRef,
+        progress: progress
+      });
+    }
   }
 
   return {
-    roadmapPath: legacyPath,
-    phasePlansDir: `.claude/phase-plans/${slug}/`,
-    structure: 'legacy'
+    roadmap,
+    planStates,
+    structure: 'epic-hierarchy'
   };
 }
 ```
 
-### Step 2: Display Execution Dashboard
+### Step 2: Display Execution Dashboard (Multi-Plan)
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -49,196 +76,379 @@ function loadRoadmapState(slug) {
 ║  📋 {{roadmap.title}}                                                       ║
 ║  ──────────────────────────────────────────────────────────────────────────║
 ║                                                                             ║
-║  Mode: {{execution.mode}}  |  Current: {{execution.current_phase || 'None'}}║
-║                                                                             ║
-║  Progress: [{{progressBar}}] {{percentage}}%                                ║
-║  Phases: {{completedPhases}}/{{totalPhases}} | Tasks: {{completedTasks}}/{{totalTasks}}
+║  Overall Progress: [{{progressBar}}] {{overallPercentage}}%                 ║
+║  Plans: {{completedPlans}}/{{totalPlans}}                                   ║
 ║                                                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
-║  PHASE STATUS                                                               ║
+║  PHASE-DEV-PLANS                                                            ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
-{{#each phases}}
-║  {{statusIcon}} {{phase_id}}: {{phase_title}}                               ║
-║     Progress: [{{phaseProgress}}] {{phasePercentage}}% | {{tasksDone}}/{{tasksTotal}} tasks
-{{#if isCurrentPhase}}
+{{#each planRefs}}
+║  {{statusIcon}} {{slug}}: {{title}}                                         ║
+║     Progress: [{{planProgress}}] {{planPercentage}}%                        ║
+{{#if isActive}}
 ║     ▶ ACTIVE                                                                ║
 {{/if}}
-{{#if blockedReason}}
-║     ⚠️ BLOCKED: {{blockedReason}}                                           ║
+{{#if isBlocked}}
+║     🚫 BLOCKED: {{blockedReason}}                                           ║
+{{/if}}
+{{#if phases}}
+║     Phases: {{completedPhases}}/{{totalPhases}}                             ║
 {{/if}}
 {{/each}}
+║                                                                             ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  CROSS-PLAN DEPENDENCIES                                                    ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+{{#each dependencies}}
+║  {{dependentSlug}} → {{dependsOnSlug}} {{status}}                           ║
+║     Reason: {{reason}}                                                      ║
+{{/each}}
+{{#if noDependencies}}
+║  No cross-plan dependencies                                                 ║
+{{/if}}
 ║                                                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 ║  NEXT AVAILABLE                                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 {{#each nextAvailable}}
-║  → {{phase_id}}: {{phase_title}} (Ready to start)                          ║
+║  → {{slug}}: {{title}} (Dependencies satisfied)                             ║
 {{/each}}
 {{#if noNextAvailable}}
-║  No phases available. Check blocked phases or dependencies.                 ║
+║  No plans available. Check blocked plans or dependencies.                   ║
 {{/if}}
 ║                                                                             ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 ```
 
-### Step 3: Offer Actions
+### Step 3: Offer Actions (Multi-Plan)
 
 Based on current state, offer relevant actions:
 
-**When Mode = paused:**
-1. `start <phase-id>` - Start a specific phase
-2. `auto` - Auto-start next available phase
-3. `status` - Refresh status display
+**When roadmap has plans pending:**
+1. `start <plan-slug>` - Start a specific plan (if dependencies satisfied)
+2. `auto` - Auto-start next available plan
+3. `run-all` - **Run ALL plans sequentially and autonomously**
+4. `status` - Refresh status display
 
-**When Mode = running:**
-1. `tasks` - Show current phase tasks
-2. `complete <task-id>` - Mark task complete
-3. `block <reason>` - Block current phase
-4. `finish` - Mark current phase complete
-5. `pause` - Pause execution
+**When roadmap has active plans:**
+1. `track <plan-slug>` - Delegate to /phase-track for detailed plan execution
+2. `sync <plan-slug>` - Sync plan reference from PROGRESS.json
+3. `sync-all` - Sync all plan references
+4. `pause` - Pause execution
 
-**When Mode = blocked:**
-1. `unblock` - Remove block and resume
-2. `skip` - Skip blocked phase (if possible)
-3. `reassign` - Reassign to different approach
+**When plan is blocked:**
+1. `unblock <plan-slug>` - Remove block and resume
+2. `skip <plan-slug>` - Skip blocked plan (update dependencies)
+3. `reassign <plan-slug>` - Reassign to different approach
 
-**When Mode = completed:**
+**When roadmap is completed:**
 1. `report` - Generate completion report
-2. `sync` - Sync to GitHub
+2. `sync-github` - Sync to parent epic (if integrated)
+3. `archive` - Archive roadmap and cleanup
 
-### Step 4: Execute Action
+### Step 4: Execute Action (Multi-Plan)
 
-#### Start Phase
+#### Start Plan
 ```javascript
 // Check dependencies are satisfied
-// Load phase plan
-// Set phase status to 'in_progress'
-// Set execution mode to 'running'
-// Display phase tasks
+async function startPlan(roadmap, planSlug) {
+  // 1. Check cross-plan dependencies
+  const depCheck = checkPlanDependencies(roadmap, planSlug);
+  if (!depCheck.satisfied) {
+    console.error(`Plan ${planSlug} blocked by dependencies: ${depCheck.missing.join(', ')}`);
+    return;
+  }
+
+  // 2. Update plan reference status
+  updatePlanReference(roadmap, planSlug, { status: 'in_progress' });
+
+  // 3. Delegate to /phase-track for execution
+  console.log(`Starting plan: ${planSlug}`);
+  console.log(`Delegating to /phase-track ${planSlug}...`);
+
+  // Spawn /phase-track command
+  await runCommand(`/phase-track ${planSlug}`);
+}
 ```
 
-#### Complete Task
+#### Sync Plan Reference
 ```javascript
-// Find task in phase plan
-// Mark as completed
-// Update metrics
-// Check if phase is complete
-// If all tasks done, offer to complete phase
+// Update plan reference from its PROGRESS.json
+async function syncPlanRef(roadmap, planSlug) {
+  const planRef = roadmap.phase_dev_plan_refs.find(ref => ref.slug === planSlug);
+  if (!planRef) return;
+
+  // Load PROGRESS.json
+  const progressPath = planRef.path;
+  const progress = JSON.parse(readFileSync(progressPath, 'utf8'));
+
+  // Update reference
+  updatePlanReference(roadmap, planSlug, {
+    status: progress.status,
+    completion_percentage: progress.completion_percentage || 0
+  });
+
+  // Recalculate overall completion
+  roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+
+  // Check if roadmap complete
+  checkRoadmapCompletion(roadmap);
+}
 ```
 
-#### Complete Phase
+#### Sync All Plans
 ```javascript
-// Validate deliverables (optional)
-// Mark phase as completed
-// Update roadmap
-// Update execution state
-// Find next available phases
-// Offer to auto-start next
+// Sync all plan references
+async function syncAllPlans(roadmap) {
+  for (const planRef of roadmap.phase_dev_plan_refs) {
+    await syncPlanRef(roadmap, planRef.slug);
+  }
+
+  console.log(`Synced ${roadmap.phase_dev_plan_refs.length} plan references`);
+}
 ```
 
-#### Auto-Advance
+#### Auto-Advance (Multi-Plan)
 ```javascript
-// Find next available phases (dependencies satisfied)
-// If multiple available, ask which to start
-// If single available, start it
-// If none available, check if all complete
+// Find next available plan (dependencies satisfied)
+async function autoAdvance(roadmap) {
+  const nextAvailable = getNextAvailablePlans(roadmap);
+
+  if (nextAvailable.length === 0) {
+    // Check if all complete
+    const allComplete = roadmap.phase_dev_plan_refs.every(ref => ref.status === 'completed');
+    if (allComplete) {
+      console.log('🎉 All plans complete!');
+      return;
+    } else {
+      console.log('No plans available. Check dependencies or blocked plans.');
+      return;
+    }
+  }
+
+  if (nextAvailable.length === 1) {
+    // Auto-start single available plan
+    await startPlan(roadmap, nextAvailable[0].slug);
+  } else {
+    // Multiple available - ask user
+    console.log('Multiple plans available:');
+    nextAvailable.forEach((plan, i) => {
+      console.log(`  ${i + 1}. ${plan.slug}: ${plan.title}`);
+    });
+    // Prompt for selection
+  }
+}
 ```
 
-### Step 5: Progress Visualization
+#### Run All Plans (Autonomous Mode)
+```javascript
+// Execute ALL plans sequentially without user intervention
+async function runAllPlans(roadmap) {
+  console.log('🚀 AUTONOMOUS MODE: Running all phase-dev-plans sequentially...\n');
 
-Generate ASCII progress bars:
+  // Get plans in dependency order
+  const orderedPlans = topologicalSortPlans(roadmap);
+
+  for (const planRef of orderedPlans) {
+    // Skip already completed plans
+    if (planRef.status === 'completed') {
+      console.log(`✓ Plan ${planRef.slug} already completed, skipping...`);
+      continue;
+    }
+
+    // Check dependencies
+    const depCheck = checkPlanDependencies(roadmap, planRef.slug);
+    if (!depCheck.satisfied) {
+      console.log(`⚠️ Plan ${planRef.slug} has unmet dependencies: ${depCheck.missing.join(', ')}`);
+      console.log('   Dependencies will be resolved by prior iterations...');
+    }
+
+    // Start plan
+    console.log(`\n▶ Starting Plan ${planRef.slug}: ${planRef.title}`);
+    updatePlanReference(roadmap, planRef.slug, { status: 'in_progress' });
+
+    // Delegate to /phase-track for plan execution
+    console.log(`   Delegating to /phase-track ${planRef.slug}...`);
+    await runCommand(`/phase-track ${planRef.slug} run-all`);
+
+    // Sync plan reference after completion
+    await syncPlanRef(roadmap, planRef.slug);
+
+    console.log(`✓ Plan ${planRef.slug} completed (${planRef.completion_percentage}%)`);
+
+    // Update overall completion
+    roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+    console.log(`   Overall roadmap progress: ${roadmap.metadata.overall_completion_percentage}%`);
+
+    // Optional: sync to parent epic after each plan
+    if (roadmap.parent_epic) {
+      await syncToParentEpic(roadmap);
+    }
+  }
+
+  console.log('\n🎉 ALL PLANS COMPLETE!');
+  roadmap.status = 'completed';
+  return { success: true, completedPlans: roadmap.phase_dev_plan_refs.length };
+}
+
+// Topological sort for dependency-ordered execution
+function topologicalSortPlans(roadmap) {
+  const sorted = [];
+  const visited = new Set();
+
+  function visit(planSlug) {
+    if (visited.has(planSlug)) return;
+    visited.add(planSlug);
+
+    // Visit dependencies first
+    const deps = roadmap.cross_plan_dependencies.filter(
+      dep => dep.dependent_slug === planSlug
+    );
+    for (const dep of deps) {
+      visit(dep.depends_on_slug);
+    }
+
+    // Add to sorted list
+    const planRef = roadmap.phase_dev_plan_refs.find(ref => ref.slug === planSlug);
+    if (planRef) {
+      sorted.push(planRef);
+    }
+  }
+
+  for (const planRef of roadmap.phase_dev_plan_refs) {
+    visit(planRef.slug);
+  }
+
+  return sorted;
+}
+```
+
+**Run-All Execution Rules (Multi-Plan):**
+1. Plans execute in dependency order (topological sort)
+2. Each plan delegates to /phase-track for detailed execution
+3. Plan references synced after each plan completes
+4. Overall roadmap completion updated incrementally
+5. Execution continues until all plans complete or error occurs
+6. User can interrupt at any time
+7. If a plan fails, execution pauses and offers recovery options
+
+### Step 5: Progress Visualization (Multi-Plan)
+
+Generate ASCII progress bars for plans:
 
 ```
-Phase Progress:
-Phase 1: ████████████████████ 100% ✓
-Phase 2: ████████████░░░░░░░░  60% 🔄
-Phase 3: ░░░░░░░░░░░░░░░░░░░░   0% ⬜
-Phase 4: ░░░░░░░░░░░░░░░░░░░░   0% 🚫 (blocked)
+Phase-Dev-Plan Progress:
+auth-backend:  ████████████████████ 100% ✅
+auth-frontend: ████████████░░░░░░░░  60% 🔄 (3/5 phases)
+auth-testing:  ░░░░░░░░░░░░░░░░░░░░   0% ⬜ (blocked by auth-frontend)
 
-Overall: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 40%
+Overall: [█████████████░░░░░░░░░░░░░░░░░░░░░░] 53%
+
+Dependencies:
+  auth-frontend → auth-backend ✅
+  auth-testing → auth-frontend ⚠️ (waiting)
 ```
 
-### Step 6: GitHub Sync
+### Step 6: Parent Epic Sync
 
-If roadmap is GitHub-integrated:
+If roadmap has parent epic:
 
 ```javascript
-// For each phase with github_issue_number:
-//   - Post progress comment
-//   - Update labels if status changed
-//   - Close issue if phase completed
-// Update epic issue with overall progress
+// Sync to parent epic
+async function syncToParentEpic(roadmap) {
+  if (!roadmap.parent_epic) return;
+
+  const epicPath = roadmap.parent_epic.epic_path;
+  if (!existsSync(epicPath)) {
+    console.warn(`Parent epic not found: ${epicPath}`);
+    return;
+  }
+
+  // Load epic
+  const epic = JSON.parse(readFileSync(epicPath, 'utf8'));
+
+  // Update roadmap reference in epic
+  const roadmapRef = epic.roadmap_refs.find(ref => ref.slug === roadmap.slug);
+  if (roadmapRef) {
+    roadmapRef.status = roadmap.status;
+    roadmapRef.completion_percentage = roadmap.metadata.overall_completion_percentage;
+    roadmapRef.updated = new Date().toISOString();
+  }
+
+  // Save updated epic
+  writeFileSync(epicPath, JSON.stringify(epic, null, 2));
+
+  console.log(`Synced to parent epic: ${roadmap.parent_epic.epic_slug}`);
+}
 ```
 
-## Argument Handling
+## Argument Handling (Multi-Plan)
 
 - `/roadmap-track` - List all roadmaps, select one
-- `/roadmap-track {slug}` - Show specific roadmap dashboard
-- `/roadmap-track {slug} start phase-1` - Start phase
-- `/roadmap-track {slug} complete 1.3` - Complete task 1.3
-- `/roadmap-track {slug} finish` - Complete current phase
-- `/roadmap-track {slug} auto` - Auto-advance to next phase
-- `/roadmap-track {slug} sync` - Sync to GitHub
-- `/roadmap-track {slug} report` - Generate report
+- `/roadmap-track {slug}` - Show specific roadmap dashboard (multi-plan view)
+- `/roadmap-track {slug} start {plan-slug}` - Start a plan (delegate to /phase-track)
+- `/roadmap-track {slug} sync {plan-slug}` - Sync plan reference from PROGRESS.json
+- `/roadmap-track {slug} sync-all` - Sync all plan references
+- `/roadmap-track {slug} auto` - Auto-advance to next available plan
+- `/roadmap-track {slug} run-all` - Run ALL plans sequentially (autonomous mode)
+- `/roadmap-track {slug} report` - Generate completion report
+- `/roadmap-track {slug} track {plan-slug}` - Delegate to /phase-track for detailed plan execution
 
-## Execution Rules
+## Execution Rules (Multi-Plan)
 
-1. **Dependency Enforcement**: Cannot start phase with unmet dependencies
-2. **Single Active Phase**: Only one phase can be in_progress at a time (per roadmap)
-3. **Task Order**: Tasks within a phase can be completed in any order
-4. **Deliverable Validation**: Optional validation before completing phase
-5. **GitHub Sync**: Auto-sync on phase completion if integrated
+1. **Dependency Enforcement**: Cannot start plan with unmet cross-plan dependencies
+2. **Multiple Active Plans**: Multiple plans can be in_progress simultaneously (if dependencies allow)
+3. **Plan Delegation**: Each plan delegates to /phase-track for detailed execution
+4. **Automatic Syncing**: Plan references auto-sync from PROGRESS.json after completion
+5. **Parent Epic Sync**: Auto-sync to parent epic on plan completion if integrated
+6. **Completion Aggregation**: Roadmap completion = average of all plan completions
 
-## Error Handling
+## Error Handling (Multi-Plan)
 
-If execution fails:
-1. Set phase to 'blocked' status
-2. Record failure reason
-3. Increment consecutive_failures counter
-4. If max_consecutive_failures reached, pause execution
-5. Suggest remediation steps
+If plan execution fails:
+1. Set plan reference status to 'blocked'
+2. Record failure reason in plan PROGRESS.json
+3. Update roadmap plan reference
+4. Block dependent plans automatically
+5. Suggest remediation steps (retry, skip, reassign)
 
-## Ralph Loop Integration
+## Plan Delegation Pattern
 
-For testing phases:
-
-```
-When phase includes testing:
-1. Show Ralph Loop option after implementation tasks
-2. Run test suite via Ralph Loop
-3. Track test-fix iterations
-4. Mark testing tasks complete when all pass
-```
-
-## Agent Spawning
-
-For complex phases:
+Roadmap delegates to /phase-track for each plan:
 
 ```
-If phase has assigned agents:
-1. Display suggested agents
-2. Offer to spawn L2 specialist
-3. Delegate phase execution to agent
-4. Monitor agent progress
-5. Receive completion report
+Roadmap-Track (L0) → coordinates plans
+  ├─ /phase-track auth-backend → executes plan phases
+  │   └─ spawns L2 specialists for tasks
+  ├─ /phase-track auth-frontend → executes plan phases
+  │   └─ spawns L2 specialists for tasks
+  └─ /phase-track auth-testing → executes plan phases
+      └─ spawns L2 specialists for tasks
 ```
 
-## Metrics Tracking
+**Key Pattern:**
+- Roadmap-Track: Plan-level coordination
+- Phase-Track: Phase/task-level execution
+- L2 Specialists: Code-level implementation
+
+## Metrics Tracking (Multi-Plan)
 
 Track and display:
-- Phases completed (total and this session)
-- Tasks completed
-- Time spent per phase
-- Consecutive failures
-- GitHub sync status
+- Plans completed (total and this session)
+- Overall roadmap completion percentage
+- Individual plan completion percentages
+- Cross-plan dependency status
+- Parent epic sync status
+- Time spent per plan
 
 ## Related Commands
 
 - `/create-roadmap` - Create new roadmap
-- `/roadmap-status` - View-only status
-- `/roadmap-edit` - Modify structure
-- `/phase-track` - Track individual phase in detail
-- `/ralph` - Test-fix loop for testing phases
+- `/roadmap-status` - View-only status (multi-plan view)
+- `/roadmap-edit` - Modify roadmap structure and plan references
+- `/phase-track` - Track individual phase-dev-plan in detail
+- `/epic-track` - Track parent epic (if integrated)
+- `/phase-dev-plan` - Create new phase-dev-plan
 
 ---
 
@@ -319,4 +529,39 @@ options:
 
 ---
 
-*Roadmap Track - Part of CCASP Roadmap Orchestration Framework*
+## Summary: Roadmap Multi-Plan Architecture
+
+### What Changed
+
+**OLD (Legacy):**
+- Roadmap directly contained phases
+- Roadmap managed phase execution
+- Single ROADMAP.json with embedded phases
+
+**NEW (Epic-Hierarchy):**
+- Roadmap coordinates MULTIPLE phase-dev-plans
+- Each plan has its own PROGRESS.json
+- Roadmap tracks plan references, not phases directly
+- Cross-plan dependencies managed at roadmap level
+- Plans delegate to /phase-track for execution
+
+### Why This Change
+
+1. **Scalability**: Large roadmaps decompose into manageable plans
+2. **Parallelization**: Multiple plans can run concurrently (if dependencies allow)
+3. **Separation of Concerns**: Roadmap = plan coordination, Phase-Track = execution
+4. **Epic Integration**: Roadmaps can report to parent epics
+5. **Domain Isolation**: Backend, frontend, testing as separate plans
+
+### Migration Path
+
+Legacy roadmaps automatically migrate on load:
+- Direct phases → converted to plan references
+- Phase dependencies → cross-plan dependencies
+- Existing PROGRESS.json files preserved
+- Backwards compatible (can still read old format)
+
+---
+
+*Roadmap Track - Multi-Plan Coordinator*
+*Part of CCASP Epic-Hierarchy Architecture*

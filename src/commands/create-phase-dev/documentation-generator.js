@@ -92,6 +92,7 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
       ...config,
       enhancements,
       agentRegistry,
+      parentContext: config.parentContext || null,
     });
     writeFileSync(progressPath, progressContent, 'utf8');
     results.files.push({ name: 'PROGRESS.json', path: progressPath });

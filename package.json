@@ -19,6 +19,10 @@
     "test:golden:verify": "node tests/golden-master/api-contracts.test.js verify",
     "test:detect": "node tests/golden-master/detect-tech-stack.test.js",
     "test:issue-body": "node tests/issue-body.test.js",
+    "test:epic": "node tests/epic.test.js",
+    "test:roadmap": "node tests/roadmap.test.js",
+    "test:orchestration": "node tests/orchestration.test.js",
+    "test:hierarchy": "node tests/run-hierarchy-tests.js",
     "lint": "eslint src/",
     "prepublishOnly": "npm run test"
   },
