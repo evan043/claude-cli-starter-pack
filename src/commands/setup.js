@@ -11,6 +11,7 @@ import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { stringify as yamlStringify } from 'yaml';
 import { showHeader, showSuccess, showError, showWarning } from '../cli/menu.js';
+import { createLogger } from '../utils/logger.js';
 import {
   getCurrentUser,
   listRepos,
@@ -20,6 +21,8 @@ import {
   listProjectFields,
   getAllFieldOptions,
 } from '../github/client.js';
+
+const log = createLogger('setup');
 
 /**
  * Run the setup wizard
@@ -218,9 +221,9 @@ export async function runSetup(options) {
       fieldSpinner.stop();
 
       if (fields.length > 0) {
-        console.log(chalk.dim('Found fields:'));
+        log.debug('Found fields:');
         for (const field of fields) {
-          console.log(chalk.dim(`  - ${field.name} (${field.id})`));
+          log.debug(`  - ${field.name} (${field.id})`);
         }
         console.log('');
 
@@ -236,12 +239,12 @@ export async function runSetup(options) {
 
         if (statusField) {
           config.field_ids.status = statusField.id;
-          console.log(chalk.green(`✓ Status field: ${statusField.id}`));
+          log.info(chalk.green(`✓ Status field: ${statusField.id}`));
         }
 
         if (priorityField) {
           config.field_ids.priority = priorityField.id;
-          console.log(chalk.green(`✓ Priority field: ${priorityField.id}`));
+          log.info(chalk.green(`✓ Priority field: ${priorityField.id}`));
         }
 
         // Get field options via GraphQL
@@ -252,9 +255,9 @@ export async function runSetup(options) {
 
         for (const field of allFieldOptions) {
           if (field.options && field.options.length > 0) {
-            console.log(chalk.dim(`\n${field.name} options:`));
+            log.debug(`\n${field.name} options:`);
             for (const opt of field.options) {
-              console.log(chalk.dim(`  - ${opt.name}: ${opt.id}`));
+              log.debug(`  - ${opt.name}: ${opt.id}`);
             }
 
             // Auto-map status options

@@ -13,6 +13,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { existsSync } from 'fs';
 import { join, basename } from 'path';
+import { createLogger } from '../utils/logger.js';
 
 // Import from extracted modules
 import { DETECTION_PATTERNS } from './tech-stack/patterns.js';
@@ -34,6 +35,8 @@ import {
   buildLocalUrls,
   createCommitConfig,
 } from './tech-stack/formatters.js';
+
+const log = createLogger('detect');
 
 /**
  * Main detection function
