@@ -53,10 +53,11 @@ M.config = {}
 -- Plugin state
 M.state = {
   sidebar_open = false,
-  active_tab = 1, -- 1=Commands, 2=Settings, 3=Protected, 4=Status, 5=Keys, 6=Assets
+  active_tab = 1, -- 1=Commands, 2=Settings, 3=Protected, 4=Status, 5=Keys, 6=Assets, 7=Shortcuts
   selected_command = nil,
   selected_asset = nil,       -- Currently selected asset name
   selected_asset_type = nil,  -- Type of selected asset (agents/hooks/skills)
+  selected_shortcut = nil,    -- Currently selected shortcut action (for tab 7)
   search_query = "",
   expanded_sections = {},
   expanded_asset_sections = { agents = true, hooks = false, skills = false }, -- Asset sections expansion state

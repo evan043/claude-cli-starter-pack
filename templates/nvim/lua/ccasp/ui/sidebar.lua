@@ -95,6 +95,7 @@ local function render_content()
     { num = "4", name = "Status" },
     { num = "5", name = "Keys" },
     { num = "6", name = "Assets" },
+    { num = "7", name = "Shortcuts" },
   }
   for i, tab in ipairs(tabs) do
     local indicator = (i == ccasp.state.active_tab) and "▸" or " "
@@ -485,6 +486,65 @@ local function render_content()
     -- Action bar
     table.insert(lines, "")
     table.insert(lines, "[↵] Edit  [d] Delete  [o] Open  [r] Reload")
+
+  elseif ccasp.state.active_tab == 7 then
+    -- Shortcuts tab - all actions in one place, no keybindings needed
+    table.insert(lines, "")
+    table.insert(lines, "⚡ Quick Actions")
+    table.insert(lines, string.rep("─", 42))
+    table.insert(lines, "")
+
+    -- Define all shortcuts with their actions
+    local shortcuts = {
+      { section = "Panels", items = {
+        { name = "Control Panel", action = "control" },
+        { name = "Dashboard", action = "dashboard" },
+        { name = "Features", action = "features" },
+        { name = "Hooks", action = "hooks" },
+        { name = "Taskbar", action = "taskbar" },
+      }},
+      { section = "Agents", items = {
+        { name = "Agent Grid", action = "grid" },
+        { name = "Restart All Agents", action = "restart_all" },
+        { name = "Kill All Agents", action = "kill_all" },
+      }},
+      { section = "Prompt Injector", items = {
+        { name = "Toggle Prompt Injector", action = "prompt_injector" },
+        { name = "Quick Enhance", action = "quick_enhance" },
+        { name = "Toggle Auto-Enhance", action = "auto_enhance" },
+      }},
+      { section = "Browse", items = {
+        { name = "Commands (Telescope)", action = "commands" },
+        { name = "Skills (Telescope)", action = "skills" },
+      }},
+      { section = "System", items = {
+        { name = "Save Settings", action = "save_settings" },
+        { name = "Detect Tech Stack", action = "detect_stack" },
+        { name = "Refresh", action = "refresh" },
+      }},
+    }
+
+    -- Track shortcut lines for selection
+    state.shortcut_lines = state.shortcut_lines or {}
+    state.shortcut_lines = {}
+
+    for _, section in ipairs(shortcuts) do
+      -- Section header
+      table.insert(lines, "▶ " .. section.section)
+
+      for _, item in ipairs(section.items) do
+        local selected = ccasp.state.selected_shortcut == item.action
+        local prefix = selected and "  ► " or "    "
+        table.insert(lines, prefix .. item.name)
+        state.shortcut_lines[#lines] = item.action
+      end
+
+      table.insert(lines, "")
+    end
+
+    -- Action bar
+    table.insert(lines, string.rep("─", 38))
+    table.insert(lines, "[↵] Execute  [j/k] Navigate  [q] Close")
   end
 
   -- Add bottom status bar (shown on all tabs)
@@ -720,9 +780,123 @@ function M.get_section_at_cursor()
   return state.section_lines[line]
 end
 
--- Select command/asset and update preview
+-- Get shortcut at current cursor line (for tab 7)
+function M.get_shortcut_at_cursor()
+  if not state.win or not vim.api.nvim_win_is_valid(state.win) then
+    return nil
+  end
+
+  local cursor = vim.api.nvim_win_get_cursor(state.win)
+  local line = cursor[1]
+
+  return state.shortcut_lines and state.shortcut_lines[line] or nil
+end
+
+-- Execute a shortcut action (for tab 7)
+function M.execute_shortcut(action)
+  local ccasp = require("ccasp")
+
+  -- Action handlers
+  local actions = {
+    -- Panels
+    control = function()
+      M.close()
+      ccasp.panels.control.toggle()
+    end,
+    dashboard = function()
+      M.close()
+      ccasp.panels.dashboard.open()
+    end,
+    features = function()
+      M.close()
+      ccasp.panels.features.open()
+    end,
+    hooks = function()
+      M.close()
+      ccasp.panels.hooks.open()
+    end,
+    taskbar = function()
+      ccasp.taskbar.show_picker()
+    end,
+
+    -- Agents
+    grid = function()
+      M.close()
+      ccasp.agents.open_grid()
+    end,
+    restart_all = function()
+      ccasp.agents.restart_all()
+      vim.notify("CCASP: All agents restarted", vim.log.levels.INFO)
+    end,
+    kill_all = function()
+      ccasp.agents.kill_all()
+      vim.notify("CCASP: All agents killed", vim.log.levels.INFO)
+    end,
+
+    -- Prompt Injector
+    prompt_injector = function()
+      ccasp.prompt_injector.toggle()
+      M.refresh()
+    end,
+    quick_enhance = function()
+      M.close()
+      ccasp.prompt_injector.quick_enhance()
+    end,
+    auto_enhance = function()
+      ccasp.prompt_injector.toggle_auto_enhance()
+      M.refresh()
+    end,
+
+    -- Browse
+    commands = function()
+      M.close()
+      ccasp.telescope.commands()
+    end,
+    skills = function()
+      M.close()
+      ccasp.telescope.skills()
+    end,
+
+    -- System
+    save_settings = function()
+      local config = require("ccasp.config")
+      config.save_settings(config.load_settings())
+      vim.notify("CCASP: Settings saved", vim.log.levels.INFO)
+    end,
+    detect_stack = function()
+      vim.cmd("!ccasp detect-stack")
+      vim.defer_fn(function()
+        M.refresh()
+      end, 1000)
+    end,
+    refresh = function()
+      M.refresh()
+      vim.notify("CCASP: Refreshed", vim.log.levels.INFO)
+    end,
+  }
+
+  local handler = actions[action]
+  if handler then
+    handler()
+  else
+    vim.notify("CCASP: Unknown shortcut action: " .. tostring(action), vim.log.levels.WARN)
+  end
+end
+
+-- Select command/asset/shortcut and update preview
 function M.select_at_cursor()
   local ccasp = require("ccasp")
+
+  if ccasp.state.active_tab == 7 then
+    -- On Shortcuts tab
+    local shortcut = M.get_shortcut_at_cursor()
+    if shortcut then
+      ccasp.state.selected_shortcut = shortcut
+      M.refresh()
+    end
+    return
+  end
+
   local item = M.get_command_at_cursor()
 
   if item then
@@ -740,7 +914,7 @@ function M.select_at_cursor()
   end
 end
 
--- Navigate to next command
+-- Navigate to next command/shortcut
 function M.next_command()
   if not state.win or not vim.api.nvim_win_is_valid(state.win) then
     return
@@ -750,6 +924,18 @@ function M.next_command()
   local cursor = vim.api.nvim_win_get_cursor(state.win)
   local current_line = cursor[1]
   local total_lines = vim.api.nvim_buf_line_count(state.buf)
+
+  -- On Shortcuts tab, navigate shortcut_lines
+  if ccasp.state.active_tab == 7 and state.shortcut_lines then
+    for line = current_line + 1, total_lines do
+      if state.shortcut_lines[line] then
+        vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+        M.select_at_cursor()
+        return
+      end
+    end
+    return
+  end
 
   -- Find next command line
   for line = current_line + 1, total_lines do
@@ -778,7 +964,7 @@ function M.next_command()
   end
 end
 
--- Navigate to previous command
+-- Navigate to previous command/shortcut
 function M.prev_command()
   if not state.win or not vim.api.nvim_win_is_valid(state.win) then
     return
@@ -787,6 +973,18 @@ function M.prev_command()
   local ccasp = require("ccasp")
   local cursor = vim.api.nvim_win_get_cursor(state.win)
   local current_line = cursor[1]
+
+  -- On Shortcuts tab, navigate shortcut_lines
+  if ccasp.state.active_tab == 7 and state.shortcut_lines then
+    for line = current_line - 1, 1, -1 do
+      if state.shortcut_lines[line] then
+        vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+        M.select_at_cursor()
+        return
+      end
+    end
+    return
+  end
 
   -- Find previous command line
   for line = current_line - 1, 1, -1 do
@@ -917,7 +1115,7 @@ function M._setup_keybindings()
   local ccasp = require("ccasp")
 
   -- Tab switching (6 tabs now)
-  for i = 1, 6 do
+  for i = 1, 7 do
     vim.keymap.set("n", tostring(i), function()
       ccasp.state.active_tab = i
       M.refresh()
@@ -925,12 +1123,12 @@ function M._setup_keybindings()
   end
 
   vim.keymap.set("n", "<Tab>", function()
-    ccasp.state.active_tab = (ccasp.state.active_tab % 6) + 1
+    ccasp.state.active_tab = (ccasp.state.active_tab % 7) + 1
     M.refresh()
   end, opts)
 
   vim.keymap.set("n", "<S-Tab>", function()
-    ccasp.state.active_tab = ((ccasp.state.active_tab - 2) % 6) + 1
+    ccasp.state.active_tab = ((ccasp.state.active_tab - 2) % 7) + 1
     M.refresh()
   end, opts)
 
@@ -982,7 +1180,7 @@ function M._setup_keybindings()
     end
   end, opts)
 
-  -- Run command / Edit asset / Toggle section
+  -- Run command / Edit asset / Toggle section / Execute shortcut
   vim.keymap.set("n", "<CR>", function()
     -- Check if on a section header first (works on all tabs)
     local section = M.get_section_at_cursor()
@@ -991,7 +1189,16 @@ function M._setup_keybindings()
       return
     end
 
-    if ccasp.state.active_tab == 6 then
+    if ccasp.state.active_tab == 7 then
+      -- On Shortcuts tab, execute the selected shortcut
+      local shortcut = M.get_shortcut_at_cursor()
+      if shortcut then
+        ccasp.state.selected_shortcut = shortcut
+        M.execute_shortcut(shortcut)
+      elseif ccasp.state.selected_shortcut then
+        M.execute_shortcut(ccasp.state.selected_shortcut)
+      end
+    elseif ccasp.state.active_tab == 6 then
       -- On Assets tab, open form editor
       local asset_ref = M.get_command_at_cursor() -- Returns "type:name" format
       if asset_ref then
