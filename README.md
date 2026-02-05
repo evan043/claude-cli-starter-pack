@@ -52,8 +52,7 @@ npx claude-cli-advanced-starter-pack init
 
 **Multi-Session Claude CLI**
 
-<!-- TODO: Add screenshot - save to docs/images/nvim-multi-session.png -->
-![Multi-Session Claude CLI](docs/images/nvim-multi-session.png)
+![Multi-Session Claude CLI](docs/images/nvim-multi-session.jpg)
 
 *4 Claude sessions with quadrant stacking, color-coded titlebars*
 
@@ -62,8 +61,7 @@ npx claude-cli-advanced-starter-pack init
 
 **CCASP Dashboard**
 
-<!-- TODO: Add screenshot - save to docs/images/ccasp-dashboard.png -->
-![CCASP Dashboard](docs/images/ccasp-dashboard.png)
+![CCASP Dashboard](docs/images/ccasp-dashboard.jpg)
 
 *Project status, token usage, installed components overview*
 
@@ -74,8 +72,7 @@ npx claude-cli-advanced-starter-pack init
 
 **Vision Mode Dashboard**
 
-<!-- TODO: Add screenshot - save to docs/images/vision-dashboard.png -->
-![Vision Dashboard](docs/images/vision-dashboard.png)
+![Vision Dashboard](docs/images/vision-dashboard.jpg)
 
 *Roadmap progress tracking with phase completion metrics*
 
