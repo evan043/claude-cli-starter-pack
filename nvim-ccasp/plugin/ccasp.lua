@@ -47,6 +47,37 @@ vim.api.nvim_create_user_command("CcaspHealth", function()
   vim.cmd("checkhealth ccasp")
 end, { desc = "Check CCASP health" })
 
+-- Window Manager commands (NEW in v1.2.0)
+vim.api.nvim_create_user_command("CcaspTaskbar", function()
+  require("ccasp.taskbar").show_picker()
+end, { desc = "Show CCASP Taskbar picker" })
+
+vim.api.nvim_create_user_command("CcaspMinimize", function()
+  local winid = vim.api.nvim_get_current_win()
+  local config = vim.api.nvim_win_get_config(winid)
+  if config.relative ~= "" then
+    local bufname = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(winid))
+    local name = bufname:match("ccasp://(.+)") or "Window"
+    require("ccasp.taskbar").minimize(winid, name, "")
+  else
+    vim.notify("CCASP: Can only minimize floating windows", vim.log.levels.WARN)
+  end
+end, { desc = "Minimize current floating window to taskbar" })
+
+vim.api.nvim_create_user_command("CcaspRestore", function(opts)
+  local index = tonumber(opts.args)
+  if index then
+    require("ccasp.taskbar").restore_by_index(index)
+  else
+    require("ccasp.taskbar").show_picker()
+  end
+end, { desc = "Restore window from taskbar", nargs = "?" })
+
+vim.api.nvim_create_user_command("CcaspCenterWindow", function()
+  local winid = vim.api.nvim_get_current_win()
+  require("ccasp.window_manager").center(winid)
+end, { desc = "Center current floating window" })
+
 -- Health check registration
 vim.api.nvim_create_autocmd("User", {
   pattern = "LazyHealth",

@@ -155,7 +155,14 @@ function M.render()
   table.insert(lines, "  ╰─────────────────────────────────────────────────╯")
   table.insert(lines, "    [g] Agent Grid    [p] Control Panel   [f] Features")
   table.insert(lines, "    [h] Hooks         [c] Commands        [s] Skills")
-  table.insert(lines, "    [r] Refresh       [q] Close")
+  table.insert(lines, "    [r] Refresh       [q] Close           [_] Minimize")
+  table.insert(lines, "")
+  table.insert(lines, "  ╭─────────────────────────────────────────────────╮")
+  table.insert(lines, "  │  Window Controls                                │")
+  table.insert(lines, "  ╰─────────────────────────────────────────────────╯")
+  table.insert(lines, "    Alt+h/j/k/l: Move window")
+  table.insert(lines, "    Alt+Shift+H/J/K/L: Resize window")
+  table.insert(lines, "    Ctrl+C: Center window    _: Minimize to taskbar")
   table.insert(lines, "")
 
   return lines
@@ -262,6 +269,23 @@ end
 -- Setup keymaps
 function M.setup_keymaps()
   local opts = { buffer = M.bufnr, nowait = true }
+
+  -- Window manager keymaps (move/resize)
+  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
+  if wm_ok and M.winid then
+    window_manager.register(M.winid, "Dashboard", "")
+    window_manager.setup_keymaps(M.bufnr, M.winid)
+  end
+
+  -- Minimize keymap
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok then
+    vim.keymap.set("n", "_", function()
+      taskbar.minimize(M.winid, "Dashboard", "")
+      M.winid = nil
+      M.bufnr = nil
+    end, opts)
+  end
 
   -- Close
   vim.keymap.set("n", "q", M.close, opts)

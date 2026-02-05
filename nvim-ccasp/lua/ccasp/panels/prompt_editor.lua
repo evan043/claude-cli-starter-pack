@@ -203,6 +203,24 @@ end
 function M.setup_keymaps(opts)
   local buf_opts = { buffer = M.bufnr, nowait = true }
 
+  -- Window manager keymaps (move/resize)
+  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
+  if wm_ok and M.winid then
+    window_manager.register(M.winid, "Prompt Editor", "")
+    window_manager.setup_keymaps(M.bufnr, M.winid)
+  end
+
+  -- Minimize keymap
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok then
+    vim.keymap.set("n", "_", function()
+      taskbar.minimize(M.winid, "Prompt Editor", "")
+      M.winid = nil
+      M.bufnr = nil
+      M.is_open = false
+    end, buf_opts)
+  end
+
   -- Send prompt (Enter in normal mode, Ctrl+Enter in insert)
   vim.keymap.set("n", "<CR>", function()
     M.send(opts)

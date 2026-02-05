@@ -85,6 +85,7 @@ ${chalk.bold('Quick Start:')}
 
    ${chalk.dim('$')} ${chalk.white('ccasp wizard')}   ${chalk.dim('← interactive setup')}
    ${chalk.dim('$')} ${chalk.white('ccasp init')}     ${chalk.dim('← quick mode')}
+   ${chalk.dim('$')} ${chalk.white('ccasp nvim')}     ${chalk.dim('← Neovim plugin')}
 
 ${chalk.dim('This deploys slash commands to your .claude/ folder.')}
 
@@ -98,6 +99,11 @@ ${chalk.bold('After Setup:')}
   ${chalk.cyan('/explore-mcp')}    - Discover MCP servers
   ${chalk.cyan('/phase-dev-plan')} - Create dev plans
   ${chalk.cyan('/github-update')}  - GitHub Project Board
+
+${chalk.bold('Neovim Users:')}
+
+  ${chalk.dim('$')} ${chalk.white('ccasp neovim')}     ${chalk.dim('← Launch Neovim with CCASP')}
+  ${chalk.dim('$')} ${chalk.white('ccasp nvim-setup')} ${chalk.dim('← Install plugin permanently')}
 `;
 
 // Main execution

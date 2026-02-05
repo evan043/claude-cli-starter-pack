@@ -1,10 +1,14 @@
 # ccasp.nvim
 
-Neovim integration for Claude CLI Advanced Starter Pack (CCASP). Build a terminal-based AI command center with multi-agent grids, feature toggles, and comprehensive project management.
+Neovim integration for Claude CLI Advanced Starter Pack (CCASP). Build a terminal-based AI command center with multi-session Claude CLI, sidebar command browser, and comprehensive project management.
 
 ## Features
 
-- **Multi-Agent Grid**: Run 6 Claude CLI sessions in a perfectly aligned grid layout
+- **Classic Layout**: Left sidebar with slash commands + multi-session Claude CLI terminals
+- **Multi-Session Support**: Spawn up to 8 Claude CLI sessions with automatic quadrant stacking
+- **Session Titlebars**: Color-coded winbar with rename, minimize, and close buttons
+- **Active Session Indicator**: Visual `▶▶ ACTIVE ◀◀` marker with auto-insert mode
+- **Collapsible Sections**: Click or keyboard to expand/collapse command categories
 - **Control Panel**: Floating panel to toggle features, restart agents, change models
 - **Feature Toggles**: Enable/disable CCASP features without editing JSON
 - **Hook Manager**: Visual management of Pre/Post tool use hooks
@@ -14,6 +18,41 @@ Neovim integration for Claude CLI Advanced Starter Pack (CCASP). Build a termina
 - **Prompt Injector** *(v1.1.0)*: Intercept prompts before sending to Claude, optionally enhance with GPT-5.2
 
 ## Installation
+
+### Quick Launch (Zero Setup)
+
+Launch Neovim with CCASP loaded instantly - no installation required:
+
+```bash
+# Launch in current directory
+ccasp neovim
+
+# Launch in specific directory
+ccasp neovim /path/to/project
+
+# Launch with files
+ccasp neovim . src/main.js README.md
+
+# Launch without auto-opening sidebar
+ccasp neovim --no-sidebar
+```
+
+This creates a temporary config and launches Neovim with CCASP fully loaded. Dependencies (lazy.nvim, nui.nvim, etc.) are installed automatically on first run.
+
+### Permanent Installation
+
+For a permanent setup in your Neovim config:
+
+```bash
+# Interactive setup - guides you through installation
+ccasp nvim-setup
+
+# Quick options:
+ccasp nvim-setup --symlink    # Create symlink (development)
+ccasp nvim-setup --copy       # Copy files (production)
+ccasp nvim-setup --lazy       # Just generate lazy.nvim config
+ccasp nvim-setup --uninstall  # Remove the plugin
+```
 
 ### Quick Start (Simple Keys - Recommended)
 
@@ -298,10 +337,12 @@ Intercept prompts before they're sent to Claude CLI, with optional GPT-5.2 enhan
 
 1. Create a `.env` file in your project root:
 ```bash
-OPENAI_API_KEY=sk-...your-key-here...
+OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-5.2
 CCASP_PROMPT_INJECTOR_ENABLED=true
 ```
+
+> **Note:** Never commit `.env` files to version control. Add `.env` to your `.gitignore`.
 
 2. Enable in config or toggle with `[I]` in the Control Panel
 
@@ -378,13 +419,54 @@ wk.add({
 })
 ```
 
+## Multi-Session Claude CLI
+
+Spawn multiple Claude CLI sessions that stack in a grid layout:
+
+```
+┌─────────────────────┬─────────────────────┐
+│ ● Claude 1 ★ ▶▶ ACTIVE ◀◀  [Tab] [r] [c] [_] [×] │
+│                                                   │
+│  > Hello Claude...                                │
+├─────────────────────┼─────────────────────┤
+│ ○ Claude 2          [Tab] [r] [c] [_] [×] │
+│                                                   │
+│  Waiting...                                       │
+└─────────────────────┴─────────────────────┘
+```
+
+### Session Keybindings
+
+| Key | Mode | Action |
+|-----|------|--------|
+| `Ctrl+Shift+N` | Normal | Spawn new Claude session |
+| `` ` `` (backtick) | Normal | Quick toggle to next session |
+| `~` | Normal | Quick toggle to previous session |
+| `Tab` | Terminal (normal) | Next session |
+| `Shift+Tab` | Terminal (normal) | Previous session |
+| `Ctrl+Tab` | Terminal (insert) | Next session |
+| `Ctrl+Shift+Tab` | Terminal (insert) | Previous session |
+| `r` | Terminal (normal) | Rename session |
+| `c` | Terminal (normal) | Change titlebar color |
+| `_` | Terminal (normal) | Minimize session |
+| `x` | Terminal (normal) | Close session |
+
+### Session Features
+
+- **Auto-insert**: Click a session to auto-enter insert mode for typing
+- **8 Colors**: Blue, Green, Purple, Orange, Red, Cyan, Pink, Yellow
+- **Quadrant Stacking**: 1→1x2→2x2→2x3→2x4 (max 8 sessions)
+- **Session Persistence**: Minimized sessions can be restored
+
 ## Requirements
 
 - Neovim 0.9+
 - Claude CLI (`npm install -g @anthropic-ai/claude-code`)
 - CCASP (`npm install -g claude-cli-advanced-starter-pack`)
+- nui.nvim (required for sidebar)
 - plenary.nvim (required)
 - telescope.nvim (optional, for browsing)
+- toggleterm.nvim (optional, for terminal integration)
 
 ## Health Check
 

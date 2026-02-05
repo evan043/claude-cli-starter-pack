@@ -1,6 +1,6 @@
 {
   "name": "claude-cli-advanced-starter-pack",
-  "version": "2.2.18",
+  "version": "2.2.19",
   "description": "Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
@@ -74,6 +74,7 @@
     "bin/",
     "src/",
     "templates/",
+    "nvim-ccasp/",
     "README.md",
     "OVERVIEW.md",
     "LICENSE"

@@ -86,8 +86,9 @@ function M.start_drag(winid)
   M.state.active = true
   M.state.winid = winid
   M.state.start_mouse = mouse
-  M.state.start_row = config.row[false] or config.row
-  M.state.start_col = config.col[false] or config.col
+  -- Handle row/col which can be number or table with [false] key
+  M.state.start_row = type(config.row) == "table" and (config.row[false] or config.row[true] or 0) or config.row
+  M.state.start_col = type(config.col) == "table" and (config.col[false] or config.col[true] or 0) or config.col
 
   -- Visual feedback - highlight border
   if M.config.visual_feedback then

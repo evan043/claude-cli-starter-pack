@@ -50,11 +50,47 @@ function M.component()
     table.insert(parts, agents)
   end
 
+  -- Taskbar (minimized windows)
+  local taskbar_status = M.get_taskbar()
+  if taskbar_status then
+    table.insert(parts, taskbar_status)
+  end
+
   if #parts == 0 then
     return ""
   end
 
   return table.concat(parts, " │ ")
+end
+
+-- Taskbar component (minimized windows)
+function M.get_taskbar()
+  local ok, taskbar = pcall(require, "ccasp.taskbar")
+  if not ok then
+    return nil
+  end
+
+  return taskbar.statusline()
+end
+
+-- Taskbar component with highlights
+function M.get_taskbar_hl()
+  local ok, taskbar = pcall(require, "ccasp.taskbar")
+  if not ok then
+    return nil
+  end
+
+  return taskbar.statusline_hl()
+end
+
+-- Lualine taskbar component
+function M.lualine_taskbar()
+  local ok, taskbar = pcall(require, "ccasp.taskbar")
+  if not ok or not taskbar.has_items() then
+    return ""
+  end
+
+  return taskbar.statusline()
 end
 
 -- Version component

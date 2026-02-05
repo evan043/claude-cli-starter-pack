@@ -201,6 +201,11 @@ function M.render()
   table.insert(lines, "    [A] Toggle Auto-Enhance")
   table.insert(lines, "    [E] Quick Enhance Selection")
   table.insert(lines, "")
+  table.insert(lines, "  Navigation")
+  table.insert(lines, "  " .. string.rep(icons.section, 39))
+  table.insert(lines, "    [c] Browse Commands")
+  table.insert(lines, "    [s] Browse Skills")
+  table.insert(lines, "    [d] Dashboard")
   table.insert(lines, "    [q] Close Panel")
   table.insert(lines, "")
 
@@ -333,6 +338,24 @@ function M.setup_keymaps()
   local config = get_config()
   local agents = get_agents()
 
+  -- Window manager keymaps (move/resize)
+  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
+  if wm_ok and M.winid then
+    window_manager.register(M.winid, "Control Panel", "")
+    window_manager.setup_keymaps(M.bufnr, M.winid)
+  end
+
+  -- Minimize keymap
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok then
+    vim.keymap.set("n", "_", function()
+      taskbar.minimize(M.winid, "Control Panel", "")
+      M.winid = nil
+      M.bufnr = nil
+      M.is_open = false
+    end, opts)
+  end
+
   -- Close panel
   vim.keymap.set("n", "q", M.close, opts)
   vim.keymap.set("n", "<Esc>", M.close, opts)
@@ -410,6 +433,22 @@ function M.setup_keymaps()
 
   -- Refresh
   vim.keymap.set("n", "r", M.refresh, opts)
+
+  -- Navigation to other panels
+  vim.keymap.set("n", "c", function()
+    M.close()
+    require("ccasp.telescope").commands()
+  end, opts)
+
+  vim.keymap.set("n", "s", function()
+    M.close()
+    require("ccasp.telescope").skills()
+  end, opts)
+
+  vim.keymap.set("n", "d", function()
+    M.close()
+    require("ccasp.panels.dashboard").open()
+  end, opts)
 end
 
 -- Toggle a feature

@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.2.18  •  Production Ready                         ║
+║                          v2.2.19  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,11 +38,49 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## 🚀 v2.2.18 Feature Update — Intelligent Planning & GitHub Sync
+## 🚀 v2.2.19 Feature Update — Neovim Integration + Multi-Session Claude CLI
 
 </div>
 
-> **Feb 2026** — CCASP now provides a complete planning-to-execution pipeline with automatic GitHub synchronization, making complex multi-phase development dramatically more effective.
+> **Feb 2026** — CCASP now includes a full Neovim plugin with multi-session Claude CLI terminals, collapsible sidebar, and zero-setup launcher. Transform your terminal into an AI command center.
+
+### 🆕 Neovim Integration (nvim-ccasp)
+
+<table>
+<tr>
+<td colspan="2">
+
+**Multi-Session Claude CLI in Neovim** — Launch up to 8 Claude sessions with automatic quadrant stacking:
+
+```
+┌──────── Claude 1 ★ ACTIVE ────────┬──────── Claude 2 ────────┐
+│ agent: planner                    │ agent: implementer       │
+│ model: opus                       │ model: sonnet            │
+├──────── Claude 3 ────────────────┼──────── Claude 4 ────────┤
+│ agent: tester                     │ agent: reviewer          │
+│ model: sonnet                     │ model: sonnet            │
+└──────────────────────────────────┴──────────────────────────┘
+```
+
+**Features:**
+- 🚀 **Zero Setup**: `ccasp neovim` launches instantly (auto-installs Neovim if needed)
+- 🎨 **8 Session Colors**: Blue, Green, Purple, Orange, Red, Cyan, Pink, Yellow
+- ⌨️ **Auto-Insert Mode**: Click session → instantly start typing
+- 📁 **Collapsible Sidebar**: Mouse-clickable sections, collapsed by default
+- 🔌 **Prompt Injector**: Intercept prompts, optionally enhance with GPT-5.2
+
+**Quick Start:**
+```bash
+# Zero-setup launch (auto-installs Neovim if missing)
+ccasp neovim
+
+# Permanent installation
+ccasp nvim-setup
+```
+
+</td>
+</tr>
+</table>
 
 ### What's New
 
@@ -554,6 +592,18 @@ npx claude-cli-advanced-starter-pack init
 
 ## Version History
 
+### v2.2.19
+**Neovim Integration (nvim-ccasp)** — Feb 2026
+- **Zero-Setup Launcher**: `ccasp neovim` launches Neovim with CCASP pre-loaded
+- **Auto-Install Neovim**: Detects winget/choco/scoop (Windows), brew (macOS), apt/dnf/pacman (Linux)
+- **Multi-Session Terminals**: Up to 8 Claude CLI sessions with automatic quadrant stacking
+- **Color-Coded Titlebars**: 8 colors (Blue, Green, Purple, Orange, Red, Cyan, Pink, Yellow) with rename/minimize/close
+- **Auto-Insert Mode**: Click on session to start typing immediately
+- **Collapsible Sidebar**: Mouse-clickable sections, all collapsed by default
+- **Prompt Injector v1.1.0**: Intercept prompts, optionally enhance with GPT-5.2
+- **npm Package Integration**: `nvim-ccasp/` included in npm distribution
+- **Permanent Installation**: `ccasp nvim-setup` with symlink/copy options
+
 ### v2.2.18
 **Critical Commands & Self-Healing Updates** — Feb 2026
 - **Critical Commands**: `update-check` and `__ccasp-sync-marker` now ALWAYS update during `ccasp init`
@@ -742,25 +792,51 @@ L1 Orchestrator (You / Main Conversation)
 /refactor-workflow
 ```
 
-### Neovim Plugin *(Actively Being Developed)*
+### Neovim Plugin (nvim-ccasp) *(Production Ready)*
 
+**Zero-Setup Launch:**
+```bash
+ccasp neovim              # Launch with CCASP pre-loaded
+ccasp neovim /path/to/dir # Launch in specific directory
+ccasp nvim-setup          # Install permanently to Neovim config
+```
+
+**Features:**
+- **Multi-Session Terminals**: Up to 8 Claude CLI sessions with quadrant stacking
+- **Color-Coded Titlebars**: 8 colors with rename, minimize, close buttons
+- **Auto-Insert Mode**: Click session to start typing immediately
+- **Collapsible Sidebar**: Mouse-clickable sections, all collapsed by default
+- **Control Panel**: Toggle features, change models, restart agents
+- **Prompt Injector**: Intercept and enhance prompts with GPT-5.2
+- **Telescope Integration**: Browse commands, skills, hooks with fuzzy finding
+- **Statusline**: Token usage, agent status, version info
+
+**Keybindings:**
+| Key | Action |
+|-----|--------|
+| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+Shift+N` | New Claude session |
+| `` ` `` (backtick) | Quick toggle sessions |
+| `Tab` | Cycle sessions |
+| `,p` | Control Panel |
+| `,g` | Agent Grid |
+| `,i` | Toggle Prompt Injector |
+
+**lazy.nvim Config:**
 ```lua
--- lazy.nvim
 {
-  "evan043/nvim-ccasp",
+  dir = "path/to/nvim-ccasp",  -- Auto-generated by ccasp neovim
   config = function()
     require("ccasp").setup({
-      keymaps = {
-        panel = "<leader>cp",
-        grid = "<leader>cg",
-        dashboard = "<leader>cd",
-      },
+      layout = "classic",
+      sidebar = { width = 40, auto_open = true },
+      terminal = { shell = "claude", size = 60 },
     })
   end,
 }
 ```
 
-Features: Multi-agent grid, control panel, Telescope integration, statusline.
+Auto-installs Neovim on first run (winget/brew/apt detected automatically).
 
 ### Happy.engineering Mobile UI
 
@@ -812,6 +888,8 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `ccasp create-agent` | Create L1/L2/L3 agents |
 | `ccasp create-hook` | Create enforcement hooks |
 | `ccasp explore-mcp` | MCP server discovery |
+| `ccasp neovim` | Launch Neovim with CCASP (zero-setup) |
+| `ccasp nvim-setup` | Install nvim-ccasp permanently |
 
 ### Slash Commands (AI-Powered)
 

@@ -175,6 +175,23 @@ function M.setup_keymaps()
   local opts = { buffer = M.bufnr, nowait = true }
   local config = get_config()
 
+  -- Window manager keymaps (move/resize)
+  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
+  if wm_ok and M.winid then
+    window_manager.register(M.winid, "Features", "")
+    window_manager.setup_keymaps(M.bufnr, M.winid)
+  end
+
+  -- Minimize keymap
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok then
+    vim.keymap.set("n", "_", function()
+      taskbar.minimize(M.winid, "Features", "")
+      M.winid = nil
+      M.bufnr = nil
+    end, opts)
+  end
+
   -- Close
   vim.keymap.set("n", "q", M.close, opts)
   vim.keymap.set("n", "<Esc>", M.close, opts)

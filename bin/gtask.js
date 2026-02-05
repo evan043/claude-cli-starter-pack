@@ -45,6 +45,8 @@ import devModeSync from '../src/commands/dev-mode-sync.js';
 import { runModelMode } from '../src/commands/model-mode.js';
 import { runVision } from '../src/commands/vision.js';
 import { runConstitutionInit } from '../src/commands/constitution-init.js';
+import { runNvimSetup } from '../src/commands/nvim-setup.js';
+import { runNvimLaunch } from '../src/commands/nvim-launch.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -481,6 +483,31 @@ program
   .option('-q, --quiet', 'Non-interactive mode')
   .action(async (options) => {
     await runConstitutionInit(options);
+  });
+
+// Neovim plugin setup
+program
+  .command('nvim-setup')
+  .description('Install CCASP Neovim plugin (sidebar, multi-session terminals, keybindings)')
+  .option('--symlink', 'Create symlink (recommended for development)')
+  .option('--copy', 'Copy files (standalone installation)')
+  .option('--lazy', 'Generate lazy.nvim config snippet only')
+  .option('--packer', 'Generate packer.nvim config snippet only')
+  .option('--uninstall', 'Remove the plugin from Neovim config')
+  .action(async (options) => {
+    await runNvimSetup(options);
+  });
+
+// Neovim launcher - launch Neovim with CCASP loaded
+program
+  .command('neovim [directory] [files...]')
+  .alias('nvim')
+  .description('Launch Neovim with CCASP plugin (no setup required)')
+  .option('--no-sidebar', 'Do not auto-open sidebar on startup')
+  .option('--force', 'Launch even if not a CCASP project')
+  .action(async (directory, files, options) => {
+    const args = directory ? [directory, ...files] : files;
+    await runNvimLaunch(args, options);
   });
 
 // Parse and run

@@ -350,9 +350,9 @@ function M.show_floating_list(lines, title)
   end, { buffer = buf })
 end
 
--- Register as telescope extension
+-- Register as telescope extension (but still return M for direct access)
 if has_telescope then
-  return telescope.register_extension({
+  telescope.register_extension({
     exports = {
       commands = M.commands,
       skills = M.skills,
