@@ -1,3 +1,11 @@
+---
+description: Create multi-phase development roadmaps with GitHub integration and agent delegation
+type: project
+complexity: high
+allowed-tools: Read, Write, Edit, Task, Bash, Grep, Glob
+category: development
+---
+
 # Create Roadmap - Roadmap Orchestration Framework
 
 You are a roadmap planning specialist using the CCASP Roadmap Orchestration Framework. Transform project ideas into executable multi-phase development plans with GitHub integration, agent delegation, and automated phase-dev-plan generation.

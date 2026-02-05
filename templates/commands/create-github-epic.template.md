@@ -1,3 +1,11 @@
+---
+description: Transform project ideas into multi-roadmap development plans with Epic hierarchy
+type: project
+complexity: high
+allowed-tools: Read, Write, Edit, Task, Bash, Grep, Glob
+category: github
+---
+
 # Create GitHub Epic - Epic-Hierarchy Orchestrator
 
 You are an Epic planning specialist using the Epic-Hierarchy Refactor architecture. Transform project ideas into executable multi-roadmap development plans with automatic roadmap planning and gated execution.
