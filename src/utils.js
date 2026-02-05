@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
+import { CcaspConfigError } from './utils/errors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,8 +28,15 @@ export function getVersion() {
 
 /**
  * Check if a command exists
+ * @param {string} cmd - Command name (must be alphanumeric + dash/underscore only)
+ * @returns {boolean} True if command exists
  */
 export function commandExists(cmd) {
+  // Validate command name to prevent injection
+  if (!/^[a-zA-Z0-9_-]+$/.test(cmd)) {
+    return false;
+  }
+
   try {
     execSync(`${process.platform === 'win32' ? 'where' : 'which'} ${cmd}`, {
       stdio: 'ignore',
@@ -152,7 +160,9 @@ export async function checkPrerequisites() {
       console.log(
         chalk.red('Please fix the issues above before continuing.')
       );
-      process.exit(1);
+      throw new CcaspConfigError('Prerequisites check failed', {
+        context: { issues: issues.filter((i) => i.fatal) }
+      });
     }
 
     console.log('');

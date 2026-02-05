@@ -48,11 +48,16 @@ import { runConstitutionInit } from '../src/commands/constitution-init.js';
 import { runNvimSetup } from '../src/commands/nvim-setup.js';
 import { runNvimLaunch } from '../src/commands/nvim-launch.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
+import { setLogLevel, LOG_LEVELS } from '../src/utils/logger.js';
+import chalk from 'chalk';
 
 program
   .name('ccasp')
   .description('Claude CLI Advanced Starter Pack - Complete toolkit for Claude Code CLI')
-  .version(getVersion());
+  .version(getVersion())
+  .option('--debug', 'Enable debug output')
+  .option('--verbose', 'Enable verbose output (same as --debug)')
+  .option('--silent', 'Suppress all output except errors');
 
 // Init command - deploy to project
 program
@@ -509,6 +514,33 @@ program
     const args = directory ? [directory, ...files] : files;
     await runNvimLaunch(args, options);
   });
+
+// Apply log level from flags
+program.hook('preAction', (thisCommand) => {
+  const opts = thisCommand.opts();
+  if (opts.silent) {
+    setLogLevel(LOG_LEVELS.SILENT);
+  } else if (opts.debug || opts.verbose) {
+    setLogLevel(LOG_LEVELS.DEBUG);
+  }
+});
+
+// Global error boundary
+process.on('uncaughtException', (error) => {
+  console.error('\n' + chalk.red('Unexpected error:'), error.message);
+  if (process.env.DEBUG) {
+    console.error(error.stack);
+  }
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('\n' + chalk.red('Unhandled promise rejection:'), reason?.message || reason);
+  if (process.env.DEBUG) {
+    console.error(reason?.stack || '');
+  }
+  process.exit(1);
+});
 
 // Parse and run
 program.parse();
