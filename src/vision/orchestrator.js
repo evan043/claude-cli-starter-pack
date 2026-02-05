@@ -99,6 +99,19 @@ import {
   extractComponentList
 } from './ui/index.js';
 
+// Epic/Roadmap subsystem
+import { createEpic, createRoadmapPlaceholder, calculateEpicCompletion } from '../epic/schema.js';
+import {
+  getGitHubConfig,
+  ensureHierarchyIssues,
+  ensureEpicIssue,
+  ensureRoadmapIssue,
+  ensurePlanIssue
+} from '../github/issue-hierarchy-manager.js';
+
+import fs from 'fs';
+import path from 'path';
+
 /**
  * Orchestrator configuration defaults
  */
@@ -547,6 +560,547 @@ export class VisionOrchestrator {
   }
 
   /**
+   * Run the planning phase - Create Epic, Roadmaps, and Phase-Dev-Plans
+   * This is the CRITICAL missing piece that connects Vision to the hierarchy
+   * @returns {Promise<Object>} Planning result with Epic and Roadmap structure
+   */
+  async plan() {
+    this.transitionStage(OrchestratorStage.PLANNING);
+
+    if (!this.vision) {
+      throw new Error('Vision not initialized. Call initialize() first.');
+    }
+
+    try {
+      this.log('info', 'Starting planning phase...');
+
+      const planningResult = {
+        epic: null,
+        roadmaps: [],
+        phaseDevPlans: [],
+        githubIssues: {
+          created: [],
+          existing: []
+        }
+      };
+
+      // Step 1: Analyze scope to determine roadmap breakdown
+      const features = this.vision.metadata?.features || [];
+      const complexity = this.vision.metadata?.estimated_complexity || 'medium';
+      const technologies = this.vision.prompt?.technologies || [];
+
+      this.log('info', 'Analyzing scope for roadmap breakdown...');
+      const roadmapBreakdown = this.analyzeRoadmapBreakdown(features, technologies, complexity);
+
+      this.log('info', `Planning ${roadmapBreakdown.length} roadmap(s) for vision`);
+
+      // Step 2: Create Epic
+      const epicSlug = this.vision.slug;
+      const epicDir = path.join(this.projectRoot, '.claude', 'epics', epicSlug);
+
+      // Ensure directory exists
+      if (!fs.existsSync(epicDir)) {
+        fs.mkdirSync(epicDir, { recursive: true });
+      }
+
+      const epicData = createEpic({
+        title: this.vision.title,
+        description: this.vision.description || this.vision.prompt?.summary || '',
+        business_objective: this.vision.metadata?.detected_intent || this.vision.title,
+        roadmap_count: roadmapBreakdown.length,
+        roadmaps: roadmapBreakdown.map((r, index) => createRoadmapPlaceholder({
+          roadmap_index: index,
+          title: r.title,
+          description: r.description,
+          phase_count: r.phases?.length || 0,
+          depends_on: r.depends_on || []
+        })),
+        metadata: {
+          created_by: 'vision-orchestrator',
+          vision_slug: this.vision.slug,
+          tags: this.vision.tags || [],
+          priority: this.vision.priority || 'medium'
+        }
+      });
+
+      // Save Epic
+      const epicPath = path.join(epicDir, 'EPIC.json');
+      fs.writeFileSync(epicPath, JSON.stringify(epicData, null, 2), 'utf8');
+      planningResult.epic = epicData;
+
+      this.log('info', `Created Epic: ${epicSlug}`);
+
+      // Step 3: Create Roadmaps
+      for (let i = 0; i < roadmapBreakdown.length; i++) {
+        const roadmapSpec = roadmapBreakdown[i];
+        const roadmapSlug = `${epicSlug}-roadmap-${i + 1}`;
+        const roadmapDir = path.join(this.projectRoot, '.claude', 'roadmaps', roadmapSlug);
+        const explorationDir = path.join(roadmapDir, 'exploration');
+
+        // Ensure directories exist
+        if (!fs.existsSync(explorationDir)) {
+          fs.mkdirSync(explorationDir, { recursive: true });
+        }
+
+        // Create ROADMAP.json with phase_dev_plan_refs structure
+        const roadmapData = {
+          slug: roadmapSlug,
+          title: roadmapSpec.title,
+          description: roadmapSpec.description,
+          status: 'not_started',
+          completion_percentage: 0,
+
+          // Parent epic reference
+          parent_epic: {
+            slug: epicSlug,
+            epic_path: `.claude/epics/${epicSlug}/EPIC.json`
+          },
+
+          // Phase-dev-plan references (will be populated during execution)
+          phase_dev_plan_refs: roadmapSpec.phases.map((phase, phaseIndex) => ({
+            slug: `${roadmapSlug}-phase-${phaseIndex + 1}`,
+            title: phase.title,
+            status: 'not_started',
+            completion_percentage: 0,
+            progress_file: `.claude/phase-plans/${roadmapSlug}-phase-${phaseIndex + 1}/PROGRESS.json`
+          })),
+
+          // Cross-plan dependencies
+          cross_plan_dependencies: roadmapSpec.dependencies || [],
+
+          // Metadata
+          metadata: {
+            created: new Date().toISOString(),
+            updated: new Date().toISOString(),
+            vision_slug: this.vision.slug,
+            roadmap_index: i,
+            github_epic_number: null
+          }
+        };
+
+        // Save ROADMAP.json
+        const roadmapPath = path.join(roadmapDir, 'ROADMAP.json');
+        fs.writeFileSync(roadmapPath, JSON.stringify(roadmapData, null, 2), 'utf8');
+
+        // Create exploration documentation files
+        await this.createExplorationDocs(explorationDir, roadmapSpec, roadmapSlug);
+
+        // Update epic's roadmap placeholder with path
+        epicData.roadmaps[i].path = `.claude/roadmaps/${roadmapSlug}/ROADMAP.json`;
+
+        planningResult.roadmaps.push(roadmapData);
+        this.log('info', `Created Roadmap: ${roadmapSlug} with ${roadmapSpec.phases.length} phase(s)`);
+
+        // Step 4: Create Phase-Dev-Plans (PROGRESS.json files)
+        for (let j = 0; j < roadmapSpec.phases.length; j++) {
+          const phaseSpec = roadmapSpec.phases[j];
+          const planSlug = `${roadmapSlug}-phase-${j + 1}`;
+          const planDir = path.join(this.projectRoot, '.claude', 'phase-plans', planSlug);
+
+          if (!fs.existsSync(planDir)) {
+            fs.mkdirSync(planDir, { recursive: true });
+          }
+
+          // Create PROGRESS.json
+          const progressData = {
+            slug: planSlug,
+            project: {
+              name: phaseSpec.title,
+              slug: planSlug
+            },
+            status: 'not_started',
+            completion_percentage: 0,
+
+            // Parent context
+            parent_context: {
+              type: 'roadmap',
+              path: `.claude/roadmaps/${roadmapSlug}/ROADMAP.json`,
+              slug: roadmapSlug
+            },
+
+            // Phases with tasks
+            phases: [{
+              id: 1,
+              name: phaseSpec.title,
+              status: 'not_started',
+              tasks: phaseSpec.tasks.map((task, taskIndex) => ({
+                id: taskIndex + 1,
+                name: task.name || task,
+                description: task.description || '',
+                status: 'pending',
+                completed: false
+              }))
+            }],
+
+            // Metadata
+            metadata: {
+              created: new Date().toISOString(),
+              updated: new Date().toISOString(),
+              vision_slug: this.vision.slug,
+              roadmap_slug: roadmapSlug
+            },
+
+            // GitHub issue placeholder
+            github_issue: null,
+            github_issue_url: null
+          };
+
+          const progressPath = path.join(planDir, 'PROGRESS.json');
+          fs.writeFileSync(progressPath, JSON.stringify(progressData, null, 2), 'utf8');
+
+          planningResult.phaseDevPlans.push(progressData);
+          this.log('info', `Created Phase-Dev-Plan: ${planSlug} with ${phaseSpec.tasks.length} task(s)`);
+        }
+      }
+
+      // Update Epic file with roadmap paths
+      fs.writeFileSync(epicPath, JSON.stringify(epicData, null, 2), 'utf8');
+
+      // Step 5: Create GitHub Issues (if GitHub is configured)
+      const githubConfig = getGitHubConfig(this.projectRoot);
+      if (githubConfig) {
+        this.log('info', 'Creating GitHub issues for hierarchy...');
+
+        // Create Epic issue
+        const epicIssueResult = await ensureEpicIssue(this.projectRoot, epicSlug, epicData, githubConfig);
+        if (epicIssueResult.success && epicIssueResult.created) {
+          planningResult.githubIssues.created.push({
+            type: 'epic',
+            number: epicIssueResult.issueNumber
+          });
+          this.log('info', `Created Epic GitHub issue #${epicIssueResult.issueNumber}`);
+        }
+
+        // Create Roadmap issues
+        for (const roadmapData of planningResult.roadmaps) {
+          const roadmapIssueResult = await ensureRoadmapIssue(
+            this.projectRoot,
+            roadmapData.slug,
+            roadmapData,
+            githubConfig,
+            { slug: epicSlug, github_issue: epicData.github_epic_number }
+          );
+          if (roadmapIssueResult.success && roadmapIssueResult.created) {
+            planningResult.githubIssues.created.push({
+              type: 'roadmap',
+              slug: roadmapData.slug,
+              number: roadmapIssueResult.issueNumber
+            });
+            this.log('info', `Created Roadmap GitHub issue #${roadmapIssueResult.issueNumber}`);
+          }
+        }
+
+        // Create Phase-Dev-Plan issues
+        for (const planData of planningResult.phaseDevPlans) {
+          const planIssueResult = await ensurePlanIssue(
+            this.projectRoot,
+            planData.slug,
+            planData,
+            githubConfig,
+            { slug: planData.parent_context.slug, github_issue: null }, // roadmap context
+            { slug: epicSlug, github_issue: epicData.github_epic_number } // epic context
+          );
+          if (planIssueResult.success && planIssueResult.created) {
+            planningResult.githubIssues.created.push({
+              type: 'plan',
+              slug: planData.slug,
+              number: planIssueResult.issueNumber
+            });
+            this.log('info', `Created Phase-Dev-Plan GitHub issue #${planIssueResult.issueNumber}`);
+          }
+        }
+      } else {
+        this.log('info', 'GitHub not configured, skipping issue creation');
+      }
+
+      // Step 6: Update Vision with planning results
+      await updateVision(this.projectRoot, this.vision.slug, (vision) => {
+        vision.orchestrator.stage = this.stage;
+        vision.planning = {
+          epic_slug: epicSlug,
+          epic_path: `.claude/epics/${epicSlug}/EPIC.json`,
+          roadmap_count: planningResult.roadmaps.length,
+          roadmaps: planningResult.roadmaps.map(r => ({
+            slug: r.slug,
+            path: `.claude/roadmaps/${r.slug}/ROADMAP.json`
+          })),
+          phase_dev_plan_count: planningResult.phaseDevPlans.length,
+          github_issues_created: planningResult.githubIssues.created.length
+        };
+        return vision;
+      });
+
+      this.vision = await loadVision(this.projectRoot, this.vision.slug);
+
+      this.log('info', 'Planning phase complete', {
+        epic: epicSlug,
+        roadmaps: planningResult.roadmaps.length,
+        phaseDevPlans: planningResult.phaseDevPlans.length,
+        githubIssues: planningResult.githubIssues.created.length
+      });
+
+      return {
+        success: true,
+        stage: this.stage,
+        result: planningResult
+      };
+
+    } catch (error) {
+      this.log('error', `Planning failed: ${error.message}`);
+      return {
+        success: false,
+        error: error.message,
+        stage: this.stage
+      };
+    }
+  }
+
+  /**
+   * Analyze scope and break down into roadmaps
+   * @param {Array} features - Features to implement
+   * @param {Array} technologies - Technologies in use
+   * @param {string} complexity - Estimated complexity
+   * @returns {Array} Roadmap breakdown with phases
+   */
+  analyzeRoadmapBreakdown(features, technologies, complexity) {
+    const roadmaps = [];
+
+    // Group features by domain
+    const frontendFeatures = features.filter(f =>
+      f.type === 'ui' || f.name?.toLowerCase().includes('ui') ||
+      f.name?.toLowerCase().includes('component') || f.name?.toLowerCase().includes('page')
+    );
+    const backendFeatures = features.filter(f =>
+      f.type === 'api' || f.name?.toLowerCase().includes('api') ||
+      f.name?.toLowerCase().includes('endpoint') || f.name?.toLowerCase().includes('service')
+    );
+    const dataFeatures = features.filter(f =>
+      f.type === 'data' || f.name?.toLowerCase().includes('database') ||
+      f.name?.toLowerCase().includes('model') || f.name?.toLowerCase().includes('schema')
+    );
+    const otherFeatures = features.filter(f =>
+      !frontendFeatures.includes(f) && !backendFeatures.includes(f) && !dataFeatures.includes(f)
+    );
+
+    // Create roadmaps based on domain groupings
+    if (frontendFeatures.length > 0) {
+      roadmaps.push({
+        title: 'Frontend Implementation',
+        description: 'UI components, pages, and user interactions',
+        phases: [{
+          title: 'Frontend Setup & Components',
+          tasks: frontendFeatures.map(f => ({
+            name: f.name || f,
+            description: f.description || ''
+          }))
+        }],
+        depends_on: dataFeatures.length > 0 ? ['data-setup'] : []
+      });
+    }
+
+    if (backendFeatures.length > 0) {
+      roadmaps.push({
+        title: 'Backend Implementation',
+        description: 'APIs, services, and business logic',
+        phases: [{
+          title: 'Backend APIs & Services',
+          tasks: backendFeatures.map(f => ({
+            name: f.name || f,
+            description: f.description || ''
+          }))
+        }],
+        depends_on: dataFeatures.length > 0 ? ['data-setup'] : []
+      });
+    }
+
+    if (dataFeatures.length > 0) {
+      roadmaps.unshift({
+        title: 'Data & Infrastructure Setup',
+        description: 'Database schemas, models, and foundational setup',
+        roadmap_id: 'data-setup',
+        phases: [{
+          title: 'Data Layer Setup',
+          tasks: dataFeatures.map(f => ({
+            name: f.name || f,
+            description: f.description || ''
+          }))
+        }],
+        depends_on: []
+      });
+    }
+
+    // Add remaining features to a general roadmap
+    if (otherFeatures.length > 0) {
+      roadmaps.push({
+        title: 'Additional Features',
+        description: 'Additional functionality and integrations',
+        phases: [{
+          title: 'Additional Implementation',
+          tasks: otherFeatures.map(f => ({
+            name: f.name || f,
+            description: f.description || ''
+          }))
+        }],
+        depends_on: []
+      });
+    }
+
+    // If no features detected, create a single roadmap
+    if (roadmaps.length === 0) {
+      roadmaps.push({
+        title: 'MVP Implementation',
+        description: `Implementation roadmap for ${this.vision.title}`,
+        phases: [{
+          title: 'Core Implementation',
+          tasks: [{
+            name: 'Implement core functionality',
+            description: 'Main implementation tasks'
+          }]
+        }],
+        depends_on: []
+      });
+    }
+
+    return roadmaps;
+  }
+
+  /**
+   * Create exploration documentation files for a roadmap
+   * @param {string} explorationDir - Directory for exploration docs
+   * @param {Object} roadmapSpec - Roadmap specification
+   * @param {string} roadmapSlug - Roadmap slug
+   */
+  async createExplorationDocs(explorationDir, roadmapSpec, roadmapSlug) {
+    const now = new Date().toISOString();
+
+    // EXPLORATION_SUMMARY.md
+    const summary = `# Exploration Summary: ${roadmapSpec.title}
+
+## Overview
+- **Roadmap:** ${roadmapSlug}
+- **Created:** ${now}
+- **Status:** Initial exploration complete
+
+## Scope
+${roadmapSpec.description || 'N/A'}
+
+## Phase Count
+${roadmapSpec.phases?.length || 0} phases identified
+
+## Task Count
+${roadmapSpec.phases?.reduce((sum, p) => sum + (p.tasks?.length || 0), 0) || 0} tasks total
+
+---
+_Generated by Vision Orchestrator_
+`;
+    fs.writeFileSync(path.join(explorationDir, 'EXPLORATION_SUMMARY.md'), summary, 'utf8');
+
+    // CODE_SNIPPETS.md
+    const snippets = `# Code Snippets: ${roadmapSpec.title}
+
+## Relevant Code Patterns
+
+_To be populated during execution phase with relevant code snippets._
+
+---
+_Generated by Vision Orchestrator_
+`;
+    fs.writeFileSync(path.join(explorationDir, 'CODE_SNIPPETS.md'), snippets, 'utf8');
+
+    // REFERENCE_FILES.md
+    const refFiles = `# Reference Files: ${roadmapSpec.title}
+
+## Key Files to Modify
+
+_To be populated during execution phase with file paths and line numbers._
+
+---
+_Generated by Vision Orchestrator_
+`;
+    fs.writeFileSync(path.join(explorationDir, 'REFERENCE_FILES.md'), refFiles, 'utf8');
+
+    // AGENT_DELEGATION.md
+    const agentDelegation = `# Agent Delegation: ${roadmapSpec.title}
+
+## Task Assignments
+
+${roadmapSpec.phases.map((phase, i) => `
+### Phase ${i + 1}: ${phase.title}
+${phase.tasks.map((task, j) => `- Task ${j + 1}: ${task.name || task} → [Agent TBD]`).join('\n')}
+`).join('\n')}
+
+---
+_Generated by Vision Orchestrator_
+`;
+    fs.writeFileSync(path.join(explorationDir, 'AGENT_DELEGATION.md'), agentDelegation, 'utf8');
+
+    // PHASE_BREAKDOWN.md
+    const phaseBreakdown = `# Phase Breakdown: ${roadmapSpec.title}
+
+${roadmapSpec.phases.map((phase, i) => `
+## Phase ${i + 1}: ${phase.title}
+
+### Tasks
+${phase.tasks.map((task, j) => `${j + 1}. **${task.name || task}**
+   - Description: ${task.description || 'N/A'}
+   - Status: Not started
+`).join('\n')}
+`).join('\n')}
+
+---
+_Generated by Vision Orchestrator_
+`;
+    fs.writeFileSync(path.join(explorationDir, 'PHASE_BREAKDOWN.md'), phaseBreakdown, 'utf8');
+
+    // findings.json
+    const findings = {
+      roadmap_slug: roadmapSlug,
+      title: roadmapSpec.title,
+      created: now,
+      phases: roadmapSpec.phases.map((phase, i) => ({
+        phase_index: i,
+        title: phase.title,
+        task_count: phase.tasks?.length || 0,
+        tasks: phase.tasks.map((task, j) => ({
+          task_index: j,
+          name: task.name || task,
+          description: task.description || ''
+        }))
+      })),
+      total_tasks: roadmapSpec.phases?.reduce((sum, p) => sum + (p.tasks?.length || 0), 0) || 0
+    };
+    fs.writeFileSync(path.join(explorationDir, 'findings.json'), JSON.stringify(findings, null, 2), 'utf8');
+  }
+
+  /**
+   * Check if session restart is needed for hooks
+   * @returns {Object} Session restart check result
+   */
+  checkSessionRestart() {
+    const markerPath = path.join(this.projectRoot, '.claude', 'vision-initialized');
+    const hooksPath = path.join(this.projectRoot, '.claude', 'hooks.json');
+
+    // Check if this is a fresh session after vision init
+    if (fs.existsSync(markerPath)) {
+      const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+      const initTime = new Date(marker.initialized_at);
+      const now = new Date();
+      const minutesSinceInit = (now - initTime) / (1000 * 60);
+
+      // If initialized less than 5 minutes ago and hooks exist, warn about restart
+      if (minutesSinceInit < 5 && fs.existsSync(hooksPath)) {
+        return {
+          needsRestart: true,
+          reason: 'Vision was recently initialized. Please restart Claude Code to activate hooks.',
+          markerPath
+        };
+      }
+    }
+
+    return { needsRestart: false };
+  }
+
+  /**
    * Run security scan phase
    * @returns {Promise<Object>} Security scan results
    */
@@ -764,7 +1318,8 @@ export class VisionOrchestrator {
   }
 
   /**
-   * Run the execution phase
+   * Run the execution phase with proper agent delegation
+   * Executes through the hierarchy: Roadmap → Phase-Dev-Plan → Tasks
    * @param {Object} options - Execution options
    * @returns {Promise<Object>} Execution result
    */
@@ -786,7 +1341,7 @@ export class VisionOrchestrator {
     }
 
     try {
-      this.log('info', 'Starting autonomous execution...');
+      this.log('info', 'Starting hierarchical execution...');
 
       // Update vision status
       updateVisionStatus(this.vision, VisionStatus.EXECUTING);
@@ -795,8 +1350,106 @@ export class VisionOrchestrator {
       // Create checkpoint before execution
       await createVisionCheckpoint(this.projectRoot, this.vision.slug, 'pre_execution');
 
-      // Run autonomous loop
-      const result = await runAutonomousLoop(this.vision, this.projectRoot);
+      const executionResult = {
+        success: true,
+        roadmapsCompleted: 0,
+        plansCompleted: 0,
+        tasksCompleted: 0,
+        iterations: 0
+      };
+
+      // Load planning data
+      if (!this.vision.planning?.epic_path) {
+        this.log('warn', 'No planning data found, falling back to autonomous loop');
+        const result = await runAutonomousLoop(this.vision, this.projectRoot);
+        return {
+          success: result.success,
+          stage: this.stage,
+          result
+        };
+      }
+
+      // Load Epic
+      const epicPath = path.join(this.projectRoot, this.vision.planning.epic_path);
+      if (!fs.existsSync(epicPath)) {
+        throw new Error('Epic not found at: ' + this.vision.planning.epic_path);
+      }
+
+      const epic = JSON.parse(fs.readFileSync(epicPath, 'utf8'));
+      this.log('info', `Executing Epic: ${epic.title} with ${epic.roadmaps?.length || 0} roadmap(s)`);
+
+      // Execute each Roadmap sequentially (respecting dependencies)
+      for (let rmIndex = 0; rmIndex < (epic.roadmaps?.length || 0); rmIndex++) {
+        const roadmapRef = epic.roadmaps[rmIndex];
+        if (!roadmapRef.path) continue;
+
+        const roadmapPath = path.join(this.projectRoot, roadmapRef.path);
+        if (!fs.existsSync(roadmapPath)) {
+          this.log('warn', `Roadmap not found: ${roadmapRef.path}`);
+          continue;
+        }
+
+        const roadmap = JSON.parse(fs.readFileSync(roadmapPath, 'utf8'));
+        this.log('info', `Executing Roadmap ${rmIndex + 1}/${epic.roadmaps.length}: ${roadmap.title}`);
+
+        // Update roadmap status
+        roadmap.status = 'in_progress';
+        roadmap.metadata = roadmap.metadata || {};
+        roadmap.metadata.updated = new Date().toISOString();
+        fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2), 'utf8');
+
+        // Execute each Phase-Dev-Plan
+        for (const planRef of (roadmap.phase_dev_plan_refs || [])) {
+          const planPath = path.join(this.projectRoot, planRef.progress_file);
+          if (!fs.existsSync(planPath)) {
+            this.log('warn', `Plan not found: ${planRef.progress_file}`);
+            continue;
+          }
+
+          const progress = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+          this.log('info', `Executing Plan: ${progress.project?.name || planRef.slug}`);
+
+          // Update plan status
+          progress.status = 'in_progress';
+          progress.metadata = progress.metadata || {};
+          progress.metadata.updated = new Date().toISOString();
+          fs.writeFileSync(planPath, JSON.stringify(progress, null, 2), 'utf8');
+
+          // Delegate to appropriate agent based on domain
+          const agent = this.selectAgentForPlan(progress);
+          if (agent) {
+            this.log('info', `Delegating to ${agent.domain} agent`);
+          }
+
+          // Execute tasks within the plan (via autonomous loop or agent)
+          const planResult = await runAutonomousLoop(
+            { ...this.vision, currentPlan: progress },
+            this.projectRoot
+          );
+
+          executionResult.iterations += planResult.iterations || 0;
+
+          // Import and call syncProgressHierarchy
+          const { syncProgressHierarchy } = await import('./state-manager.js');
+
+          // Sync progress up the hierarchy after plan execution
+          const syncResult = await syncProgressHierarchy(this.projectRoot, planRef.slug);
+          if (syncResult.success) {
+            this.log('info', `Progress synced: Plan ${syncResult.updates.plan?.completion}% → Roadmap ${syncResult.updates.roadmap?.completion}%`);
+          }
+
+          if (planResult.success) {
+            executionResult.plansCompleted++;
+          }
+        }
+
+        // Check if roadmap is complete
+        const updatedRoadmap = JSON.parse(fs.readFileSync(roadmapPath, 'utf8'));
+        if (updatedRoadmap.completion_percentage === 100) {
+          executionResult.roadmapsCompleted++;
+          this.log('info', `Roadmap completed: ${roadmap.title}`);
+        }
+      }
 
       // Reload vision after execution
       this.vision = await loadVision(this.projectRoot, this.vision.slug);
@@ -804,23 +1457,20 @@ export class VisionOrchestrator {
       // Update orchestrator stage in vision
       await updateVision(this.projectRoot, this.vision.slug, (vision) => {
         vision.orchestrator.stage = this.stage;
-        vision.orchestrator.execution_result = {
-          success: result.success,
-          reason: result.reason,
-          iterations: result.iterations
-        };
+        vision.orchestrator.execution_result = executionResult;
         return vision;
       });
 
-      this.log('info', `Execution ${result.success ? 'completed' : 'stopped'}`, {
-        reason: result.reason,
-        iterations: result.iterations
+      this.log('info', 'Hierarchical execution completed', {
+        roadmapsCompleted: executionResult.roadmapsCompleted,
+        plansCompleted: executionResult.plansCompleted,
+        iterations: executionResult.iterations
       });
 
       return {
-        success: result.success,
+        success: executionResult.success,
         stage: this.stage,
-        result
+        result: executionResult
       };
 
     } catch (error) {
@@ -836,6 +1486,31 @@ export class VisionOrchestrator {
         stage: this.stage
       };
     }
+  }
+
+  /**
+   * Select the appropriate agent for a phase-dev-plan based on its content
+   * @param {Object} progress - PROGRESS.json data
+   * @returns {Object|null} Selected agent or null
+   */
+  selectAgentForPlan(progress) {
+    const planName = (progress.project?.name || progress.slug || '').toLowerCase();
+
+    // Check agent registry for matching domain
+    for (const [domain, agent] of this.agents) {
+      if (domain === 'frontend' && (planName.includes('frontend') || planName.includes('ui') || planName.includes('component'))) {
+        return agent;
+      }
+      if (domain === 'backend' && (planName.includes('backend') || planName.includes('api') || planName.includes('service'))) {
+        return agent;
+      }
+      if (domain === 'testing' && (planName.includes('test') || planName.includes('e2e'))) {
+        return agent;
+      }
+    }
+
+    // Default to orchestrator agent
+    return this.agents.get('orchestrator') || null;
   }
 
   /**
@@ -1031,7 +1706,13 @@ export class VisionOrchestrator {
         this.log('warn', 'Architecture had errors, continuing...');
       }
 
-      // Stage 4: Security scan
+      // Stage 4: Planning (NEW - creates Epic → Roadmaps → Phase-Dev-Plans)
+      results.stages.planning = await this.plan();
+      if (!results.stages.planning.success) {
+        this.log('warn', 'Planning had errors, continuing...');
+      }
+
+      // Stage 5: Security scan
       results.stages.security = await this.scanSecurity();
       if (results.stages.security.results?.hasBlockedPackages && !this.config.security.allowOverride) {
         this.log('error', 'Blocked packages detected, stopping execution');
@@ -1042,20 +1723,48 @@ export class VisionOrchestrator {
         };
       }
 
-      // Stage 5: Create agents
+      // Stage 6: Create agents
       results.stages.agents = await this.createAgents();
 
-      // Stage 6: Execute
+      // Stage 7: Session restart check (before execution)
+      const sessionCheck = this.checkSessionRestart();
+      if (sessionCheck.needsRestart && !options.skipSessionCheck) {
+        this.log('warn', sessionCheck.reason);
+        results.sessionRestartRequired = true;
+        results.sessionRestartReason = sessionCheck.reason;
+
+        // Create marker file for session tracking
+        const markerPath = path.join(this.projectRoot, '.claude', 'vision-initialized');
+        if (!fs.existsSync(markerPath)) {
+          fs.writeFileSync(markerPath, JSON.stringify({
+            vision_slug: this.vision.slug,
+            initialized_at: new Date().toISOString(),
+            planning_complete: true
+          }, null, 2), 'utf8');
+        }
+
+        // If not auto-executing, return here with restart warning
+        if (!options.forceExecute) {
+          return {
+            ...results,
+            success: false,
+            paused: true,
+            message: 'Planning complete. Please restart Claude Code session to activate hooks, then run /vision-run to continue.'
+          };
+        }
+      }
+
+      // Stage 8: Execute
       if (options.autoExecute !== false) {
         results.stages.execution = await this.execute(options);
       }
 
-      // Stage 7: Validate
+      // Stage 9: Validate
       if (results.stages.execution?.success) {
         results.stages.validation = await this.validate();
       }
 
-      // Stage 8: Complete
+      // Stage 10: Complete
       if (results.stages.validation?.success && results.stages.validation.result.mvp.complete) {
         results.stages.completion = await this.complete();
         results.success = true;

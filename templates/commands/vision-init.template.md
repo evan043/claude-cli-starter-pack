@@ -180,7 +180,70 @@ if (securityResult.results?.hasBlockedPackages) {
 - pip-audit/safety (Python packages)
 - OSV Scanner (Google's vulnerability database)
 
-### Step 6: Create Agents
+### Step 6: Planning Phase (NEW - CRITICAL)
+
+**This is the critical step that creates the full hierarchy:**
+
+```javascript
+// Run planning phase - creates Epic → Roadmaps → Phase-Dev-Plans
+console.log('📋 Creating planning hierarchy...');
+const planningResult = await orchestrator.plan();
+
+if (planningResult.success) {
+  const p = planningResult.result;
+  console.log(`  ✓ Epic created: ${p.epic?.slug}`);
+  console.log(`  ✓ Roadmaps: ${p.roadmaps?.length || 0}`);
+  console.log(`  ✓ Phase-Dev-Plans: ${p.phaseDevPlans?.length || 0}`);
+  console.log(`  ✓ GitHub Issues: ${p.githubIssues?.created?.length || 0}`);
+}
+```
+
+**Planning creates these files:**
+```
+.claude/epics/{vision-slug}/
+└── EPIC.json                    # Epic definition
+
+.claude/roadmaps/{vision-slug}-roadmap-{n}/
+├── ROADMAP.json                 # Roadmap with phase_dev_plan_refs[]
+└── exploration/
+    ├── EXPLORATION_SUMMARY.md
+    ├── CODE_SNIPPETS.md
+    ├── REFERENCE_FILES.md
+    ├── AGENT_DELEGATION.md
+    ├── PHASE_BREAKDOWN.md
+    └── findings.json
+
+.claude/phase-plans/{vision-slug}-roadmap-{n}-phase-{m}/
+└── PROGRESS.json                # Phase-dev-plan progress tracking
+```
+
+**GitHub Issues Created (if configured):**
+- Epic issue with roadmap checklist
+- Roadmap issues linked to Epic
+- Phase-dev-plan issues linked to Roadmaps
+
+**Display planning summary:**
+
+```
+╔════════════════════════════════════════════════════════════════════╗
+║                   PLANNING HIERARCHY CREATED 📋                     ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Epic: {{epic_slug}}                                               ║
+║  📁 .claude/epics/{{epic_slug}}/EPIC.json                          ║
+║                                                                    ║
+║  Roadmaps Created:                                                 ║
+{{#each roadmaps}}
+║    {{@index}}. {{title}} ({{phase_count}} phases)                  ║
+{{/each}}
+║                                                                    ║
+║  Phase-Dev-Plans Created: {{phase_dev_plan_count}}                 ║
+║  GitHub Issues Created: {{github_issue_count}}                     ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+```
+
+### Step 7: Create Agents
 
 ```javascript
 // Create specialized agents
@@ -200,7 +263,40 @@ if (agentsResult.success) {
 - Backend agent (FastAPI/Express/Django/Flask)
 - Testing agent (always)
 
-### Step 7: Display Summary
+### Step 8: Session Restart Check
+
+**CRITICAL:** After planning creates hooks and configurations, a session restart may be required.
+
+```javascript
+// Check if session restart needed
+const sessionCheck = orchestrator.checkSessionRestart();
+
+if (sessionCheck.needsRestart) {
+  console.log(`
+╔════════════════════════════════════════════════════════════════════╗
+║  ⚠️  SESSION RESTART REQUIRED                                       ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Vision planning is complete, but hooks need to be activated.      ║
+║                                                                    ║
+║  Please:                                                           ║
+║  1. Exit Claude Code (Ctrl+C or /exit)                             ║
+║  2. Restart Claude Code CLI                                        ║
+║  3. Run: /vision-run ${vision.slug}                                ║
+║                                                                    ║
+║  This ensures:                                                     ║
+║  • Progress sync hooks are active                                  ║
+║  • GitHub issue updates work                                       ║
+║  • Drift detection is enabled                                      ║
+║  • Agent delegation functions properly                             ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+  `);
+  return; // Don't auto-execute
+}
+```
+
+### Step 9: Display Summary
 
 ```
 ╔════════════════════════════════════════════════════════════════════╗
@@ -308,7 +404,14 @@ Before marking complete, verify:
 [ ] Analysis completed (web search, tools)
 [ ] Architecture generated (diagrams, components)
 [ ] Security scan completed
+[ ] PLANNING PHASE COMPLETED:
+    [ ] EPIC.json created in .claude/epics/{slug}/
+    [ ] ROADMAP.json files created in .claude/roadmaps/
+    [ ] PROGRESS.json files created in .claude/phase-plans/
+    [ ] Exploration docs created (6 files per roadmap)
+    [ ] GitHub issues created (if configured)
 [ ] Agents created
+[ ] Session restart check performed
 [ ] Summary displayed to user
 ```
 
