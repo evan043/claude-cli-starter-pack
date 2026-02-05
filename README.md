@@ -48,19 +48,40 @@ npx claude-cli-advanced-starter-pack init
 
 <table>
 <tr>
+<td width="50%">
+
+**Multi-Session Claude CLI**
+
+<!-- TODO: Add screenshot - save to docs/images/nvim-multi-session.png -->
+![Multi-Session Claude CLI](docs/images/nvim-multi-session.png)
+
+*4 Claude sessions with quadrant stacking, color-coded titlebars*
+
+</td>
+<td width="50%">
+
+**CCASP Dashboard**
+
+<!-- TODO: Add screenshot - save to docs/images/ccasp-dashboard.png -->
+![CCASP Dashboard](docs/images/ccasp-dashboard.png)
+
+*Project status, token usage, installed components overview*
+
+</td>
+</tr>
+<tr>
 <td colspan="2">
 
-**Multi-Session Claude CLI in Neovim** — Launch up to 8 Claude sessions with automatic quadrant stacking:
+**Vision Mode Dashboard**
 
-```
-┌──────── Claude 1 ★ ACTIVE ────────┬──────── Claude 2 ────────┐
-│ agent: planner                    │ agent: implementer       │
-│ model: opus                       │ model: sonnet            │
-├──────── Claude 3 ────────────────┼──────── Claude 4 ────────┤
-│ agent: tester                     │ agent: reviewer          │
-│ model: sonnet                     │ model: sonnet            │
-└──────────────────────────────────┴──────────────────────────┘
-```
+<!-- TODO: Add screenshot - save to docs/images/vision-dashboard.png -->
+![Vision Dashboard](docs/images/vision-dashboard.png)
+
+*Roadmap progress tracking with phase completion metrics*
+
+</td>
+</tr>
+</table>
 
 **Features:**
 - 🚀 **Zero Setup**: `ccasp neovim` launches instantly (auto-installs Neovim if needed)
@@ -77,10 +98,6 @@ ccasp neovim
 # Permanent installation
 ccasp nvim-setup
 ```
-
-</td>
-</tr>
-</table>
 
 ### What's New
 
