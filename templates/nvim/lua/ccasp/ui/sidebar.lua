@@ -1132,8 +1132,11 @@ function M._setup_keybindings()
 
   -- Mouse click support
   vim.keymap.set("n", "<LeftMouse>", function()
-    -- First let the click position the cursor
-    vim.cmd("normal! <LeftMouse>")
+    -- Position cursor at click location (works on non-modifiable buffers)
+    local mouse_pos = vim.fn.getmousepos()
+    if mouse_pos.line > 0 then
+      vim.api.nvim_win_set_cursor(0, { mouse_pos.line, mouse_pos.column - 1 })
+    end
 
     -- Then handle the click based on what's at cursor
     local section = M.get_section_at_cursor()
@@ -1148,7 +1151,10 @@ function M._setup_keybindings()
 
   -- Double-click to open/run
   vim.keymap.set("n", "<2-LeftMouse>", function()
-    vim.cmd("normal! <LeftMouse>")
+    local mouse_pos = vim.fn.getmousepos()
+    if mouse_pos.line > 0 then
+      vim.api.nvim_win_set_cursor(0, { mouse_pos.line, mouse_pos.column - 1 })
+    end
 
     local section = M.get_section_at_cursor()
     if section then
@@ -1180,7 +1186,10 @@ function M._setup_keybindings()
 
   -- Right-click context menu
   vim.keymap.set("n", "<RightMouse>", function()
-    vim.cmd("normal! <RightMouse>")
+    local mouse_pos = vim.fn.getmousepos()
+    if mouse_pos.line > 0 then
+      vim.api.nvim_win_set_cursor(0, { mouse_pos.line, mouse_pos.column - 1 })
+    end
     M.show_context_menu()
   end, opts)
 end
