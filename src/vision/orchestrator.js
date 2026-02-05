@@ -76,8 +76,9 @@ export {
 } from './orchestrators/monitoring.js';
 
 // Import required for class definition
-import { DEFAULT_CONFIG, OrchestratorStage } from './orchestrators/lifecycle.js';
 import {
+  DEFAULT_CONFIG,
+  OrchestratorStage,
   log,
   transitionStage,
   initialize,

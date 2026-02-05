@@ -4,8 +4,7 @@
  * Functions for migrating between schema versions.
  */
 
-import { generateSlug } from './generators.js';
-import { createPlanReference } from './generators.js';
+import { generateSlug, createPlanReference } from './generators.js';
 import { addCrossPlanDependency } from './mutations.js';
 import { calculateOverallCompletion } from './calculators.js';
 

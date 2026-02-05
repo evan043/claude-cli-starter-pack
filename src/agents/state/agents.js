@@ -6,8 +6,7 @@
 
 import fs from 'fs';
 import { acquireLock, releaseLock } from './locking.js';
-import { getStatePath } from './store.js';
-import { loadState } from './store.js';
+import { getStatePath, loadState } from './store.js';
 
 /**
  * Update agent status
