@@ -17,6 +17,8 @@
  * - Dynamic agent creation
  * - Security scanning before installations
  * - Autonomous MVP iteration until 100% working
+ *
+ * Phase 7: Vision Mode Orchestrator integrates all subsystems into unified workflow.
  */
 
 // Schema and Types
@@ -82,16 +84,39 @@ export {
   DOMAIN_PATTERNS
 } from './agent-factory.js';
 
+// Observer (drift detection)
+export {
+  observeProgress,
+  calculateAlignment,
+  detectDrift,
+  identifyDriftAreas,
+  generateAdjustments,
+  shouldTriggerReplan,
+  formatDriftReport
+} from './observer.js';
+
+// Orchestrator (Phase 7)
+export {
+  VisionOrchestrator,
+  OrchestratorStage,
+  createOrchestrator,
+  quickRun
+} from './orchestrator.js';
+
 // Re-export default objects for convenience
 import schema from './schema.js';
 import stateManager from './state-manager.js';
 import parser from './parser.js';
 import agentFactory from './agent-factory.js';
+import observer from './observer.js';
+import orchestrator from './orchestrator.js';
 
-export { schema, stateManager, parser, agentFactory };
+export { schema, stateManager, parser, agentFactory, observer, orchestrator };
 
 /**
- * Initialize a new Vision from a prompt
+ * Initialize a new Vision from a prompt (convenience wrapper)
+ *
+ * For full orchestration, use createOrchestrator() or quickRun() instead.
  *
  * @param {string} projectRoot - Project root directory
  * @param {string} prompt - Natural language prompt
@@ -101,7 +126,6 @@ export { schema, stateManager, parser, agentFactory };
 export async function initializeVision(projectRoot, prompt, options = {}) {
   const { parseVisionPrompt, estimateComplexity } = parser;
   const { createAndSaveVision } = stateManager;
-  const { createVision } = schema;
 
   // Parse the prompt
   const parsedPrompt = parseVisionPrompt(prompt);
@@ -192,9 +216,17 @@ export default {
   initializeVision,
   getQuickStatus,
 
+  // Orchestrator (Phase 7 - recommended entry point)
+  createOrchestrator: orchestrator.createOrchestrator,
+  quickRun: orchestrator.quickRun,
+  VisionOrchestrator: orchestrator.VisionOrchestrator,
+  OrchestratorStage: orchestrator.OrchestratorStage,
+
   // Modules
   schema,
   stateManager,
   parser,
-  agentFactory
+  agentFactory,
+  observer,
+  orchestrator
 };

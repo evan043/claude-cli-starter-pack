@@ -15,9 +15,11 @@ const path = require('path');
 const CONFIG = {
   stateDir: '.claude/orchestrator',
   stateFile: 'state.json',
+  cacheDir: '.claude/cache/agent-outputs', // Context-safe output directory
   l3RequestPattern: /L3_REQUEST:\s*(\S+)/g,
   maxConcurrentWorkers: 5,
   defaultTimeout: 30000,
+  maxSummaryLength: 400, // Context safety: cap summary length
   requestExtractors: {
     type: /TYPE:\s*(\w+)/,
     description: /DESCRIPTION:\s*(.+?)(?:\n|$)/,
@@ -137,15 +139,73 @@ function getCompletedWorkers(statePath, workerIds) {
 }
 
 /**
- * Generate L3 worker Task tool calls
+ * Generate L3 worker Task tool calls (Context-Safe)
+ *
+ * CRITICAL: All L3 workers must follow the Agent Output Protocol (AOP)
+ * to prevent context overflow when results are returned to parent.
  */
 function generateWorkerTaskCalls(workers) {
+  // Ensure cache directory exists
+  const cacheDir = CONFIG.cacheDir;
+
   return workers.map(worker => {
+    const outputFile = `${cacheDir}/l3-${worker.id}-${Date.now()}.json`;
+
+    // Context-safe prompt templates with AOP instructions
     const promptMap = {
-      search: `Search for: ${worker.description}\nScope: ${worker.scope}\n\nReturn results as:\nL3_RESULT: ${worker.id}\nSTATUS: completed\nDATA:\n- [findings]`,
-      analyze: `Analyze: ${worker.description}\nTarget: ${worker.scope}\n\nReturn results as:\nL3_RESULT: ${worker.id}\nSTATUS: completed\nDATA:\n- [analysis]`,
-      count: `Count occurrences: ${worker.description}\nScope: ${worker.scope}\n\nReturn results as:\nL3_RESULT: ${worker.id}\nSTATUS: completed\nDATA:\n- Total: [N]`,
-      extract: `Extract: ${worker.description}\nFrom: ${worker.scope}\n\nReturn results as:\nL3_RESULT: ${worker.id}\nSTATUS: completed\nDATA:\n- [extracted data]`,
+      search: `Search for: ${worker.description}
+Scope: ${worker.scope}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write FULL search results to: ${outputFile}
+2. Return ONLY a summary (max ${CONFIG.maxSummaryLength} chars):
+
+[AOP:SUMMARY]
+Found N files matching criteria. Key findings: [brief list]
+[AOP:DETAILS_FILE] ${outputFile}
+[AOP:STATUS] success
+
+3. DO NOT include file contents or full paths in your response`,
+
+      analyze: `Analyze: ${worker.description}
+Target: ${worker.scope}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write FULL analysis to: ${outputFile}
+2. Return ONLY a summary (max ${CONFIG.maxSummaryLength} chars):
+
+[AOP:SUMMARY]
+Analysis complete. Key insights: [2-3 bullet points]
+[AOP:DETAILS_FILE] ${outputFile}
+[AOP:STATUS] success
+
+3. DO NOT include full code snippets in your response`,
+
+      count: `Count occurrences: ${worker.description}
+Scope: ${worker.scope}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write detailed counts to: ${outputFile}
+2. Return ONLY a summary:
+
+[AOP:SUMMARY]
+Total: N occurrences across M files
+[AOP:DETAILS_FILE] ${outputFile}
+[AOP:STATUS] success`,
+
+      extract: `Extract: ${worker.description}
+From: ${worker.scope}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write extracted data to: ${outputFile}
+2. Return ONLY a summary (max ${CONFIG.maxSummaryLength} chars):
+
+[AOP:SUMMARY]
+Extracted N items. Types: [brief list]
+[AOP:DETAILS_FILE] ${outputFile}
+[AOP:STATUS] success
+
+3. DO NOT include extracted content in your response`,
     };
 
     return {
@@ -157,25 +217,27 @@ function generateWorkerTaskCalls(workers) {
         model: 'haiku',
         run_in_background: worker.parallel,
       },
+      // Store output file path for later retrieval
+      outputFile: outputFile,
     };
   });
 }
 
 /**
- * Format spawned workers message
+ * Format spawned workers message (Context-Safe)
  */
 function formatSpawnMessage(workers) {
-  let message = `\n## L3 Workers Queued\n\n`;
+  let message = `\n## L3 Workers Queued (Context-Safe Mode)\n\n`;
   message += `Spawning ${workers.length} L3 worker(s) for parallel execution:\n\n`;
 
   workers.forEach((worker, index) => {
     message += `${index + 1}. **${worker.id}** (${worker.type})\n`;
-    message += `   - ${worker.description}\n`;
-    message += `   - Scope: \`${worker.scope}\`\n`;
+    message += `   - ${worker.description.slice(0, 50)}${worker.description.length > 50 ? '...' : ''}\n`;
   });
 
-  message += `\nWorkers will execute in ${workers[0]?.parallel ? 'parallel' : 'sequence'}.\n`;
-  message += `Results will be aggregated when all complete.\n`;
+  message += `\n**Context Safety:** Workers will return summaries only.\n`;
+  message += `Full results saved to: \`${CONFIG.cacheDir}/\`\n`;
+  message += `Mode: ${workers[0]?.parallel ? 'parallel' : 'sequential'}\n`;
 
   return message;
 }
