@@ -1,7 +1,7 @@
 {
   "claude-settings": {
     "name": "claude-settings",
-    "capturedAt": "2026-02-05T22:51:12.091Z",
+    "capturedAt": "2026-02-05T23:54:25.533Z",
     "exports": {
       "DEFAULT_GITHUB_SETTINGS": {
         "name": "DEFAULT_GITHUB_SETTINGS",
@@ -165,7 +165,7 @@
   },
   "init": {
     "name": "init",
-    "capturedAt": "2026-02-05T22:51:12.612Z",
+    "capturedAt": "2026-02-05T23:54:26.076Z",
     "exports": {
       "runInit": {
         "name": "runInit",
@@ -189,7 +189,7 @@
   },
   "claude-audit": {
     "name": "claude-audit",
-    "capturedAt": "2026-02-05T22:51:12.661Z",
+    "capturedAt": "2026-02-05T23:54:26.128Z",
     "exports": {
       "ENHANCEMENT_TEMPLATES": {
         "name": "ENHANCEMENT_TEMPLATES",
@@ -236,7 +236,7 @@
   },
   "menu": {
     "name": "menu",
-    "capturedAt": "2026-02-05T22:51:12.661Z",
+    "capturedAt": "2026-02-05T23:54:26.128Z",
     "exports": {
       "showError": {
         "name": "showError",
@@ -303,7 +303,7 @@
   },
   "setup-wizard": {
     "name": "setup-wizard",
-    "capturedAt": "2026-02-05T22:51:12.662Z",
+    "capturedAt": "2026-02-05T23:54:26.129Z",
     "exports": {
       "createBackup": {
         "name": "createBackup",
@@ -343,7 +343,7 @@
   },
   "explore-mcp": {
     "name": "explore-mcp",
-    "capturedAt": "2026-02-05T22:51:12.662Z",
+    "capturedAt": "2026-02-05T23:54:26.129Z",
     "exports": {
       "runExploreMcp": {
         "name": "runExploreMcp",
@@ -372,7 +372,7 @@
   },
   "detect-tech-stack": {
     "name": "detect-tech-stack",
-    "capturedAt": "2026-02-05T22:51:12.662Z",
+    "capturedAt": "2026-02-05T23:54:26.129Z",
     "exports": {
       "default": {
         "name": "default",
@@ -399,6 +399,5080 @@
         "params": [
           "options"
         ],
+        "length": 0
+      }
+    }
+  },
+  "cli-flows-settings": {
+    "name": "cli-flows-settings",
+    "capturedAt": "2026-02-05T23:54:26.129Z",
+    "exports": {
+      "configureDeployment": {
+        "name": "configureDeployment",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "configureGitHub": {
+        "name": "configureGitHub",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "configureHappy": {
+        "name": "configureHappy",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "configureToken": {
+        "name": "configureToken",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "configureTunnel": {
+        "name": "configureTunnel",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "showProjectSettingsMenu": {
+        "name": "showProjectSettingsMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "roadmap-github-integration": {
+    "name": "roadmap-github-integration",
+    "capturedAt": "2026-02-05T23:54:26.129Z",
+    "exports": {
+      "addProgressComment": {
+        "name": "addProgressComment",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "comment",
+          "options"
+        ],
+        "length": 2
+      },
+      "checkGhCli": {
+        "name": "checkGhCli",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "closeIssue": {
+        "name": "closeIssue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "reason",
+          "options"
+        ],
+        "length": 2
+      },
+      "closeProjectIssue": {
+        "name": "closeProjectIssue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "summary",
+          "options"
+        ],
+        "length": 1
+      },
+      "createPhaseIssue": {
+        "name": "createPhaseIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "phase",
+          "roadmap",
+          "options"
+        ],
+        "length": 2
+      },
+      "createProjectIssue": {
+        "name": "createProjectIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "project",
+          "roadmap",
+          "options"
+        ],
+        "length": 2
+      },
+      "createRoadmapEpic": {
+        "name": "createRoadmapEpic",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "roadmap",
+          "options"
+        ],
+        "length": 1
+      },
+      "createRoadmapEpicAfterProjects": {
+        "name": "createRoadmapEpicAfterProjects",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "roadmap",
+          "options"
+        ],
+        "length": 1
+      },
+      "fetchIssues": {
+        "name": "fetchIssues",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "fetchProjectItems": {
+        "name": "fetchProjectItems",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "formatIssueTable": {
+        "name": "formatIssueTable",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issues"
+        ],
+        "length": 1
+      },
+      "generateProjectIssueBody": {
+        "name": "generateProjectIssueBody",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "project",
+          "roadmap"
+        ],
+        "length": 2
+      },
+      "getIssueDetails": {
+        "name": "getIssueDetails",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "options"
+        ],
+        "length": 1
+      },
+      "getRepoInfo": {
+        "name": "getRepoInfo",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "linkProjectsToEpic": {
+        "name": "linkProjectsToEpic",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projects",
+          "epicNumber",
+          "options"
+        ],
+        "length": 2
+      },
+      "parseSelection": {
+        "name": "parseSelection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "input",
+          "maxIndex"
+        ],
+        "length": 2
+      },
+      "syncToGitHub": {
+        "name": "syncToGitHub",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "roadmap",
+          "options"
+        ],
+        "length": 1
+      },
+      "updateProjectIssueTask": {
+        "name": "updateProjectIssueTask",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "task",
+          "options"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "vdb-decision-engine": {
+    "name": "vdb-decision-engine",
+    "capturedAt": "2026-02-05T23:54:26.130Z",
+    "exports": {
+      "DecisionEngine": {
+        "name": "DecisionEngine",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "create-phase-dev-wizard": {
+    "name": "create-phase-dev-wizard",
+    "capturedAt": "2026-02-05T23:54:26.131Z",
+    "exports": {
+      "promptEnhancements": {
+        "name": "promptEnhancements",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "promptL2ExplorationOptions": {
+        "name": "promptL2ExplorationOptions",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "promptTestingConfig": {
+        "name": "promptTestingConfig",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "architecture"
+        ],
+        "length": 0
+      },
+      "promptWorkflowOptions": {
+        "name": "promptWorkflowOptions",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "runWizard": {
+        "name": "runWizard",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "testing-config": {
+    "name": "testing-config",
+    "capturedAt": "2026-02-05T23:54:26.131Z",
+    "exports": {
+      "CREDENTIAL_SOURCES": {
+        "name": "CREDENTIAL_SOURCES",
+        "type": "object",
+        "keys": [
+          "env",
+          "config",
+          "prompt",
+          "none"
+        ]
+      },
+      "ENVIRONMENTS": {
+        "name": "ENVIRONMENTS",
+        "type": "object",
+        "keys": [
+          "localhost",
+          "ngrok",
+          "custom"
+        ]
+      },
+      "ENV_EXAMPLE_PATH": {
+        "name": "ENV_EXAMPLE_PATH",
+        "type": "string"
+      },
+      "ENV_PATH": {
+        "name": "ENV_PATH",
+        "type": "string"
+      },
+      "RULES_DIR": {
+        "name": "RULES_DIR",
+        "type": "string"
+      },
+      "TECH_STACK_PATHS": {
+        "name": "TECH_STACK_PATHS",
+        "type": "array",
+        "keys": [
+          "0",
+          "1"
+        ],
+        "length": 2
+      },
+      "TESTING_MODES": {
+        "name": "TESTING_MODES",
+        "type": "object",
+        "keys": [
+          "ralph",
+          "manual",
+          "minimal"
+        ]
+      },
+      "TESTING_RULES_FILE": {
+        "name": "TESTING_RULES_FILE",
+        "type": "string"
+      },
+      "createEnvExample": {
+        "name": "createEnvExample",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "createTestingConfig": {
+        "name": "createTestingConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "ensureEnvInGitignore": {
+        "name": "ensureEnvInGitignore",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateTestingRules": {
+        "name": "generateTestingRules",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "getCredentials": {
+        "name": "getCredentials",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "getEnvironmentConfig": {
+        "name": "getEnvironmentConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "getTechStackPath": {
+        "name": "getTechStackPath",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getTestingConfigSummary": {
+        "name": "getTestingConfigSummary",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "hasTestingConfig": {
+        "name": "hasTestingConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "injectCredentialsToEnv": {
+        "name": "injectCredentialsToEnv",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "username",
+          "password",
+          "options"
+        ],
+        "length": 2
+      },
+      "loadTechStackJson": {
+        "name": "loadTechStackJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "loadTestingConfig": {
+        "name": "loadTestingConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "readCredentialsFromEnv": {
+        "name": "readCredentialsFromEnv",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "saveTechStackJson": {
+        "name": "saveTechStackJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "saveTestingConfig": {
+        "name": "saveTestingConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "saveTestingRules": {
+        "name": "saveTestingRules",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "filename"
+        ],
+        "length": 1
+      },
+      "validateConfig": {
+        "name": "validateConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "validateCredentialsExist": {
+        "name": "validateCredentialsExist",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "init-command-templates": {
+    "name": "init-command-templates",
+    "capturedAt": "2026-02-05T23:54:26.131Z",
+    "exports": {
+      "COMMAND_TEMPLATES": {
+        "name": "COMMAND_TEMPLATES",
+        "type": "object",
+        "keys": [
+          "e2e-test",
+          "claude-audit",
+          "claude-settings",
+          "codebase-explorer",
+          "explore-mcp",
+          "ccasp-setup",
+          "github-task",
+          "roadmap-sync",
+          "phase-dev-plan",
+          "create-agent",
+          "create-hook",
+          "create-skill",
+          "rag-pipeline",
+          "create-task-list"
+        ]
+      },
+      "getCommandTemplate": {
+        "name": "getCommandTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name"
+        ],
+        "length": 1
+      },
+      "getCommandTemplateNames": {
+        "name": "getCommandTemplateNames",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "hasCommandTemplate": {
+        "name": "hasCommandTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "roadmap": {
+    "name": "roadmap",
+    "capturedAt": "2026-02-05T23:54:26.131Z",
+    "exports": {
+      "runRoadmap": {
+        "name": "runRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "showRoadmapMenu": {
+        "name": "showRoadmapMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "create-phase-dev-codebase-analyzer": {
+    "name": "create-phase-dev-codebase-analyzer",
+    "capturedAt": "2026-02-05T23:54:26.132Z",
+    "exports": {
+      "analyzeCodebase": {
+        "name": "analyzeCodebase",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "cwd"
+        ],
+        "length": 0
+      },
+      "displayAnalysisResults": {
+        "name": "displayAnalysisResults",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis"
+        ],
+        "length": 1
+      },
+      "generateStackSummary": {
+        "name": "generateStackSummary",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "agents-spawner": {
+    "name": "agents-spawner",
+    "capturedAt": "2026-02-05T23:54:26.132Z",
+    "exports": {
+      "AGENT_CONFIGS": {
+        "name": "AGENT_CONFIGS",
+        "type": "object",
+        "keys": [
+          "L2",
+          "L3"
+        ]
+      },
+      "DOMAIN_KEYWORDS": {
+        "name": "DOMAIN_KEYWORDS",
+        "type": "object",
+        "keys": [
+          "frontend",
+          "backend",
+          "testing",
+          "deployment"
+        ]
+      },
+      "PROJECT_L2_AGENT_TYPES": {
+        "name": "PROJECT_L2_AGENT_TYPES",
+        "type": "object",
+        "keys": [
+          "code_snippets",
+          "reference_files",
+          "agent_delegation",
+          "json_structure"
+        ]
+      },
+      "addAgentToState": {
+        "name": "addAgentToState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "statePath",
+          "agentConfig"
+        ],
+        "length": 2
+      },
+      "createCheckpoint": {
+        "name": "createCheckpoint",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "statePath",
+          "summary"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "detectTaskDomain",
+          "generateL2Config",
+          "generateL3Config",
+          "parseCompletionReport",
+          "updateAgentInState",
+          "addAgentToState",
+          "initializeOrchestratorState",
+          "loadOrchestratorState",
+          "createCheckpoint",
+          "generateProjectL2Config",
+          "parseProjectL2Report",
+          "AGENT_CONFIGS",
+          "DOMAIN_KEYWORDS",
+          "PROJECT_L2_AGENT_TYPES"
+        ]
+      },
+      "detectTaskDomain": {
+        "name": "detectTaskDomain",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "task"
+        ],
+        "length": 1
+      },
+      "generateL2Config": {
+        "name": "generateL2Config",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "task",
+          "phase",
+          "plan",
+          "orchestratorState"
+        ],
+        "length": 4
+      },
+      "generateL3Config": {
+        "name": "generateL3Config",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "subtask",
+          "parentAgentId",
+          "taskType"
+        ],
+        "length": 2
+      },
+      "generateProjectL2Config": {
+        "name": "generateProjectL2Config",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "project",
+          "agentType",
+          "roadmapContext"
+        ],
+        "length": 2
+      },
+      "initializeOrchestratorState": {
+        "name": "initializeOrchestratorState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "planId",
+          "planPath",
+          "progressData",
+          "githubConfig"
+        ],
+        "length": 4
+      },
+      "loadOrchestratorState": {
+        "name": "loadOrchestratorState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "parseCompletionReport": {
+        "name": "parseCompletionReport",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "output"
+        ],
+        "length": 1
+      },
+      "parseProjectL2Report": {
+        "name": "parseProjectL2Report",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "output",
+          "agentType"
+        ],
+        "length": 2
+      },
+      "updateAgentInState": {
+        "name": "updateAgentInState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "statePath",
+          "agentId",
+          "status",
+          "result"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "cli-flows-main": {
+    "name": "cli-flows-main",
+    "capturedAt": "2026-02-05T23:54:26.134Z",
+    "exports": {
+      "showMainMenu": {
+        "name": "showMainMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "vision-agent-factory": {
+    "name": "vision-agent-factory",
+    "capturedAt": "2026-02-05T23:54:26.134Z",
+    "exports": {
+      "DOMAIN_PATTERNS": {
+        "name": "DOMAIN_PATTERNS",
+        "type": "object",
+        "keys": [
+          "frontend",
+          "backend",
+          "database",
+          "testing",
+          "deployment",
+          "state"
+        ]
+      },
+      "allocateAgentContext": {
+        "name": "allocateAgentContext",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agent",
+          "tokenBudget",
+          "level"
+        ],
+        "length": 2
+      },
+      "createAgentRegistry": {
+        "name": "createAgentRegistry",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "techStack"
+        ],
+        "length": 2
+      },
+      "createSpecializedAgent": {
+        "name": "createSpecializedAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "decommissionAgent": {
+        "name": "decommissionAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agentName",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "createSpecializedAgent",
+          "generateAgentTemplate",
+          "updateExistingAgent",
+          "registerAgent",
+          "allocateAgentContext",
+          "getAgentForDomain",
+          "decommissionAgent",
+          "listAgents",
+          "createAgentRegistry",
+          "DOMAIN_PATTERNS"
+        ]
+      },
+      "generateAgentTemplate": {
+        "name": "generateAgentTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "domain",
+          "techStack",
+          "options"
+        ],
+        "length": 2
+      },
+      "getAgentForDomain": {
+        "name": "getAgentForDomain",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "domain",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "listAgents": {
+        "name": "listAgents",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "registerAgent": {
+        "name": "registerAgent",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "agentName",
+          "visionSlug",
+          "projectRoot",
+          "domain"
+        ],
+        "length": 3
+      },
+      "updateExistingAgent": {
+        "name": "updateExistingAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agentPath",
+          "newCapabilities"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "create-phase-dev-l2-orchestrator": {
+    "name": "create-phase-dev-l2-orchestrator",
+    "capturedAt": "2026-02-05T23:54:26.134Z",
+    "exports": {
+      "aggregateExplorationResults": {
+        "name": "aggregateExplorationResults",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "explorerResults",
+          "analyzerResults"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "runL2Exploration",
+          "extractKeywords",
+          "aggregateExplorationResults",
+          "generatePhaseBreakdown",
+          "saveExplorationToMarkdown",
+          "L2_EXPLORATION_AGENTS"
+        ]
+      },
+      "extractKeywords": {
+        "name": "extractKeywords",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "description",
+          "architecture"
+        ],
+        "length": 2
+      },
+      "generatePhaseBreakdown": {
+        "name": "generatePhaseBreakdown",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "aggregated",
+          "basePhases",
+          "config"
+        ],
+        "length": 3
+      },
+      "runL2Exploration": {
+        "name": "runL2Exploration",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "config",
+          "options"
+        ],
+        "length": 1
+      },
+      "saveExplorationToMarkdown": {
+        "name": "saveExplorationToMarkdown",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "slug",
+          "findings",
+          "cwd"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "explore-mcp-registry": {
+    "name": "explore-mcp-registry",
+    "capturedAt": "2026-02-05T23:54:26.134Z",
+    "exports": {
+      "CORE_TESTING_MCPS": {
+        "name": "CORE_TESTING_MCPS",
+        "type": "array",
+        "keys": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "length": 4
+      },
+      "MCP_REGISTRY": {
+        "name": "MCP_REGISTRY",
+        "type": "object",
+        "keys": [
+          "testing",
+          "vcs",
+          "deployment",
+          "database",
+          "automation",
+          "communication",
+          "ai",
+          "debugging",
+          "tunnel",
+          "utilities"
+        ]
+      },
+      "getAllMcps": {
+        "name": "getAllMcps",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getCategories": {
+        "name": "getCategories",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getCoreTestingMcps": {
+        "name": "getCoreTestingMcps",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getMcpApiKeyInfo": {
+        "name": "getMcpApiKeyInfo",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "mcp"
+        ],
+        "length": 1
+      },
+      "getMcpById": {
+        "name": "getMcpById",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "id"
+        ],
+        "length": 1
+      },
+      "getMcpsByCategory": {
+        "name": "getMcpsByCategory",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "category"
+        ],
+        "length": 1
+      },
+      "getMcpsWithoutApiKeys": {
+        "name": "getMcpsWithoutApiKeys",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getRecommendedMcps": {
+        "name": "getRecommendedMcps",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis"
+        ],
+        "length": 1
+      },
+      "getTestingMcps": {
+        "name": "getTestingMcps",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "mcpRequiresApiKey": {
+        "name": "mcpRequiresApiKey",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "mcp"
+        ],
+        "length": 1
+      },
+      "mergeMcpResults": {
+        "name": "mergeMcpResults",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "staticMcps",
+          "dynamicMcps",
+          "coreTestingMcps"
+        ],
+        "length": 0
+      },
+      "normalizeDiscoveredMcp": {
+        "name": "normalizeDiscoveredMcp",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "rawMcp"
+        ],
+        "length": 1
+      },
+      "searchMcps": {
+        "name": "searchMcps",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "query"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "roadmap-multi-project-builder": {
+    "name": "roadmap-multi-project-builder",
+    "capturedAt": "2026-02-05T23:54:26.134Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "runMultiProjectBuilder",
+          "runDiscoveryPhase",
+          "displayProjectTable",
+          "editProjects"
+        ]
+      },
+      "displayProjectTable": {
+        "name": "displayProjectTable",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projects"
+        ],
+        "length": 1
+      },
+      "editProjects": {
+        "name": "editProjects",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projects"
+        ],
+        "length": 1
+      },
+      "runDiscoveryPhase": {
+        "name": "runDiscoveryPhase",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "roadmap",
+          "options"
+        ],
+        "length": 1
+      },
+      "runMultiProjectBuilder": {
+        "name": "runMultiProjectBuilder",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "github-epic-menu": {
+    "name": "github-epic-menu",
+    "capturedAt": "2026-02-05T23:54:26.143Z",
+    "exports": {
+      "listEpics": {
+        "name": "listEpics",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "cwd"
+        ],
+        "length": 0
+      },
+      "migrateToEpics": {
+        "name": "migrateToEpics",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "cwd"
+        ],
+        "length": 0
+      },
+      "runGitHubEpicMenu": {
+        "name": "runGitHubEpicMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "showGitHubEpicMenu": {
+        "name": "showGitHubEpicMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "vision-state-manager": {
+    "name": "vision-state-manager",
+    "capturedAt": "2026-02-05T23:54:26.143Z",
+    "exports": {
+      "completeTaskAndSync": {
+        "name": "completeTaskAndSync",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "planSlug",
+          "phaseId",
+          "taskId"
+        ],
+        "length": 4
+      },
+      "createAndSaveVision": {
+        "name": "createAndSaveVision",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "options"
+        ],
+        "length": 2
+      },
+      "createVisionCheckpoint": {
+        "name": "createVisionCheckpoint",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "visionSlug",
+          "summary"
+        ],
+        "length": 3
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "getVisionDir",
+          "getVisionPath",
+          "ensureVisionDir",
+          "loadVision",
+          "saveVision",
+          "createAndSaveVision",
+          "listVisions",
+          "updateVision",
+          "deleteVision",
+          "transitionVisionStatus",
+          "getVisionStatus",
+          "createVisionCheckpoint",
+          "restoreVisionCheckpoint",
+          "listVisionCheckpoints",
+          "syncProgressHierarchy",
+          "completeTaskAndSync"
+        ]
+      },
+      "deleteVision": {
+        "name": "deleteVision",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "ensureVisionDir": {
+        "name": "ensureVisionDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "getVisionDir": {
+        "name": "getVisionDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "getVisionPath": {
+        "name": "getVisionPath",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "getVisionStatus": {
+        "name": "getVisionStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "listVisionCheckpoints": {
+        "name": "listVisionCheckpoints",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "listVisions": {
+        "name": "listVisions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "loadVision": {
+        "name": "loadVision",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "visionSlug"
+        ],
+        "length": 2
+      },
+      "restoreVisionCheckpoint": {
+        "name": "restoreVisionCheckpoint",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "visionSlug",
+          "checkpointId"
+        ],
+        "length": 3
+      },
+      "saveVision": {
+        "name": "saveVision",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "vision"
+        ],
+        "length": 2
+      },
+      "syncProgressHierarchy": {
+        "name": "syncProgressHierarchy",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "planSlug"
+        ],
+        "length": 2
+      },
+      "transitionVisionStatus": {
+        "name": "transitionVisionStatus",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "visionSlug",
+          "newStatus"
+        ],
+        "length": 3
+      },
+      "updateVision": {
+        "name": "updateVision",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "visionSlug",
+          "updateFn"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "dev-deploy": {
+    "name": "dev-deploy",
+    "capturedAt": "2026-02-05T23:54:26.144Z",
+    "exports": {
+      "runDevDeploy": {
+        "name": "runDevDeploy",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "create-roadmap": {
+    "name": "create-roadmap",
+    "capturedAt": "2026-02-05T23:54:26.147Z",
+    "exports": {
+      "runCreateRoadmap": {
+        "name": "runCreateRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "pm-hierarchy-schema": {
+    "name": "pm-hierarchy-schema",
+    "capturedAt": "2026-02-05T23:54:26.152Z",
+    "exports": {
+      "COMPLETION_TRACKING_SCHEMA": {
+        "name": "COMPLETION_TRACKING_SCHEMA",
+        "type": "object",
+        "keys": [
+          "velocity",
+          "completions",
+          "schedule_status",
+          "vision_reminders",
+          "last_updated"
+        ]
+      },
+      "DEFAULTS": {
+        "name": "DEFAULTS",
+        "type": "object",
+        "keys": [
+          "vision_epics",
+          "vision",
+          "epic",
+          "roadmap",
+          "phase",
+          "task",
+          "integration",
+          "velocity"
+        ]
+      },
+      "EPIC_SCHEMA": {
+        "name": "EPIC_SCHEMA",
+        "type": "object",
+        "keys": [
+          "epic_id",
+          "slug",
+          "title",
+          "description",
+          "type",
+          "business_objective",
+          "success_criteria",
+          "scope",
+          "status",
+          "priority",
+          "timeline",
+          "vision_id",
+          "linked_roadmaps",
+          "external_links",
+          "progress",
+          "created",
+          "updated",
+          "created_by"
+        ]
+      },
+      "INTEGRATION_CONFIG_SCHEMA": {
+        "name": "INTEGRATION_CONFIG_SCHEMA",
+        "type": "object",
+        "keys": [
+          "primary",
+          "enabled",
+          "github",
+          "jira",
+          "linear",
+          "clickup",
+          "sync",
+          "configured_at",
+          "last_modified"
+        ]
+      },
+      "PHASE_SCHEMA": {
+        "name": "PHASE_SCHEMA",
+        "type": "object",
+        "keys": [
+          "phase_id",
+          "phase_title",
+          "goal",
+          "complexity",
+          "status",
+          "inputs",
+          "outputs",
+          "dependencies",
+          "tasks"
+        ]
+      },
+      "ROADMAP_SCHEMA": {
+        "name": "ROADMAP_SCHEMA",
+        "type": "object",
+        "keys": [
+          "roadmap_id",
+          "slug",
+          "title",
+          "description",
+          "epic_id",
+          "source",
+          "status",
+          "phases",
+          "dependency_graph",
+          "progress",
+          "external_links",
+          "created",
+          "updated"
+        ]
+      },
+      "TASK_SCHEMA": {
+        "name": "TASK_SCHEMA",
+        "type": "object",
+        "keys": [
+          "task_id",
+          "content",
+          "activeForm",
+          "status",
+          "type",
+          "file_refs",
+          "function_refs",
+          "estimated_hours",
+          "actual_hours"
+        ]
+      },
+      "VISION_SCHEMA": {
+        "name": "VISION_SCHEMA",
+        "type": "object",
+        "keys": [
+          "vision_id",
+          "title",
+          "description",
+          "status",
+          "enabled",
+          "okrs",
+          "timeline",
+          "epics",
+          "linked_roadmaps",
+          "ai_settings",
+          "created",
+          "updated"
+        ]
+      },
+      "createEmptyCompletionTracking": {
+        "name": "createEmptyCompletionTracking",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "createEmptyEpic": {
+        "name": "createEmptyEpic",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "overrides"
+        ],
+        "length": 0
+      },
+      "createEmptyIntegrationConfig": {
+        "name": "createEmptyIntegrationConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "overrides"
+        ],
+        "length": 0
+      },
+      "createEmptyVision": {
+        "name": "createEmptyVision",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "overrides"
+        ],
+        "length": 0
+      },
+      "validateEpic": {
+        "name": "validateEpic",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "epic"
+        ],
+        "length": 1
+      },
+      "validateIntegrationConfig": {
+        "name": "validateIntegrationConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "validateVision": {
+        "name": "validateVision",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "config-github-config": {
+    "name": "config-github-config",
+    "capturedAt": "2026-02-05T23:54:26.152Z",
+    "exports": {
+      "DEFAULT_GITHUB_SETTINGS": {
+        "name": "DEFAULT_GITHUB_SETTINGS",
+        "type": "object",
+        "keys": [
+          "repository",
+          "project",
+          "defaults",
+          "workflow",
+          "pr"
+        ]
+      },
+      "configureGitHubSettings": {
+        "name": "configureGitHubSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "returnToMain"
+        ],
+        "length": 1
+      },
+      "generateGitHubSettingsUpdater": {
+        "name": "generateGitHubSettingsUpdater",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "loadGitHubSettings": {
+        "name": "loadGitHubSettings",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "saveGitHubSettings": {
+        "name": "saveGitHubSettings",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "settings"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "config-tech-stack-config": {
+    "name": "config-tech-stack-config",
+    "capturedAt": "2026-02-05T23:54:26.152Z",
+    "exports": {
+      "applyTechStackTemplates": {
+        "name": "applyTechStackTemplates",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "returnToMain"
+        ],
+        "length": 1
+      },
+      "configureTechStackSettings": {
+        "name": "configureTechStackSettings",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "returnToMain"
+        ],
+        "length": 1
+      },
+      "loadTechStack": {
+        "name": "loadTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "saveTechStack": {
+        "name": "saveTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "orchestration-progress-aggregator": {
+    "name": "orchestration-progress-aggregator",
+    "capturedAt": "2026-02-05T23:54:26.152Z",
+    "exports": {
+      "HierarchyStatus": {
+        "name": "HierarchyStatus",
+        "type": "object",
+        "keys": [
+          "PENDING",
+          "IN_PROGRESS",
+          "COMPLETED",
+          "BLOCKED",
+          "FAILED"
+        ]
+      },
+      "aggregateEpicProgress": {
+        "name": "aggregateEpicProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "epicPath"
+        ],
+        "length": 1
+      },
+      "aggregatePhaseProgress": {
+        "name": "aggregatePhaseProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "progressPath"
+        ],
+        "length": 1
+      },
+      "aggregateRoadmapProgress": {
+        "name": "aggregateRoadmapProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapPath"
+        ],
+        "length": 1
+      },
+      "calculateVelocity": {
+        "name": "calculateVelocity",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "progressHistory"
+        ],
+        "length": 1
+      },
+      "closeEpicIssueIfComplete": {
+        "name": "closeEpicIssueIfComplete",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicPath"
+        ],
+        "length": 2
+      },
+      "closePhaseDevIssueIfComplete": {
+        "name": "closePhaseDevIssueIfComplete",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "progressPath"
+        ],
+        "length": 2
+      },
+      "closeRoadmapIssueIfComplete": {
+        "name": "closeRoadmapIssueIfComplete",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "roadmapPath"
+        ],
+        "length": 2
+      },
+      "determineStatus": {
+        "name": "determineStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "children"
+        ],
+        "length": 1
+      },
+      "formatProgressSummary": {
+        "name": "formatProgressSummary",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "progressSummary"
+        ],
+        "length": 1
+      },
+      "getProgressAtLevel": {
+        "name": "getProgressAtLevel",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "path",
+          "level"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "vdb-board-sync": {
+    "name": "vdb-board-sync",
+    "capturedAt": "2026-02-05T23:54:26.154Z",
+    "exports": {
+      "BoardSync": {
+        "name": "BoardSync",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "GitHubProjectAdapter": {
+        "name": "GitHubProjectAdapter",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "JiraAdapter": {
+        "name": "JiraAdapter",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "LocalAdapter": {
+        "name": "LocalAdapter",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config",
+          "projectRoot"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "github-client": {
+    "name": "github-client",
+    "capturedAt": "2026-02-05T23:54:26.155Z",
+    "exports": {
+      "addIssueComment": {
+        "name": "addIssueComment",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo",
+          "issueNumber",
+          "body"
+        ],
+        "length": 4
+      },
+      "addIssueToProject": {
+        "name": "addIssueToProject",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "projectNumber",
+          "issueUrl"
+        ],
+        "length": 3
+      },
+      "closeIssue": {
+        "name": "closeIssue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo",
+          "issueNumber",
+          "comment"
+        ],
+        "length": 4
+      },
+      "createIssue": {
+        "name": "createIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "owner",
+          "repo",
+          "options"
+        ],
+        "length": 3
+      },
+      "createPhaseIssue": {
+        "name": "createPhaseIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "owner",
+          "repo",
+          "phaseConfig"
+        ],
+        "length": 3
+      },
+      "createRoadmapIssues": {
+        "name": "createRoadmapIssues",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "owner",
+          "repo",
+          "roadmapConfig"
+        ],
+        "length": 3
+      },
+      "getAllFieldOptions": {
+        "name": "getAllFieldOptions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectId"
+        ],
+        "length": 1
+      },
+      "getCurrentUser": {
+        "name": "getCurrentUser",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getFieldOptions": {
+        "name": "getFieldOptions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectId",
+          "fieldId"
+        ],
+        "length": 2
+      },
+      "getIssue": {
+        "name": "getIssue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo",
+          "issueNumber"
+        ],
+        "length": 3
+      },
+      "getProject": {
+        "name": "getProject",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "projectNumber"
+        ],
+        "length": 2
+      },
+      "getProjectItemId": {
+        "name": "getProjectItemId",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "projectNumber",
+          "issueNumber"
+        ],
+        "length": 3
+      },
+      "getRepoInfo": {
+        "name": "getRepoInfo",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo"
+        ],
+        "length": 2
+      },
+      "isAuthenticated": {
+        "name": "isAuthenticated",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "listIssues": {
+        "name": "listIssues",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo",
+          "options"
+        ],
+        "length": 2
+      },
+      "listProjectFields": {
+        "name": "listProjectFields",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "projectNumber"
+        ],
+        "length": 2
+      },
+      "listProjects": {
+        "name": "listProjects",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner"
+        ],
+        "length": 1
+      },
+      "listRepos": {
+        "name": "listRepos",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "options"
+        ],
+        "length": 1
+      },
+      "repoExists": {
+        "name": "repoExists",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo"
+        ],
+        "length": 2
+      },
+      "safeGhExec": {
+        "name": "safeGhExec",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "args",
+          "options"
+        ],
+        "length": 1
+      },
+      "updateIssueBody": {
+        "name": "updateIssueBody",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "owner",
+          "repo",
+          "issueNumber",
+          "body"
+        ],
+        "length": 4
+      },
+      "updateProjectItemField": {
+        "name": "updateProjectItemField",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectId",
+          "itemId",
+          "fieldId",
+          "value",
+          "fieldType"
+        ],
+        "length": 4
+      }
+    }
+  },
+  "phase-dev-completion-reporter": {
+    "name": "phase-dev-completion-reporter",
+    "capturedAt": "2026-02-05T23:54:26.155Z",
+    "exports": {
+      "calculateCompletionMetrics": {
+        "name": "calculateCompletionMetrics",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "progress"
+        ],
+        "length": 1
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "reportPhaseDevComplete",
+          "calculateCompletionMetrics",
+          "markPhaseDevComplete",
+          "getPhaseDevStatus"
+        ]
+      },
+      "getPhaseDevStatus": {
+        "name": "getPhaseDevStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "phaseDevSlug"
+        ],
+        "length": 2
+      },
+      "markPhaseDevComplete": {
+        "name": "markPhaseDevComplete",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "phaseDevSlug",
+          "completionMetrics"
+        ],
+        "length": 2
+      },
+      "reportPhaseDevComplete": {
+        "name": "reportPhaseDevComplete",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "phaseDevSlug",
+          "completionMetrics"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "agents-templates": {
+    "name": "agents-templates",
+    "capturedAt": "2026-02-05T23:54:26.158Z",
+    "exports": {
+      "AGENT_LEVELS": {
+        "name": "AGENT_LEVELS",
+        "type": "object",
+        "keys": [
+          "L1",
+          "L2",
+          "L3"
+        ]
+      },
+      "COMPLEXITY_LEVELS": {
+        "name": "COMPLEXITY_LEVELS",
+        "type": "object",
+        "keys": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "HOOK_EVENT_TYPES": {
+        "name": "HOOK_EVENT_TYPES",
+        "type": "object",
+        "keys": [
+          "PreToolUse",
+          "PostToolUse",
+          "UserPromptSubmit",
+          "SessionStart",
+          "SessionStop"
+        ]
+      },
+      "HOOK_TOOLS": {
+        "name": "HOOK_TOOLS",
+        "type": "array",
+        "keys": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8"
+        ],
+        "length": 9
+      },
+      "generateAgentTemplate": {
+        "name": "generateAgentTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateCommandTemplate": {
+        "name": "generateCommandTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateHookTemplate": {
+        "name": "generateHookTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateOrchestratorTemplate": {
+        "name": "generateOrchestratorTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateSkillContextReadme": {
+        "name": "generateSkillContextReadme",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateSkillTemplate": {
+        "name": "generateSkillTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "generateSkillWorkflowsReadme": {
+        "name": "generateSkillWorkflowsReadme",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "panel": {
+    "name": "panel",
+    "capturedAt": "2026-02-05T23:54:26.158Z",
+    "exports": {
+      "launchPanel": {
+        "name": "launchPanel",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "launchPanelInline": {
+        "name": "launchPanelInline",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "runPanel": {
+        "name": "runPanel",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "audit-helpers": {
+    "name": "audit-helpers",
+    "capturedAt": "2026-02-05T23:54:26.158Z",
+    "exports": {
+      "auditClaudeFolder": {
+        "name": "auditClaudeFolder",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "cwd",
+          "result"
+        ],
+        "length": 2
+      },
+      "auditClaudeFolderContents": {
+        "name": "auditClaudeFolderContents",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "dirPath",
+          "type",
+          "result"
+        ],
+        "length": 3
+      },
+      "auditClaudeMdFiles": {
+        "name": "auditClaudeMdFiles",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "cwd",
+          "result"
+        ],
+        "length": 2
+      },
+      "auditSingleClaudeMd": {
+        "name": "auditSingleClaudeMd",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath",
+          "name",
+          "result"
+        ],
+        "length": 3
+      },
+      "calculateOverallScore": {
+        "name": "calculateOverallScore",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "results"
+        ],
+        "length": 1
+      },
+      "checkCommonMisconfigurations": {
+        "name": "checkCommonMisconfigurations",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "claudeDir",
+          "result"
+        ],
+        "length": 2
+      },
+      "displayAuditResults": {
+        "name": "displayAuditResults",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "results"
+        ],
+        "length": 1
+      },
+      "generateEnhancementSuggestions": {
+        "name": "generateEnhancementSuggestions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "results",
+          "techStack",
+          "ENHANCEMENT_TEMPLATES"
+        ],
+        "length": 3
+      },
+      "showBestPracticesReference": {
+        "name": "showBestPracticesReference",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "showDetailedFixes": {
+        "name": "showDetailedFixes",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "results"
+        ],
+        "length": 1
+      },
+      "validateJsonFile": {
+        "name": "validateJsonFile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath",
+          "displayPath",
+          "result"
+        ],
+        "length": 3
+      },
+      "validateSkillOrAgent": {
+        "name": "validateSkillOrAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath",
+          "displayPath",
+          "type",
+          "result"
+        ],
+        "length": 4
+      }
+    }
+  },
+  "create-agent": {
+    "name": "create-agent",
+    "capturedAt": "2026-02-05T23:54:26.159Z",
+    "exports": {
+      "runCreateAgent": {
+        "name": "runCreateAgent",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "analysis-competitor-analysis": {
+    "name": "analysis-competitor-analysis",
+    "capturedAt": "2026-02-05T23:54:26.159Z",
+    "exports": {
+      "ANALYSIS_PHASES": {
+        "name": "ANALYSIS_PHASES",
+        "type": "object",
+        "keys": [
+          "discovery",
+          "features",
+          "pricing",
+          "techStack",
+          "sentiment",
+          "gaps"
+        ]
+      },
+      "PRICING_PATTERNS": {
+        "name": "PRICING_PATTERNS",
+        "type": "object",
+        "keys": [
+          "free",
+          "freemium",
+          "subscription",
+          "enterprise",
+          "perSeat",
+          "usage"
+        ]
+      },
+      "SCRAPER_CONFIG": {
+        "name": "SCRAPER_CONFIG",
+        "type": "object",
+        "keys": [
+          "primary",
+          "fallback"
+        ]
+      },
+      "SEARCH_PROVIDERS": {
+        "name": "SEARCH_PROVIDERS",
+        "type": "object",
+        "keys": [
+          "primary",
+          "secondary",
+          "builtin"
+        ]
+      },
+      "TECH_STACK_PATTERNS": {
+        "name": "TECH_STACK_PATTERNS",
+        "type": "object",
+        "keys": [
+          "frontend",
+          "backend",
+          "database",
+          "cloud"
+        ]
+      },
+      "checkMcpAvailability": {
+        "name": "checkMcpAvailability",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "createAnalysisPrompt": {
+        "name": "createAnalysisPrompt",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "context",
+          "phase"
+        ],
+        "length": 2
+      },
+      "createCompetitorProfile": {
+        "name": "createCompetitorProfile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name"
+        ],
+        "length": 1
+      },
+      "createSwotAnalysis": {
+        "name": "createSwotAnalysis",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "ANALYSIS_PHASES",
+          "SEARCH_PROVIDERS",
+          "SCRAPER_CONFIG",
+          "PRICING_PATTERNS",
+          "TECH_STACK_PATTERNS",
+          "getReportDir",
+          "generateDiscoveryQueries",
+          "generateFeatureQueries",
+          "createCompetitorProfile",
+          "createSwotAnalysis",
+          "generateFeatureGapMatrix",
+          "generateMarkdownReport",
+          "saveReport",
+          "loadAnalysis",
+          "createAnalysisPrompt",
+          "checkMcpAvailability"
+        ]
+      },
+      "generateDiscoveryQueries": {
+        "name": "generateDiscoveryQueries",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "context"
+        ],
+        "length": 1
+      },
+      "generateFeatureGapMatrix": {
+        "name": "generateFeatureGapMatrix",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "ourProduct",
+          "competitors"
+        ],
+        "length": 2
+      },
+      "generateFeatureQueries": {
+        "name": "generateFeatureQueries",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "competitors"
+        ],
+        "length": 1
+      },
+      "generateMarkdownReport": {
+        "name": "generateMarkdownReport",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis"
+        ],
+        "length": 1
+      },
+      "getReportDir": {
+        "name": "getReportDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 0
+      },
+      "loadAnalysis": {
+        "name": "loadAnalysis",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "productName",
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "saveReport": {
+        "name": "saveReport",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis",
+          "projectRoot"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "create-phase-dev-documentation-generator": {
+    "name": "create-phase-dev-documentation-generator",
+    "capturedAt": "2026-02-05T23:54:26.160Z",
+    "exports": {
+      "createGitCheckpoint": {
+        "name": "createGitCheckpoint",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectSlug"
+        ],
+        "length": 1
+      },
+      "createPhaseDevGitHubIssue": {
+        "name": "createPhaseDevGitHubIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "config",
+          "explorationData"
+        ],
+        "length": 1
+      },
+      "displayGenerationResults": {
+        "name": "displayGenerationResults",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "results"
+        ],
+        "length": 1
+      },
+      "generateBackendConfig": {
+        "name": "generateBackendConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "architecture"
+        ],
+        "length": 1
+      },
+      "generatePhaseDevDocumentation": {
+        "name": "generatePhaseDevDocumentation",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "config",
+          "enhancements"
+        ],
+        "length": 1
+      },
+      "generatePhaseDevDocumentationWithL2": {
+        "name": "generatePhaseDevDocumentationWithL2",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "config",
+          "enhancements",
+          "options"
+        ],
+        "length": 1
+      },
+      "updateProgressWithExploration": {
+        "name": "updateProgressWithExploration",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "progressPath",
+          "explorationFindings"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "vision": {
+    "name": "vision",
+    "capturedAt": "2026-02-05T23:54:26.160Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "runVision"
+        ]
+      },
+      "runVision": {
+        "name": "runVision",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "subcommand",
+          "options"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "agents-generator-content-generators": {
+    "name": "agents-generator-content-generators",
+    "capturedAt": "2026-02-05T23:54:26.160Z",
+    "exports": {
+      "getAgentContent": {
+        "name": "getAgentContent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agent",
+          "techStack"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "gtask-init": {
+    "name": "gtask-init",
+    "capturedAt": "2026-02-05T23:54:26.161Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "runGtaskInit"
+        ]
+      },
+      "runGtaskInit": {
+        "name": "runGtaskInit",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "epic-state-manager": {
+    "name": "epic-state-manager",
+    "capturedAt": "2026-02-05T23:54:26.164Z",
+    "exports": {
+      "addActiveRoadmap": {
+        "name": "addActiveRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapConfig"
+        ],
+        "length": 3
+      },
+      "advanceToNextRoadmap": {
+        "name": "advanceToNextRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "completedRoadmapId"
+        ],
+        "length": 3
+      },
+      "checkGatingRequirements": {
+        "name": "checkGatingRequirements",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapIndex"
+        ],
+        "length": 3
+      },
+      "completeRoadmap": {
+        "name": "completeRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapId",
+          "summary"
+        ],
+        "length": 3
+      },
+      "createCheckpoint": {
+        "name": "createCheckpoint",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "summary",
+          "metadata"
+        ],
+        "length": 3
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "initEpicDirectory",
+          "loadEpic",
+          "saveEpic",
+          "initEpicOrchestratorState",
+          "loadOrchestratorState",
+          "saveOrchestratorState",
+          "updateRoadmapStatus",
+          "updateRoadmapProgress",
+          "advanceToNextRoadmap",
+          "checkGatingRequirements",
+          "addActiveRoadmap",
+          "completeRoadmap",
+          "failRoadmap",
+          "updateTokenBudget",
+          "createCheckpoint",
+          "getEpicStatus"
+        ]
+      },
+      "failRoadmap": {
+        "name": "failRoadmap",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapId",
+          "error"
+        ],
+        "length": 4
+      },
+      "getEpicStatus": {
+        "name": "getEpicStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "epicSlug"
+        ],
+        "length": 2
+      },
+      "initEpicDirectory": {
+        "name": "initEpicDirectory",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "epicSlug"
+        ],
+        "length": 2
+      },
+      "initEpicOrchestratorState": {
+        "name": "initEpicOrchestratorState",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicConfig"
+        ],
+        "length": 2
+      },
+      "loadEpic": {
+        "name": "loadEpic",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "epicSlug"
+        ],
+        "length": 2
+      },
+      "loadOrchestratorState": {
+        "name": "loadOrchestratorState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot",
+          "epicSlug"
+        ],
+        "length": 2
+      },
+      "saveEpic": {
+        "name": "saveEpic",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "epic"
+        ],
+        "length": 3
+      },
+      "saveOrchestratorState": {
+        "name": "saveOrchestratorState",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "state"
+        ],
+        "length": 3
+      },
+      "updateRoadmapProgress": {
+        "name": "updateRoadmapProgress",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapId",
+          "completionPercentage",
+          "phaseData"
+        ],
+        "length": 4
+      },
+      "updateRoadmapStatus": {
+        "name": "updateRoadmapStatus",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "roadmapId",
+          "status",
+          "result"
+        ],
+        "length": 4
+      },
+      "updateTokenBudget": {
+        "name": "updateTokenBudget",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "tokensUsed"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "vision-ui-ascii-generator": {
+    "name": "vision-ui-ascii-generator",
+    "capturedAt": "2026-02-05T23:54:26.165Z",
+    "exports": {
+      "extractComponentList": {
+        "name": "extractComponentList",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "wireframe"
+        ],
+        "length": 1
+      },
+      "generateASCIIWireframe": {
+        "name": "generateASCIIWireframe",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "components",
+          "layout"
+        ],
+        "length": 0
+      },
+      "generateCard": {
+        "name": "generateCard",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title",
+          "content",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateComponentBox": {
+        "name": "generateComponentBox",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name",
+          "width",
+          "height",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateForm": {
+        "name": "generateForm",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "fields",
+          "options"
+        ],
+        "length": 0
+      },
+      "generateLayoutGrid": {
+        "name": "generateLayoutGrid",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "rows",
+          "cols",
+          "options"
+        ],
+        "length": 0
+      },
+      "generateModal": {
+        "name": "generateModal",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title",
+          "content",
+          "buttons",
+          "'Cancel']",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateNavbar": {
+        "name": "generateNavbar",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "items",
+          "options"
+        ],
+        "length": 0
+      },
+      "generateSidebar": {
+        "name": "generateSidebar",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "items",
+          "options"
+        ],
+        "length": 0
+      },
+      "generateTable": {
+        "name": "generateTable",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "headers",
+          "rows",
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "explore-mcp-flows": {
+    "name": "explore-mcp-flows",
+    "capturedAt": "2026-02-05T23:54:26.165Z",
+    "exports": {
+      "runBrowseFlow": {
+        "name": "runBrowseFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "runDiscoverFlow": {
+        "name": "runDiscoverFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "runInstalledFlow": {
+        "name": "runInstalledFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "runRecommendedFlow": {
+        "name": "runRecommendedFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "runSearchFlow": {
+        "name": "runSearchFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "runTestingFlow": {
+        "name": "runTestingFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "runUpdateDocsFlow": {
+        "name": "runUpdateDocsFlow",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "showMcpDetails": {
+        "name": "showMcpDetails",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "mcp"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "vision-observer": {
+    "name": "vision-observer",
+    "capturedAt": "2026-02-05T23:54:26.165Z",
+    "exports": {
+      "calculateAlignment": {
+        "name": "calculateAlignment",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "actual",
+          "expected"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "observeProgress",
+          "calculateAlignment",
+          "detectDrift",
+          "identifyDriftAreas",
+          "generateAdjustments",
+          "shouldTriggerReplan",
+          "formatDriftReport"
+        ]
+      },
+      "detectDrift": {
+        "name": "detectDrift",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "alignment",
+          "thresholds"
+        ],
+        "length": 1
+      },
+      "formatDriftReport": {
+        "name": "formatDriftReport",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "observation"
+        ],
+        "length": 1
+      },
+      "generateAdjustments": {
+        "name": "generateAdjustments",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "driftAreas",
+          "visionPlan",
+          "driftSeverity"
+        ],
+        "length": 3
+      },
+      "identifyDriftAreas": {
+        "name": "identifyDriftAreas",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "actual",
+          "expected"
+        ],
+        "length": 2
+      },
+      "observeProgress": {
+        "name": "observeProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "epicUpdate",
+          "visionPlan",
+          "projectRoot"
+        ],
+        "length": 3
+      },
+      "shouldTriggerReplan": {
+        "name": "shouldTriggerReplan",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "driftSeverity",
+          "driftAreas",
+          "visionPlan"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "roadmap-phase-generator": {
+    "name": "roadmap-phase-generator",
+    "capturedAt": "2026-02-05T23:54:26.166Z",
+    "exports": {
+      "completeTask": {
+        "name": "completeTask",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "phaseId",
+          "taskId",
+          "cwd"
+        ],
+        "length": 3
+      },
+      "ensurePhasePlansDir": {
+        "name": "ensurePhasePlansDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "generateAllPhasePlans": {
+        "name": "generateAllPhasePlans",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "roadmapName",
+          "options",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "generatePhasePlan": {
+        "name": "generatePhasePlan",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "phase",
+          "roadmap",
+          "options",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "getPhasePlansDir": {
+        "name": "getPhasePlansDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "getRoadmapProgress": {
+        "name": "getRoadmapProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "loadPhasePlan": {
+        "name": "loadPhasePlan",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "phaseId",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "updatePhasePlan": {
+        "name": "updatePhasePlan",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "roadmapSlug",
+          "phaseId",
+          "updates",
+          "cwd"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "templates-issue-body": {
+    "name": "templates-issue-body",
+    "capturedAt": "2026-02-05T23:54:26.166Z",
+    "exports": {
+      "createFileObject": {
+        "name": "createFileObject",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name",
+          "type",
+          "path"
+        ],
+        "length": 3
+      },
+      "extractCCSAPMetaBlock": {
+        "name": "extractCCSAPMetaBlock",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueBody"
+        ],
+        "length": 1
+      },
+      "formatFilePath": {
+        "name": "formatFilePath",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "path",
+          "projectRoot"
+        ],
+        "length": 1
+      },
+      "generateAgentRecommendationSection": {
+        "name": "generateAgentRecommendationSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "recommendation"
+        ],
+        "length": 1
+      },
+      "generateApiStatusSection": {
+        "name": "generateApiStatusSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "apiStatus"
+        ],
+        "length": 1
+      },
+      "generateCCSAPMeta": {
+        "name": "generateCCSAPMeta",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "generateCodeAnalysisSection": {
+        "name": "generateCodeAnalysisSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "analysis"
+        ],
+        "length": 1
+      },
+      "generateCompactFilesSection": {
+        "name": "generateCompactFilesSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "files",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateFileLinksSection": {
+        "name": "generateFileLinksSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateFilesList": {
+        "name": "generateFilesList",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateFilesSection": {
+        "name": "generateFilesSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "files",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateGroupedFilesSection": {
+        "name": "generateGroupedFilesSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateIssueBody": {
+        "name": "generateIssueBody",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "data"
+        ],
+        "length": 1
+      },
+      "generateSimpleIssueBody": {
+        "name": "generateSimpleIssueBody",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "data"
+        ],
+        "length": 1
+      },
+      "generateTestingSection": {
+        "name": "generateTestingSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "scenarios"
+        ],
+        "length": 1
+      },
+      "generateTodoSection": {
+        "name": "generateTodoSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "todoList"
+        ],
+        "length": 1
+      },
+      "generateTypeSpecificSection": {
+        "name": "generateTypeSpecificSection",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueType",
+          "data"
+        ],
+        "length": 2
+      },
+      "getAgentRecommendation": {
+        "name": "getAgentRecommendation",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "registry",
+          "description",
+          "labels",
+          "files"
+        ],
+        "length": 2
+      },
+      "getAvailableTypes": {
+        "name": "getAvailableTypes",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getIssueType": {
+        "name": "getIssueType",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "getLanguageForExt": {
+        "name": "getLanguageForExt",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "ext"
+        ],
+        "length": 1
+      },
+      "getRequiredFields": {
+        "name": "getRequiredFields",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "getTypeAcceptanceCriteria": {
+        "name": "getTypeAcceptanceCriteria",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "getTypeLabels": {
+        "name": "getTypeLabels",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "getTypeSections": {
+        "name": "getTypeSections",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "hasCCSAPMeta": {
+        "name": "hasCCSAPMeta",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueBody"
+        ],
+        "length": 1
+      },
+      "isValidType": {
+        "name": "isValidType",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName"
+        ],
+        "length": 1
+      },
+      "parseCCSAPMeta": {
+        "name": "parseCCSAPMeta",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueBody"
+        ],
+        "length": 1
+      },
+      "suggestAcceptanceCriteria": {
+        "name": "suggestAcceptanceCriteria",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueType",
+          "keywords"
+        ],
+        "length": 1
+      },
+      "updateCCSAPMeta": {
+        "name": "updateCCSAPMeta",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueBody",
+          "updates"
+        ],
+        "length": 2
+      },
+      "validateIssueData": {
+        "name": "validateIssueData",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "typeName",
+          "data"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "utils-smart-merge": {
+    "name": "utils-smart-merge",
+    "capturedAt": "2026-02-05T23:54:26.166Z",
+    "exports": {
+      "ASSET_PATHS": {
+        "name": "ASSET_PATHS",
+        "type": "object",
+        "keys": [
+          "commands",
+          "skills",
+          "agents",
+          "hooks"
+        ]
+      },
+      "analyzeChangeSignificance": {
+        "name": "analyzeChangeSignificance",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "changes",
+          "localContent",
+          "templateContent"
+        ],
+        "length": 3
+      },
+      "compareAssetVersions": {
+        "name": "compareAssetVersions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "localContent",
+          "templateContent"
+        ],
+        "length": 2
+      },
+      "createBackup": {
+        "name": "createBackup",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath",
+          "projectDir"
+        ],
+        "length": 1
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "getLocalAsset",
+          "getTemplateAsset",
+          "compareAssetVersions",
+          "generateDetailedDiff",
+          "getAssetsNeedingMerge",
+          "generateMergeExplanation",
+          "formatMergeOptions",
+          "getMergeAttentionCount",
+          "createBackup",
+          "listBackups",
+          "restoreBackup"
+        ]
+      },
+      "formatMergeOptions": {
+        "name": "formatMergeOptions",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "assetName",
+          "useCount"
+        ],
+        "length": 2
+      },
+      "generateChangeSummary": {
+        "name": "generateChangeSummary",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "changes",
+          "significance"
+        ],
+        "length": 2
+      },
+      "generateDetailedDiff": {
+        "name": "generateDetailedDiff",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "localPath",
+          "templatePath"
+        ],
+        "length": 2
+      },
+      "generateMergeExplanation": {
+        "name": "generateMergeExplanation",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "assetType",
+          "assetName",
+          "comparison",
+          "localContent",
+          "templateContent"
+        ],
+        "length": 5
+      },
+      "getAssetsNeedingMerge": {
+        "name": "getAssetsNeedingMerge",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectDir"
+        ],
+        "length": 0
+      },
+      "getLocalAsset": {
+        "name": "getLocalAsset",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "assetType",
+          "assetName",
+          "projectDir"
+        ],
+        "length": 2
+      },
+      "getMergeAttentionCount": {
+        "name": "getMergeAttentionCount",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectDir"
+        ],
+        "length": 0
+      },
+      "getTemplateAsset": {
+        "name": "getTemplateAsset",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "assetType",
+          "assetName"
+        ],
+        "length": 2
+      },
+      "listBackups": {
+        "name": "listBackups",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "assetType",
+          "assetName",
+          "projectDir"
+        ],
+        "length": 2
+      },
+      "restoreBackup": {
+        "name": "restoreBackup",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "backupPath",
+          "projectDir"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "vision-schema": {
+    "name": "vision-schema",
+    "capturedAt": "2026-02-05T23:54:26.166Z",
+    "exports": {
+      "DriftSeverity": {
+        "name": "DriftSeverity",
+        "type": "object",
+        "keys": [
+          "NONE",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "CRITICAL"
+        ]
+      },
+      "VISION_SCHEMA": {
+        "name": "VISION_SCHEMA",
+        "type": "object",
+        "keys": [
+          "vision_id",
+          "slug",
+          "title",
+          "status",
+          "prompt",
+          "analysis",
+          "wireframes",
+          "architecture",
+          "execution_plan",
+          "observer",
+          "security",
+          "metadata"
+        ]
+      },
+      "VisionIntent": {
+        "name": "VisionIntent",
+        "type": "object",
+        "keys": [
+          "BUILD",
+          "MODIFY",
+          "REFACTOR",
+          "MIGRATE",
+          "OPTIMIZE"
+        ]
+      },
+      "VisionStatus": {
+        "name": "VisionStatus",
+        "type": "object",
+        "keys": [
+          "PLANNING",
+          "ANALYZING",
+          "ARCHITECTING",
+          "ORCHESTRATING",
+          "EXECUTING",
+          "VALIDATING",
+          "COMPLETED",
+          "FAILED",
+          "PAUSED"
+        ]
+      },
+      "addCreatedAgent": {
+        "name": "addCreatedAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "agent"
+        ],
+        "length": 2
+      },
+      "calculateVisionCompletion": {
+        "name": "calculateVisionCompletion",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision"
+        ],
+        "length": 1
+      },
+      "createVision": {
+        "name": "createVision",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "VisionStatus",
+          "VisionIntent",
+          "DriftSeverity",
+          "VISION_SCHEMA",
+          "createVision",
+          "generateSlug",
+          "validateVision",
+          "updateVisionStatus",
+          "calculateVisionCompletion",
+          "recordDriftEvent",
+          "updateAlignment",
+          "recordSecurityScan",
+          "addCreatedAgent",
+          "updateRoadmapProgress"
+        ]
+      },
+      "generateSlug": {
+        "name": "generateSlug",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "title"
+        ],
+        "length": 1
+      },
+      "recordDriftEvent": {
+        "name": "recordDriftEvent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "driftEvent"
+        ],
+        "length": 2
+      },
+      "recordSecurityScan": {
+        "name": "recordSecurityScan",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "scanResults"
+        ],
+        "length": 2
+      },
+      "updateAlignment": {
+        "name": "updateAlignment",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "alignment"
+        ],
+        "length": 2
+      },
+      "updateRoadmapProgress": {
+        "name": "updateRoadmapProgress",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "roadmapId",
+          "updates"
+        ],
+        "length": 3
+      },
+      "updateVisionStatus": {
+        "name": "updateVisionStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision",
+          "newStatus"
+        ],
+        "length": 2
+      },
+      "validateVision": {
+        "name": "validateVision",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "vision"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "github-issue-hierarchy-manager": {
+    "name": "github-issue-hierarchy-manager",
+    "capturedAt": "2026-02-05T23:54:26.166Z",
+    "exports": {
+      "createGitHubIssue": {
+        "name": "createGitHubIssue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "{ owner",
+          "repo",
+          "title",
+          "body",
+          "labels"
+        ],
+        "length": 1
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "getGitHubConfig",
+          "createGitHubIssue",
+          "generateCcaspMeta",
+          "generateBreadcrumb",
+          "ensureEpicIssue",
+          "ensureRoadmapIssue",
+          "ensurePlanIssue",
+          "ensureHierarchyIssues"
+        ]
+      },
+      "ensureEpicIssue": {
+        "name": "ensureEpicIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "epicSlug",
+          "epicData",
+          "githubConfig"
+        ],
+        "length": 4
+      },
+      "ensureHierarchyIssues": {
+        "name": "ensureHierarchyIssues",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "level",
+          "slug"
+        ],
+        "length": 3
+      },
+      "ensurePlanIssue": {
+        "name": "ensurePlanIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "planSlug",
+          "progressData",
+          "githubConfig",
+          "roadmapContext",
+          "epicContext"
+        ],
+        "length": 4
+      },
+      "ensureRoadmapIssue": {
+        "name": "ensureRoadmapIssue",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectRoot",
+          "roadmapSlug",
+          "roadmapData",
+          "githubConfig",
+          "epicContext"
+        ],
+        "length": 4
+      },
+      "generateBreadcrumb": {
+        "name": "generateBreadcrumb",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "context",
+          "githubConfig"
+        ],
+        "length": 2
+      },
+      "generateCcaspMeta": {
+        "name": "generateCcaspMeta",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "{ source",
+          "slug",
+          "issueType",
+          "progressFile",
+          "parentType",
+          "parentSlug }"
+        ],
+        "length": 1
+      },
+      "getGitHubConfig": {
+        "name": "getGitHubConfig",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "pm-hierarchy-integrations-linear-adapter": {
+    "name": "pm-hierarchy-integrations-linear-adapter",
+    "capturedAt": "2026-02-05T23:54:26.167Z",
+    "exports": {
+      "LinearAdapter": {
+        "name": "LinearAdapter",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      },
+      "createLinearAdapter": {
+        "name": "createLinearAdapter",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "config"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "utils-template-engine": {
+    "name": "utils-template-engine",
+    "capturedAt": "2026-02-05T23:54:26.167Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "replacePlaceholders",
+          "processFile",
+          "processDirectory",
+          "generateTechStack",
+          "flattenObject",
+          "extractPlaceholders",
+          "validateTechStack",
+          "evaluateCondition",
+          "processConditionalBlocks",
+          "processEachBlocks",
+          "processPathVariables",
+          "loadAgentContext",
+          "findBestAgent",
+          "mergeAgentContext"
+        ]
+      },
+      "evaluateCondition": {
+        "name": "evaluateCondition",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "condition",
+          "values"
+        ],
+        "length": 2
+      },
+      "extractPlaceholders": {
+        "name": "extractPlaceholders",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "content"
+        ],
+        "length": 1
+      },
+      "findBestAgent": {
+        "name": "findBestAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agentContext",
+          "prompt",
+          "files"
+        ],
+        "length": 2
+      },
+      "flattenObject": {
+        "name": "flattenObject",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "obj",
+          "prefix"
+        ],
+        "length": 1
+      },
+      "generateTechStack": {
+        "name": "generateTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "detected",
+          "userOverrides"
+        ],
+        "length": 1
+      },
+      "getNestedValue": {
+        "name": "getNestedValue",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "obj",
+          "path"
+        ],
+        "length": 2
+      },
+      "loadAgentContext": {
+        "name": "loadAgentContext",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 0
+      },
+      "mergeAgentContext": {
+        "name": "mergeAgentContext",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "values",
+          "agentContext"
+        ],
+        "length": 2
+      },
+      "processConditionalBlocks": {
+        "name": "processConditionalBlocks",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "content",
+          "values"
+        ],
+        "length": 2
+      },
+      "processDirectory": {
+        "name": "processDirectory",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "dirPath",
+          "values",
+          "options"
+        ],
+        "length": 2
+      },
+      "processEachBlocks": {
+        "name": "processEachBlocks",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "content",
+          "values"
+        ],
+        "length": 2
+      },
+      "processFile": {
+        "name": "processFile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath",
+          "values",
+          "options"
+        ],
+        "length": 2
+      },
+      "processPathVariables": {
+        "name": "processPathVariables",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "content"
+        ],
+        "length": 1
+      },
+      "replacePlaceholders": {
+        "name": "replacePlaceholders",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "content",
+          "values",
+          "options"
+        ],
+        "length": 2
+      },
+      "validateTechStack": {
+        "name": "validateTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack",
+          "requiredPlaceholders"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "init-features": {
+    "name": "init-features",
+    "capturedAt": "2026-02-05T23:54:26.167Z",
+    "exports": {
+      "AVAILABLE_COMMANDS": {
+        "name": "AVAILABLE_COMMANDS",
+        "type": "array",
+        "keys": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "length": 49
+      },
+      "OPTIONAL_FEATURES": {
+        "name": "OPTIONAL_FEATURES",
+        "type": "array",
+        "keys": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17"
+        ],
+        "length": 18
+      },
+      "getCommandsForFeature": {
+        "name": "getCommandsForFeature",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "featureName"
+        ],
+        "length": 1
+      },
+      "getDefaultFeatures": {
+        "name": "getDefaultFeatures",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "getFeatureByName": {
+        "name": "getFeatureByName",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "name"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "vision-analysis-account-detector": {
+    "name": "vision-analysis-account-detector",
+    "capturedAt": "2026-02-05T23:54:26.167Z",
+    "exports": {
+      "detectAccountRequirements": {
+        "name": "detectAccountRequirements",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "tools",
+          "mcpServers"
+        ],
+        "length": 0
+      },
+      "generateEnvTemplate": {
+        "name": "generateEnvTemplate",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "requirements"
+        ],
+        "length": 1
+      },
+      "generateSetupChecklist": {
+        "name": "generateSetupChecklist",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "requirements"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "utils-exploration-docs": {
+    "name": "utils-exploration-docs",
+    "capturedAt": "2026-02-05T23:54:26.167Z",
+    "exports": {
+      "createExplorationDir": {
+        "name": "createExplorationDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "createExplorationDir",
+          "getExplorationDir",
+          "saveExplorationSummary",
+          "saveCodeSnippets",
+          "saveReferenceFiles",
+          "saveAgentDelegation",
+          "savePhaseBreakdown",
+          "saveFindingsJson",
+          "loadExplorationDocs",
+          "explorationDocsExist",
+          "saveAllExplorationDocs",
+          "generatePhaseBreakdownMarkdown"
+        ]
+      },
+      "explorationDocsExist": {
+        "name": "explorationDocsExist",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "generatePhaseBreakdownMarkdown": {
+        "name": "generatePhaseBreakdownMarkdown",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "phases"
+        ],
+        "length": 2
+      },
+      "getExplorationDir": {
+        "name": "getExplorationDir",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "loadExplorationDocs": {
+        "name": "loadExplorationDocs",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "cwd"
+        ],
+        "length": 1
+      },
+      "saveAgentDelegation": {
+        "name": "saveAgentDelegation",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "delegation",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "saveAllExplorationDocs": {
+        "name": "saveAllExplorationDocs",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "explorationData",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "saveCodeSnippets": {
+        "name": "saveCodeSnippets",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "snippets",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "saveExplorationSummary": {
+        "name": "saveExplorationSummary",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "summary",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "saveFindingsJson": {
+        "name": "saveFindingsJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "findings",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "savePhaseBreakdown": {
+        "name": "savePhaseBreakdown",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "phases",
+          "cwd"
+        ],
+        "length": 2
+      },
+      "saveReferenceFiles": {
+        "name": "saveReferenceFiles",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "slug",
+          "files",
+          "cwd"
+        ],
+        "length": 2
+      }
+    }
+  },
+  "init-generators": {
+    "name": "init-generators",
+    "capturedAt": "2026-02-05T23:54:26.168Z",
+    "exports": {
+      "generateIndexFile": {
+        "name": "generateIndexFile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "commands",
+          "projectName"
+        ],
+        "length": 2
+      },
+      "generateMenuCommand": {
+        "name": "generateMenuCommand",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectName",
+          "installedCommands",
+          "installedAgents",
+          "installedSkills",
+          "installedHooks"
+        ],
+        "length": 5
+      },
+      "generateReadmeFile": {
+        "name": "generateReadmeFile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "commands",
+          "projectName"
+        ],
+        "length": 2
+      },
+      "generateSettingsJson": {
+        "name": "generateSettingsJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectName"
+        ],
+        "length": 1
+      },
+      "generateSettingsLocalJson": {
+        "name": "generateSettingsLocalJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateStarterAgent": {
+        "name": "generateStarterAgent",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "agentName"
+        ],
+        "length": 1
+      },
+      "generateStarterHook": {
+        "name": "generateStarterHook",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "hookName",
+          "eventType"
+        ],
+        "length": 1
+      },
+      "generateStarterSkill": {
+        "name": "generateStarterSkill",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "skillName"
+        ],
+        "length": 1
+      },
+      "generateUpdateCheckHook": {
+        "name": "generateUpdateCheckHook",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "agents-testing-scout": {
+    "name": "agents-testing-scout",
+    "capturedAt": "2026-02-05T23:54:26.168Z",
+    "exports": {
+      "CONFIG_TEMPLATES": {
+        "name": "CONFIG_TEMPLATES",
+        "type": "object",
+        "keys": [
+          "vitest.config.ts",
+          "playwright.config.ts",
+          "jest.config.js",
+          "pytest.ini"
+        ]
+      },
+      "FRAMEWORK_RECOMMENDATIONS": {
+        "name": "FRAMEWORK_RECOMMENDATIONS",
+        "type": "object",
+        "keys": [
+          "react",
+          "vue",
+          "angular",
+          "svelte",
+          "nextjs",
+          "fastapi",
+          "django",
+          "express"
+        ]
+      },
+      "TESTING_TOOLS": {
+        "name": "TESTING_TOOLS",
+        "type": "object",
+        "keys": [
+          "javascript",
+          "python",
+          "go",
+          "rust"
+        ]
+      },
+      "classifyTechStack": {
+        "name": "classifyTechStack",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "createScoutPrompt": {
+        "name": "createScoutPrompt",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack",
+          "classification"
+        ],
+        "length": 2
+      },
+      "default": {
+        "name": "default",
+        "type": "object",
+        "keys": [
+          "TESTING_TOOLS",
+          "FRAMEWORK_RECOMMENDATIONS",
+          "CONFIG_TEMPLATES",
+          "classifyTechStack",
+          "getRecommendations",
+          "generateRecommendationTable",
+          "generateConfigFile",
+          "createScoutPrompt",
+          "loadInventory",
+          "saveToInventory",
+          "getInventoryPath"
+        ]
+      },
+      "generateConfigFile": {
+        "name": "generateConfigFile",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "configFile"
+        ],
+        "length": 1
+      },
+      "generateRecommendationTable": {
+        "name": "generateRecommendationTable",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "recommendations"
+        ],
+        "length": 1
+      },
+      "getInventoryPath": {
+        "name": "getInventoryPath",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 0
+      },
+      "getRecommendations": {
+        "name": "getRecommendations",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "techStack"
+        ],
+        "length": 1
+      },
+      "loadInventory": {
+        "name": "loadInventory",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "projectRoot"
+        ],
+        "length": 0
+      },
+      "saveToInventory": {
+        "name": "saveToInventory",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "entry",
+          "projectRoot"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "sync": {
+    "name": "sync",
+    "capturedAt": "2026-02-05T23:54:26.169Z",
+    "exports": {
+      "loadAllTaskStates": {
+        "name": "loadAllTaskStates",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "loadTaskState": {
+        "name": "loadTaskState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber"
+        ],
+        "length": 1
+      },
+      "runSync": {
+        "name": "runSync",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 1
+      },
+      "saveTaskState": {
+        "name": "saveTaskState",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "state"
+        ],
+        "length": 1
+      },
+      "updateTaskStatus": {
+        "name": "updateTaskStatus",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "issueNumber",
+          "taskIndex",
+          "status"
+        ],
+        "length": 3
+      }
+    }
+  },
+  "nvim-setup": {
+    "name": "nvim-setup",
+    "capturedAt": "2026-02-05T23:54:26.169Z",
+    "exports": {
+      "default": {
+        "name": "default",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "runNvimSetup": {
+        "name": "runNvimSetup",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "vision-orchestrators-planning": {
+    "name": "vision-orchestrators-planning",
+    "capturedAt": "2026-02-05T23:54:26.171Z",
+    "exports": {
+      "analyzeRoadmapBreakdown": {
+        "name": "analyzeRoadmapBreakdown",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "orchestrator",
+          "features",
+          "technologies",
+          "complexity"
+        ],
+        "length": 4
+      },
+      "plan": {
+        "name": "plan",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "orchestrator"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "pm-hierarchy-integration-wizard": {
+    "name": "pm-hierarchy-integration-wizard",
+    "capturedAt": "2026-02-05T23:54:26.171Z",
+    "exports": {
+      "promptForIntegrations": {
+        "name": "promptForIntegrations",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "runIntegrationWizard": {
+        "name": "runIntegrationWizard",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
+  "vision-architecture-api-contracts": {
+    "name": "vision-architecture-api-contracts",
+    "capturedAt": "2026-02-05T23:54:26.171Z",
+    "exports": {
+      "formatOpenAPISpec": {
+        "name": "formatOpenAPISpec",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "endpoints",
+          "options"
+        ],
+        "length": 1
+      },
+      "generateRESTEndpoints": {
+        "name": "generateRESTEndpoints",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "features"
+        ],
+        "length": 1
+      },
+      "generateRequestSchema": {
+        "name": "generateRequestSchema",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "endpoint"
+        ],
+        "length": 1
+      },
+      "generateResponseSchema": {
+        "name": "generateResponseSchema",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "endpoint"
+        ],
+        "length": 1
+      }
+    }
+  },
+  "config-agent-config": {
+    "name": "config-agent-config",
+    "capturedAt": "2026-02-05T23:54:26.172Z",
+    "exports": {
+      "createAgentOnlyLauncher": {
+        "name": "createAgentOnlyLauncher",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
+        "length": 0
+      },
+      "generateAgentOnlyPolicy": {
+        "name": "generateAgentOnlyPolicy",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateAgentsJson": {
+        "name": "generateAgentsJson",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateBashLauncher": {
+        "name": "generateBashLauncher",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generatePowerShellLauncher": {
+        "name": "generatePowerShellLauncher",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "generateWindowsBatch": {
+        "name": "generateWindowsBatch",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      }
+    }
+  },
+  "create-phase-dev": {
+    "name": "create-phase-dev",
+    "capturedAt": "2026-02-05T23:54:26.172Z",
+    "exports": {
+      "runCreatePhaseDev": {
+        "name": "runCreatePhaseDev",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options",
+          "parentContext"
+        ],
+        "length": 0
+      },
+      "showPhasDevMainMenu": {
+        "name": "showPhasDevMainMenu",
+        "type": "function",
+        "isAsync": true,
+        "params": [],
         "length": 0
       }
     }

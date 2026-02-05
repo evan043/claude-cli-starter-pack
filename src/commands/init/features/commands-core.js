@@ -1,0 +1,197 @@
+/**
+ * Core Available Commands
+ *
+ * Defines core slash commands (always selected/required).
+ */
+
+export const CORE_COMMANDS = [
+  {
+    name: 'menu',
+    description: 'Interactive ASCII menu for project commands and tools',
+    category: 'Navigation',
+    selected: true,
+    required: true,
+  },
+  {
+    name: 'menu-happy',
+    description: 'Mobile-optimized menu for Happy CLI (40-char width)',
+    category: 'Navigation',
+    selected: true,
+    required: true,
+  },
+  {
+    name: 'ccasp-panel',
+    description: 'Launch control panel in new terminal (agents, skills, hooks, MCP)',
+    category: 'Navigation',
+    selected: true,
+  },
+  {
+    name: 'e2e-test',
+    description: 'Run E2E tests with Playwright (ralph loop, headed, watch modes)',
+    category: 'Testing',
+    selected: true,
+  },
+  {
+    name: 'ralph',
+    description: 'Ralph Loop - Continuous test-fix cycle until all tests pass',
+    category: 'Testing',
+    selected: true,
+  },
+  {
+    name: 'refactor-workflow',
+    description: 'Guided refactoring workflow with branch, task list, and GitHub issue',
+    category: 'Refactoring',
+    selected: true,
+  },
+  {
+    name: 'refactor-analyze',
+    description: 'Deep complexity analysis for refactoring prioritization',
+    category: 'Refactoring',
+    selected: true,
+  },
+  {
+    name: 'golden-master',
+    description: 'Generate characterization tests before refactoring',
+    category: 'Refactoring',
+    selected: true,
+  },
+  {
+    name: 'github-task',
+    description: 'Create GitHub issues with codebase analysis',
+    category: 'GitHub',
+    selected: true,
+  },
+  {
+    name: 'github-menu-issues-list',
+    description: 'Mobile-friendly menu of open GitHub issues',
+    category: 'GitHub',
+    selected: true,
+  },
+  {
+    name: 'create-task-list-for-issue',
+    description: 'Start working on a GitHub issue by number',
+    category: 'GitHub',
+    selected: true,
+  },
+  {
+    name: 'phase-dev-plan',
+    description: 'Create phased development plans (95%+ success rate)',
+    category: 'Planning',
+    selected: true,
+  },
+  {
+    name: 'create-agent',
+    description: 'Create L1/L2/L3 agents for Claude Code',
+    category: 'Claude Code',
+    selected: true,
+  },
+  {
+    name: 'create-hook',
+    description: 'Create enforcement hooks (PreToolUse, PostToolUse, UserPromptSubmit)',
+    category: 'Claude Code',
+    selected: true,
+  },
+  {
+    name: 'create-skill',
+    description: 'Create RAG-enhanced skill packages',
+    category: 'Claude Code',
+    selected: true,
+  },
+  {
+    name: 'explore-mcp',
+    description: 'Discover and install MCP servers based on tech stack',
+    category: 'MCP',
+    selected: true,
+  },
+  {
+    name: 'claude-audit',
+    description: 'Audit CLAUDE.md and .claude/ against best practices',
+    category: 'Claude Code',
+    selected: true,
+  },
+  {
+    name: 'detect-tech-stack',
+    description: 'Re-run tech stack detection and update configuration',
+    category: 'Analysis',
+    selected: true,
+  },
+  {
+    name: 'generate-agents',
+    description: 'Generate stack-specific agents from detected tech stack',
+    category: 'Claude Code',
+    selected: true,
+  },
+  {
+    name: 'project-explorer',
+    description: 'Interactive scaffolding wizard for fresh projects',
+    category: 'Scaffolding',
+    selected: true,
+  },
+  {
+    name: 'init-ccasp-new-project',
+    description: 'Initialize CCASP Full preset on empty folder (for Happy users)',
+    category: 'Setup',
+    selected: true,
+  },
+  {
+    name: 'roadmap-sync',
+    description: 'Sync roadmaps with GitHub Project Board',
+    category: 'GitHub',
+    selected: false,
+  },
+  {
+    name: 'claude-settings',
+    description: 'Configure Claude CLI permissions and modes',
+    category: 'Claude Code',
+    selected: false,
+  },
+  {
+    name: 'codebase-explorer',
+    description: 'Analyze codebase structure and find relevant files',
+    category: 'Analysis',
+    selected: true,
+  },
+  {
+    name: 'rag-pipeline',
+    description: 'Generate RAG pipeline with L1 orchestrator + L2 specialists',
+    category: 'Claude Code',
+    selected: false,
+  },
+  {
+    name: 'create-task-list',
+    description: 'Create intelligent task list with codebase exploration and GitHub integration',
+    category: 'Planning',
+    selected: true,
+  },
+  {
+    name: 'ccasp-setup',
+    description: 'CCASP Setup Wizard - vibe-code friendly project configuration',
+    category: 'Claude Code',
+    selected: true,
+    required: true,
+  },
+  {
+    name: 'project-implementation-for-ccasp',
+    description: 'Complete CCASP project setup - tech stack, CLAUDE.md, GitHub, MCPs',
+    category: 'Setup',
+    selected: true,
+  },
+  {
+    name: 'update-check',
+    description: 'Check for CCASP updates and add new features to your project',
+    category: 'Maintenance',
+    selected: true,
+  },
+  {
+    name: 'update-smart',
+    description: 'Smart merge manager for customized assets during updates',
+    category: 'Maintenance',
+    selected: true,
+  },
+  {
+    name: 'ask-claude',
+    description: 'Natural language command discovery - find the right command for any task',
+    category: 'Discovery',
+    selected: true,
+  },
+];
