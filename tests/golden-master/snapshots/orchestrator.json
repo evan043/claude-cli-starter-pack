@@ -1,7 +1,18 @@
 {
   "path": "src/vision/orchestrator.js",
-  "capturedAt": "2026-02-05T22:07:50.419Z",
+  "capturedAt": "2026-02-05T22:22:59.800Z",
   "exports": {
+    "DEFAULT_CONFIG": {
+      "type": "object",
+      "keys": [
+        "security",
+        "analysis",
+        "autonomous",
+        "observer",
+        "agents"
+      ],
+      "length": 5
+    },
     "OrchestratorStage": {
       "type": "object",
       "keys": [
@@ -24,6 +35,57 @@
       "params": [],
       "isAsync": false
     },
+    "analyze": {
+      "type": "function",
+      "name": "analyze",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
+    "analyzeRoadmapBreakdown": {
+      "type": "function",
+      "name": "analyzeRoadmapBreakdown",
+      "params": [
+        "orchestrator",
+        "features",
+        "technologies",
+        "complexity"
+      ],
+      "isAsync": false
+    },
+    "architect": {
+      "type": "function",
+      "name": "architect",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
+    "checkSessionRestart": {
+      "type": "function",
+      "name": "checkSessionRestart",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": false
+    },
+    "complete": {
+      "type": "function",
+      "name": "complete",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
+    "createAgents": {
+      "type": "function",
+      "name": "createAgents",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
     "createOrchestrator": {
       "type": "function",
       "name": "createOrchestrator",
@@ -44,6 +106,88 @@
       ],
       "length": 5
     },
+    "determineRequiredAgents": {
+      "type": "function",
+      "name": "determineRequiredAgents",
+      "params": [
+        "orchestrator",
+        "features",
+        "technologies"
+      ],
+      "isAsync": false
+    },
+    "execute": {
+      "type": "function",
+      "name": "execute",
+      "params": [
+        "orchestrator",
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "generateTitleFromPrompt": {
+      "type": "function",
+      "name": "generateTitleFromPrompt",
+      "params": [
+        "prompt"
+      ],
+      "isAsync": false
+    },
+    "getStatus": {
+      "type": "function",
+      "name": "getStatus",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": false
+    },
+    "initialize": {
+      "type": "function",
+      "name": "initialize",
+      "params": [
+        "orchestrator",
+        "prompt",
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "isPackageBlocked": {
+      "type": "function",
+      "name": "isPackageBlocked",
+      "params": [
+        "orchestrator",
+        "packageName"
+      ],
+      "isAsync": false
+    },
+    "log": {
+      "type": "function",
+      "name": "log",
+      "params": [
+        "orchestrator",
+        "level",
+        "message",
+        "data = null"
+      ],
+      "isAsync": false
+    },
+    "observe": {
+      "type": "function",
+      "name": "observe",
+      "params": [
+        "orchestrator",
+        "update"
+      ],
+      "isAsync": false
+    },
+    "plan": {
+      "type": "function",
+      "name": "plan",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
     "quickRun": {
       "type": "function",
       "name": "quickRun",
@@ -51,6 +195,59 @@
         "projectRoot",
         "prompt",
         "options = {}"
+      ],
+      "isAsync": true
+    },
+    "resume": {
+      "type": "function",
+      "name": "resume",
+      "params": [
+        "orchestrator",
+        "visionSlug"
+      ],
+      "isAsync": true
+    },
+    "run": {
+      "type": "function",
+      "name": "run",
+      "params": [
+        "orchestrator",
+        "prompt",
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "scanSecurity": {
+      "type": "function",
+      "name": "scanSecurity",
+      "params": [
+        "orchestrator"
+      ],
+      "isAsync": true
+    },
+    "selectAgentForPlan": {
+      "type": "function",
+      "name": "selectAgentForPlan",
+      "params": [
+        "orchestrator",
+        "progress"
+      ],
+      "isAsync": false
+    },
+    "transitionStage": {
+      "type": "function",
+      "name": "transitionStage",
+      "params": [
+        "orchestrator",
+        "newStage"
+      ],
+      "isAsync": false
+    },
+    "validate": {
+      "type": "function",
+      "name": "validate",
+      "params": [
+        "orchestrator"
       ],
       "isAsync": true
     }
