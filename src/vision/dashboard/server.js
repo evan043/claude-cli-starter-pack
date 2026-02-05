@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
-import { listVisions, loadVision, getVisionStatus } from '../index.js';
+import { listVisions, loadVision, getVisionStatus, calculateVisionCompletion } from '../index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -250,19 +250,50 @@ export class VisionDashboardServer {
         visions.map(async (v) => {
           try {
             const vision = await loadVision(this.projectRoot, v.slug);
-            const status = getVisionStatus(this.projectRoot, v.slug);
+            if (!vision) {
+              return {
+                slug: v.slug,
+                title: v.slug,
+                status: 'error',
+                completion: 0,
+                alignment: 0
+              };
+            }
+
+            // Calculate completion dynamically from roadmaps
+            let completion = 0;
+            const roadmaps = vision.execution_plan?.roadmaps || [];
+            if (roadmaps.length > 0) {
+              const totalCompletion = roadmaps.reduce((sum, rm) => sum + (rm.completion_percentage || 0), 0);
+              completion = Math.round(totalCompletion / roadmaps.length);
+            }
+
+            // Count roadmap statuses
+            const completedRoadmaps = roadmaps.filter(rm => rm.status === 'completed').length;
+            const inProgressRoadmaps = roadmaps.filter(rm => rm.status === 'in_progress').length;
+            const pendingRoadmaps = roadmaps.filter(rm => rm.status === 'pending' || !rm.status).length;
+
+            // Get alignment from observer
+            const alignment = vision.observer?.current_alignment ?? 1.0;
+
             return {
               slug: v.slug,
               title: v.title || vision?.title || v.slug,
               status: vision?.status || 'unknown',
               orchestrator: vision?.orchestrator || {},
-              completion: status?.completion_percentage || 0,
-              alignment: status?.observer?.current_alignment || 1.0,
-              roadmaps: status?.roadmaps || { total: 0, completed: 0 },
-              driftEvents: status?.observer?.drift_events || 0,
-              lastUpdated: vision?.updated_at || null
+              completion: completion,
+              alignment: alignment,
+              roadmaps: {
+                total: roadmaps.length,
+                completed: completedRoadmaps,
+                in_progress: inProgressRoadmaps,
+                pending: pendingRoadmaps
+              },
+              driftEvents: vision.observer?.drift_events?.length || 0,
+              lastUpdated: vision?.updated_at || vision?.metadata?.updated || null
             };
-          } catch {
+          } catch (err) {
+            console.error(`[Dashboard] Error loading vision ${v.slug}:`, err.message);
             return {
               slug: v.slug,
               title: v.slug,

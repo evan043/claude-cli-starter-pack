@@ -13,7 +13,7 @@ import { loadVision, saveVision, updateVision } from './state-manager.js';
 /**
  * Domain to tech stack mappings
  */
-const DOMAIN_PATTERNS = {
+export const DOMAIN_PATTERNS = {
   frontend: {
     keywords: ['frontend', 'ui', 'component', 'react', 'vue', 'angular', 'svelte', 'nextjs'],
     frameworks: ['react', 'vue', 'angular', 'svelte', 'nextjs', 'nuxt', 'remix']

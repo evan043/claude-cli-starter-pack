@@ -19,6 +19,14 @@ local function get_agents()
   return require("ccasp.agents")
 end
 
+local function get_prompt_injector()
+  return require("ccasp.prompt_injector")
+end
+
+local function get_openai()
+  return require("ccasp.openai")
+end
+
 -- Icons and formatting
 local icons = {
   enabled = "",
@@ -42,6 +50,7 @@ M.features = {
   { key = "p", name = "Phased Dev", path = "phasedDevelopment.enabled", default = true },
   { key = "h", name = "Hooks", path = "hooks.enabled", default = true },
   { key = "k", name = "Token Tracking", path = "tokenManagement.enabled", default = false },
+  { key = "i", name = "Prompt Injector", path = "promptInjector.enabled", default = false, special = "prompt_injector" },
 }
 
 -- Model options
@@ -134,6 +143,33 @@ function M.render()
     table.insert(lines, "")
   end
 
+  -- Prompt Injector Status Section
+  local pi_ok, prompt_injector = pcall(get_prompt_injector)
+  if pi_ok then
+    local pi_status = prompt_injector.get_status()
+    table.insert(lines, "   Prompt Injector")
+    table.insert(lines, "  " .. string.rep(icons.section, 39))
+
+    local pi_state = pi_status.enabled and "ENABLED" or "DISABLED"
+    local pi_icon = pi_status.enabled and icons.enabled or icons.disabled
+    table.insert(lines, string.format("    %s Status: %s", pi_icon, pi_state))
+
+    if pi_status.openai_available then
+      local openai = get_openai()
+      table.insert(lines, string.format("    %s Model: %s", icons.model, pi_status.openai_model or "gpt-5.2"))
+      table.insert(lines, string.format("      Requests: %d", pi_status.request_count or 0))
+    else
+      table.insert(lines, "     OpenAI: Not configured")
+      table.insert(lines, "      Add OPENAI_API_KEY to .env")
+    end
+
+    if pi_status.auto_enhance then
+      table.insert(lines, "    ✨ Auto-enhance: ON")
+    end
+
+    table.insert(lines, "")
+  end
+
   -- Feature Toggles Section
   table.insert(lines, "  " .. icons.hook .. " Features")
   table.insert(lines, "  " .. string.rep(icons.section, 39))
@@ -160,6 +196,10 @@ function M.render()
   table.insert(lines, "    [K] Kill All Agents")
   table.insert(lines, "    [S] Save Settings")
   table.insert(lines, "    [D] Detect Tech Stack")
+  table.insert(lines, "")
+  table.insert(lines, "    [I] Toggle Prompt Injector")
+  table.insert(lines, "    [A] Toggle Auto-Enhance")
+  table.insert(lines, "    [E] Quick Enhance Selection")
   table.insert(lines, "")
   table.insert(lines, "    [q] Close Panel")
   table.insert(lines, "")
@@ -339,6 +379,33 @@ function M.setup_keymaps()
     vim.defer_fn(function()
       M.refresh()
     end, 1000)
+  end, opts)
+
+  -- Prompt Injector actions
+  vim.keymap.set("n", "I", function()
+    local pi_ok, prompt_injector = pcall(get_prompt_injector)
+    if pi_ok then
+      prompt_injector.toggle()
+      M.refresh()
+    else
+      vim.notify("CCASP: Prompt Injector module not available", vim.log.levels.ERROR)
+    end
+  end, opts)
+
+  vim.keymap.set("n", "A", function()
+    local pi_ok, prompt_injector = pcall(get_prompt_injector)
+    if pi_ok then
+      prompt_injector.toggle_auto_enhance()
+      M.refresh()
+    end
+  end, opts)
+
+  vim.keymap.set("n", "E", function()
+    local pi_ok, prompt_injector = pcall(get_prompt_injector)
+    if pi_ok then
+      M.close()
+      prompt_injector.quick_enhance()
+    end
   end, opts)
 
   -- Refresh

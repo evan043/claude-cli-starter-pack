@@ -4,7 +4,7 @@
 local M = {}
 
 -- Plugin version
-M.version = "1.0.0"
+M.version = "1.1.0"
 
 -- Default configuration
 M.config = {
@@ -25,9 +25,19 @@ M.config = {
   -- Control panel settings
   control_panel = {
     width = 45,
-    height = 25,
+    height = 30, -- Increased for Prompt Injector section
     position = "right", -- "right", "left", "float"
     border = "rounded",
+  },
+  -- Prompt Injector settings (NEW in v1.1.0)
+  prompt_injector = {
+    enabled = false,
+    auto_enhance = false,
+    openai = {
+      model = "gpt-5.2",
+      max_tokens = 1000,
+      temperature = 0.3,
+    },
   },
   -- CCASP paths (relative to project root)
   paths = {
@@ -59,6 +69,9 @@ M.config = {
     dashboard = "d",
     restart_all = "R",
     kill_all = "K",
+    -- Prompt Injector keymaps
+    prompt_injector = "i",
+    quick_enhance = "e",
   },
 }
 
@@ -81,10 +94,22 @@ function M.setup(opts)
     features = require("ccasp.panels.features"),
     hooks = require("ccasp.panels.hooks"),
     dashboard = require("ccasp.panels.dashboard"),
+    prompt_editor = require("ccasp.panels.prompt_editor"),
   }
   M.agents = require("ccasp.agents")
   M.telescope = require("ccasp.telescope")
   M.statusline = require("ccasp.statusline")
+
+  -- Load Prompt Injector modules
+  M.openai = require("ccasp.openai")
+  M.prompt_injector = require("ccasp.prompt_injector")
+
+  -- Initialize Prompt Injector with config
+  M.prompt_injector.setup({
+    enabled = M.config.prompt_injector.enabled,
+    auto_enhance = M.config.prompt_injector.auto_enhance,
+    openai = M.config.prompt_injector.openai,
+  })
 
   -- Setup keymaps
   M.setup_keymaps()

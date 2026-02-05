@@ -5,6 +5,7 @@
  * Continues until vision.status === 'completed' or human intervention needed.
  */
 
+// Re-export all named exports
 export {
   runAutonomousLoop,
   executeNextTasks,
@@ -35,23 +36,15 @@ export {
   generateCompletionReport
 } from './completion-verifier.js';
 
+// Import for default export
+import * as executionLoop from './execution-loop.js';
+import * as testValidator from './test-validator.js';
+import * as selfHealer from './self-healer.js';
+import * as completionVerifier from './completion-verifier.js';
+
 export default {
-  runAutonomousLoop,
-  executeNextTasks,
-  checkProgress,
-  shouldContinue,
-  handleInterruption,
-  runTests,
-  parseTestResults,
-  identifyFailures,
-  generateTestReport,
-  generateFixes,
-  applyFixes,
-  validateFix,
-  shouldEscalate,
-  MAX_RETRIES,
-  verifyMVPComplete,
-  checkAllTestsPass,
-  checkAllFeaturesImplemented,
-  generateCompletionReport
+  ...executionLoop,
+  ...testValidator,
+  ...selfHealer,
+  ...completionVerifier
 };

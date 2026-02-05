@@ -11,6 +11,7 @@ Neovim integration for Claude CLI Advanced Starter Pack (CCASP). Build a termina
 - **Dashboard**: Overview of project status, token usage, installed components
 - **Telescope Integration**: Browse commands, skills, hooks with fuzzy finding
 - **Statusline**: Token usage, agent status, version info for lualine/etc
+- **Prompt Injector** *(v1.1.0)*: Intercept prompts before sending to Claude, optionally enhance with GPT-5.2
 
 ## Installation
 
@@ -93,6 +94,19 @@ require("ccasp").setup({
     dashboard = "d",
     restart_all = "R",
     kill_all = "K",
+    prompt_injector = "i",
+    quick_enhance = "e",
+  },
+
+  -- Prompt Injector (v1.1.0)
+  prompt_injector = {
+    enabled = false,           -- Enable prompt interception
+    auto_enhance = false,      -- Auto-enhance prompts with GPT-5.2
+    openai = {
+      model = "gpt-5.2",       -- OpenAI model for enhancement
+      max_tokens = 1000,
+      temperature = 0.3,
+    },
   },
 })
 ```
@@ -112,6 +126,8 @@ Default keybindings (with `<leader>c` prefix):
 | `<leader>cd` | Dashboard |
 | `<leader>cR` | Restart All Agents |
 | `<leader>cK` | Kill All Agents |
+| `<leader>ci` | Toggle Prompt Injector |
+| `<leader>ce` | Quick Enhance (current line/selection) |
 
 ## Commands
 
@@ -127,6 +143,8 @@ Default keybindings (with `<leader>c` prefix):
 | `:CcaspKillAll` | Kill all agents |
 | `:CcaspRestartAll` | Restart all agents |
 | `:CcaspHealth` | Check plugin health |
+| `:CcaspPromptInjector` | Toggle Prompt Injector |
+| `:CcaspQuickEnhance` | Enhance current line with GPT-5.2 |
 
 ## Panels
 
@@ -169,6 +187,15 @@ Default keybindings (with `<leader>c` prefix):
    [g]  GitHub Sync    OFF
    [p]  Phased Dev     ON
    [h]  Hooks          ON
+   [i]  Prompt Inj.    OFF
+
+ Prompt Injector
+───────────────────────────────────────
+   Status: Disabled
+   Model:  gpt-5.2
+   Auto:   OFF
+
+   [I] Toggle | [A] Auto-Enhance | [E] Quick
 
  Actions
 ───────────────────────────────────────
@@ -197,6 +224,61 @@ Manage hooks by lifecycle event:
 - `u1-u3`: Toggle UserPromptSubmit hooks
 - `H`: Toggle all hooks globally
 - `e`: Edit settings.json directly
+
+### Prompt Injector *(v1.1.0)*
+
+Intercept prompts before they're sent to Claude CLI, with optional GPT-5.2 enhancement:
+
+```
+╔═══════════════════════════════════════════════════╗
+║           CCASP Prompt Editor (Enhanced)          ║
+╠═══════════════════════════════════════════════════╣
+║                                                   ║
+║  # ✨ Enhanced Prompt                             ║
+║                                                   ║
+║  > Original: refactor this function...            ║
+║                                                   ║
+║  ---                                              ║
+║                                                   ║
+║  1. Analyze the function structure                ║
+║  2. Identify code smells and duplication          ║
+║  3. Apply Extract Method pattern where needed     ║
+║  4. Ensure all tests pass after refactoring       ║
+║                                                   ║
+╠═══════════════════════════════════════════════════╣
+║ <CR>:Send | <C-e>:Enhance Again | <C-o>:Original  ║
+╚═══════════════════════════════════════════════════╝
+```
+
+**Control Panel Keys:**
+- `[I]` Toggle Prompt Injector mode
+- `[A]` Toggle Auto-Enhance (automatically enhance all prompts)
+- `[E]` Quick Enhance current line/selection
+
+**Prompt Editor Keys:**
+- `<Enter>` / `<C-s>` - Send prompt to Claude
+- `<C-e>` / `e` / `E` - Enhance with GPT-5.2
+- `<C-o>` - Show original prompt (if enhanced)
+- `<Esc>` / `q` - Cancel and close
+- `?` - Show help
+
+**Setup:**
+
+1. Create a `.env` file in your project root:
+```bash
+OPENAI_API_KEY=sk-...your-key-here...
+OPENAI_MODEL=gpt-5.2
+CCASP_PROMPT_INJECTOR_ENABLED=true
+```
+
+2. Enable in config or toggle with `[I]` in the Control Panel
+
+**Supported Models:**
+- `gpt-5.2` - Best balance of quality and cost (default)
+- `gpt-5.2-codex` - Optimized for code
+- `o3` - Advanced reasoning
+- `o4-mini` - Fast and lightweight
+- `gpt-4.1` - 1M token context
 
 ## Statusline Integration
 
