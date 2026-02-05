@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { analyzeCodebase, generateStackSummary, displayAnalysisResults } from './codebase-analyzer.js';
 import { calculateProjectScale } from './scale-calculator.js';
+import { kebabCasePrompt } from '../../utils/inquirer-presets.js';
 
 /**
  * Run the interactive wizard
@@ -66,8 +67,7 @@ async function promptProjectInfo(options) {
       default: options.name || '',
       validate: (input) => input.length > 0 || 'Project name is required',
     },
-    {
-      type: 'input',
+    kebabCasePrompt({
       name: 'projectSlug',
       message: 'Project slug (kebab-case):',
       default: (answers) =>
@@ -75,13 +75,7 @@ async function promptProjectInfo(options) {
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, ''),
-      validate: (input) => {
-        if (!/^[a-z][a-z0-9-]*$/.test(input)) {
-          return 'Use kebab-case (lowercase letters, numbers, hyphens)';
-        }
-        return true;
-      },
-    },
+    }),
     {
       type: 'editor',
       name: 'description',

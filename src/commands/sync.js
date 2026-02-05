@@ -7,12 +7,13 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { loadConfigSync, execCommand } from '../utils.js';
 import { getIssue, addIssueComment, updateProjectItemField, getProjectItemId } from '../github/client.js';
 import { parseIssueBody, toClaudeTaskList, toMarkdownChecklist, getCompletionStats } from '../analysis/checklist-parser.js';
+import { safeWriteJson } from '../utils/file-ops.js';
 
 // State directory
 const STATE_DIR = join(process.cwd(), '.gtask');
@@ -471,12 +472,8 @@ async function syncWatch(issueNumber, options) {
  * Save task state to disk
  */
 export function saveTaskState(state) {
-  if (!existsSync(STATE_DIR)) {
-    mkdirSync(STATE_DIR, { recursive: true });
-  }
-
   const filePath = join(STATE_DIR, `issue-${state.issueNumber}.json`);
-  writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+  safeWriteJson(filePath, state);
 }
 
 /**

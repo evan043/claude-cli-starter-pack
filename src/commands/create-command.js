@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { generateCommandTemplate, COMPLEXITY_LEVELS } from '../agents/templates.js';
+import { kebabCasePrompt, descriptionPrompt } from '../utils/inquirer-presets.js';
 
 /**
  * Run the create-command wizard
@@ -23,29 +24,19 @@ export async function runCreateCommand(options) {
 
   // Step 1: Command name
   const { name } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
+    kebabCasePrompt({
       message: 'Command name (without /):',
       default: options.name || 'my-command',
-      validate: (input) => {
-        if (!/^[a-z][a-z0-9-]*$/.test(input)) {
-          return 'Use kebab-case (lowercase letters, numbers, hyphens)';
-        }
-        return true;
-      },
-    },
+    }),
   ]);
 
   // Step 2: Description
   const { description } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'description',
+    descriptionPrompt({
       message: 'Brief description (shown in menus):',
       default: `Run ${name} workflow`,
       validate: (input) => input.length > 0 || 'Description is required',
-    },
+    }),
   ]);
 
   // Step 3: Complexity

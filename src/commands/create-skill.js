@@ -16,6 +16,7 @@ import {
   generateSkillWorkflowsReadme,
   generateAgentTemplate,
 } from '../agents/templates.js';
+import { kebabCasePrompt, descriptionPrompt } from '../utils/inquirer-presets.js';
 
 /**
  * Run the create-skill wizard
@@ -28,28 +29,18 @@ export async function runCreateSkill(options) {
 
   // Step 1: Skill name
   const { name } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
+    kebabCasePrompt({
       message: 'Skill name (kebab-case):',
       default: options.name || 'my-skill',
-      validate: (input) => {
-        if (!/^[a-z][a-z0-9-]*$/.test(input)) {
-          return 'Use kebab-case (lowercase letters, numbers, hyphens)';
-        }
-        return true;
-      },
-    },
+    }),
   ]);
 
   // Step 2: Description
   const { description } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'description',
+    descriptionPrompt({
       message: 'What does this skill provide?',
       default: `${name} domain expertise and workflows`,
-    },
+    }),
   ]);
 
   // Step 3: Triggers

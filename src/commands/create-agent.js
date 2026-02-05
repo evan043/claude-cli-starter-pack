@@ -19,6 +19,7 @@ import {
 import { runCreateHook } from './create-hook.js';
 import { runCreateCommand } from './create-command.js';
 import { runCreateSkill } from './create-skill.js';
+import { kebabCasePrompt, descriptionPrompt } from '../utils/inquirer-presets.js';
 
 /**
  * Run the create-agent wizard
@@ -109,28 +110,18 @@ async function createIndividualAgent(options) {
 
   // Step 1: Agent name
   const { name } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
+    kebabCasePrompt({
       message: 'Agent name (kebab-case):',
       default: options.name || 'my-agent',
-      validate: (input) => {
-        if (!/^[a-z][a-z0-9-]*$/.test(input)) {
-          return 'Use kebab-case (lowercase letters, numbers, hyphens)';
-        }
-        return true;
-      },
-    },
+    }),
   ]);
 
   // Step 2: Description
   const { description } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'description',
+    descriptionPrompt({
       message: 'What does this agent do?',
       default: `Specialized agent for ${name} tasks`,
-    },
+    }),
   ]);
 
   // Step 3: Level

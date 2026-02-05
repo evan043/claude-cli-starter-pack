@@ -15,6 +15,7 @@ import {
   HOOK_EVENT_TYPES,
   HOOK_TOOLS,
 } from '../agents/templates.js';
+import { kebabCasePrompt, descriptionPrompt } from '../utils/inquirer-presets.js';
 
 /**
  * Run the create-hook wizard
@@ -27,28 +28,18 @@ export async function runCreateHook(options) {
 
   // Step 1: Hook name
   const { name } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'name',
+    kebabCasePrompt({
       message: 'Hook name (kebab-case):',
       default: options.name || 'my-hook',
-      validate: (input) => {
-        if (!/^[a-z][a-z0-9-]*$/.test(input)) {
-          return 'Use kebab-case (lowercase letters, numbers, hyphens)';
-        }
-        return true;
-      },
-    },
+    }),
   ]);
 
   // Step 2: Description
   const { description } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'description',
+    descriptionPrompt({
       message: 'What does this hook do?',
       default: `Enforce patterns for ${name}`,
-    },
+    }),
   ]);
 
   // Step 3: Event type

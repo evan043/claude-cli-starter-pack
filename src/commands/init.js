@@ -14,6 +14,7 @@ import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
 import { getVersion } from '../utils.js';
+import { createLogger } from '../utils/logger.js';
 import { createBackup } from './setup-wizard.js';
 import {
   loadUsageTracking,
@@ -30,6 +31,7 @@ import {
 } from '../utils/smart-merge.js';
 import { registerProject } from '../utils/global-registry.js';
 import { replacePlaceholders } from '../utils/template-engine.js';
+import { safeWriteFile, safeWriteJson } from '../utils/file-ops.js';
 
 // Import from extracted modules
 import {
@@ -59,6 +61,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const log = createLogger('init');
+
 /**
  * Run dev mode - rapid template testing workflow
  * Loads existing tech-stack.json, processes templates, overwrites commands
@@ -85,22 +89,22 @@ async function runDevMode(options = {}) {
   if (existsSync(techStackPath)) {
     try {
       techStack = JSON.parse(readFileSync(techStackPath, 'utf8'));
-      console.log(chalk.green('  ✓ Loaded existing tech-stack.json'));
+      log.info(chalk.green('  ✓ Loaded existing tech-stack.json'));
     } catch (err) {
-      console.log(chalk.yellow(`  ⚠ Could not parse tech-stack.json: ${err.message}`));
+      log.warn(`  ⚠ Could not parse tech-stack.json: ${err.message}`);
     }
   } else {
-    console.log(chalk.yellow('  ⚠ No tech-stack.json found - templates will have unprocessed placeholders'));
+    log.warn('  ⚠ No tech-stack.json found - templates will have unprocessed placeholders');
   }
 
   // Ensure directories exist
   if (!existsSync(commandsDir)) {
     mkdirSync(commandsDir, { recursive: true });
-    console.log(chalk.green('  ✓ Created .claude/commands/'));
+    log.info(chalk.green('  ✓ Created .claude/commands/'));
   }
   if (!existsSync(hooksDir)) {
     mkdirSync(hooksDir, { recursive: true });
-    console.log(chalk.green('  ✓ Created .claude/hooks/'));
+    log.info(chalk.green('  ✓ Created .claude/hooks/'));
   }
 
   // Identify custom commands (no matching template) to preserve
@@ -409,21 +413,21 @@ export async function runInit(options = {}) {
       }
 
       if (settingsUpdated) {
-        writeFileSync(settingsPath, JSON.stringify(existingSettings, null, 2), 'utf8');
-        console.log(chalk.green('  ✓ Updated settings.json (added update check hook)'));
+        safeWriteJson(settingsPath, existingSettings);
+        log.info(chalk.green('  ✓ Updated settings.json (added update check hook)'));
       } else {
-        console.log(chalk.blue('  ○ settings.json exists (preserved)'));
+        log.debug(chalk.blue('  ○ settings.json exists (preserved)'));
       }
     } catch (error) {
-      console.log(chalk.blue('  ○ settings.json exists (preserved)'));
+      log.debug(chalk.blue('  ○ settings.json exists (preserved)'));
     }
   }
 
   if (!existsSync(settingsLocalPath)) {
     writeFileSync(settingsLocalPath, generateSettingsLocalJson(), 'utf8');
-    console.log(chalk.green('  ✓ Created settings.local.json'));
+    log.info(chalk.green('  ✓ Created settings.local.json'));
   } else {
-    console.log(chalk.blue('  ○ settings.local.json exists (preserved)'));
+    log.debug(chalk.blue('  ○ settings.local.json exists (preserved)'));
   }
 
   console.log('');
@@ -437,24 +441,21 @@ export async function runInit(options = {}) {
   if (agentFiles.length === 0) {
     const starterAgentPath = join(agentsDir, 'example-agent.md');
     writeFileSync(starterAgentPath, generateStarterAgent('example-agent'), 'utf8');
-    console.log(chalk.green('  ✓ Created agents/example-agent.md (starter template)'));
+    log.info(chalk.green('  ✓ Created agents/example-agent.md (starter template)'));
   } else {
-    console.log(chalk.blue(`  ○ agents/ has ${agentFiles.length} existing agent(s) (preserved)`));
+    log.debug(chalk.blue(`  ○ agents/ has ${agentFiles.length} existing agent(s) (preserved)`));
   }
 
   // Check if skills folder has any skills before adding example
   const skillDirs = existsSync(skillsDir) ? readdirSync(skillsDir).filter(f => !f.startsWith('.')) : [];
   if (skillDirs.length === 0) {
     const starterSkillDir = join(skillsDir, 'example-skill');
-    mkdirSync(starterSkillDir, { recursive: true });
-    mkdirSync(join(starterSkillDir, 'context'), { recursive: true });
-    mkdirSync(join(starterSkillDir, 'workflows'), { recursive: true });
-    writeFileSync(join(starterSkillDir, 'skill.md'), generateStarterSkill('example-skill'), 'utf8');
-    writeFileSync(join(starterSkillDir, 'context', 'README.md'), '# Context\n\nAdd supporting documentation here.\n', 'utf8');
-    writeFileSync(join(starterSkillDir, 'workflows', 'README.md'), '# Workflows\n\nAdd step-by-step procedures here.\n', 'utf8');
-    console.log(chalk.green('  ✓ Created skills/example-skill/ (starter template)'));
+    safeWriteFile(join(starterSkillDir, 'skill.md'), generateStarterSkill('example-skill'));
+    safeWriteFile(join(starterSkillDir, 'context', 'README.md'), '# Context\n\nAdd supporting documentation here.\n');
+    safeWriteFile(join(starterSkillDir, 'workflows', 'README.md'), '# Workflows\n\nAdd step-by-step procedures here.\n');
+    log.info(chalk.green('  ✓ Created skills/example-skill/ (starter template)'));
   } else {
-    console.log(chalk.blue(`  ○ skills/ has ${skillDirs.length} existing skill(s) (preserved)`));
+    log.debug(chalk.blue(`  ○ skills/ has ${skillDirs.length} existing skill(s) (preserved)`));
   }
 
   // Check if hooks folder has any files before adding example
@@ -462,9 +463,9 @@ export async function runInit(options = {}) {
   if (hookFiles.length === 0) {
     const starterHookPath = join(hooksDir, 'example-hook.js');
     writeFileSync(starterHookPath, generateStarterHook('example-hook', 'PreToolUse'), 'utf8');
-    console.log(chalk.green('  ✓ Created hooks/example-hook.js (starter template)'));
+    log.info(chalk.green('  ✓ Created hooks/example-hook.js (starter template)'));
   } else {
-    console.log(chalk.blue(`  ○ hooks/ has ${hookFiles.length} existing hook(s) (preserved)`));
+    log.debug(chalk.blue(`  ○ hooks/ has ${hookFiles.length} existing hook(s) (preserved)`));
   }
 
   // Always deploy the CCASP update check hook (essential for update notifications)
@@ -476,11 +477,11 @@ export async function runInit(options = {}) {
     if (existsSync(templatePath)) {
       const hookContent = readFileSync(templatePath, 'utf8');
       writeFileSync(updateCheckHookPath, hookContent, 'utf8');
-      console.log(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
+      log.info(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
     } else {
       // Fallback: create minimal version
       writeFileSync(updateCheckHookPath, generateUpdateCheckHook(), 'utf8');
-      console.log(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
+      log.info(chalk.green('  ✓ Created hooks/ccasp-update-check.js (update notifications)'));
     }
   } else {
     // Hook exists - check if it has the buggy path (Issue #9: state file mismatch)
@@ -493,9 +494,9 @@ export async function runInit(options = {}) {
       // Replace with fixed template version
       const hookContent = readFileSync(templatePath, 'utf8');
       writeFileSync(updateCheckHookPath, hookContent, 'utf8');
-      console.log(chalk.green('  ✓ Updated hooks/ccasp-update-check.js (fixed state file path)'));
+      log.info(chalk.green('  ✓ Updated hooks/ccasp-update-check.js (fixed state file path)'));
     } else {
-      console.log(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
+      log.debug(chalk.blue('  ○ hooks/ccasp-update-check.js exists (preserved)'));
     }
   }
 
@@ -506,10 +507,10 @@ export async function runInit(options = {}) {
     if (existsSync(templatePath)) {
       const hookContent = readFileSync(templatePath, 'utf8');
       writeFileSync(usageTrackingHookPath, hookContent, 'utf8');
-      console.log(chalk.green('  ✓ Created hooks/usage-tracking.js (smart merge tracking)'));
+      log.info(chalk.green('  ✓ Created hooks/usage-tracking.js (smart merge tracking)'));
     }
   } else {
-    console.log(chalk.blue('  ○ hooks/usage-tracking.js exists (preserved)'));
+    log.debug(chalk.blue('  ○ hooks/usage-tracking.js exists (preserved)'));
   }
 
   console.log('');
@@ -1340,10 +1341,10 @@ export async function runInit(options = {}) {
   };
 
   if (!existsSync(techStackPath)) {
-    writeFileSync(techStackPath, JSON.stringify(techStack, null, 2), 'utf8');
-    console.log(chalk.green('  ✓ Created config/tech-stack.json'));
+    safeWriteJson(techStackPath, techStack);
+    log.info(chalk.green('  ✓ Created config/tech-stack.json'));
   } else {
-    console.log(chalk.blue('  ○ config/tech-stack.json exists (preserved)'));
+    log.debug(chalk.blue('  ○ config/tech-stack.json exists (preserved)'));
   }
 
   // Update ccasp-state.json with current version (fixes version display in /menu)
@@ -1363,8 +1364,8 @@ export async function runInit(options = {}) {
   ccaspState.currentVersion = currentVersion;
   ccaspState.installedAt = new Date().toISOString();
 
-  writeFileSync(ccaspStatePath, JSON.stringify(ccaspState, null, 2), 'utf8');
-  console.log(chalk.green(`  ✓ Updated ccasp-state.json (v${currentVersion})`));
+  safeWriteJson(ccaspStatePath, ccaspState);
+  log.info(chalk.green(`  ✓ Updated ccasp-state.json (v${currentVersion})`));
 
   // Register project in global registry (unless --no-register flag is set)
   if (!options.noRegister) {
@@ -1374,9 +1375,9 @@ export async function runInit(options = {}) {
       features: selectedFeatures
     });
     if (isNewProject) {
-      console.log(chalk.green(`  ✓ Registered project in global CCASP registry`));
+      log.info(chalk.green(`  ✓ Registered project in global CCASP registry`));
     } else {
-      console.log(chalk.dim(`  ○ Updated project in global CCASP registry`));
+      log.debug(`  ○ Updated project in global CCASP registry`);
     }
   }
 
@@ -1501,7 +1502,7 @@ export async function verifyLegacyInstallation(projectDir = process.cwd()) {
           }],
         });
 
-        writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+        safeWriteJson(settingsPath, settings);
         fixes.push('Registered update-check hook in settings.json');
       }
     } catch {
