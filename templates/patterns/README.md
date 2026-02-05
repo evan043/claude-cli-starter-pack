@@ -12,6 +12,10 @@ Reusable patterns for Claude Code agent orchestration.
 | [Two-Tier Query Pipeline](two-tier-query-pipeline.md) | Intent classification + execution | Medium | ⚠️ Apply AOP |
 | [L1→L2 Orchestration](l1-l2-orchestration.md) | Master-worker parallel tasks | Medium | ✅ Updated |
 | [Multi-Phase Orchestration](multi-phase-orchestration.md) | Sequential phases with parallel tasks | High | ✅ Updated |
+| [Circuit Breaker](circuit-breaker.md) | Fail-fast for external calls | Medium | ✅ New |
+| [Retry with Backoff](retry-with-backoff.md) | Transient failure recovery | Low | ✅ New |
+| [Fan-Out/Fan-In](fan-out-fan-in.md) | Parallel task distribution | Medium | ✅ New |
+| [Streaming/Progressive](streaming-progressive.md) | Long-running task feedback | Low | ✅ New |
 
 ## Context Safety (MANDATORY)
 
@@ -39,16 +43,31 @@ Before using ANY pattern:
 - Need confidence-based routing
 
 ### Parallel Subtask Execution
-**Use: L1→L2 Orchestration**
+**Use: L1→L2 Orchestration or Fan-Out/Fan-In**
 - Task decomposes into independent parts
 - Parallel execution improves speed
 - Need result aggregation
+- Fan-Out/Fan-In offers more aggregation strategies
 
 ### Complex Multi-Step Projects
 **Use: Multi-Phase Orchestration**
 - Work has natural phase boundaries
 - Validation needed between phases
 - Phases may have parallel subtasks
+
+### External System Reliability
+**Use: Circuit Breaker + Retry with Backoff**
+- Calling flaky APIs or MCP servers
+- Need fail-fast behavior on sustained failures
+- Want automatic recovery detection
+- Retry transient errors with exponential backoff
+
+### Long-Running Operations
+**Use: Streaming/Progressive Output**
+- Tasks take longer than 5 seconds
+- Users need progress feedback
+- Want resumable operations
+- Need to monitor multi-phase execution
 
 ## Pattern Combinations
 
