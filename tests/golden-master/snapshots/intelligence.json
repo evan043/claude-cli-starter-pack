@@ -1,7 +1,28 @@
 {
   "path": "src/roadmap/intelligence.js",
-  "capturedAt": "2026-02-05T21:38:35.900Z",
+  "capturedAt": "2026-02-05T22:07:50.421Z",
   "exports": {
+    "COMPLEXITY": {
+      "type": "object",
+      "keys": [
+        "S",
+        "M",
+        "L"
+      ],
+      "length": 3
+    },
+    "DOMAIN_KEYWORDS": {
+      "type": "object",
+      "keys": [
+        "frontend",
+        "backend",
+        "database",
+        "testing",
+        "deployment",
+        "documentation"
+      ],
+      "length": 6
+    },
     "analyzeFileOverlap": {
       "type": "function",
       "name": "analyzeFileOverlap",
@@ -58,6 +79,15 @@
       ],
       "isAsync": false
     },
+    "formatProjectTitle": {
+      "type": "function",
+      "name": "formatProjectTitle",
+      "params": [
+        "domain",
+        "keywords"
+      ],
+      "isAsync": false
+    },
     "generatePhaseRecommendations": {
       "type": "function",
       "name": "generatePhaseRecommendations",
@@ -83,6 +113,31 @@
       ],
       "isAsync": false
     },
+    "hasExplicitProjectMarkers": {
+      "type": "function",
+      "name": "hasExplicitProjectMarkers",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "hasIndependentWorkflows": {
+      "type": "function",
+      "name": "hasIndependentWorkflows",
+      "params": [
+        "items",
+        "groups"
+      ],
+      "isAsync": false
+    },
+    "hasSignificantComplexitySpread": {
+      "type": "function",
+      "name": "hasSignificantComplexitySpread",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
     "identifyIndependentTracks": {
       "type": "function",
       "name": "identifyIndependentTracks",
@@ -97,14 +152,6 @@
       "name": "identifyParallelWork",
       "params": [
         "phases"
-      ],
-      "isAsync": false
-    },
-    "shouldRecommendSinglePhase": {
-      "type": "function",
-      "name": "shouldRecommendSinglePhase",
-      "params": [
-        "scope"
       ],
       "isAsync": false
     },

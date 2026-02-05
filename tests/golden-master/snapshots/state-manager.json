@@ -1,6 +1,6 @@
 {
   "path": "src/agents/state-manager.js",
-  "capturedAt": "2026-02-05T21:38:35.903Z",
+  "capturedAt": "2026-02-05T22:07:50.425Z",
   "exports": {
     "addActiveAgent": {
       "type": "function",

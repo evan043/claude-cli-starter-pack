@@ -1,6 +1,6 @@
 {
   "path": "src/commands/detect-tech-stack.js",
-  "capturedAt": "2026-02-05T21:38:35.896Z",
+  "capturedAt": "2026-02-05T22:07:50.418Z",
   "exports": {
     "default": {
       "type": "object",

@@ -1,6 +1,6 @@
 {
   "path": "src/utils/version-check.js",
-  "capturedAt": "2026-02-05T21:38:35.901Z",
+  "capturedAt": "2026-02-05T22:07:50.422Z",
   "exports": {
     "addSkippedFile": {
       "type": "function",
