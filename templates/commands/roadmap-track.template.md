@@ -1,8 +1,45 @@
+---
+description: Execute and coordinate multiple phase-dev-plans within a roadmap
+type: project
+complexity: high
+allowed-tools: Read, Write, Edit, Task, Bash
+category: development
+---
+
 # Roadmap Track - Multi-Plan Execution Coordinator
 
 You are a roadmap execution coordinator. You coordinate execution across MULTIPLE phase-dev-plans within a roadmap, respect cross-plan dependencies, and aggregate progress.
 
 > ⚠️ **CONTEXT SAFETY REQUIRED**: This command MUST follow [Context-Safe Orchestration](../patterns/context-safe-orchestration.md) patterns. All plan executions return summaries only. Full results stored in files.
+
+---
+
+## HARD SEQUENTIAL GATES (NON-NEGOTIABLE)
+
+**These rules OVERRIDE all other instructions. Violating them causes context overflow and lost work.**
+
+### FORBIDDEN - Will Cause Failure:
+- **DO NOT** launch Phase N+1 before Phase N status = `completed` in PROGRESS.json
+- **DO NOT** launch multiple `/phase-track` commands for different plans simultaneously
+- **DO NOT** spawn parallel background agents for separate plans/phases
+- **DO NOT** "get ahead" by starting later phases while earlier ones run
+- **DO NOT** interpret "run-all" as "run all at once" — it means "run all sequentially, one at a time"
+
+### REQUIRED - Must Follow:
+1. **ONE plan at a time**: Only ONE `/phase-track` execution may be active at any moment
+2. **Wait for completion**: After launching `/phase-track {slug}`, you MUST wait for it to return before starting the next plan
+3. **Verify via file**: Read PROGRESS.json to confirm `status: "completed"` before advancing
+4. **If validation fails**: STOP. Do NOT continue to the next plan. Report the failure and wait for user input
+5. **Context checkpoint**: Check context usage before EACH plan. If >70%, pause and offer /compact
+
+### Why This Matters:
+Launching multiple plans/phases in parallel causes:
+- Context window overflow (the model freezes/stops responding)
+- Lost work from forced compaction
+- Silent permission denials on background agents
+- The exact bug you are reading this to prevent
+
+---
 
 ## Context Safety Rules
 
@@ -252,14 +289,21 @@ async function autoAdvance(roadmap) {
 ```
 
 #### Run All Plans (Autonomous Mode - Context-Safe)
+
+> **SEQUENTIAL EXECUTION ONLY**: "run-all" means "run each plan one at a time, in order, waiting for each to complete before starting the next." It does NOT mean "run all at once." Launching multiple plans simultaneously is FORBIDDEN and will cause context overflow.
+
 ```javascript
 /**
- * Execute ALL plans sequentially without user intervention
- * CRITICAL: Follows context-safe orchestration pattern
+ * Execute ALL plans SEQUENTIALLY without user intervention.
+ *
+ * HARD GATE: Only ONE plan runs at a time. The next plan
+ * CANNOT start until the current plan's PROGRESS.json
+ * shows status: "completed". This is non-negotiable.
  */
 async function runAllPlans(roadmap) {
-  console.log('🚀 AUTONOMOUS MODE (Context-Safe): Running all phase-dev-plans...\n');
+  console.log('🚀 AUTONOMOUS MODE (Context-Safe): Running all phase-dev-plans SEQUENTIALLY...\n');
   console.log('📋 State tracked in: ROADMAP.json (not context)\n');
+  console.log('⛔ HARD GATE: Only ONE plan runs at a time. Next plan waits for current to complete.\n');
 
   // Get plans in dependency order
   const orderedPlans = topologicalSortPlans(roadmap);
@@ -368,16 +412,19 @@ function topologicalSortPlans(roadmap) {
 ```
 
 **Run-All Execution Rules (Multi-Plan, Context-Safe):**
-1. Plans execute in dependency order (topological sort)
-2. Each plan delegates to /phase-track for detailed execution
-3. **Context checkpoint before each plan (pause at 70%)**
-4. **Results read from files, not from command output**
-5. Plan references synced from PROGRESS.json files
-6. Overall roadmap completion updated incrementally in ROADMAP.json
-7. Execution continues until all plans complete or error occurs
-8. User can interrupt, /compact, and resume at any time
-9. If a plan fails, execution pauses and offers recovery options
-10. **Full details in files, only summaries in context**
+1. **ONE PLAN AT A TIME** - Only one plan executes at any moment. This is a hard gate, not a suggestion
+2. Plans execute in dependency order (topological sort)
+3. Each plan delegates to /phase-track for detailed execution
+4. **WAIT for /phase-track to RETURN before starting the next plan** - Do NOT launch the next plan while the current one is running
+5. **Context checkpoint before each plan (pause at 70%)** - If >70%, STOP and offer /compact
+6. **Results read from files, not from command output**
+7. Plan references synced from PROGRESS.json files
+8. Overall roadmap completion updated incrementally in ROADMAP.json
+9. Execution continues until all plans complete or error occurs
+10. User can interrupt, /compact, and resume at any time
+11. If a plan fails, execution **STOPS** and offers recovery options (do NOT skip and continue)
+12. **Full details in files, only summaries in context**
+13. **NEVER launch background agents for plan execution** - all plan execution is foreground, sequential
 
 ### Step 5: Progress Visualization (Multi-Plan)
 
@@ -444,11 +491,13 @@ async function syncToParentEpic(roadmap) {
 ## Execution Rules (Multi-Plan)
 
 1. **Dependency Enforcement**: Cannot start plan with unmet cross-plan dependencies
-2. **Multiple Active Plans**: Multiple plans can be in_progress simultaneously (if dependencies allow)
+2. **ONE ACTIVE PLAN AT A TIME**: Only ONE plan may be `in_progress` at any moment. Do NOT start a second plan until the first completes. This prevents context overflow
 3. **Plan Delegation**: Each plan delegates to /phase-track for detailed execution
-4. **Automatic Syncing**: Plan references auto-sync from PROGRESS.json after completion
-5. **Parent Epic Sync**: Auto-sync to parent epic on plan completion if integrated
-6. **Completion Aggregation**: Roadmap completion = average of all plan completions
+4. **Sequential Execution**: Wait for `/phase-track` to return before starting the next plan
+5. **Automatic Syncing**: Plan references auto-sync from PROGRESS.json after completion
+6. **Parent Epic Sync**: Auto-sync to parent epic on plan completion if integrated
+7. **Completion Aggregation**: Roadmap completion = average of all plan completions
+8. **Failure = Full Stop**: If a plan fails, do NOT continue to the next plan. Stop and report
 
 ## Error Handling (Multi-Plan)
 

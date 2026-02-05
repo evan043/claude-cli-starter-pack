@@ -7,6 +7,28 @@ model: haiku
 
 View and update progress on phased development plans.
 
+---
+
+## HARD SEQUENTIAL GATES (NON-NEGOTIABLE)
+
+**Phases execute ONE AT A TIME. Phase N+1 CANNOT start until Phase N status = `completed` in PROGRESS.json.**
+
+### FORBIDDEN - Will Cause Context Overflow and Lost Work:
+- **DO NOT** start Phase N+1 while Phase N is still `in_progress`
+- **DO NOT** launch multiple phases in parallel (even via background agents)
+- **DO NOT** launch tasks from different phases simultaneously
+- **DO NOT** skip a phase that failed validation and continue to the next
+- **DO NOT** interpret "run-all" as "run all at once" — it means "run all sequentially, one at a time"
+
+### REQUIRED - Hard Gate Protocol:
+1. **ONE phase at a time**: Execute all tasks in Phase N → verify all complete → mark Phase N `completed` → THEN start Phase N+1
+2. **Verify via PROGRESS.json**: Read the file to confirm `status: "completed"` before advancing — do not rely on memory
+3. **Context checkpoint**: Before EACH phase, check context usage. If >70%, STOP and offer /compact
+4. **Failure = Full Stop**: If a task or phase fails, HALT execution. Do NOT continue to the next phase. Report the error and wait for user input
+5. **File is source of truth**: Write to PROGRESS.json after EVERY task completion. If the session crashes, progress is preserved
+
+---
+
 {{#if phasedDevelopment.enabled}}
 
 ## Configuration
@@ -117,17 +139,24 @@ Marks a task as completed and updates metrics.
 
 Generates a markdown progress report.
 
-### Run All Phases (Autonomous Mode - Context-Safe)
+### Run All Phases (Autonomous Mode - STRICTLY Sequential)
 
 ```
 /phase-track <project-slug> --run-all
 ```
 
-Executes ALL remaining phases sequentially and autonomously:
+Executes ALL remaining phases **one at a time, in order**. "Run-all" does NOT mean "run all at once."
+
+**Hard Gate Rules:**
+- Only ONE phase runs at any moment. The next phase WAITS for the current to complete
+- Phase N must reach `status: "completed"` in PROGRESS.json before Phase N+1 can begin
+- If a phase fails, execution STOPS — it does NOT skip to the next phase
+
+**Execution behavior:**
 - Starts from current phase (or Phase 1 if none active)
 - Completes all tasks in each phase before moving to next
 - **Updates PROGRESS.json after each task (file is source of truth)**
-- **Context checkpoint at 70% - pauses for /compact if needed**
+- **Context checkpoint at 70% - STOPS for /compact if needed**
 - **Returns summaries only - full results in cache files**
 - Continues until all phases complete or an error occurs
 - Can be interrupted with Ctrl+C at any time
@@ -248,11 +277,17 @@ When this command is invoked:
 ### Run-All Context-Safe Implementation
 
 ```javascript
+/**
+ * HARD GATE: Phases execute ONE AT A TIME, in strict order.
+ * Phase N+1 CANNOT start until Phase N is "completed" in PROGRESS.json.
+ * This function NEVER launches multiple phases in parallel.
+ * Violating this causes context overflow — the exact bug this prevents.
+ */
 async function runAllPhasesContextSafe(progressPath) {
   const cacheDir = '.claude/cache/agent-outputs';
   const batchId = `phase-run-${Date.now()}`;
 
-  // Load state from file
+  // Load state from file (not from context/memory)
   let progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
 
   for (const phase of progress.phases) {
@@ -261,15 +296,33 @@ async function runAllPhasesContextSafe(progressPath) {
       continue;
     }
 
-    // CONTEXT CHECKPOINT
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE #1: Context check BEFORE each phase (not after)
+    // ═══════════════════════════════════════════════════════════════
     const usage = await estimateContextUsage();
     if (usage.percent > 70) {
-      console.log(`\n⚠️ Context at ${usage.percent}%. Progress saved.`);
-      console.log('   Run /compact then resume with /phase-track ${slug} --run-all\n');
+      console.log(`\n⛔ CONTEXT GATE: ${usage.percent}% used. STOPPING execution.`);
+      console.log('   Run /compact then resume with /phase-track ${slug} --run-all');
+      console.log('   Progress is saved — you will pick up where you left off.\n');
+      fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
       return { paused: true, atPhase: phase.id, progressPath };
     }
 
-    console.log(`\n▶ Phase ${phase.id}: ${phase.name}`);
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE #2: Verify previous phase completed before starting
+    // ═══════════════════════════════════════════════════════════════
+    const phaseIndex = progress.phases.indexOf(phase);
+    if (phaseIndex > 0) {
+      const prevPhase = progress.phases[phaseIndex - 1];
+      if (prevPhase.status !== 'completed') {
+        console.log(`\n⛔ HARD GATE: Cannot start Phase ${phase.id}`);
+        console.log(`   Previous Phase ${prevPhase.id} status: "${prevPhase.status}" (must be "completed")`);
+        console.log(`   Complete Phase ${prevPhase.id} first, then retry.`);
+        return { blocked: true, atPhase: phase.id, reason: `Phase ${prevPhase.id} not complete` };
+      }
+    }
+
+    console.log(`\n▶ Phase ${phase.id}: ${phase.name} (ONLY phase running right now)`);
     phase.status = 'in_progress';
 
     // Execute tasks with AOP
@@ -289,9 +342,25 @@ async function runAllPhasesContextSafe(progressPath) {
     }
 
     // Update phase status
-    phase.status = phase.tasks.every(t => t.completed) ? 'completed' : 'partial';
+    const allTasksComplete = phase.tasks.every(t => t.completed);
+    phase.status = allTasksComplete ? 'completed' : 'partial';
     phase.completedAt = phase.status === 'completed' ? new Date().toISOString() : null;
     fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE #3: If phase did NOT complete, STOP — do NOT continue
+    // ═══════════════════════════════════════════════════════════════
+    if (!allTasksComplete) {
+      const failedTasks = phase.tasks.filter(t => !t.completed);
+      console.log(`\n⛔ Phase ${phase.id} has ${failedTasks.length} incomplete task(s). HALTING.`);
+      console.log(`   Failed: ${failedTasks.map(t => t.id).join(', ')}`);
+      console.log(`   Fix these tasks before continuing to Phase ${phase.id + 1}.`);
+      return {
+        status: 'partial',
+        summary: `Stopped at Phase ${phase.id}: ${failedTasks.length} tasks incomplete`,
+        progressPath
+      };
+    }
   }
 
   // Calculate final metrics

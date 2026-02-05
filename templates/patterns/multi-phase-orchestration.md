@@ -4,12 +4,41 @@ Sequential phase execution with parallel agents within phases.
 
 > ⚠️ **CRITICAL**: This pattern MUST follow [Context-Safe Orchestration](./context-safe-orchestration.md) to prevent context overflow.
 
+---
+
+## HARD SEQUENTIAL GATES (NON-NEGOTIABLE)
+
+**Phase N+1 CANNOT start until Phase N status = `completed` and its validation gate has passed.**
+
+This is the single most important rule in this entire document. Everything else is secondary.
+
+### FORBIDDEN - These Actions Will Cause Context Overflow:
+- **DO NOT** start Phase 2 while Phase 1 is still running
+- **DO NOT** launch background agents for multiple phases simultaneously
+- **DO NOT** "pipeline" phases (starting Phase 2 tasks while Phase 1 validation runs)
+- **DO NOT** interpret "sequential phases with parallel tasks" as "parallel phases"
+- **DO NOT** skip a failed validation gate and proceed to the next phase
+
+### REQUIRED - You Must Follow These Steps:
+1. Execute Phase N tasks (parallel within the phase is OK)
+2. Run Phase N validation gate
+3. If validation **passes**: write `status: "completed"` to PROGRESS.json, THEN start Phase N+1
+4. If validation **fails**: STOP COMPLETELY. Report failure. Wait for user input. Do NOT continue
+5. Check context usage before each phase. If >70%, pause and offer /compact
+
+### What "Parallel Within a Phase" Means:
+- Tasks A, B, C within Phase 1 can run simultaneously (they are at the same level)
+- Phase 2 tasks CANNOT run until ALL Phase 1 tasks complete AND validation passes
+- This is the ONLY form of parallelism allowed
+
+---
+
 ## Overview
 
 Organizes work into distinct phases where:
-- Phases execute sequentially (each depends on previous)
-- Tasks within a phase can run in parallel
-- Validation gates between phases ensure quality
+- **Phases execute STRICTLY sequentially** — Phase N+1 is BLOCKED until Phase N completes
+- Tasks **within** a single phase can run in parallel (this is the only allowed parallelism)
+- Validation gates between phases are HARD STOPS — failing a gate means execution halts
 - **All state lives in files, not context**
 
 ## Context Safety Rules
@@ -72,16 +101,34 @@ interface Phase {
 }
 
 // CRITICAL: State lives in files, not in context variable
+// HARD GATE: Phases execute ONE AT A TIME. Phase N+1 blocked until Phase N complete.
 async function executePhases(phases: Phase[], progressPath: string): Promise<PhaseResults> {
   // Results stored in file, not accumulated in memory
   const cacheDir = '.claude/cache/agent-outputs';
 
   for (const phase of phases) {
-    // Context checkpoint before each phase
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE: Verify previous phase completed before proceeding
+    // ═══════════════════════════════════════════════════════════════
+    const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+    const phaseIndex = phases.indexOf(phase);
+    if (phaseIndex > 0) {
+      const prevPhase = progress.phases[phaseIndex - 1];
+      if (prevPhase.status !== 'completed') {
+        throw new Error(
+          `HARD GATE VIOLATION: Cannot start Phase ${phase.id} — ` +
+          `Phase ${phases[phaseIndex - 1].id} status is "${prevPhase.status}", not "completed". ` +
+          `Fix the previous phase first.`
+        );
+      }
+    }
+
+    // Context checkpoint before each phase — MANDATORY
     const contextCheck = await checkContextUtilization();
     if (contextCheck.percent > 70) {
-      console.log(`⚠️ Context at ${contextCheck.percent}%. Consider /compact before continuing.`);
-      // Could pause here for user decision
+      console.log(`⚠️ CONTEXT GATE: ${contextCheck.percent}% used. PAUSING execution.`);
+      console.log('   Run /compact to free context, then resume. Progress is saved.');
+      return { status: 'paused', reason: 'context_threshold', resumeFrom: phase.id };
     }
 
     console.log(`Starting Phase ${phase.id}: ${phase.name}`);
@@ -103,11 +150,15 @@ async function executePhases(phases: Phase[], progressPath: string): Promise<Pha
     });
 
     if (!validation.passed) {
+      // HARD GATE: Validation failure = FULL STOP. Do NOT continue.
+      console.log(`⛔ HARD GATE: Phase ${phase.id} validation FAILED. Execution halted.`);
+      console.log(`   Reason: ${validation.reason}`);
+      console.log(`   DO NOT proceed to next phase. Fix this phase first.`);
       return {
         status: 'failed',
         failedPhase: phase.id,
         reason: validation.reason,
-        summary: `Failed at phase ${phase.id}: ${validation.reason}`
+        summary: `STOPPED at phase ${phase.id}: ${validation.reason}`
       };
     }
 

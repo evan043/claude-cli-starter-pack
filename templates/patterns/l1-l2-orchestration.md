@@ -4,6 +4,34 @@ Hierarchical agent coordination with parallel L2 spawning.
 
 > ⚠️ **CRITICAL**: This pattern MUST follow [Context-Safe Orchestration](./context-safe-orchestration.md) to prevent context overflow.
 
+---
+
+## HARD DEPENDENCY GATES (NON-NEGOTIABLE)
+
+**Dependencies are BLOCKING PREREQUISITES, not suggestions. A task with `dependencies: ['X']` CANNOT start until task X status = `completed`.**
+
+### FORBIDDEN:
+- **DO NOT** launch a dependent task before its prerequisites complete
+- **DO NOT** launch ALL subtasks in parallel when some have dependencies on others
+- **DO NOT** treat `dependencies: []` and `dependencies: ['search']` the same way
+- **DO NOT** "optimistically start" dependent tasks hoping prerequisites will finish in time
+
+### REQUIRED:
+1. **Independent tasks** (empty dependencies): Launch in parallel — this is safe and encouraged
+2. **Dependent tasks**: WAIT for all listed prerequisites to complete, THEN launch
+3. **Mixed batches**: Launch independent tasks first → collect results → THEN launch dependent tasks
+4. If a prerequisite fails, its dependents are automatically BLOCKED — do NOT run them
+
+### Example:
+```
+Task A: dependencies: []        → Launch immediately (parallel OK)
+Task B: dependencies: []        → Launch immediately (parallel OK)
+Task C: dependencies: ['A','B'] → BLOCKED until A AND B complete
+```
+Launch A+B in parallel. Wait. When both complete, THEN launch C. Never launch C with A+B.
+
+---
+
 ## Overview
 
 A master-worker pattern where:
@@ -52,13 +80,17 @@ async function orchestrate(task: string) {
   // Step 1: Decompose task into subtasks
   const subtasks = await decomposeTask(task);
 
-  // Step 2: Identify dependencies
+  // Step 2: Separate into independent vs dependent tasks
+  // Independent (blocking_prerequisites: []) → safe to run in parallel
+  // Dependent (blocking_prerequisites: ['X']) → MUST wait for X to complete
   const { independent, dependent } = categorizeSubtasks(subtasks);
 
-  // Step 3: Launch independent L2 agents in parallel
+  // Step 3: Launch ONLY independent L2 agents in parallel
+  // These have no prerequisites and cannot block each other
   const parallelResults = await launchParallelL2s(independent);
 
-  // Step 4: Launch dependent L2 agents sequentially
+  // Step 4: Launch dependent L2 agents ONLY AFTER their prerequisites complete
+  // HARD GATE: Each dependent task waits for ALL its blocking_prerequisites
   const sequentialResults = await launchSequentialL2s(dependent, parallelResults);
 
   // Step 5: Aggregate results
@@ -134,6 +166,11 @@ function extractAOPSummary(output: string): AgentSummary {
 ```typescript
 function decomposeTask(task: string): Subtask[] {
   // Example: "Analyze and document the authentication system"
+  //
+  // HARD GATE: "blocking_prerequisites" means the task CANNOT start
+  // until ALL listed tasks have status "completed". This is enforced,
+  // not advisory. Launching a task before its prerequisites complete
+  // is FORBIDDEN and will cause failures.
 
   return [
     {
@@ -141,21 +178,21 @@ function decomposeTask(task: string): Subtask[] {
       title: 'Find auth files',
       prompt: 'Search for all authentication-related files',
       type: 'Explore',
-      dependencies: []
+      blocking_prerequisites: []  // No prerequisites — can launch immediately
     },
     {
       id: 'analyze',
       title: 'Analyze auth flow',
       prompt: 'Analyze the authentication flow and security',
       type: 'Plan',
-      dependencies: ['search']
+      blocking_prerequisites: ['search']  // BLOCKED until 'search' is completed
     },
     {
       id: 'document',
       title: 'Generate docs',
       prompt: 'Document the authentication system',
       type: 'general-purpose',
-      dependencies: ['analyze']
+      blocking_prerequisites: ['analyze']  // BLOCKED until 'analyze' is completed
     }
   ];
 }

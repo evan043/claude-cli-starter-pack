@@ -2,6 +2,26 @@
 
 **CRITICAL**: This pattern MUST be followed by all CCASP orchestration commands to prevent context window overflow.
 
+---
+
+## HARD SEQUENTIAL GATES (NON-NEGOTIABLE)
+
+**Phases/plans execute ONE AT A TIME. The next phase CANNOT start until the current phase is 100% complete.**
+
+### FORBIDDEN — Will Cause the Exact Bug This Pattern Prevents:
+- **DO NOT** launch multiple phases/plans in parallel (even if they seem independent)
+- **DO NOT** start Phase N+1 before Phase N returns and PROGRESS.json shows `completed`
+- **DO NOT** use `run_in_background: true` for phase-level execution (only for tasks WITHIN a single phase)
+- **DO NOT** "get ahead" by reading Phase 3 while Phase 2 runs
+
+### REQUIRED — Hard Gate Protocol:
+1. Start Phase N → wait for it to complete → verify PROGRESS.json → start Phase N+1
+2. If Phase N fails, STOP. Do not continue. Report and wait for user input
+3. Before each phase: check context. If >70%, STOP and offer /compact
+4. The word "sequential" means "one at a time, blocking" — not "eventually in order"
+
+---
+
 ## The Problem
 
 When parallel agents complete, their **entire outputs** are returned to the parent context, causing:
@@ -192,30 +212,69 @@ async function executePhaseContextSafe(phaseId: number, progressPath: string) {
 ### Pattern C: Run-All with Checkpoint Recovery
 
 ```typescript
+/**
+ * HARD GATE: Phases execute ONE AT A TIME, in strict order.
+ * Phase N+1 CANNOT start until Phase N is "completed" in PROGRESS.json.
+ * This function NEVER launches multiple phases in parallel.
+ */
 async function runAllPhasesContextSafe(progressPath: string) {
   const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
 
-  // Process phases sequentially
+  // Process phases STRICTLY SEQUENTIALLY — one at a time
   for (const phase of progress.phases) {
     if (phase.status === 'completed') {
       console.log(`✓ Phase ${phase.id} already complete`);
       continue;
     }
 
-    console.log(`▶ Starting Phase ${phase.id}: ${phase.name}`);
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE: Context check BEFORE each phase (not after)
+    // ═══════════════════════════════════════════════════════════════
+    const contextUsage = await checkContextUtilization();
+    if (contextUsage > 0.7) {
+      console.log(`⛔ CONTEXT GATE: ${Math.round(contextUsage * 100)}% used. STOPPING.`);
+      console.log('   Run /compact to free context, then resume.');
+      console.log('   Progress is saved — you will pick up where you left off.');
+      return {
+        completed: false,
+        summary: `Paused at Phase ${phase.id}: context at ${Math.round(contextUsage * 100)}%`
+      };
+    }
 
-    // Execute phase with context-safe pattern
+    // ═══════════════════════════════════════════════════════════════
+    // HARD GATE: Verify previous phase is "completed" before starting
+    // ═══════════════════════════════════════════════════════════════
+    const phaseIndex = progress.phases.indexOf(phase);
+    if (phaseIndex > 0) {
+      const prevPhase = progress.phases[phaseIndex - 1];
+      if (prevPhase.status !== 'completed') {
+        console.log(`⛔ HARD GATE: Cannot start Phase ${phase.id}`);
+        console.log(`   Previous Phase ${prevPhase.id} status: "${prevPhase.status}" (must be "completed")`);
+        return {
+          completed: false,
+          summary: `Blocked: Phase ${prevPhase.id} not complete`
+        };
+      }
+    }
+
+    console.log(`▶ Starting Phase ${phase.id}: ${phase.name}`);
+    console.log(`  (This is the ONLY phase running right now)`);
+
+    // Execute SINGLE phase with context-safe pattern — blocks until complete
     const result = await executePhaseContextSafe(phase.id, progressPath);
 
-    // Update phase status in file
+    // Update phase status in file IMMEDIATELY
     phase.status = result.completed ? 'completed' : 'in_progress';
     phase.completedAt = result.completed ? new Date().toISOString() : null;
     fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
 
-    // Checkpoint: If context is getting full, offer to pause
-    if (await checkContextUtilization() > 0.7) {
-      console.log('⚠️ Context at 70%+. Consider: /compact or continue?');
-      // Could pause here for user input
+    // If phase did not complete, STOP — do not continue to next phase
+    if (!result.completed) {
+      console.log(`⛔ Phase ${phase.id} did not complete. Halting execution.`);
+      return {
+        completed: false,
+        summary: `Stopped at Phase ${phase.id}: incomplete`
+      };
     }
   }
 
