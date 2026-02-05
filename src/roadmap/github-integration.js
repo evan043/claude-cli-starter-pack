@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import chalk from 'chalk';
 import ora from 'ora';
 import { loadConfig } from '../utils.js';
-import { safeCreateIssue } from '../utils/safe-exec.js';
+import { safeCreateIssue, safeGhExec, safeAddIssueComment, safeCloseIssue } from '../utils/safe-exec.js';
 
 /**
  * Check if gh CLI is available and authenticated
@@ -87,15 +87,20 @@ export function fetchIssues(options = {}) {
     throw new Error('Could not determine repository. Run `ccasp setup` first.');
   }
 
-  let cmd = `gh issue list --repo "${targetOwner}/${targetRepo}" --state ${state} --limit ${limit}`;
-  cmd += ' --json number,title,body,state,labels,assignees,createdAt,updatedAt,url';
+  const args = [
+    'issue', 'list',
+    '--repo', `${targetOwner}/${targetRepo}`,
+    '--state', state,
+    '--limit', String(limit),
+    '--json', 'number,title,body,state,labels,assignees,createdAt,updatedAt,url',
+  ];
 
   if (labels.length > 0) {
-    cmd += ` --label "${labels.join(',')}"`;
+    args.push('--label', labels.join(','));
   }
 
   try {
-    const result = execSync(cmd, { encoding: 'utf8' });
+    const result = safeGhExec(args);
     return JSON.parse(result);
   } catch (e) {
     console.error(chalk.red(`Failed to fetch issues: ${e.message}`));
@@ -120,8 +125,13 @@ export function fetchProjectItems(options = {}) {
   }
 
   try {
-    const cmd = `gh project item-list ${projectNumber} --owner "${targetOwner}" --format json --limit ${limit}`;
-    const result = execSync(cmd, { encoding: 'utf8' });
+    const args = [
+      'project', 'item-list', String(projectNumber),
+      '--owner', targetOwner,
+      '--format', 'json',
+      '--limit', String(limit),
+    ];
+    const result = safeGhExec(args);
     const data = JSON.parse(result);
     return data.items || [];
   } catch (e) {
@@ -145,8 +155,12 @@ export function getIssueDetails(issueNumber, options = {}) {
   if (!owner || !repo) return null;
 
   try {
-    const cmd = `gh issue view ${issueNumber} --repo "${owner}/${repo}" --json number,title,body,state,labels,assignees,comments,createdAt,updatedAt,url`;
-    const result = execSync(cmd, { encoding: 'utf8' });
+    const args = [
+      'issue', 'view', String(issueNumber),
+      '--repo', `${owner}/${repo}`,
+      '--json', 'number,title,body,state,labels,assignees,comments,createdAt,updatedAt,url',
+    ];
+    const result = safeGhExec(args);
     return JSON.parse(result);
   } catch (e) {
     return null;
@@ -413,14 +427,12 @@ export function addProgressComment(issueNumber, comment, options = {}) {
 
   if (!owner || !repo) return false;
 
-  try {
-    const escapedComment = comment.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-    const cmd = `gh issue comment ${issueNumber} --repo "${owner}/${repo}" --body "${escapedComment}"`;
-    execSync(cmd, { encoding: 'utf8' });
-    return true;
-  } catch (e) {
-    return false;
-  }
+  return safeAddIssueComment({
+    owner,
+    repo,
+    issueNumber,
+    body: comment,
+  });
 }
 
 /**
@@ -438,16 +450,12 @@ export function closeIssue(issueNumber, reason, options = {}) {
 
   if (!owner || !repo) return false;
 
-  try {
-    if (reason) {
-      addProgressComment(issueNumber, `✅ ${reason}`, options);
-    }
-    const cmd = `gh issue close ${issueNumber} --repo "${owner}/${repo}"`;
-    execSync(cmd, { encoding: 'utf8' });
-    return true;
-  } catch (e) {
-    return false;
-  }
+  return safeCloseIssue({
+    owner,
+    repo,
+    issueNumber,
+    comment: reason ? `✅ ${reason}` : undefined,
+  });
 }
 
 /**

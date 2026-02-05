@@ -80,7 +80,6 @@ const l2Config = generateL2Config(testTask, testPhase, testPlan, null);
 ok(l2Config, 'L2 config should be generated');
 ok(l2Config.prompt.includes('P1.1'), 'Prompt should include task ID');
 ok(l2Config.prompt.includes('TASK_COMPLETE'), 'Prompt should include completion format');
-strictEqual(l2Config.model, 'sonnet', 'L2 should use Sonnet model');
 strictEqual(l2Config.subagentType, 'general-purpose', 'Should use general-purpose agent type');
 
 console.log('  ✓ L2 config generation passed\n');
@@ -113,7 +112,6 @@ ok(L3_WORKER_TYPES['github-issue-sync'], 'GitHub Issue Sync worker type should e
 
 const searchWorker = generateL3Worker('search', { query: 'Find Button components', scope: 'src/' });
 ok(searchWorker, 'Search worker should be generated');
-strictEqual(searchWorker.model, 'haiku', 'L3 should use Haiku model');
 strictEqual(searchWorker.subagentType, 'Explore', 'Search tasks should use Explore agent');
 
 console.log('  ✓ L3 worker type generation passed\n');

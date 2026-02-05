@@ -9,6 +9,23 @@
  */
 
 /**
+ * Sanitize user input for safe interpolation into JavaScript code
+ * Prevents template injection attacks
+ * @param {*} value - Value to sanitize
+ * @returns {string} Sanitized string safe for JS interpolation
+ */
+function sanitizeForJS(value) {
+  if (typeof value !== 'string') return String(value);
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
+}
+
+/**
  * Hook template for enforcement/injection
  */
 export function generateHookTemplate(config) {
@@ -25,14 +42,14 @@ export function generateHookTemplate(config) {
   } = config;
 
   const toolsArray = Array.isArray(tools) ? tools : [tools];
-  const toolsList = toolsArray.map((t) => `'${t}'`).join(', ');
+  const toolsList = toolsArray.map((t) => `'${sanitizeForJS(t)}'`).join(', ');
 
   return `#!/usr/bin/env node
 /**
- * ${name}
+ * ${sanitizeForJS(name)}
  *
- * Event: ${eventType} (${toolsArray.join('|')})
- * Purpose: ${description}
+ * Event: ${sanitizeForJS(eventType)} (${toolsArray.map(t => sanitizeForJS(t)).join('|')})
+ * Purpose: ${sanitizeForJS(description)}
  *
  * Created by: gtask create-hook
  * Date: ${new Date().toISOString()}
@@ -42,9 +59,9 @@ const hookInput = JSON.parse(process.env.CLAUDE_HOOK_INPUT || '{}');
 
 // Configuration
 const CONFIG = {
-  targetPatterns: [${targetPatterns.map((p) => `'${p}'`).join(', ')}],
-  blockedPatterns: [${blockedPatterns.map((p) => `'${p}'`).join(', ')}],
-  warningPatterns: [${warningPatterns.map((p) => `'${p}'`).join(', ')}]
+  targetPatterns: [${targetPatterns.map((p) => `'${sanitizeForJS(p)}'`).join(', ')}],
+  blockedPatterns: [${blockedPatterns.map((p) => `'${sanitizeForJS(p)}'`).join(', ')}],
+  warningPatterns: [${warningPatterns.map((p) => `'${sanitizeForJS(p)}'`).join(', ')}]
 };
 
 // Helper functions
@@ -92,16 +109,16 @@ async function main() {
     if (blocked.length > 0) {
       console.log(JSON.stringify({
         decision: 'block',
-        reason: '${blockReason}',
+        reason: '${sanitizeForJS(blockReason)}',
         systemMessage: \`
-## ${name} - Violation Detected
+## ${sanitizeForJS(name)} - Violation Detected
 
 **Blocked patterns found:** \${blocked.join(', ')}
 
 **Why this was blocked:**
-${blockReason}
+${sanitizeForJS(blockReason)}
 
-${referenceDoc ? `**Reference:** \`${referenceDoc}\`` : ''}
+${referenceDoc ? `**Reference:** \`${sanitizeForJS(referenceDoc)}\`` : ''}
 
 **To fix:**
 1. Review the blocked patterns above
@@ -119,7 +136,7 @@ ${referenceDoc ? `**Reference:** \`${referenceDoc}\`` : ''}
       console.log(JSON.stringify({
         decision: 'approve',
         systemMessage: \`
-## ${name} - Warning
+## ${sanitizeForJS(name)} - Warning
 
 **Patterns that may need review:** \${warnings.join(', ')}
 
@@ -173,22 +190,22 @@ ${step.instructions}
     .map((ex) => `# ${ex.description}\n/${name} ${ex.args}`)
     .join('\n\n');
 
-  const relatedMarkdown = relatedCommands.map((cmd) => `- \`/${cmd}\``).join('\n');
+  const relatedMarkdown = relatedCommands.map((cmd) => `- \`/${sanitizeForJS(cmd)}\``).join('\n');
 
   return `---
-description: ${description}
+description: ${sanitizeForJS(description)}
 type: project
-complexity: ${complexity}
+complexity: ${sanitizeForJS(complexity)}
 ---
 
-# /${name}
+# /${sanitizeForJS(name)}
 
-${description}
+${sanitizeForJS(description)}
 
 ## Usage
 
 \`\`\`bash
-/${name}${args ? ` ${args}` : ''}
+/${sanitizeForJS(name)}${args ? ` ${sanitizeForJS(args)}` : ''}
 \`\`\`
 
 ## Instructions
@@ -204,7 +221,7 @@ ${
   delegatesTo
     ? `## Delegates To
 
-This command uses: \`${delegatesTo}\`
+This command uses: \`${sanitizeForJS(delegatesTo)}\`
 `
     : ''
 }
@@ -244,31 +261,31 @@ export function generateAgentTemplate(config) {
     outputFormat = '',
   } = config;
 
-  const toolsList = Array.isArray(tools) ? tools.join(', ') : tools;
-  const whenToUseMarkdown = whenToUse.map((item) => `- ${item}`).join('\n');
+  const toolsList = Array.isArray(tools) ? tools.map(t => sanitizeForJS(t)).join(', ') : sanitizeForJS(tools);
+  const whenToUseMarkdown = whenToUse.map((item) => `- ${sanitizeForJS(item)}`).join('\n');
   const workflowMarkdown = workflow
     .map(
-      (step, i) => `### Step ${i + 1}: ${step.title}
+      (step, i) => `### Step ${i + 1}: ${sanitizeForJS(step.title)}
 
-${step.instructions}
+${sanitizeForJS(step.instructions)}
 `
     )
     .join('\n');
 
   return `---
-name: ${name}
-description: ${description}
-level: ${level}
+name: ${sanitizeForJS(name)}
+description: ${sanitizeForJS(description)}
+level: ${sanitizeForJS(level)}
 tools: ${toolsList}
 ---
 
-# ${name}
+# ${sanitizeForJS(name)}
 
-${description}
+${sanitizeForJS(description)}
 
 ## Specialization
 
-${specialization || 'General-purpose agent for delegated tasks.'}
+${sanitizeForJS(specialization || 'General-purpose agent for delegated tasks.')}
 
 ## When to Use
 
@@ -327,29 +344,29 @@ export function generateSkillTemplate(config) {
     hooks = [],
   } = config;
 
-  const triggersMarkdown = triggers.map((t) => `- \`${t}\``).join('\n');
-  const knowledgeMarkdown = knowledgeAreas.map((k) => `- ${k}`).join('\n');
+  const triggersMarkdown = triggers.map((t) => `- \`${sanitizeForJS(t)}\``).join('\n');
+  const knowledgeMarkdown = knowledgeAreas.map((k) => `- ${sanitizeForJS(k)}`).join('\n');
   const workflowsMarkdown = workflows
     .map(
-      (w) => `### ${w.name}
+      (w) => `### ${sanitizeForJS(w.name)}
 
-**File:** \`workflows/${w.file}\`
+**File:** \`workflows/${sanitizeForJS(w.file)}\`
 
-${w.description}
+${sanitizeForJS(w.description)}
 `
     )
     .join('\n');
-  const hooksMarkdown = hooks.map((h) => `- \`${h}\``).join('\n');
+  const hooksMarkdown = hooks.map((h) => `- \`${sanitizeForJS(h)}\``).join('\n');
 
   return `---
-name: ${name}
-description: ${description}
+name: ${sanitizeForJS(name)}
+description: ${sanitizeForJS(description)}
 version: 1.0.0
 ---
 
-# ${name} Skill
+# ${sanitizeForJS(name)} Skill
 
-${description}
+${sanitizeForJS(description)}
 
 ## Triggers
 
@@ -386,7 +403,7 @@ ${hooksMarkdown || 'No enforcement hooks defined.'}
 ## Usage
 
 \`\`\`markdown
-skill: "${name}"
+skill: "${sanitizeForJS(name)}"
 
 [Your request here]
 \`\`\`
@@ -410,9 +427,9 @@ Before completing any task:
 export function generateSkillContextReadme(config) {
   const { name, description, knowledgeAreas = [] } = config;
 
-  return `# ${name} - Context
+  return `# ${sanitizeForJS(name)} - Context
 
-This directory contains the knowledge base for the ${name} skill.
+This directory contains the knowledge base for the ${sanitizeForJS(name)} skill.
 
 ## Contents
 
@@ -422,7 +439,7 @@ This directory contains the knowledge base for the ${name} skill.
 
 ## Knowledge Areas
 
-${knowledgeAreas.map((k) => `- ${k}`).join('\n') || '- General domain knowledge'}
+${knowledgeAreas.map((k) => `- ${sanitizeForJS(k)}`).join('\n') || '- General domain knowledge'}
 
 ## Adding Context
 
@@ -431,7 +448,7 @@ ${knowledgeAreas.map((k) => `- ${k}`).join('\n') || '- General domain knowledge'
 3. Update this README
 
 ---
-*Part of ${name} skill*
+*Part of ${sanitizeForJS(name)} skill*
 `;
 }
 
@@ -442,12 +459,12 @@ export function generateSkillWorkflowsReadme(config) {
   const { name, workflows = [] } = config;
 
   const workflowTable = workflows.length
-    ? workflows.map((w) => `| ${w.name} | ${w.file} | ${w.description} |`).join('\n')
+    ? workflows.map((w) => `| ${sanitizeForJS(w.name)} | ${sanitizeForJS(w.file)} | ${sanitizeForJS(w.description)} |`).join('\n')
     : '| (none) | - | No workflows defined |';
 
-  return `# ${name} - Workflows
+  return `# ${sanitizeForJS(name)} - Workflows
 
-Agent workflows for the ${name} skill.
+Agent workflows for the ${sanitizeForJS(name)} skill.
 
 ## Available Workflows
 
@@ -462,7 +479,7 @@ ${workflowTable}
 3. Reference context from \`../context/\`
 
 ---
-*Part of ${name} skill*
+*Part of ${sanitizeForJS(name)} skill*
 `;
 }
 
@@ -474,19 +491,19 @@ export function generateOrchestratorTemplate(config) {
 
   const specialistsMarkdown = specialists
     .map(
-      (s) => `### ${s.name}
+      (s) => `### ${sanitizeForJS(s.name)}
 
-**File:** \`${s.file}\`
-**Level:** ${s.level || 'L2'}
+**File:** \`${sanitizeForJS(s.file)}\`
+**Level:** ${sanitizeForJS(s.level || 'L2')}
 
-${s.description}
+${sanitizeForJS(s.description)}
 `
     )
     .join('\n');
 
   return `---
-name: ${name}-orchestrator
-description: L1 Orchestrator for ${description}
+name: ${sanitizeForJS(name)}-orchestrator
+description: L1 Orchestrator for ${sanitizeForJS(description)}
 level: L1
 tools: Task, Read, Grep, Glob
 capabilities:
@@ -496,9 +513,9 @@ capabilities:
   - auto_respawn
 ---
 
-# ${name} - L1 Orchestrator
+# ${sanitizeForJS(name)} - L1 Orchestrator
 
-Central orchestrator for ${description}.
+Central orchestrator for ${sanitizeForJS(description)}.
 
 ## Role
 
@@ -553,7 +570,7 @@ ${specialistsMarkdown || 'No specialists defined.'}
 ## State Persistence
 
 Session state saved to:
-\`.claude/sessions/${name}-{session-id}.json\`
+\`.claude/sessions/${sanitizeForJS(name)}-{session-id}.json\`
 
 ## Continuation Protocol
 

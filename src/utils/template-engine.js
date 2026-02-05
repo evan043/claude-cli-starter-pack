@@ -11,8 +11,8 @@
  * - Path variables: ${CWD}, ${HOME}
  */
 
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
-import { join, extname } from 'path';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
+import { join, extname, dirname } from 'path';
 import { homedir } from 'os';
 
 /**
@@ -257,6 +257,9 @@ function processEachBlocks(content, values) {
   });
 }
 
+// Maximum template processing iterations to prevent infinite loops
+const MAX_TEMPLATE_ITERATIONS = 100;
+
 /**
  * Process {{#if condition}}...{{else}}...{{/if}} blocks
  * @param {string} content - Content with conditional blocks
@@ -267,9 +270,16 @@ function processConditionalBlocks(content, values) {
   // Process from innermost to outermost to handle nested conditionals
   let result = content;
   let previousResult;
+  let iterations = 0;
 
   // Keep processing until no more changes (handles nested blocks)
   do {
+    if (++iterations > MAX_TEMPLATE_ITERATIONS) {
+      throw new Error(
+        `Template processing exceeded ${MAX_TEMPLATE_ITERATIONS} iterations - possible infinite loop in template`
+      );
+    }
+
     previousResult = result;
 
     // Match {{#if condition}}...{{else}}...{{/if}} or {{#if condition}}...{{/if}}
@@ -389,6 +399,11 @@ export function processFile(filePath, values, options = {}) {
   };
 
   if (!dryRun && result.changed) {
+    // Ensure parent directory exists before writing
+    const dir = dirname(filePath);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
     writeFileSync(filePath, newContent, 'utf8');
   }
 

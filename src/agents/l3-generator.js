@@ -179,10 +179,20 @@ Actions:
 3. Update completion percentage in status line
 4. Add execution log comment if milestone reached
 
-Use gh CLI commands:
-- gh issue view ${task.issueNumber} --json body
-- gh issue edit ${task.issueNumber} --body "..."
-- gh issue comment ${task.issueNumber} --body "..."
+Use gh CLI commands${task.repo ? ` (always include --repo ${task.repo})` : ''}:
+- gh issue view ${task.issueNumber}${task.repo ? ` --repo ${task.repo}` : ''} --json body
+- gh issue edit ${task.issueNumber}${task.repo ? ` --repo ${task.repo}` : ''} --body "$(cat <<'EOF'
+[updated body content]
+EOF
+)"
+- gh issue comment ${task.issueNumber}${task.repo ? ` --repo ${task.repo}` : ''} --body "$(cat <<'EOF'
+[comment content]
+EOF
+)"
+
+Fast execution requirements:
+- Return immediately after completing updates
+- Don't wait for confirmation or additional processing
 
 Return results in this exact format:
 \`\`\`
