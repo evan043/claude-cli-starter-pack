@@ -57,200 +57,24 @@ import {
   generateIndexFile,
   generateReadmeFile,
 } from './init/generators.js';
+import { runDevMode } from './init/dev-mode.js';
+import { verifyLegacyInstallation } from './init/legacy-verify.js';
+import { deployCommands, deployHooks, deploySkills, deployBinaries } from './init/deploy-assets.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const log = createLogger('init');
 
+// Re-export for backwards compatibility
+export { verifyLegacyInstallation };
+
 /**
  * Run dev mode - rapid template testing workflow
- * Loads existing tech-stack.json, processes templates, overwrites commands
+ * (Delegated to init/dev-mode.js)
  */
-async function runDevMode(options = {}) {
-  const cwd = process.cwd();
-  const projectName = basename(cwd);
-  const claudeDir = join(cwd, '.claude');
-  const commandsDir = join(claudeDir, 'commands');
-  const hooksDir = join(claudeDir, 'hooks');
-  const configDir = join(claudeDir, 'config');
-  const techStackPath = join(configDir, 'tech-stack.json');
-
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-  console.log(chalk.magenta.bold('  🔧 DEV MODE - Template Testing'));
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-  console.log('');
-  console.log(chalk.cyan(`  Project: ${chalk.bold(projectName)}`));
-  console.log(chalk.cyan(`  Location: ${cwd}`));
-  console.log('');
-
-  // Load existing tech-stack.json
-  let techStack = {};
-  if (existsSync(techStackPath)) {
-    try {
-      techStack = JSON.parse(readFileSync(techStackPath, 'utf8'));
-      log.info(chalk.green('  ✓ Loaded existing tech-stack.json'));
-    } catch (err) {
-      log.warn(`  ⚠ Could not parse tech-stack.json: ${err.message}`);
-    }
-  } else {
-    log.warn('  ⚠ No tech-stack.json found - templates will have unprocessed placeholders');
-  }
-
-  // Ensure directories exist
-  if (!existsSync(commandsDir)) {
-    mkdirSync(commandsDir, { recursive: true });
-    log.info(chalk.green('  ✓ Created .claude/commands/'));
-  }
-  if (!existsSync(hooksDir)) {
-    mkdirSync(hooksDir, { recursive: true });
-    log.info(chalk.green('  ✓ Created .claude/hooks/'));
-  }
-
-  // Identify custom commands (no matching template) to preserve
-  const templatesDir = join(__dirname, '..', '..', 'templates', 'commands');
-  const hooksTemplatesDir = join(__dirname, '..', '..', 'templates', 'hooks');
-
-  const templateCommandNames = existsSync(templatesDir)
-    ? readdirSync(templatesDir).filter(f => f.endsWith('.template.md')).map(f => f.replace('.template.md', ''))
-    : [];
-  const templateHookNames = existsSync(hooksTemplatesDir)
-    ? readdirSync(hooksTemplatesDir).filter(f => f.endsWith('.template.js')).map(f => f.replace('.template.js', ''))
-    : [];
-
-  // Find existing custom commands (those without matching templates)
-  const existingCommands = existsSync(commandsDir)
-    ? readdirSync(commandsDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''))
-    : [];
-  const customCommands = existingCommands.filter(cmd =>
-    !templateCommandNames.includes(cmd) &&
-    cmd !== 'menu' &&
-    cmd !== 'INDEX' &&
-    cmd !== 'README'
-  );
-
-  if (customCommands.length > 0) {
-    console.log(chalk.blue(`  📌 Preserving ${customCommands.length} custom command(s):`));
-    for (const cmd of customCommands) {
-      console.log(chalk.dim(`    • /${cmd}`));
-    }
-    console.log('');
-  }
-
-  console.log(chalk.bold('Processing and deploying templates...\n'));
-
-  const spinner = ora('Processing templates...').start();
-  const deployed = { commands: [], hooks: [], preserved: customCommands };
-  const failed = [];
-
-  // Get all command templates
-  if (existsSync(templatesDir)) {
-    const templateFiles = readdirSync(templatesDir).filter(f => f.endsWith('.template.md'));
-
-    for (const templateFile of templateFiles) {
-      const cmdName = templateFile.replace('.template.md', '');
-      const templatePath = join(templatesDir, templateFile);
-      const outputPath = join(commandsDir, `${cmdName}.md`);
-
-      try {
-        const content = readFileSync(templatePath, 'utf8');
-
-        // Process template with tech-stack values
-        const { content: processed, warnings } = replacePlaceholders(content, techStack, {
-          preserveUnknown: false,
-          warnOnMissing: false,
-        });
-
-        writeFileSync(outputPath, processed, 'utf8');
-        deployed.commands.push(cmdName);
-      } catch (err) {
-        failed.push({ name: cmdName, type: 'command', error: err.message });
-      }
-    }
-  }
-
-  // Also process hook templates
-  if (existsSync(hooksTemplatesDir)) {
-    const hookFiles = readdirSync(hooksTemplatesDir).filter(f => f.endsWith('.template.js'));
-
-    for (const hookFile of hookFiles) {
-      const hookName = hookFile.replace('.template.js', '');
-      const templatePath = join(hooksTemplatesDir, hookFile);
-      const outputPath = join(hooksDir, `${hookName}.js`);
-
-      try {
-        const content = readFileSync(templatePath, 'utf8');
-
-        // Process template with tech-stack values
-        const { content: processed } = replacePlaceholders(content, techStack, {
-          preserveUnknown: false,
-          warnOnMissing: false,
-        });
-
-        writeFileSync(outputPath, processed, 'utf8');
-        deployed.hooks.push(hookName);
-      } catch (err) {
-        failed.push({ name: hookName, type: 'hook', error: err.message });
-      }
-    }
-  }
-
-  // Generate menu command from scratch (uses COMMAND_TEMPLATES)
-  const menuTemplate = COMMAND_TEMPLATES['menu'];
-  if (menuTemplate) {
-    const installedAgents = existsSync(join(claudeDir, 'agents'))
-      ? readdirSync(join(claudeDir, 'agents')).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''))
-      : [];
-    const installedSkills = existsSync(join(claudeDir, 'skills'))
-      ? readdirSync(join(claudeDir, 'skills')).filter(f => !f.startsWith('.'))
-      : [];
-    const installedHooks = existsSync(hooksDir)
-      ? readdirSync(hooksDir).filter(f => f.endsWith('.js')).map(f => f.replace('.js', ''))
-      : [];
-
-    const menuContent = generateMenuCommand(projectName, deployed.commands, installedAgents, installedSkills, installedHooks);
-    writeFileSync(join(commandsDir, 'menu.md'), menuContent, 'utf8');
-    deployed.commands.push('menu');
-  }
-
-  // Generate INDEX.md
-  const indexContent = generateIndexFile(deployed.commands, projectName);
-  writeFileSync(join(commandsDir, 'INDEX.md'), indexContent, 'utf8');
-
-  // Generate README.md
-  const readmeContent = generateReadmeFile(deployed.commands, projectName);
-  writeFileSync(join(commandsDir, 'README.md'), readmeContent, 'utf8');
-
-  spinner.stop();
-
-  // Summary
-  console.log('');
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-  console.log(chalk.green.bold('  ✓ DEV MODE: Templates Deployed'));
-  console.log(chalk.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-  console.log('');
-  console.log(chalk.cyan(`  Commands: ${deployed.commands.length} deployed`));
-  console.log(chalk.cyan(`  Hooks: ${deployed.hooks.length} deployed`));
-  if (deployed.preserved && deployed.preserved.length > 0) {
-    console.log(chalk.blue(`  Custom: ${deployed.preserved.length} preserved`));
-  }
-  if (failed.length > 0) {
-    console.log(chalk.yellow(`  Failed: ${failed.length}`));
-    for (const f of failed) {
-      console.log(chalk.red(`    • ${f.type}/${f.name}: ${f.error}`));
-    }
-  }
-  console.log('');
-  console.log(chalk.dim('  tech-stack.json: Preserved'));
-  console.log(chalk.dim('  settings.json: Preserved'));
-  if (deployed.preserved && deployed.preserved.length > 0) {
-    console.log(chalk.dim(`  Custom commands: ${deployed.preserved.join(', ')}`));
-  }
-  console.log('');
-  console.log(chalk.yellow.bold('  ⚠ Restart Claude Code CLI to use new commands'));
-  console.log('');
-
-  return { deployed, failed };
+async function runDevModeWrapper(options = {}) {
+  return runDevMode(options);
 }
 
 /**
@@ -270,7 +94,7 @@ export async function runInit(options = {}) {
   // DEV MODE: Fast path for template testing
   if (options.dev) {
     showHeader('Claude CLI Advanced Starter Pack - DEV MODE');
-    return runDevMode(options);
+    return runDevModeWrapper(options);
   }
 
   showHeader('Claude CLI Advanced Starter Pack - Project Setup');
@@ -956,13 +780,7 @@ export async function runInit(options = {}) {
     return false;
   };
 
-  // Step 7: Install commands
-  console.log(chalk.bold('Step 6: Installing slash commands\n'));
-
-  const spinner = ora('Installing commands...').start();
-  const installed = [];
-  const failed = [];
-
+  // Step 6: Install commands (delegated to deploy-assets.js)
   // Get installed agents, skills, hooks for menu
   const installedAgents = existsSync(agentsDir)
     ? readdirSync(agentsDir).filter(f => f.endsWith('.md')).map(f => f.replace('.md', ''))
@@ -975,230 +793,62 @@ export async function runInit(options = {}) {
     : [];
 
   // Critical commands that should ALWAYS be updated (never skipped)
-  // These are essential for the upgrade/sync system to work
   const alwaysUpdateCommands = ['update-check', '__ccasp-sync-marker'];
 
-  for (const cmdName of finalCommands) {
-    try {
-      // Skip commands that were marked to skip in smart merge
-      // EXCEPT for critical commands that must always be updated
-      if (shouldSkipCommand(cmdName) && !alwaysUpdateCommands.includes(cmdName)) {
-        continue;
-      }
+  const commandResult = await deployCommands({
+    commandsDir,
+    finalCommands,
+    projectName,
+    installedAgents,
+    installedSkills,
+    installedHooks,
+    alwaysUpdateCommands,
+    shouldBackupCommand,
+    shouldSkipCommand,
+    COMMAND_TEMPLATES,
+    generateMenuCommand,
+    createBackup,
+  });
 
-      const cmdPath = join(commandsDir, `${cmdName}.md`);
+  const installed = commandResult.installed;
+  const failed = commandResult.failed;
+  backedUpFiles.push(...commandResult.backedUpFiles);
 
-      let content;
-      if (cmdName === 'menu') {
-        // Generate dynamic menu command
-        content = generateMenuCommand(projectName, finalCommands, installedAgents, installedSkills, installedHooks);
-      } else {
-        const template = COMMAND_TEMPLATES[cmdName];
-        if (template) {
-          content = template();
-        } else {
-          // Try to load from templates/commands/ folder
-          const templatePath = join(__dirname, '..', '..', 'templates', 'commands', `${cmdName}.template.md`);
-          if (existsSync(templatePath)) {
-            content = readFileSync(templatePath, 'utf8');
-          } else {
-            failed.push({ name: cmdName, error: 'No template found' });
-            continue;
-          }
-        }
-      }
+  // Step 6b: Deploy feature-specific hooks (delegated to deploy-assets.js)
+  const hooksResult = await deployHooks({
+    hooksDir,
+    featureHooks,
+    overwrite,
+    createBackup,
+  });
 
-      // Create backup if overwriting existing file (respects smart merge decisions)
-      if (existsSync(cmdPath) && shouldBackupCommand(cmdName)) {
-        const backupPath = createBackup(cmdPath);
-        if (backupPath) {
-          backedUpFiles.push({ original: cmdPath, backup: backupPath });
-        }
-      }
+  const deployedHooks = hooksResult.deployed;
+  const failedHooks = hooksResult.failed;
+  backedUpFiles.push(...hooksResult.backedUpFiles);
 
-      writeFileSync(cmdPath, content, 'utf8');
-      installed.push(cmdName);
-    } catch (error) {
-      failed.push({ name: cmdName, error: error.message });
-    }
-  }
+  // Step 6c: Deploy feature skills (delegated to deploy-assets.js)
+  const skillsResult = await deploySkills({
+    skillsDir,
+    featureSkills,
+    overwrite,
+    createBackup,
+  });
 
-  spinner.stop();
+  const deployedSkills = skillsResult.deployed;
+  const failedSkills = skillsResult.failed;
+  backedUpFiles.push(...skillsResult.backedUpFiles);
 
-  // Show backup summary if any files were backed up
-  if (backedUpFiles.length > 0) {
-    console.log(chalk.cyan(`\n  📁 Backed up ${backedUpFiles.length} file(s) to .claude/backups/`));
-  }
+  // Step 6d: Deploy feature binaries (helper scripts) - delegated to deploy-assets.js
+  const binariesResult = await deployBinaries({
+    cwd,
+    featureBinaries,
+    overwrite,
+    createBackup,
+  });
 
-  // Step 6b: Deploy feature-specific hooks
-  const deployedHooks = [];
-  const failedHooks = [];
-
-  if (featureHooks.length > 0) {
-    console.log(chalk.bold('\nStep 6b: Deploying feature hooks\n'));
-
-    for (const hookName of featureHooks) {
-      try {
-        const hookPath = join(hooksDir, `${hookName}.js`);
-        const hookExists = existsSync(hookPath);
-
-        // Respect overwrite setting for hooks (like commands)
-        if (hookExists && !overwrite) {
-          console.log(chalk.blue(`  ○ hooks/${hookName}.js exists (preserved)`));
-          continue;
-        }
-
-        // Try to load from templates/hooks/ folder (support both .js and .cjs extensions)
-        const templatePathJs = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.js`);
-        const templatePathCjs = join(__dirname, '..', '..', 'templates', 'hooks', `${hookName}.template.cjs`);
-        const templatePath = existsSync(templatePathCjs) ? templatePathCjs : templatePathJs;
-        const outputExt = existsSync(templatePathCjs) ? '.cjs' : '.js';
-        const outputPath = join(hooksDir, `${hookName}${outputExt}`);
-
-        if (existsSync(templatePath)) {
-          // Check if output already exists (could be .js or .cjs)
-          const hookExistsJs = existsSync(join(hooksDir, `${hookName}.js`));
-          const hookExistsCjs = existsSync(join(hooksDir, `${hookName}.cjs`));
-          const hookExistsAny = hookExistsJs || hookExistsCjs;
-
-          // Create backup if overwriting existing hook
-          if (hookExistsAny && overwrite) {
-            const existingPath = hookExistsCjs ? join(hooksDir, `${hookName}.cjs`) : join(hooksDir, `${hookName}.js`);
-            const backupPath = createBackup(existingPath);
-            if (backupPath) {
-              backedUpFiles.push({ original: existingPath, backup: backupPath });
-            }
-          }
-
-          // Skip if exists and not overwriting
-          if (hookExistsAny && !overwrite) {
-            console.log(chalk.blue(`  ○ hooks/${hookName}${outputExt} exists (preserved)`));
-          } else {
-            const hookContent = readFileSync(templatePath, 'utf8');
-            writeFileSync(outputPath, hookContent, 'utf8');
-            deployedHooks.push(hookName);
-            const action = hookExistsAny ? 'Updated' : 'Created';
-            console.log(chalk.green(`  ✓ ${action} hooks/${hookName}${outputExt}`));
-          }
-        } else {
-          failedHooks.push({ name: hookName, error: 'No template found' });
-          console.log(chalk.yellow(`  ⚠ Skipped hooks/${hookName}${outputExt} (no template)`));
-        }
-      } catch (error) {
-        failedHooks.push({ name: hookName, error: error.message });
-        console.log(chalk.red(`  ✗ Failed: hooks/${hookName}.js - ${error.message}`));
-      }
-    }
-
-    if (deployedHooks.length > 0) {
-      console.log(chalk.green(`\n  ✓ Deployed ${deployedHooks.length} feature hook(s)`));
-    }
-  }
-
-  // Step 6c: Deploy feature skills
-  const deployedSkills = [];
-  const failedSkills = [];
-
-  if (featureSkills.length > 0) {
-    console.log(chalk.bold('\nStep 6c: Deploying feature skills\n'));
-
-    for (const skillName of featureSkills) {
-      try {
-        const skillPath = join(skillsDir, skillName);
-        const skillExists = existsSync(skillPath);
-
-        // Respect overwrite setting for skills (like commands)
-        if (skillExists && !overwrite) {
-          console.log(chalk.blue(`  ○ skills/${skillName}/ exists (preserved)`));
-          continue;
-        }
-
-        // Try to load from templates/skills/ folder
-        const templatePath = join(__dirname, '..', '..', 'templates', 'skills', skillName);
-        if (existsSync(templatePath)) {
-          // Create backup if overwriting existing skill
-          if (skillExists && overwrite) {
-            const backupPath = createBackup(skillPath);
-            if (backupPath) {
-              backedUpFiles.push({ original: skillPath, backup: backupPath });
-            }
-          }
-          // Create skill directory and copy recursively
-          mkdirSync(skillPath, { recursive: true });
-          const { cpSync } = await import('fs');
-          cpSync(templatePath, skillPath, { recursive: true });
-          deployedSkills.push(skillName);
-          const action = skillExists ? 'Updated' : 'Created';
-          console.log(chalk.green(`  ✓ ${action} skills/${skillName}/`));
-        } else {
-          failedSkills.push({ name: skillName, error: 'No template found' });
-          console.log(chalk.yellow(`  ⚠ Skipped skills/${skillName}/ (no template)`));
-        }
-      } catch (error) {
-        failedSkills.push({ name: skillName, error: error.message });
-        console.log(chalk.red(`  ✗ Failed: skills/${skillName}/ - ${error.message}`));
-      }
-    }
-
-    if (deployedSkills.length > 0) {
-      console.log(chalk.green(`\n  ✓ Deployed ${deployedSkills.length} feature skill(s)`));
-    }
-  }
-
-  // Step 6d: Deploy feature binaries (helper scripts)
-  const deployedBinaries = [];
-  const failedBinaries = [];
-
-  if (featureBinaries.length > 0) {
-    console.log(chalk.bold('\nStep 6d: Deploying helper scripts\n'));
-
-    // Create bin directory in project root (alongside .claude)
-    const binDir = join(cwd, 'bin');
-    if (!existsSync(binDir)) {
-      mkdirSync(binDir, { recursive: true });
-    }
-
-    for (const binaryName of featureBinaries) {
-      try {
-        const binaryPath = join(binDir, binaryName);
-        const binaryExists = existsSync(binaryPath);
-
-        // Respect overwrite setting
-        if (binaryExists && !overwrite) {
-          console.log(chalk.blue(`  ○ bin/${binaryName} exists (preserved)`));
-          continue;
-        }
-
-        // Try to load from templates/bin/ folder (remove .template suffix if present)
-        const templateName = binaryName.includes('.template.') ? binaryName : binaryName.replace(/(\.[^.]+)$/, '.template$1');
-        const templatePath = join(__dirname, '..', '..', 'templates', 'bin', templateName);
-        if (existsSync(templatePath)) {
-          // Create backup if overwriting
-          if (binaryExists && overwrite) {
-            const backupPath = createBackup(binaryPath);
-            if (backupPath) {
-              backedUpFiles.push({ original: binaryPath, backup: backupPath });
-            }
-          }
-          const binaryContent = readFileSync(templatePath, 'utf8');
-          writeFileSync(binaryPath, binaryContent, 'utf8');
-          deployedBinaries.push(binaryName);
-          const action = binaryExists ? 'Updated' : 'Created';
-          console.log(chalk.green(`  ✓ ${action} bin/${binaryName}`));
-        } else {
-          failedBinaries.push({ name: binaryName, error: 'No template found' });
-          console.log(chalk.yellow(`  ⚠ Skipped bin/${binaryName} (no template)`));
-        }
-      } catch (error) {
-        failedBinaries.push({ name: binaryName, error: error.message });
-        console.log(chalk.red(`  ✗ Failed: bin/${binaryName} - ${error.message}`));
-      }
-    }
-
-    if (deployedBinaries.length > 0) {
-      console.log(chalk.green(`\n  ✓ Deployed ${deployedBinaries.length} helper script(s)`));
-    }
-  }
+  const deployedBinaries = binariesResult.deployed;
+  const failedBinaries = binariesResult.failed;
+  backedUpFiles.push(...binariesResult.backedUpFiles);
 
   // Step 7: Generate INDEX.md
   const indexPath = join(commandsDir, 'INDEX.md');
@@ -1420,102 +1070,4 @@ export async function runInit(options = {}) {
   console.log('');
 }
 
-/**
- * Verify and fix legacy installations (pre-v1.0.8)
- * Issue #8: Ensures update-check hook is properly configured
- *
- * @param {string} projectDir - Project directory to verify
- * @returns {Object} Verification result with fixes applied
- */
-export async function verifyLegacyInstallation(projectDir = process.cwd()) {
-  const fixes = [];
-  const issues = [];
-
-  const claudeDir = join(projectDir, '.claude');
-  const hooksDir = join(claudeDir, 'hooks');
-  const settingsPath = join(claudeDir, 'settings.json');
-  const updateCheckHookPath = join(hooksDir, 'ccasp-update-check.js');
-
-  // Check if this is a CCASP installation
-  if (!existsSync(claudeDir)) {
-    return { isLegacy: false, message: 'No .claude folder found' };
-  }
-
-  // Check 1: Does the update-check hook file exist and have correct paths?
-  const templatePath = join(__dirname, '..', '..', 'templates', 'hooks', 'ccasp-update-check.template.js');
-
-  if (!existsSync(updateCheckHookPath)) {
-    issues.push('Missing ccasp-update-check.js hook file');
-
-    // Fix: Create the hook file
-    if (!existsSync(hooksDir)) {
-      mkdirSync(hooksDir, { recursive: true });
-    }
-
-    if (existsSync(templatePath)) {
-      const hookContent = readFileSync(templatePath, 'utf8');
-      writeFileSync(updateCheckHookPath, hookContent, 'utf8');
-      fixes.push('Created ccasp-update-check.js hook file');
-    }
-  } else {
-    // Check 1b: Hook exists - verify it has correct state file path (Issue #9 fix)
-    const existingHook = readFileSync(updateCheckHookPath, 'utf8');
-    const hasBuggyPath = existingHook.includes('.ccasp-dev/ccasp-state.json') ||
-                         existingHook.includes("'.ccasp-dev/") ||
-                         !existingHook.includes('.claude/config/ccasp-state.json');
-
-    if (hasBuggyPath) {
-      issues.push('Update-check hook has incorrect state file path (update notifications broken)');
-
-      if (existsSync(templatePath)) {
-        const hookContent = readFileSync(templatePath, 'utf8');
-        writeFileSync(updateCheckHookPath, hookContent, 'utf8');
-        fixes.push('Fixed ccasp-update-check.js state file path');
-      }
-    }
-  }
-
-  // Check 2: Is the hook registered in settings.json?
-  if (existsSync(settingsPath)) {
-    try {
-      const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
-
-      // Check if UserPromptSubmit hook exists with update-check
-      const hasUpdateHook = settings.hooks?.UserPromptSubmit?.some(
-        (h) => h.hooks?.some((hook) => hook.command?.includes('ccasp-update-check'))
-      );
-
-      if (!hasUpdateHook) {
-        issues.push('Update-check hook not registered in settings.json');
-
-        // Fix: Add the hook to settings.json
-        if (!settings.hooks) settings.hooks = {};
-        if (!settings.hooks.UserPromptSubmit) {
-          settings.hooks.UserPromptSubmit = [];
-        }
-
-        settings.hooks.UserPromptSubmit.push({
-          matcher: '',
-          hooks: [{
-            type: 'command',
-            command: 'node .claude/hooks/ccasp-update-check.js',
-          }],
-        });
-
-        safeWriteJson(settingsPath, settings);
-        fixes.push('Registered update-check hook in settings.json');
-      }
-    } catch {
-      issues.push('Could not parse settings.json');
-    }
-  }
-
-  return {
-    isLegacy: issues.length > 0,
-    issues,
-    fixes,
-    message: fixes.length > 0
-      ? `Fixed ${fixes.length} legacy installation issue(s)`
-      : 'Installation is up to date',
-  };
-}
+// verifyLegacyInstallation is now in init/legacy-verify.js and re-exported at the top

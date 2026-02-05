@@ -7,7 +7,7 @@
   "status": "in_progress",
   "scale": "L",
   "target_success": 0.95,
-  "completion_percentage": 14,
+  "completion_percentage": 28,
 
   "parent_epic": null,
 
@@ -87,8 +87,8 @@
       "name": "Commands Domain Decomposition",
       "slug": "commands-decompose",
       "description": "Split the 3 largest command files: init.js (1521), wizard/actions.js (1451), and create-phase-dev/wizard.js (864)",
-      "status": "pending",
-      "completion_percentage": 0,
+      "status": "completed",
+      "completion_percentage": 100,
       "estimated_effort": "4-5 days",
       "priority": "HIGH",
       "dependencies": [1],
