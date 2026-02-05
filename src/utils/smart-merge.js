@@ -11,6 +11,7 @@ import { existsSync, readFileSync, readdirSync, statSync, mkdirSync, copyFileSyn
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import chalk from 'chalk';
 import {
   loadUsageTracking,
   getCustomizedUsedAssets,
@@ -66,7 +67,8 @@ export function getLocalAsset(assetType, assetName, projectDir = process.cwd()) 
       content: readFileSync(localPath, 'utf8'),
       stats: statSync(localPath),
     };
-  } catch {
+  } catch (error) {
+    console.error(chalk.yellow(`Warning: Failed to read local asset ${assetName} - ${error.message}`));
     return null;
   }
 }
@@ -90,7 +92,8 @@ export function getTemplateAsset(assetType, assetName) {
       content: readFileSync(templatePath, 'utf8'),
       stats: statSync(templatePath),
     };
-  } catch {
+  } catch (error) {
+    console.error(chalk.yellow(`Warning: Failed to read template asset ${assetName} - ${error.message}`));
     return null;
   }
 }
@@ -534,7 +537,8 @@ export function listBackups(assetType, assetName, projectDir = process.cwd()) {
       .sort((a, b) => b.timestamp - a.timestamp); // Most recent first
 
     return backups;
-  } catch {
+  } catch (error) {
+    console.error(chalk.yellow(`Warning: Failed to list backups for ${assetName} - ${error.message}`));
     return [];
   }
 }

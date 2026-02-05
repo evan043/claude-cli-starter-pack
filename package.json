@@ -1,6 +1,6 @@
 {
   "name": "claude-cli-advanced-starter-pack",
-  "version": "2.2.19",
+  "version": "2.3.0",
   "description": "Advanced Claude Code CLI toolkit - agents, hooks, skills, MCP servers, phased development, and GitHub integration",
   "main": "src/index.js",
   "bin": {
@@ -13,7 +13,10 @@
     "start": "node bin/gtask.js",
     "setup": "node bin/gtask.js setup",
     "postinstall": "node bin/postinstall.js",
-    "test": "node --check bin/gtask.js && node --check bin/postinstall.js && echo 'Syntax OK'",
+    "test": "node --test tests/**/*.test.js tests/**/*.test.mjs",
+    "test:syntax": "node --check bin/gtask.js && node --check bin/postinstall.js",
+    "test:all": "npm run test:syntax && npm test",
+    "test:coverage": "npx c8 --reporter=text --reporter=html node --test tests/**/*.test.js",
     "test:golden": "node tests/golden-master/api-contracts.test.js",
     "test:golden:capture": "node tests/golden-master/api-contracts.test.js capture",
     "test:golden:verify": "node tests/golden-master/api-contracts.test.js verify",
@@ -24,7 +27,7 @@
     "test:orchestration": "node tests/orchestration.test.js",
     "test:hierarchy": "node tests/run-hierarchy-tests.js",
     "lint": "eslint src/",
-    "prepublishOnly": "npm run test"
+    "prepublishOnly": "npm run test:all"
   },
   "keywords": [
     "claude",
@@ -67,6 +70,7 @@
     "yaml": "^2.4.1"
   },
   "devDependencies": {
+    "c8": "^10.0.0",
     "eslint": "^9.0.0",
     "globals": "^17.2.0"
   },

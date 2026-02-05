@@ -240,29 +240,46 @@ export async function launchClaudeCLI() {
   let launched = false;
 
   try {
-    const { execSync } = await import('child_process');
+    const { spawn } = await import('child_process');
 
     if (platform === 'win32') {
-      // Windows: Use PowerShell Start-Process with argument array
-      // This reliably handles paths with spaces and special characters
-      const psArgs = `/k','cd /d "${cwd}" && claude "${setupCommand}"`;
-      execSync(`powershell -Command "Start-Process cmd -ArgumentList '${psArgs}'"`, {
+      // Windows: Use PowerShell Start-Process with properly escaped arguments
+      // Escape special chars for PowerShell string context
+      const escapedCwd = cwd.replace(/'/g, "''");
+      const escapedCmd = setupCommand.replace(/'/g, "''");
+      const psArgs = `/k','cd /d ''${escapedCwd}'' && claude ''${escapedCmd}''`;
+
+      spawn('powershell', ['-Command', `Start-Process cmd -ArgumentList '${psArgs}'`], {
+        detached: true,
         stdio: 'ignore',
-        cwd: cwd,
-      });
+      }).unref();
       launched = true;
     } else if (platform === 'darwin') {
-      // macOS: Open Terminal app with claude command and inject setup
-      execSync(`osascript -e 'tell application "Terminal" to do script "cd \\"${cwd}\\" && claude \\"${setupCommand}\\""'`, { stdio: 'pipe' });
+      // macOS: Use osascript with properly escaped arguments
+      // Escape backslashes and quotes for AppleScript string context
+      const escapedCwd = cwd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const escapedCmd = setupCommand.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const script = `tell application "Terminal" to do script "cd \\"${escapedCwd}\\" && claude \\"${escapedCmd}\\""`;
+
+      spawn('osascript', ['-e', script], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref();
       launched = true;
     } else {
-      // Linux: Try common terminals with injected command
+      // Linux: Try common terminals - pass as array arguments where possible
       try {
-        execSync(`gnome-terminal -- bash -c "cd '${cwd}' && claude '${setupCommand}'; exec bash"`, { stdio: 'pipe' });
+        spawn('gnome-terminal', ['--', 'bash', '-c', `cd '${cwd}' && claude '${setupCommand}'; exec bash`], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
         launched = true;
       } catch {
         try {
-          execSync(`xterm -e "cd '${cwd}' && claude '${setupCommand}'"`, { stdio: 'pipe' });
+          spawn('xterm', ['-e', `cd '${cwd}' && claude '${setupCommand}'`], {
+            detached: true,
+            stdio: 'ignore',
+          }).unref();
           launched = true;
         } catch {
           // Fallback below

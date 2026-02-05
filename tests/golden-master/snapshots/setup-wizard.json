@@ -1,6 +1,6 @@
 {
   "path": "src/commands/setup-wizard.js",
-  "capturedAt": "2026-02-05T19:53:16.418Z",
+  "capturedAt": "2026-02-05T19:58:34.119Z",
   "exports": {
     "createBackup": {
       "type": "function",

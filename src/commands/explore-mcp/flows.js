@@ -574,16 +574,35 @@ ${keywords.map((k) => `- "MCP server ${k} Claude"`).join('\n')}
 For each MCP found, provide: name, npmPackage, description, tools list.`;
 
     try {
-      const { execSync } = await import('child_process');
+      const { spawnSync } = await import('child_process');
       const platform = process.platform;
+
+      let result;
       if (platform === 'darwin') {
-        execSync(`echo "${instructions}" | pbcopy`);
+        result = spawnSync('pbcopy', [], {
+          input: instructions,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
       } else if (platform === 'linux') {
-        execSync(`echo "${instructions}" | xclip -selection clipboard`);
+        result = spawnSync('xclip', ['-selection', 'clipboard'], {
+          input: instructions,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
       } else if (platform === 'win32') {
-        execSync(`echo ${instructions.replace(/\n/g, '& echo.')} | clip`, { shell: true });
+        result = spawnSync('clip', [], {
+          input: instructions,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
       }
-      console.log(chalk.green('\n✓ Instructions copied to clipboard'));
+
+      if (result && result.status === 0) {
+        console.log(chalk.green('\n✓ Instructions copied to clipboard'));
+      } else {
+        console.log(chalk.yellow('\nCould not copy to clipboard. Please copy manually.'));
+      }
     } catch {
       console.log(chalk.yellow('\nCould not copy to clipboard. Please copy manually.'));
     }

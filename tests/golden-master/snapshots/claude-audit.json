@@ -1,6 +1,6 @@
 {
   "path": "src/commands/claude-audit.js",
-  "capturedAt": "2026-02-05T19:53:16.417Z",
+  "capturedAt": "2026-02-05T19:58:34.118Z",
   "exports": {
     "ENHANCEMENT_TEMPLATES": {
       "type": "object",

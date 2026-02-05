@@ -1,6 +1,6 @@
 {
   "path": "src/cli/menu.js",
-  "capturedAt": "2026-02-05T19:53:16.417Z",
+  "capturedAt": "2026-02-05T19:58:34.119Z",
   "exports": {
     "showError": {
       "type": "function",

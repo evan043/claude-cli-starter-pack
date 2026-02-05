@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, watchFile, unwatchFile } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 // Queue file location - in user's .claude folder for cross-project access
 const QUEUE_DIR = join(homedir(), '.claude', 'ccasp-panel');
@@ -135,23 +135,44 @@ export function getQueueStatus() {
 
 /**
  * Copy text to clipboard (cross-platform)
+ * Uses stdin to safely pass text without shell injection risks
  */
 export function copyToClipboard(text) {
   try {
     if (process.platform === 'win32') {
-      // PowerShell clip
-      execSync(`echo ${text} | clip`, { stdio: 'pipe' });
+      // Windows: pipe text to clip via stdin
+      const result = spawnSync('clip', [], {
+        input: text,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      return result.status === 0;
     } else if (process.platform === 'darwin') {
-      execSync(`echo "${text}" | pbcopy`, { stdio: 'pipe' });
+      // macOS: pipe to pbcopy via stdin
+      const result = spawnSync('pbcopy', [], {
+        input: text,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+      return result.status === 0;
     } else {
-      // Linux - try xclip or xsel
-      try {
-        execSync(`echo "${text}" | xclip -selection clipboard`, { stdio: 'pipe' });
-      } catch {
-        execSync(`echo "${text}" | xsel --clipboard`, { stdio: 'pipe' });
+      // Linux: try xclip, fallback to xsel
+      let result = spawnSync('xclip', ['-selection', 'clipboard'], {
+        input: text,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      if (result.status !== 0) {
+        result = spawnSync('xsel', ['--clipboard'], {
+          input: text,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
       }
+
+      return result.status === 0;
     }
-    return true;
   } catch {
     return false;
   }

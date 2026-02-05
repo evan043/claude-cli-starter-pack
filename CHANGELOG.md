@@ -4,13 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [2.3.0] - 2026-02-05
 ### Added
-- Enhanced documentation and discoverability features (v2.3.0 preparation)
-- CHANGELOG.md following Keep a Changelog format
-- Template index files for better navigation
-- Template variables reference documentation
-- Migration guide for version upgrades
+- **Security**: Template injection prevention (`sanitizeForJS`) in agent templates
+- **Security**: Path traversal protection (`safePath`, `safeComponent`) in file operations
+- **Security**: Command injection prevention - converted `execSync` to `execFileSync` in github-integration.js
+- **Security**: Max iteration limit (100) for template engine to prevent infinite loops
+- **Testing**: Golden master test suite for API contract verification
+- **Testing**: Template engine test suite (14 tests)
+- **Testing**: Safe path test suite (11 tests)
+- **Testing**: 135 tests total, all passing
+- **Utilities**: `src/utils/logger.js` - Structured logging with levels (SILENT/ERROR/WARN/INFO/DEBUG)
+- **Utilities**: `src/utils/errors.js` - Custom error hierarchy (CcaspError, CcaspConfigError, etc.)
+- **Utilities**: `src/utils/inquirer-presets.js` - Shared prompt factories
+- **Utilities**: `src/utils/file-ops.js` - Safe file I/O wrappers
+- **Patterns**: Circuit breaker pattern for fail-fast external calls
+- **Patterns**: Retry with exponential backoff pattern
+- **Patterns**: Fan-out/fan-in parallel aggregation pattern
+- **Patterns**: Streaming/progressive output pattern for long-running tasks
+- **Commands**: `/security-scan` - OWASP check, npm audit, dependency scanning
+- **Commands**: `/perf-profile` - Lighthouse, bundle analysis, Core Web Vitals
+- **Commands**: `/monitoring-setup` - Sentry/DataDog/New Relic integration
+- **Commands**: `/api-docs` - OpenAPI/Swagger generation from codebase
+- **Commands**: `/db-migrate` - Database migration management with rollback
+- **Schemas**: JSON schemas for PROGRESS.json, ROADMAP.json, EPIC.json, skill.json
+- **Documentation**: Templates INDEX.md, VARIABLES.md, hooks INDEX.md
+- **Documentation**: MIGRATION.md for version upgrade guidance
+- **CLI**: `--debug`, `--verbose`, `--silent` global flags for log level control
+- **CLI**: Global error boundary (uncaughtException/unhandledRejection handlers)
+
+### Changed
+- ESLint config strengthened with security and best-practice rules
+- YAML frontmatter added to 18 templates missing it
+- Golden master tests now ignore `capturedAt` timestamps in comparisons
+- All 53 hook templates use consistent kebab-case naming
+- Patterns README updated as decision guide indexing all 8 patterns
+
+### Fixed
+- Template injection vulnerability in `agents/templates.js`
+- Path traversal vulnerability in file write operations
+- Command injection in `github-integration.js` `execSync` calls
+- Golden master test false failures from timestamp comparison
+- `agents.test.js` stale model assertions after model field removal
+- L3 github-issue-sync worker missing `--repo` flag
 
 ## [2.2.19] - 2026-02-05
 ### Added

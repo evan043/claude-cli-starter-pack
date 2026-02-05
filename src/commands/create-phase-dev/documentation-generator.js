@@ -27,9 +27,8 @@ import {
   generatePhaseDevEnforcerHook,
 } from '../../agents/phase-dev-templates.js';
 import { runL2Exploration } from './l2-orchestrator.js';
-import { saveAllExplorationDocs, explorationDocsExist, loadExplorationDocs } from '../../utils/exploration-docs.js';
+import { saveAllExplorationDocs, explorationDocsExist, loadExplorationDocs, generatePhaseBreakdownMarkdown } from '../../utils/exploration-docs.js';
 import { checkGhCli, getRepoInfo } from '../../roadmap/github-integration.js';
-import { generatePhaseBreakdownMarkdown } from '../../utils/exploration-docs.js';
 import { execSync } from 'child_process';
 
 /**
