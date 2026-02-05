@@ -1,162 +1,140 @@
 /**
  * Progress Sync Hook Template
  *
- * Master hook for progress-based GitHub synchronization.
- * Monitors PROGRESS.json changes and spawns L3 worker agents
- * to sync updates to GitHub issues.
+ * Monitors PROGRESS.json and ROADMAP.json writes and syncs
+ * completion status to linked GitHub issues using direct gh CLI.
  *
  * Event: PostToolUse
- * Tools: Write, Edit
- * Target: **/PROGRESS.json
+ * Matcher: Write|Edit
+ *
+ * Reads from stdin (Claude Code passes tool info as JSON).
+ * Auto-detects issue numbers from the JSON file's own metadata.
  *
  * Features:
- * - Change detection (task/phase/plan completion, blockers)
+ * - Change detection (task/phase/plan completion)
  * - Debounce logic to prevent sync spam
- * - L3 worker agent spawning with Task tool
+ * - Direct gh CLI execution (hooks cannot use Task tool)
+ * - Auto-detects issue numbers from JSON metadata
+ * - Supports both PROGRESS.json and ROADMAP.json
  * - Comprehensive logging
  * - Configurable sync triggers
  */
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// Configuration paths (replaced during template processing)
-const PROJECT_ROOT = '{{projectRoot}}';
-const CONFIG_PATH = '{{configPath}}';
-
-// State cache for debounce tracking
-const syncStateCache = new Map();
+const PROJECT_ROOT = process.cwd();
+const LOG_DIR = path.join(PROJECT_ROOT, '.claude', 'logs');
+const CACHE_DIR = path.join(PROJECT_ROOT, '.claude', 'cache', 'progress-states');
+const CONFIG_PATH = path.join(PROJECT_ROOT, '.claude', 'config', 'progress-sync-config.json');
+const DEBOUNCE_MS = 10000;
 
 /**
- * Load sync configuration from .claude/config/progress-sync-config.json
- *
- * @param {string} projectRoot - Project root directory
- * @returns {Object|null} Configuration object or null if not found
+ * Log a sync event
  */
-function loadConfig(projectRoot) {
-  const configPath = path.join(projectRoot, '.claude', 'config', 'progress-sync-config.json');
-
-  if (!fs.existsSync(configPath)) {
-    return null;
-  }
-
+function log(level, message, data) {
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    return config;
-  } catch (error) {
-    logError('Failed to load config', { configPath, error: error.message });
-    return null;
-  }
+    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    const ts = new Date().toISOString();
+    const entry = `[${ts}] [${level}] ${message}${data ? ' ' + JSON.stringify(data) : ''}\n`;
+    fs.appendFileSync(path.join(LOG_DIR, 'progress-sync.log'), entry, 'utf8');
+  } catch { /* silent */ }
 }
 
 /**
- * Load PROGRESS.json file and parse it
- *
- * @param {string} filePath - Absolute path to PROGRESS.json
- * @returns {Object|null} Parsed progress data or null on error
+ * Load sync config
  */
-function loadProgressFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-
+function loadConfig() {
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(content);
-  } catch (error) {
-    logError('Failed to load progress file', { filePath, error: error.message });
-    return null;
-  }
+    if (fs.existsSync(CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    }
+  } catch { /* silent */ }
+  return { enabled: true, sync_on: ['task_complete', 'phase_advance', 'plan_complete'] };
 }
 
 /**
- * Detect changes between old and new progress states
- *
- * Detects:
- * - task_complete: Task status changed to "completed"
- * - phase_advance: Phase status changed to "completed"
- * - blocker: Task status changed to "blocked"
- * - plan_complete: All phases completed
- *
- * @param {Object} oldProgress - Previous progress state (can be null)
- * @param {Object} newProgress - Current progress state
- * @returns {Array<Object>} Array of detected changes
+ * Check if a file path is a tracked progress/roadmap JSON
  */
-function detectChanges(oldProgress, newProgress) {
+function isTrackedFile(filePath) {
+  if (!filePath) return false;
+  const normalized = filePath.replace(/\\/g, '/');
+  return normalized.endsWith('/PROGRESS.json') ||
+         normalized.endsWith('/ROADMAP.json') ||
+         normalized === 'PROGRESS.json' ||
+         normalized === 'ROADMAP.json';
+}
+
+/**
+ * Extract GitHub issue info from the JSON data itself.
+ * Checks multiple locations where issue numbers can live.
+ */
+function extractIssueInfo(data) {
+  const issues = {};
+
+  const epicIssue = data.metadata?.github_epic_number ||
+                    data.metadata?.epic_issue_number ||
+                    data.github_issue_number;
+  if (epicIssue) issues.epic = epicIssue;
+
+  const phases = data.phases || [];
+  for (const phase of phases) {
+    const phaseIssue = phase.github_issue_number;
+    if (phaseIssue) {
+      issues[`phase-${phase.id || phase.phase_id}`] = phaseIssue;
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Detect what changed by comparing cached vs current state
+ */
+function detectChanges(cached, current) {
   const changes = [];
+  if (!current) return changes;
 
-  if (!newProgress) {
-    return changes;
+  if (current.status === 'completed' && cached?.status !== 'completed') {
+    changes.push({ type: 'plan_complete', name: current.title || current.slug });
   }
 
-  // Check for plan completion
-  if (newProgress.status === 'completed' && oldProgress?.status !== 'completed') {
-    changes.push({
-      type: 'plan_complete',
-      planId: newProgress.plan_id,
-      planName: newProgress.plan_name,
-      completedAt: newProgress.completedAt || new Date().toISOString(),
-      completionPercentage: 100,
-    });
-  }
+  const currentPhases = current.phases || [];
+  const cachedPhases = cached?.phases || [];
 
-  // Iterate through phases
-  for (const newPhase of newProgress.phases || []) {
-    const oldPhase = oldProgress?.phases?.find(p => p.phase_id === newPhase.phase_id);
+  for (const phase of currentPhases) {
+    const phaseId = phase.id || phase.phase_id;
+    const cachedPhase = cachedPhases.find(p => (p.id || p.phase_id) === phaseId);
 
-    // Check for phase completion
-    if (newPhase.status === 'completed' && oldPhase?.status !== 'completed') {
+    if (phase.status === 'completed' && cachedPhase?.status !== 'completed') {
       changes.push({
         type: 'phase_advance',
-        phaseId: newPhase.phase_id,
-        phaseName: newPhase.name,
-        completedAt: newPhase.completedAt || new Date().toISOString(),
-        tasksCompleted: newPhase.tasks?.filter(t => t.status === 'completed').length || 0,
-        totalTasks: newPhase.tasks?.length || 0,
+        phaseId,
+        name: phase.name || phase.phase_title,
+        completion: phase.completion_percentage || 100,
       });
     }
 
-    // Check for task changes within phase
-    for (const newTask of newPhase.tasks || []) {
-      const oldTask = oldPhase?.tasks?.find(t => t.id === newTask.id);
+    const currentTasks = phase.tasks || [];
+    const cachedTasks = cachedPhase?.tasks || [];
 
-      // Task completion
-      if (newTask.status === 'completed' && oldTask?.status !== 'completed') {
+    for (const task of currentTasks) {
+      const cachedTask = cachedTasks.find(t => t.id === task.id);
+      if (task.completed && !cachedTask?.completed) {
         changes.push({
           type: 'task_complete',
-          taskId: newTask.id,
-          taskTitle: newTask.title,
-          phaseId: newPhase.phase_id,
-          phaseName: newPhase.name,
-          completedAt: newTask.completedAt || new Date().toISOString(),
-          summary: newTask.summary,
-          artifacts: newTask.artifacts,
+          taskId: task.id,
+          description: task.description,
+          phaseId,
         });
       }
-
-      // Task blocked
-      if (newTask.status === 'blocked' && oldTask?.status !== 'blocked') {
+      if (task.status === 'completed' && cachedTask?.status !== 'completed') {
         changes.push({
-          type: 'blocker',
-          taskId: newTask.id,
-          taskTitle: newTask.title,
-          phaseId: newPhase.phase_id,
-          phaseName: newPhase.name,
-          blocker: newTask.blocker || 'No details provided',
-          blockedAt: new Date().toISOString(),
-        });
-      }
-
-      // Task failed
-      if (newTask.status === 'failed' && oldTask?.status !== 'failed') {
-        changes.push({
-          type: 'task_failed',
-          taskId: newTask.id,
-          taskTitle: newTask.title,
-          phaseId: newPhase.phase_id,
-          phaseName: newPhase.name,
-          error: newTask.error || 'No error details',
-          failedAt: new Date().toISOString(),
+          type: 'task_complete',
+          taskId: task.id,
+          description: task.title || task.description,
+          phaseId,
         });
       }
     }
@@ -166,433 +144,239 @@ function detectChanges(oldProgress, newProgress) {
 }
 
 /**
- * Check if sync should be triggered based on changes and config
- *
- * @param {Array<Object>} changes - Detected changes
- * @param {Object} config - Sync configuration
- * @returns {boolean} True if sync should occur
+ * Build progress bar string
  */
-function shouldSync(changes, config) {
-  if (!changes || changes.length === 0) {
-    return false;
-  }
-
-  if (!config || !config.enabled) {
-    return false;
-  }
-
-  // Check if any change type matches enabled triggers
-  const triggers = config.triggers || {};
-
-  for (const change of changes) {
-    switch (change.type) {
-      case 'task_complete':
-        if (triggers.onTaskComplete) return true;
-        break;
-      case 'phase_advance':
-        if (triggers.onPhaseComplete) return true;
-        break;
-      case 'blocker':
-        if (triggers.onBlocker) return true;
-        break;
-      case 'plan_complete':
-        if (triggers.onPlanComplete) return true;
-        break;
-      case 'task_failed':
-        if (triggers.onTaskFailed) return true;
-        break;
-    }
-  }
-
-  return false;
+function progressBar(pct) {
+  const filled = Math.floor(pct / 10);
+  return '\u2588'.repeat(filled) + '\u2591'.repeat(10 - filled) + ` ${pct}%`;
 }
 
 /**
- * Check debounce: return true if enough time has passed since last sync
- *
- * @param {string} progressFile - Progress file path (cache key)
- * @param {number} debounceMs - Debounce time in milliseconds
- * @returns {boolean} True if sync should proceed (debounce passed)
+ * Calculate overall completion from phases
  */
-function checkDebounce(progressFile, debounceMs = 5000) {
-  const now = Date.now();
-  const lastSync = syncStateCache.get(progressFile);
-
-  if (!lastSync) {
-    return true; // First sync for this file
-  }
-
-  const elapsed = now - lastSync;
-  return elapsed >= debounceMs;
+function calcCompletion(data) {
+  if (data.completion_percentage !== undefined) return data.completion_percentage;
+  const phases = data.phases || [];
+  if (phases.length === 0) return 0;
+  const completed = phases.filter(p => p.status === 'completed').length;
+  return Math.round((completed / phases.length) * 100);
 }
 
 /**
- * Update debounce state for a progress file
- *
- * @param {string} progressFile - Progress file path (cache key)
+ * Post a progress comment to a GitHub issue
  */
-function updateDebounceState(progressFile) {
-  syncStateCache.set(progressFile, Date.now());
-}
+function postProgressComment(issueNumber, data, changes) {
+  const pct = calcCompletion(data);
+  const phases = data.phases || [];
+  const title = data.title || data.slug || 'Development Plan';
 
-/**
- * Spawn L3 worker agent to sync changes to GitHub
- *
- * Uses Task tool with run_in_background: true
- *
- * @param {string} issueNumber - GitHub issue number
- * @param {string} progressFile - Absolute path to PROGRESS.json
- * @param {Array<Object>} changes - Detected changes
- * @param {string} projectRoot - Project root directory
- * @returns {Object} Task spawn result
- */
-async function spawnSyncWorker(issueNumber, progressFile, changes, projectRoot) {
-  // Build worker context
-  const changeSummary = changes.map(c => {
-    switch (c.type) {
-      case 'task_complete':
-        return `- Task completed: ${c.taskId} (${c.taskTitle})`;
-      case 'phase_advance':
-        return `- Phase completed: ${c.phaseName} (${c.phaseId})`;
-      case 'blocker':
-        return `- Task blocked: ${c.taskId} - ${c.blocker}`;
-      case 'plan_complete':
-        return `- Plan completed: ${c.planName}`;
-      case 'task_failed':
-        return `- Task failed: ${c.taskId} - ${c.error}`;
-      default:
-        return `- Change: ${c.type}`;
-    }
+  const phaseLines = phases.map(p => {
+    const status = p.status === 'completed' ? '\u2713' :
+                   p.status === 'in_progress' ? '\u25B6' :
+                   p.status === 'blocked' ? '\u2717' : '\u25CB';
+    const name = p.name || p.phase_title || `Phase ${p.id || p.phase_id}`;
+    const phasePct = p.completion_percentage !== undefined ? p.completion_percentage : (p.status === 'completed' ? 100 : 0);
+    return `| ${status} | ${name} | ${phasePct}% |`;
   }).join('\n');
 
-  // Extract repository info from config if available
-  const config = loadConfig(projectRoot);
-  const repository = config?.repository || 'owner/repo';
+  const changeSummary = changes.slice(0, 5).map(c => {
+    if (c.type === 'plan_complete') return `- Plan completed: ${c.name}`;
+    if (c.type === 'phase_advance') return `- Phase completed: ${c.name}`;
+    if (c.type === 'task_complete') return `- Task done: ${c.taskId} - ${(c.description || '').slice(0, 80)}`;
+    return `- ${c.type}`;
+  }).join('\n');
 
-  const workerPrompt = `
-You are a GitHub Issue Sync Worker (L3). Your task is to sync progress updates to a GitHub issue.
+  const comment = `### Progress Update - ${title}\n\n${progressBar(pct)} (${phases.filter(p => p.status === 'completed').length}/${phases.length} phases)\n\n| Status | Phase | Progress |\n|--------|-------|----------|\n${phaseLines}\n\n**Latest changes:**\n${changeSummary || '_No specific changes detected_'}\n\n---\n*Auto-synced by progress-sync hook*`;
 
-**Context:**
-- Issue Number: #${issueNumber}
-- Repository: ${repository}
-- Progress File: ${progressFile}
+  const tmpFile = path.join(CACHE_DIR, 'tmp-progress-comment.md');
+  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+  fs.writeFileSync(tmpFile, comment, 'utf8');
 
-**Changes Detected:**
-${changeSummary}
-
-**Instructions:**
-1. Read the PROGRESS.json file at: ${progressFile}
-2. Calculate current progress percentage (completed tasks / total tasks * 100)
-3. Determine current phase status
-4. Generate a progress bar visualization (e.g., "[████████░░] 80%")
-5. Use gh CLI to add a comment to issue #${issueNumber} with:
-   - Progress bar
-   - Summary of changes
-   - Current phase status table
-   - List of remaining tasks in current phase
-6. Update issue labels:
-   - Add appropriate progress label (progress:0%, progress:25%, progress:50%, progress:75%, progress:100%)
-   - Remove old progress labels
-7. If plan is 100% complete, close the issue with completion message
-
-**GitHub CLI Commands:**
-\`\`\`bash
-# Add comment
-gh issue comment ${issueNumber} --body "<your_comment_body>"
-
-# Update labels
-gh issue edit ${issueNumber} --add-label "progress:XX%" --remove-label "progress:YY%"
-
-# Close issue (only if 100% complete)
-gh issue close ${issueNumber} --comment "Plan completed successfully!"
-\`\`\`
-
-**Completion Report:**
-When done, report:
-TASK_COMPLETE: sync-issue-${issueNumber}
-SUMMARY: Posted progress update to issue #${issueNumber}
-`.trim();
-
-  // Log worker spawn
-  logSyncEvent({
-    type: 'worker_spawn',
-    issueNumber,
-    progressFile,
-    changes: changes.length,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Return Task tool invocation structure
-  return {
-    tool: 'Task',
-    params: {
-      subagent_type: 'l3-worker',
-      agent_name: 'github-issue-sync-worker',
-      description: `Sync GitHub issue #${issueNumber} with progress updates`,
-      prompt: workerPrompt,
-      run_in_background: true,
-      metadata: {
-        issueNumber,
-        progressFile,
-        changeCount: changes.length,
-        changeTypes: changes.map(c => c.type),
-      },
-    },
-  };
-}
-
-/**
- * Log sync event to .claude/logs/progress-sync.log
- *
- * @param {Object} event - Event data to log
- */
-function logSyncEvent(event) {
   try {
-    const logDir = path.join(PROJECT_ROOT, '.claude', 'logs');
-    const logFile = path.join(logDir, 'progress-sync.log');
-
-    // Ensure log directory exists
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] ${JSON.stringify(event)}\n`;
-
-    fs.appendFileSync(logFile, logEntry, 'utf8');
-  } catch (error) {
-    // Silent fail on logging errors
-    console.error('Failed to log sync event:', error.message);
+    execSync(`gh issue comment ${issueNumber} --body-file "${tmpFile}"`, {
+      stdio: 'pipe',
+      timeout: 15000,
+    });
+    log('info', `Posted progress comment to #${issueNumber}`, { pct });
+    return true;
+  } catch (err) {
+    log('error', `Failed to post comment to #${issueNumber}`, { error: err.message });
+    return false;
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch { /* silent */ }
   }
 }
 
 /**
- * Log error to .claude/logs/progress-sync-errors.log
- *
- * @param {string} message - Error message
- * @param {Object} details - Additional error details
+ * Close a GitHub issue when plan reaches 100%
  */
-function logError(message, details = {}) {
+function closeIssueIfComplete(issueNumber, data) {
+  const pct = calcCompletion(data);
+  if (pct < 100) return false;
+
+  const title = data.title || data.slug || 'Plan';
   try {
-    const logDir = path.join(PROJECT_ROOT, '.claude', 'logs');
-    const logFile = path.join(logDir, 'progress-sync-errors.log');
-
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] ERROR: ${message}\n${JSON.stringify(details, null, 2)}\n\n`;
-
-    fs.appendFileSync(logFile, logEntry, 'utf8');
-  } catch (error) {
-    console.error('Failed to log error:', error.message);
+    execSync(
+      `gh issue close ${issueNumber} --comment "All phases completed for: ${title}"`,
+      { stdio: 'pipe', timeout: 15000 }
+    );
+    log('info', `Closed issue #${issueNumber} (100% complete)`);
+    return true;
+  } catch (err) {
+    log('error', `Failed to close #${issueNumber}`, { error: err.message });
+    return false;
   }
 }
 
 /**
- * Check if file path matches PROGRESS.json pattern
- *
- * @param {string} filePath - File path to check
- * @returns {boolean} True if matches **/PROGRESS.json
+ * Load cached state for a file
  */
-function isProgressFile(filePath) {
-  if (!filePath) return false;
-
-  const normalized = filePath.replace(/\\/g, '/');
-  return normalized.endsWith('/PROGRESS.json') || normalized === 'PROGRESS.json';
+function loadCache(filePath) {
+  try {
+    const hash = Buffer.from(filePath).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
+    const cachePath = path.join(CACHE_DIR, `${hash}.json`);
+    if (fs.existsSync(cachePath)) {
+      return JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    }
+  } catch { /* silent */ }
+  return null;
 }
 
 /**
- * Load previous progress state from cache
- *
- * Cache location: .claude/cache/progress-states/{hash}.json
- *
- * @param {string} progressFile - Progress file path
- * @param {string} projectRoot - Project root
- * @returns {Object|null} Cached progress state or null
+ * Save state to cache
  */
-function loadCachedProgress(progressFile, projectRoot) {
+function saveCache(filePath, data) {
   try {
-    const cacheDir = path.join(projectRoot, '.claude', 'cache', 'progress-states');
-    const fileHash = Buffer.from(progressFile).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-    const cachePath = path.join(cacheDir, `${fileHash}.json`);
-
-    if (!fs.existsSync(cachePath)) {
-      return null;
-    }
-
-    const cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-    return cached.progress || null;
-  } catch (error) {
-    logError('Failed to load cached progress', { progressFile, error: error.message });
-    return null;
-  }
-}
-
-/**
- * Save current progress state to cache
- *
- * @param {string} progressFile - Progress file path
- * @param {Object} progress - Progress data to cache
- * @param {string} projectRoot - Project root
- */
-function cacheProgress(progressFile, progress, projectRoot) {
-  try {
-    const cacheDir = path.join(projectRoot, '.claude', 'cache', 'progress-states');
-
-    if (!fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir, { recursive: true });
-    }
-
-    const fileHash = Buffer.from(progressFile).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-    const cachePath = path.join(cacheDir, `${fileHash}.json`);
-
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    const hash = Buffer.from(filePath).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40);
+    const cachePath = path.join(CACHE_DIR, `${hash}.json`);
     fs.writeFileSync(cachePath, JSON.stringify({
-      progressFile,
-      progress,
-      cachedAt: new Date().toISOString(),
+      filePath, data, cachedAt: new Date().toISOString(),
     }, null, 2), 'utf8');
-  } catch (error) {
-    logError('Failed to cache progress', { progressFile, error: error.message });
+  } catch { /* silent */ }
+}
+
+/** Debounce map (in-memory, per process) */
+const debounceMap = new Map();
+function debounceOk(filePath) {
+  const now = Date.now();
+  const last = debounceMap.get(filePath);
+  if (last && (now - last) < DEBOUNCE_MS) return false;
+  debounceMap.set(filePath, now);
+  return true;
+}
+
+/** Check if gh CLI is available */
+function hasGh() {
+  try {
+    execSync('gh --version', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
   }
 }
 
 /**
- * Main hook handler
- *
- * @param {Object} context - Hook context from Claude Code CLI
- * @returns {Object} Hook result { continue, message, metadata }
+ * Main hook entry point - reads stdin, processes Write/Edit events
  */
-async function progressSyncHook(context) {
-  const { tool, toolInput, toolOutput, projectRoot, hookType } = context;
-
-  // Only process PostToolUse events
-  if (hookType !== 'PostToolUse') {
-    return { continue: true };
+async function main() {
+  let input = '';
+  try {
+    input = fs.readFileSync(0, 'utf8');
+  } catch {
+    return;
   }
 
-  // Only process Write and Edit operations
-  if (!['Write', 'Edit'].includes(tool)) {
-    return { continue: true };
+  let hookData;
+  try {
+    hookData = JSON.parse(input);
+  } catch {
+    return;
   }
 
-  // Check if target file is PROGRESS.json
-  const filePath = toolInput?.file_path;
-  if (!isProgressFile(filePath)) {
-    return { continue: true };
+  const toolName = hookData.tool_name || hookData.name || '';
+  if (!['Write', 'Edit'].includes(toolName)) return;
+
+  const filePath = hookData.tool_input?.file_path || hookData.input?.file_path || '';
+  if (!isTrackedFile(filePath)) return;
+
+  const config = loadConfig();
+  if (!config.enabled) return;
+
+  if (!debounceOk(filePath)) {
+    log('debug', 'Debounced', { filePath });
+    return;
   }
 
-  // Resolve absolute path
-  const absolutePath = path.isAbsolute(filePath)
-    ? filePath
-    : path.join(projectRoot, filePath);
-
-  // Load configuration
-  const config = loadConfig(projectRoot);
-  if (!config || !config.enabled) {
-    return { continue: true };
+  if (!hasGh()) {
+    log('warn', 'gh CLI not available, skipping sync');
+    return;
   }
 
-  // Check if issue is linked
-  if (!config.issueNumber) {
-    logSyncEvent({
-      type: 'skip_no_issue',
-      progressFile: absolutePath,
-      reason: 'No issue number in config',
-      timestamp: new Date().toISOString(),
-    });
-    return { continue: true };
+  const absPath = path.isAbsolute(filePath) ? filePath : path.join(PROJECT_ROOT, filePath);
+  let currentData;
+  try {
+    currentData = JSON.parse(fs.readFileSync(absPath, 'utf8'));
+  } catch {
+    log('error', 'Failed to read tracked file', { filePath: absPath });
+    return;
   }
 
-  // Load old and new progress states
-  const oldProgress = loadCachedProgress(absolutePath, projectRoot);
-  const newProgress = loadProgressFile(absolutePath);
-
-  if (!newProgress) {
-    logError('Failed to load new progress file', { filePath: absolutePath });
-    return { continue: true };
+  const issues = extractIssueInfo(currentData);
+  if (Object.keys(issues).length === 0) {
+    log('debug', 'No GitHub issues linked in file', { filePath });
+    saveCache(absPath, currentData);
+    return;
   }
 
-  // Detect changes
-  const changes = detectChanges(oldProgress, newProgress);
+  const cached = loadCache(absPath);
+  const cachedData = cached?.data || null;
+  const changes = detectChanges(cachedData, currentData);
+  const syncOn = config.sync_on || ['task_complete', 'phase_advance', 'plan_complete'];
+  const relevantChanges = changes.filter(c => syncOn.includes(c.type));
 
-  // Check if sync should occur
-  if (!shouldSync(changes, config)) {
-    // Cache current state even if not syncing
-    cacheProgress(absolutePath, newProgress, projectRoot);
-    return { continue: true };
+  if (relevantChanges.length === 0) {
+    saveCache(absPath, currentData);
+    return;
   }
 
-  // Check debounce
-  const debounceMs = config.debounceMs || 5000;
-  if (!checkDebounce(absolutePath, debounceMs)) {
-    logSyncEvent({
-      type: 'skip_debounce',
-      progressFile: absolutePath,
-      changeCount: changes.length,
-      timestamp: new Date().toISOString(),
-    });
-    return { continue: true };
-  }
-
-  // Update debounce state
-  updateDebounceState(absolutePath);
-
-  // Spawn L3 worker agent
-  const workerResult = await spawnSyncWorker(
-    config.issueNumber,
-    absolutePath,
-    changes,
-    projectRoot
-  );
-
-  // Cache current progress state
-  cacheProgress(absolutePath, newProgress, projectRoot);
-
-  // Log sync event
-  logSyncEvent({
-    type: 'sync_triggered',
-    issueNumber: config.issueNumber,
-    progressFile: absolutePath,
-    changes: changes.map(c => ({ type: c.type, taskId: c.taskId, phaseId: c.phaseId })),
-    workerSpawned: true,
-    timestamp: new Date().toISOString(),
+  log('info', `Changes detected: ${relevantChanges.length}`, {
+    types: relevantChanges.map(c => c.type),
+    filePath,
   });
 
-  // Build response message
-  let message = '';
-  if (changes.length > 0) {
-    message += `Progress sync triggered for issue #${config.issueNumber}\n`;
-    message += `Changes detected: ${changes.map(c => c.type).join(', ')}\n`;
-    message += `Spawning L3 worker (github-issue-sync-worker) for GitHub sync...\n`;
+  // Sync to epic issue
+  if (issues.epic) {
+    postProgressComment(issues.epic, currentData, relevantChanges);
+    if (relevantChanges.some(c => c.type === 'plan_complete')) {
+      closeIssueIfComplete(issues.epic, currentData);
+    }
   }
 
-  return {
-    continue: true,
-    message: message || undefined,
-    metadata: {
-      progressSync: {
-        issueNumber: config.issueNumber,
-        changes: changes.length,
-        workerSpawned: true,
-        debounceMs,
-      },
-    },
-    // Pass Task tool invocation to Claude Code CLI
-    taskSpawn: workerResult,
-  };
+  // Sync to individual phase issues
+  for (const change of relevantChanges) {
+    if (change.type === 'phase_advance' && change.phaseId) {
+      const phaseIssue = issues[`phase-${change.phaseId}`];
+      if (phaseIssue) {
+        try {
+          execSync(
+            `gh issue close ${phaseIssue} --comment "Phase completed: ${change.name}"`,
+            { stdio: 'pipe', timeout: 15000 }
+          );
+          log('info', `Closed phase issue #${phaseIssue}`, { phase: change.name });
+        } catch (err) {
+          log('error', `Failed to close phase issue #${phaseIssue}`, { error: err.message });
+        }
+      }
+    }
+  }
+
+  saveCache(absPath, currentData);
+  log('info', 'Sync complete', { epicIssue: issues.epic, changesProcessed: relevantChanges.length });
 }
 
-module.exports = progressSyncHook;
-
-// Export for testing
-module.exports.loadConfig = loadConfig;
-module.exports.loadProgressFile = loadProgressFile;
-module.exports.detectChanges = detectChanges;
-module.exports.shouldSync = shouldSync;
-module.exports.checkDebounce = checkDebounce;
-module.exports.spawnSyncWorker = spawnSyncWorker;
-module.exports.isProgressFile = isProgressFile;
-module.exports.loadCachedProgress = loadCachedProgress;
-module.exports.cacheProgress = cacheProgress;
+main().catch(err => {
+  if (process.env.DEBUG) {
+    console.error('progress-sync hook error:', err);
+  }
+});
