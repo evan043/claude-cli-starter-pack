@@ -1,0 +1,67 @@
+{
+  "path": "src/agents/generator.js",
+  "capturedAt": "2026-02-05T21:38:35.908Z",
+  "exports": {
+    "deleteGeneratedAgent": {
+      "type": "function",
+      "name": "deleteGeneratedAgent",
+      "params": [
+        "agentName",
+        "projectRoot = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "generateAgentMarkdown": {
+      "type": "function",
+      "name": "generateAgentMarkdown",
+      "params": [
+        "config",
+        "techStack = {}"
+      ],
+      "isAsync": false
+    },
+    "generateAgentsForStack": {
+      "type": "function",
+      "name": "generateAgentsForStack",
+      "params": [
+        "techStack",
+        "projectRoot = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getAgentsPath": {
+      "type": "function",
+      "name": "getAgentsPath",
+      "params": [
+        "projectRoot = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getTemplatesPath": {
+      "type": "function",
+      "name": "getTemplatesPath",
+      "params": [
+        "ccaspRoot"
+      ],
+      "isAsync": false
+    },
+    "listGeneratedAgents": {
+      "type": "function",
+      "name": "listGeneratedAgents",
+      "params": [
+        "projectRoot = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "writeAgentFile": {
+      "type": "function",
+      "name": "writeAgentFile",
+      "params": [
+        "agent",
+        "projectRoot",
+        "techStack = {}"
+      ],
+      "isAsync": false
+    }
+  }
+}

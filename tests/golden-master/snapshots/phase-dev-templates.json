@@ -1,0 +1,127 @@
+{
+  "path": "src/agents/phase-dev-templates.js",
+  "capturedAt": "2026-02-05T21:38:35.898Z",
+  "exports": {
+    "LARGE_PHASE_TEMPLATES": {
+      "type": "array",
+      "keys": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "length": 8
+    },
+    "MEDIUM_PHASE_TEMPLATES": {
+      "type": "array",
+      "keys": [
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "length": 4
+    },
+    "SCALE_DEFINITIONS": {
+      "type": "object",
+      "keys": [
+        "S",
+        "M",
+        "L"
+      ],
+      "length": 3
+    },
+    "SMALL_PHASE_TEMPLATES": {
+      "type": "array",
+      "keys": [
+        "0",
+        "1"
+      ],
+      "length": 2
+    },
+    "generateApiEndpoints": {
+      "type": "function",
+      "name": "generateApiEndpoints",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateDatabaseSchema": {
+      "type": "function",
+      "name": "generateDatabaseSchema",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateDeploymentConfig": {
+      "type": "function",
+      "name": "generateDeploymentConfig",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateExecutiveSummary": {
+      "type": "function",
+      "name": "generateExecutiveSummary",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateMiddlewareSpec": {
+      "type": "function",
+      "name": "generateMiddlewareSpec",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generatePhaseDevCommand": {
+      "type": "function",
+      "name": "generatePhaseDevCommand",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generatePhaseDevEnforcerHook": {
+      "type": "function",
+      "name": "generatePhaseDevEnforcerHook",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generatePhaseExecutorAgent": {
+      "type": "function",
+      "name": "generatePhaseExecutorAgent",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateProgressJson": {
+      "type": "function",
+      "name": "generateProgressJson",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    },
+    "generateTestDefinitions": {
+      "type": "function",
+      "name": "generateTestDefinitions",
+      "params": [
+        "config"
+      ],
+      "isAsync": false
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "path": "src/commands/init.js",
-  "capturedAt": "2026-02-05T19:58:34.117Z",
+  "capturedAt": "2026-02-05T21:38:35.893Z",
   "exports": {
     "runInit": {
       "type": "function",

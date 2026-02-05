@@ -1,0 +1,264 @@
+{
+  "path": "src/roadmap/schema.js",
+  "capturedAt": "2026-02-05T21:38:35.899Z",
+  "exports": {
+    "COMPLEXITY": {
+      "type": "object",
+      "keys": [
+        "S",
+        "M",
+        "L"
+      ],
+      "length": 3
+    },
+    "MULTI_PROJECT_ROADMAP_SCHEMA": {
+      "type": "object",
+      "keys": [
+        "roadmap_id",
+        "slug",
+        "title",
+        "description",
+        "created",
+        "updated",
+        "source",
+        "status",
+        "decomposition_type",
+        "projects",
+        "execution_config",
+        "metadata"
+      ],
+      "length": 12
+    },
+    "PHASE_STATUS": {
+      "type": "object",
+      "keys": [
+        "pending",
+        "in_progress",
+        "completed",
+        "blocked"
+      ],
+      "length": 4
+    },
+    "ROADMAP_SCHEMA": {
+      "type": "object",
+      "keys": [
+        "roadmap_id",
+        "title",
+        "description",
+        "created",
+        "updated",
+        "source",
+        "status",
+        "milestone",
+        "parent_epic",
+        "phase_dev_plan_refs",
+        "cross_plan_dependencies",
+        "metadata",
+        "phases"
+      ],
+      "length": 13
+    },
+    "ROADMAP_SOURCE": {
+      "type": "object",
+      "keys": [
+        "manual",
+        "github_issues",
+        "github_project"
+      ],
+      "length": 3
+    },
+    "addCrossPlanDependency": {
+      "type": "function",
+      "name": "addCrossPlanDependency",
+      "params": [
+        "roadmap",
+        "dependentSlug",
+        "dependsOnSlug",
+        "reason = ''"
+      ],
+      "isAsync": false
+    },
+    "addPlanReference": {
+      "type": "function",
+      "name": "addPlanReference",
+      "params": [
+        "roadmap",
+        "planRef"
+      ],
+      "isAsync": false
+    },
+    "calculateCompletion": {
+      "type": "function",
+      "name": "calculateCompletion",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "calculateMultiProjectCompletion": {
+      "type": "function",
+      "name": "calculateMultiProjectCompletion",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "calculateOverallCompletion": {
+      "type": "function",
+      "name": "calculateOverallCompletion",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "checkPlanDependencies": {
+      "type": "function",
+      "name": "checkPlanDependencies",
+      "params": [
+        "roadmap",
+        "planSlug"
+      ],
+      "isAsync": false
+    },
+    "createMultiProjectRoadmap": {
+      "type": "function",
+      "name": "createMultiProjectRoadmap",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "createPhase": {
+      "type": "function",
+      "name": "createPhase",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "createPlanReference": {
+      "type": "function",
+      "name": "createPlanReference",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "createProject": {
+      "type": "function",
+      "name": "createProject",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "createRoadmap": {
+      "type": "function",
+      "name": "createRoadmap",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "detectDependencyCycles": {
+      "type": "function",
+      "name": "detectDependencyCycles",
+      "params": [
+        "phases"
+      ],
+      "isAsync": false
+    },
+    "generateSlug": {
+      "type": "function",
+      "name": "generateSlug",
+      "params": [
+        "title"
+      ],
+      "isAsync": false
+    },
+    "getNextAvailablePhases": {
+      "type": "function",
+      "name": "getNextAvailablePhases",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "getNextAvailableProjects": {
+      "type": "function",
+      "name": "getNextAvailableProjects",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "migrateLegacyRoadmap": {
+      "type": "function",
+      "name": "migrateLegacyRoadmap",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "removePlanReference": {
+      "type": "function",
+      "name": "removePlanReference",
+      "params": [
+        "roadmap",
+        "planSlug"
+      ],
+      "isAsync": false
+    },
+    "updateMultiProjectRoadmapMetadata": {
+      "type": "function",
+      "name": "updateMultiProjectRoadmapMetadata",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "updatePlanReference": {
+      "type": "function",
+      "name": "updatePlanReference",
+      "params": [
+        "roadmap",
+        "planSlug",
+        "updates"
+      ],
+      "isAsync": false
+    },
+    "updateRoadmapMetadata": {
+      "type": "function",
+      "name": "updateRoadmapMetadata",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "validateMultiProjectRoadmap": {
+      "type": "function",
+      "name": "validateMultiProjectRoadmap",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    },
+    "validatePhase": {
+      "type": "function",
+      "name": "validatePhase",
+      "params": [
+        "phase",
+        "existingIds = new Set("
+      ],
+      "isAsync": false
+    },
+    "validateRoadmap": {
+      "type": "function",
+      "name": "validateRoadmap",
+      "params": [
+        "roadmap"
+      ],
+      "isAsync": false
+    }
+  }
+}

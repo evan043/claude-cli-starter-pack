@@ -1,0 +1,254 @@
+{
+  "path": "src/agents/state-manager.js",
+  "capturedAt": "2026-02-05T21:38:35.903Z",
+  "exports": {
+    "addActiveAgent": {
+      "type": "function",
+      "name": "addActiveAgent",
+      "params": [
+        "projectRoot",
+        "agentConfig"
+      ],
+      "isAsync": true
+    },
+    "addMessage": {
+      "type": "function",
+      "name": "addMessage",
+      "params": [
+        "projectRoot",
+        "message"
+      ],
+      "isAsync": true
+    },
+    "advancePhase": {
+      "type": "function",
+      "name": "advancePhase",
+      "params": [
+        "projectRoot",
+        "completedPhaseId",
+        "nextPhaseId"
+      ],
+      "isAsync": true
+    },
+    "completeOrchestration": {
+      "type": "function",
+      "name": "completeOrchestration",
+      "params": [
+        "projectRoot",
+        "summary"
+      ],
+      "isAsync": true
+    },
+    "completeProjectOrchestration": {
+      "type": "function",
+      "name": "completeProjectOrchestration",
+      "params": [
+        "projectRoot",
+        "projectId",
+        "summary = {}"
+      ],
+      "isAsync": true
+    },
+    "createCheckpoint": {
+      "type": "function",
+      "name": "createCheckpoint",
+      "params": [
+        "projectRoot",
+        "summary"
+      ],
+      "isAsync": true
+    },
+    "default": {
+      "type": "object",
+      "keys": [
+        "initOrchestratorState",
+        "loadState",
+        "saveState",
+        "updateAgentStatus",
+        "addActiveAgent",
+        "getAgentTasks",
+        "getPendingTasksForPhase",
+        "advancePhase",
+        "addMessage",
+        "getMessages",
+        "markMessageProcessed",
+        "updateTokenBudget",
+        "createCheckpoint",
+        "getStatus",
+        "pauseOrchestration",
+        "resumeOrchestration",
+        "completeOrchestration",
+        "initProjectOrchestratorState",
+        "loadProjectState",
+        "saveProjectState",
+        "updateL2Findings",
+        "getAllProjectStates",
+        "markProjectDiscoveryComplete",
+        "completeProjectOrchestration"
+      ],
+      "length": 24
+    },
+    "getAgentTasks": {
+      "type": "function",
+      "name": "getAgentTasks",
+      "params": [
+        "projectRoot",
+        "agentId"
+      ],
+      "isAsync": false
+    },
+    "getAllProjectStates": {
+      "type": "function",
+      "name": "getAllProjectStates",
+      "params": [
+        "projectRoot"
+      ],
+      "isAsync": false
+    },
+    "getMessages": {
+      "type": "function",
+      "name": "getMessages",
+      "params": [
+        "projectRoot",
+        "options = {}"
+      ],
+      "isAsync": false
+    },
+    "getPendingTasksForPhase": {
+      "type": "function",
+      "name": "getPendingTasksForPhase",
+      "params": [
+        "projectRoot",
+        "phaseId"
+      ],
+      "isAsync": false
+    },
+    "getStatus": {
+      "type": "function",
+      "name": "getStatus",
+      "params": [
+        "projectRoot"
+      ],
+      "isAsync": false
+    },
+    "initOrchestratorState": {
+      "type": "function",
+      "name": "initOrchestratorState",
+      "params": [
+        "projectRoot",
+        "planConfig"
+      ],
+      "isAsync": true
+    },
+    "initProjectOrchestratorState": {
+      "type": "function",
+      "name": "initProjectOrchestratorState",
+      "params": [
+        "projectRoot",
+        "projectConfig"
+      ],
+      "isAsync": true
+    },
+    "loadProjectState": {
+      "type": "function",
+      "name": "loadProjectState",
+      "params": [
+        "projectRoot",
+        "projectId"
+      ],
+      "isAsync": false
+    },
+    "loadState": {
+      "type": "function",
+      "name": "loadState",
+      "params": [
+        "projectRoot"
+      ],
+      "isAsync": false
+    },
+    "markMessageProcessed": {
+      "type": "function",
+      "name": "markMessageProcessed",
+      "params": [
+        "projectRoot",
+        "messageId"
+      ],
+      "isAsync": true
+    },
+    "markProjectDiscoveryComplete": {
+      "type": "function",
+      "name": "markProjectDiscoveryComplete",
+      "params": [
+        "projectRoot",
+        "projectId"
+      ],
+      "isAsync": true
+    },
+    "pauseOrchestration": {
+      "type": "function",
+      "name": "pauseOrchestration",
+      "params": [
+        "projectRoot"
+      ],
+      "isAsync": true
+    },
+    "resumeOrchestration": {
+      "type": "function",
+      "name": "resumeOrchestration",
+      "params": [
+        "projectRoot"
+      ],
+      "isAsync": true
+    },
+    "saveProjectState": {
+      "type": "function",
+      "name": "saveProjectState",
+      "params": [
+        "projectRoot",
+        "projectId",
+        "state"
+      ],
+      "isAsync": true
+    },
+    "saveState": {
+      "type": "function",
+      "name": "saveState",
+      "params": [
+        "projectRoot",
+        "state"
+      ],
+      "isAsync": true
+    },
+    "updateAgentStatus": {
+      "type": "function",
+      "name": "updateAgentStatus",
+      "params": [
+        "projectRoot",
+        "agentId",
+        "status",
+        "result = null"
+      ],
+      "isAsync": true
+    },
+    "updateL2Findings": {
+      "type": "function",
+      "name": "updateL2Findings",
+      "params": [
+        "projectRoot",
+        "projectId",
+        "agentType",
+        "findings"
+      ],
+      "isAsync": true
+    },
+    "updateTokenBudget": {
+      "type": "function",
+      "name": "updateTokenBudget",
+      "params": [
+        "projectRoot",
+        "tokensUsed"
+      ],
+      "isAsync": true
+    }
+  }
+}

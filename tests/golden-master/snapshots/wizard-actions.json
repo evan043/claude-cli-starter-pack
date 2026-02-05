@@ -1,0 +1,95 @@
+{
+  "path": "src/commands/wizard/actions.js",
+  "capturedAt": "2026-02-05T21:38:35.898Z",
+  "exports": {
+    "addFeaturesFromRelease": {
+      "type": "function",
+      "name": "addFeaturesFromRelease",
+      "params": [
+        "release"
+      ],
+      "isAsync": true
+    },
+    "default": {
+      "type": "object",
+      "keys": [
+        "runRestore",
+        "runRemove",
+        "runReinstall",
+        "runAutoInstall",
+        "runCustomInstall",
+        "showTemplates",
+        "showPriorReleases",
+        "showReleaseDetails",
+        "showAddFeaturesMenu",
+        "addFeaturesFromRelease",
+        "installHappyEngineering"
+      ],
+      "length": 11
+    },
+    "installHappyEngineering": {
+      "type": "function",
+      "name": "installHappyEngineering",
+      "params": [],
+      "isAsync": true
+    },
+    "runAutoInstall": {
+      "type": "function",
+      "name": "runAutoInstall",
+      "params": [],
+      "isAsync": true
+    },
+    "runCustomInstall": {
+      "type": "function",
+      "name": "runCustomInstall",
+      "params": [],
+      "isAsync": true
+    },
+    "runReinstall": {
+      "type": "function",
+      "name": "runReinstall",
+      "params": [],
+      "isAsync": true
+    },
+    "runRemove": {
+      "type": "function",
+      "name": "runRemove",
+      "params": [],
+      "isAsync": true
+    },
+    "runRestore": {
+      "type": "function",
+      "name": "runRestore",
+      "params": [
+        "backups"
+      ],
+      "isAsync": true
+    },
+    "showAddFeaturesMenu": {
+      "type": "function",
+      "name": "showAddFeaturesMenu",
+      "params": [],
+      "isAsync": true
+    },
+    "showPriorReleases": {
+      "type": "function",
+      "name": "showPriorReleases",
+      "params": [],
+      "isAsync": true
+    },
+    "showReleaseDetails": {
+      "type": "function",
+      "name": "showReleaseDetails",
+      "params": [
+        "release"
+      ],
+      "isAsync": true
+    },
+    "showTemplates": {
+      "type": "function",
+      "name": "showTemplates",
+      "params": [],
+      "isAsync": true
+    }
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "small": [
+    {
+      "name": "Foundation",
+      "description": "Core implementation and setup",
+      "taskTemplates": [
+        "Set up project structure",
+        "Implement core functionality",
+        "Add basic validation",
+        "Create unit tests"
+      ]
+    },
+    {
+      "name": "Polish & Deploy",
+      "description": "Refinement and deployment",
+      "taskTemplates": [
+        "Add error handling",
+        "Implement UI polish",
+        "Run tests",
+        "Deploy to environment"
+      ]
+    }
+  ],
+  "medium": [
+    {
+      "name": "Foundation",
+      "description": "Setup and core architecture",
+      "taskTemplates": [
+        "Set up project structure",
+        "Configure development environment",
+        "Implement data layer",
+        "Set up API structure"
+      ]
+    },
+    {
+      "name": "Core Features",
+      "description": "Main functionality implementation",
+      "taskTemplates": [
+        "Build primary UI components",
+        "Implement business logic",
+        "Add state management",
+        "Create integration tests"
+      ]
+    },
+    {
+      "name": "Integration",
+      "description": "Connect components and test",
+      "taskTemplates": [
+        "Wire frontend to backend",
+        "Add real-time features (if needed)",
+        "Implement caching",
+        "Run E2E tests"
+      ]
+    },
+    {
+      "name": "Polish & Deploy",
+      "description": "Final touches and deployment",
+      "taskTemplates": [
+        "UI/UX refinements",
+        "Performance optimization",
+        "Documentation",
+        "Production deployment"
+      ]
+    }
+  ],
+  "large": [
+    {
+      "name": "Architecture",
+      "description": "System design and infrastructure",
+      "taskTemplates": [
+        "Define system architecture",
+        "Design data model",
+        "Plan API structure",
+        "Set up CI/CD pipeline"
+      ]
+    },
+    {
+      "name": "Data Layer",
+      "description": "Database and data access",
+      "taskTemplates": [
+        "Create database schema",
+        "Implement data access layer",
+        "Add data validation",
+        "Set up caching layer"
+      ]
+    },
+    {
+      "name": "API Layer",
+      "description": "Backend endpoints and services",
+      "taskTemplates": [
+        "Build REST/GraphQL endpoints",
+        "Add real-time support (if needed)",
+        "Implement middleware",
+        "Create API documentation"
+      ]
+    },
+    {
+      "name": "Core UI",
+      "description": "Primary user interface",
+      "taskTemplates": [
+        "Build core components",
+        "Implement navigation",
+        "Add form handling",
+        "Create state management"
+      ]
+    },
+    {
+      "name": "Features",
+      "description": "Feature-specific implementation",
+      "taskTemplates": [
+        "Implement feature modules",
+        "Add business logic",
+        "Create feature tests",
+        "Wire to backend"
+      ]
+    },
+    {
+      "name": "Integration",
+      "description": "System integration and testing",
+      "taskTemplates": [
+        "End-to-end integration",
+        "Performance testing",
+        "Security review",
+        "Load testing"
+      ]
+    },
+    {
+      "name": "Polish",
+      "description": "Refinement and optimization",
+      "taskTemplates": [
+        "UI/UX improvements",
+        "Accessibility audit",
+        "Mobile optimization",
+        "Documentation"
+      ]
+    },
+    {
+      "name": "Launch",
+      "description": "Deployment and monitoring",
+      "taskTemplates": [
+        "Staging deployment",
+        "Production deployment",
+        "Monitoring setup",
+        "Post-launch support"
+      ]
+    }
+  ]
+}

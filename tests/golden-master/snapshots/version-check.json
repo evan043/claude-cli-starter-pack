@@ -1,0 +1,343 @@
+{
+  "path": "src/utils/version-check.js",
+  "capturedAt": "2026-02-05T21:38:35.901Z",
+  "exports": {
+    "addSkippedFile": {
+      "type": "function",
+      "name": "addSkippedFile",
+      "params": [
+        "assetType",
+        "assetName",
+        "reason",
+        "templateVersion",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "checkLatestVersion": {
+      "type": "function",
+      "name": "checkLatestVersion",
+      "params": [],
+      "isAsync": true
+    },
+    "compareVersions": {
+      "type": "function",
+      "name": "compareVersions",
+      "params": [
+        "v1",
+        "v2"
+      ],
+      "isAsync": false
+    },
+    "default": {
+      "type": "object",
+      "keys": [
+        "getCurrentVersion",
+        "loadUpdateState",
+        "saveUpdateState",
+        "compareVersions",
+        "checkLatestVersion",
+        "getPackageInfo",
+        "loadReleaseNotes",
+        "getReleaseNotes",
+        "getReleasesSince",
+        "getNewFeaturesSince",
+        "shouldShowUpdateNotification",
+        "performVersionCheck",
+        "dismissUpdateNotification",
+        "markFeatureInstalled",
+        "markFeatureSkipped",
+        "getAvailableFeatures",
+        "formatUpdateBanner",
+        "formatUpdateMarkdown",
+        "loadUsageTracking",
+        "saveUsageTracking",
+        "trackAssetUsage",
+        "markAssetCustomized",
+        "getUsedAssets",
+        "getCustomizedUsedAssets",
+        "isAssetCustomized",
+        "getUsageStats",
+        "getAutoUpdateSettings",
+        "updateAutoUpdateSettings",
+        "isAutoUpdateCheckDue",
+        "recordAutoUpdateCheck",
+        "addSkippedFile",
+        "removeSkippedFile",
+        "getSkippedFiles",
+        "dismissAutoUpdateNotification",
+        "shouldShowAutoUpdateNotification"
+      ],
+      "length": 35
+    },
+    "dismissAutoUpdateNotification": {
+      "type": "function",
+      "name": "dismissAutoUpdateNotification",
+      "params": [
+        "notificationId",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "dismissUpdateNotification": {
+      "type": "function",
+      "name": "dismissUpdateNotification",
+      "params": [
+        "version",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "formatUpdateBanner": {
+      "type": "function",
+      "name": "formatUpdateBanner",
+      "params": [
+        "checkResult"
+      ],
+      "isAsync": false
+    },
+    "formatUpdateMarkdown": {
+      "type": "function",
+      "name": "formatUpdateMarkdown",
+      "params": [
+        "checkResult"
+      ],
+      "isAsync": false
+    },
+    "getAutoUpdateSettings": {
+      "type": "function",
+      "name": "getAutoUpdateSettings",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getAvailableFeatures": {
+      "type": "function",
+      "name": "getAvailableFeatures",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getCurrentVersion": {
+      "type": "function",
+      "name": "getCurrentVersion",
+      "params": [],
+      "isAsync": false
+    },
+    "getCustomizedUsedAssets": {
+      "type": "function",
+      "name": "getCustomizedUsedAssets",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getNewFeaturesSince": {
+      "type": "function",
+      "name": "getNewFeaturesSince",
+      "params": [
+        "sinceVersion"
+      ],
+      "isAsync": false
+    },
+    "getPackageInfo": {
+      "type": "function",
+      "name": "getPackageInfo",
+      "params": [],
+      "isAsync": true
+    },
+    "getReleaseNotes": {
+      "type": "function",
+      "name": "getReleaseNotes",
+      "params": [
+        "version"
+      ],
+      "isAsync": false
+    },
+    "getReleasesSince": {
+      "type": "function",
+      "name": "getReleasesSince",
+      "params": [
+        "sinceVersion"
+      ],
+      "isAsync": false
+    },
+    "getSkippedFiles": {
+      "type": "function",
+      "name": "getSkippedFiles",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getUsageStats": {
+      "type": "function",
+      "name": "getUsageStats",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getUsedAssets": {
+      "type": "function",
+      "name": "getUsedAssets",
+      "params": [
+        "options = {}",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "isAssetCustomized": {
+      "type": "function",
+      "name": "isAssetCustomized",
+      "params": [
+        "assetType",
+        "assetName",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "isAutoUpdateCheckDue": {
+      "type": "function",
+      "name": "isAutoUpdateCheckDue",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "loadReleaseNotes": {
+      "type": "function",
+      "name": "loadReleaseNotes",
+      "params": [],
+      "isAsync": false
+    },
+    "loadUpdateState": {
+      "type": "function",
+      "name": "loadUpdateState",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "loadUsageTracking": {
+      "type": "function",
+      "name": "loadUsageTracking",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "markAssetCustomized": {
+      "type": "function",
+      "name": "markAssetCustomized",
+      "params": [
+        "assetType",
+        "assetName",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "markFeatureInstalled": {
+      "type": "function",
+      "name": "markFeatureInstalled",
+      "params": [
+        "featureName",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "markFeatureSkipped": {
+      "type": "function",
+      "name": "markFeatureSkipped",
+      "params": [
+        "featureName",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "performVersionCheck": {
+      "type": "function",
+      "name": "performVersionCheck",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": true
+    },
+    "recordAutoUpdateCheck": {
+      "type": "function",
+      "name": "recordAutoUpdateCheck",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "removeSkippedFile": {
+      "type": "function",
+      "name": "removeSkippedFile",
+      "params": [
+        "assetType",
+        "assetName",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "saveUpdateState": {
+      "type": "function",
+      "name": "saveUpdateState",
+      "params": [
+        "state",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "saveUsageTracking": {
+      "type": "function",
+      "name": "saveUsageTracking",
+      "params": [
+        "tracking",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "shouldShowAutoUpdateNotification": {
+      "type": "function",
+      "name": "shouldShowAutoUpdateNotification",
+      "params": [
+        "notificationId",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "shouldShowUpdateNotification": {
+      "type": "function",
+      "name": "shouldShowUpdateNotification",
+      "params": [
+        "state",
+        "latestVersion"
+      ],
+      "isAsync": false
+    },
+    "trackAssetUsage": {
+      "type": "function",
+      "name": "trackAssetUsage",
+      "params": [
+        "assetType",
+        "assetName",
+        "options = {}",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "updateAutoUpdateSettings": {
+      "type": "function",
+      "name": "updateAutoUpdateSettings",
+      "params": [
+        "settings",
+        "projectDir = process.cwd("
+      ],
+      "isAsync": false
+    }
+  }
+}

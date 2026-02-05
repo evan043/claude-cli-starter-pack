@@ -1,0 +1,120 @@
+{
+  "path": "src/roadmap/intelligence.js",
+  "capturedAt": "2026-02-05T21:38:35.900Z",
+  "exports": {
+    "analyzeFileOverlap": {
+      "type": "function",
+      "name": "analyzeFileOverlap",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "analyzeProjectForL2Delegation": {
+      "type": "function",
+      "name": "analyzeProjectForL2Delegation",
+      "params": [
+        "project"
+      ],
+      "isAsync": false
+    },
+    "analyzeScope": {
+      "type": "function",
+      "name": "analyzeScope",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "classifyDomain": {
+      "type": "function",
+      "name": "classifyDomain",
+      "params": [
+        "text"
+      ],
+      "isAsync": false
+    },
+    "detectDependencies": {
+      "type": "function",
+      "name": "detectDependencies",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "detectMultiProjectPatterns": {
+      "type": "function",
+      "name": "detectMultiProjectPatterns",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "estimateComplexity": {
+      "type": "function",
+      "name": "estimateComplexity",
+      "params": [
+        "phase"
+      ],
+      "isAsync": false
+    },
+    "generatePhaseRecommendations": {
+      "type": "function",
+      "name": "generatePhaseRecommendations",
+      "params": [
+        "scopeAnalysis",
+        "items"
+      ],
+      "isAsync": false
+    },
+    "getPrimaryDomain": {
+      "type": "function",
+      "name": "getPrimaryDomain",
+      "params": [
+        "text"
+      ],
+      "isAsync": false
+    },
+    "groupRelatedItems": {
+      "type": "function",
+      "name": "groupRelatedItems",
+      "params": [
+        "items"
+      ],
+      "isAsync": false
+    },
+    "identifyIndependentTracks": {
+      "type": "function",
+      "name": "identifyIndependentTracks",
+      "params": [
+        "groups",
+        "dependencies"
+      ],
+      "isAsync": false
+    },
+    "identifyParallelWork": {
+      "type": "function",
+      "name": "identifyParallelWork",
+      "params": [
+        "phases"
+      ],
+      "isAsync": false
+    },
+    "shouldRecommendSinglePhase": {
+      "type": "function",
+      "name": "shouldRecommendSinglePhase",
+      "params": [
+        "scope"
+      ],
+      "isAsync": false
+    },
+    "suggestAgents": {
+      "type": "function",
+      "name": "suggestAgents",
+      "params": [
+        "phase"
+      ],
+      "isAsync": false
+    }
+  }
+}

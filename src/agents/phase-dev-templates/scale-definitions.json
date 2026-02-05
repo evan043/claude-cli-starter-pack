@@ -1,0 +1,20 @@
+{
+  "S": {
+    "name": "Small",
+    "phases": 2,
+    "taskRange": [10, 30],
+    "description": "Focused feature or bug fix"
+  },
+  "M": {
+    "name": "Medium",
+    "phases": [3, 4],
+    "taskRange": [30, 80],
+    "description": "Multi-component feature or refactor"
+  },
+  "L": {
+    "name": "Large",
+    "phases": [5, 8],
+    "taskRange": [80, 200],
+    "description": "Major system overhaul or new module"
+  }
+}

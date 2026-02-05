@@ -1,6 +1,6 @@
 {
   "path": "src/commands/claude-settings.js",
-  "capturedAt": "2026-02-05T19:58:34.082Z",
+  "capturedAt": "2026-02-05T21:38:35.859Z",
   "exports": {
     "DEFAULT_GITHUB_SETTINGS": {
       "type": "object",

@@ -1,0 +1,58 @@
+{
+  "path": "src/vision/orchestrator.js",
+  "capturedAt": "2026-02-05T21:38:35.897Z",
+  "exports": {
+    "OrchestratorStage": {
+      "type": "object",
+      "keys": [
+        "INITIALIZATION",
+        "ANALYSIS",
+        "ARCHITECTURE",
+        "PLANNING",
+        "SECURITY",
+        "EXECUTION",
+        "VALIDATION",
+        "COMPLETION",
+        "PAUSED",
+        "FAILED"
+      ],
+      "length": 10
+    },
+    "VisionOrchestrator": {
+      "type": "function",
+      "name": "unknown",
+      "params": [],
+      "isAsync": false
+    },
+    "createOrchestrator": {
+      "type": "function",
+      "name": "createOrchestrator",
+      "params": [
+        "projectRoot",
+        "config = {}"
+      ],
+      "isAsync": false
+    },
+    "default": {
+      "type": "object",
+      "keys": [
+        "VisionOrchestrator",
+        "OrchestratorStage",
+        "createOrchestrator",
+        "quickRun",
+        "DEFAULT_CONFIG"
+      ],
+      "length": 5
+    },
+    "quickRun": {
+      "type": "function",
+      "name": "quickRun",
+      "params": [
+        "projectRoot",
+        "prompt",
+        "options = {}"
+      ],
+      "isAsync": true
+    }
+  }
+}

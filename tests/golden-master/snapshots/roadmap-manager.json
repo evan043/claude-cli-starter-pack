@@ -1,0 +1,236 @@
+{
+  "path": "src/roadmap/roadmap-manager.js",
+  "capturedAt": "2026-02-05T21:38:35.900Z",
+  "exports": {
+    "addCrossPlanDep": {
+      "type": "function",
+      "name": "addCrossPlanDep",
+      "params": [
+        "roadmapName",
+        "dependentSlug",
+        "dependsOnSlug",
+        "reason",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "addPhase": {
+      "type": "function",
+      "name": "addPhase",
+      "params": [
+        "roadmapName",
+        "phaseOptions",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "addPhaseDevPlanRef": {
+      "type": "function",
+      "name": "addPhaseDevPlanRef",
+      "params": [
+        "roadmapName",
+        "planRefOptions",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "createNewRoadmap": {
+      "type": "function",
+      "name": "createNewRoadmap",
+      "params": [
+        "options",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "deleteRoadmap": {
+      "type": "function",
+      "name": "deleteRoadmap",
+      "params": [
+        "roadmapName",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "ensureRoadmapDir": {
+      "type": "function",
+      "name": "ensureRoadmapDir",
+      "params": [
+        "roadmapSlug",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "ensureRoadmapsDir": {
+      "type": "function",
+      "name": "ensureRoadmapsDir",
+      "params": [
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "generateRoadmapsIndex": {
+      "type": "function",
+      "name": "generateRoadmapsIndex",
+      "params": [
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getNextAvailablePlans": {
+      "type": "function",
+      "name": "getNextAvailablePlans",
+      "params": [
+        "roadmapName",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getRoadmapDir": {
+      "type": "function",
+      "name": "getRoadmapDir",
+      "params": [
+        "roadmapSlug",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getRoadmapPath": {
+      "type": "function",
+      "name": "getRoadmapPath",
+      "params": [
+        "roadmapName",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getRoadmapSummary": {
+      "type": "function",
+      "name": "getRoadmapSummary",
+      "params": [
+        "roadmapName",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getRoadmapsDir": {
+      "type": "function",
+      "name": "getRoadmapsDir",
+      "params": [
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "listRoadmaps": {
+      "type": "function",
+      "name": "listRoadmaps",
+      "params": [
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "loadRoadmap": {
+      "type": "function",
+      "name": "loadRoadmap",
+      "params": [
+        "roadmapName",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "mergePhases": {
+      "type": "function",
+      "name": "mergePhases",
+      "params": [
+        "roadmapName",
+        "phaseId1",
+        "phaseId2",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "removePhase": {
+      "type": "function",
+      "name": "removePhase",
+      "params": [
+        "roadmapName",
+        "phaseId",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "removePhaseDevPlanRef": {
+      "type": "function",
+      "name": "removePhaseDevPlanRef",
+      "params": [
+        "roadmapName",
+        "planSlug",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "reorderPhase": {
+      "type": "function",
+      "name": "reorderPhase",
+      "params": [
+        "roadmapName",
+        "phaseId",
+        "newPosition",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "saveRoadmap": {
+      "type": "function",
+      "name": "saveRoadmap",
+      "params": [
+        "roadmap",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "splitPhase": {
+      "type": "function",
+      "name": "splitPhase",
+      "params": [
+        "roadmapName",
+        "phaseId",
+        "splitConfig",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "syncPhaseDevPlanRef": {
+      "type": "function",
+      "name": "syncPhaseDevPlanRef",
+      "params": [
+        "roadmapName",
+        "planSlug",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "updatePhase": {
+      "type": "function",
+      "name": "updatePhase",
+      "params": [
+        "roadmapName",
+        "phaseId",
+        "updates",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "updatePhaseDevPlanRef": {
+      "type": "function",
+      "name": "updatePhaseDevPlanRef",
+      "params": [
+        "roadmapName",
+        "planSlug",
+        "updates",
+        "cwd = process.cwd("
+      ],
+      "isAsync": false
+    }
+  }
+}

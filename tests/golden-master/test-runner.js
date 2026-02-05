@@ -214,6 +214,70 @@ const TEST_SUITES = [
     tests: async (module) => {
       return captureModuleStructure('src/commands/detect-tech-stack.js', module);
     }
+  },
+  // === Refactoring targets (added for ccasp-code-refactoring roadmap) ===
+  {
+    name: 'orchestrator',
+    modulePath: '../../src/vision/orchestrator.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/vision/orchestrator.js', module);
+    }
+  },
+  {
+    name: 'wizard-actions',
+    modulePath: '../../src/commands/wizard/actions.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/commands/wizard/actions.js', module);
+    }
+  },
+  {
+    name: 'phase-dev-templates',
+    modulePath: '../../src/agents/phase-dev-templates.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/agents/phase-dev-templates.js', module);
+    }
+  },
+  {
+    name: 'schema',
+    modulePath: '../../src/roadmap/schema.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/roadmap/schema.js', module);
+    }
+  },
+  {
+    name: 'roadmap-manager',
+    modulePath: '../../src/roadmap/roadmap-manager.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/roadmap/roadmap-manager.js', module);
+    }
+  },
+  {
+    name: 'intelligence',
+    modulePath: '../../src/roadmap/intelligence.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/roadmap/intelligence.js', module);
+    }
+  },
+  {
+    name: 'version-check',
+    modulePath: '../../src/utils/version-check.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/utils/version-check.js', module);
+    }
+  },
+  {
+    name: 'state-manager',
+    modulePath: '../../src/agents/state-manager.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/agents/state-manager.js', module);
+    }
+  },
+  {
+    name: 'generator',
+    modulePath: '../../src/agents/generator.js',
+    tests: async (module) => {
+      return captureModuleStructure('src/agents/generator.js', module);
+    }
   }
 ];
 
