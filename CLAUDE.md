@@ -102,6 +102,32 @@ All code uses ES6 `import`/`export` syntax. Package has `"type": "module"`.
 | `/deploy-full` | Parallel full-stack deployment |
 | `/create-task-list` | AI-powered task list generation |
 | `/phase-dev-plan` | Create phased development plans |
+| `/ai-constitution-framework` | Code style enforcement documentation |
+
+## AI Constitution Framework
+
+Code style and architecture preferences enforcement system. Ensures Claude follows project-specific coding standards.
+
+### Configuration
+- **YAML Schema**: `.claude/config/constitution.yaml` - Project rules
+- **JSON Schema**: `templates/constitution.schema.json` - Validation
+- **Hook**: `templates/hooks/constitution-enforcer.template.js` - Enforcement
+
+### CLI Commands
+```bash
+ccasp constitution-init              # Interactive setup
+ccasp constitution-init --preset senior   # Senior fullstack defaults (5% sampling)
+ccasp constitution-init --preset minimal  # Security only (2% sampling)
+ccasp constitution-init --preset strict   # All rules (15% sampling)
+```
+
+### Rule Sections
+- `code_style` - Naming conventions, type annotations
+- `architecture` - Module boundaries, patterns
+- `security` - Input validation, credentials (always checked)
+- `performance` - Async patterns, memoization
+- `git` - Commit format, branch rules
+- `dependencies` - Version pinning, security
 
 ## Agent-Only Mode
 

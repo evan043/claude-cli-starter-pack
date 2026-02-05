@@ -44,6 +44,7 @@ import { runDevDeploy } from '../src/commands/dev-deploy.js';
 import devModeSync from '../src/commands/dev-mode-sync.js';
 import { runModelMode } from '../src/commands/model-mode.js';
 import { runVision } from '../src/commands/vision.js';
+import { runConstitutionInit } from '../src/commands/constitution-init.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -468,6 +469,18 @@ program
   .option('--threshold <level>', 'Security threshold: low, moderate, high, critical')
   .action(async (subcommand, args, options) => {
     await runVision(subcommand || 'help', { ...options, args });
+  });
+
+// AI Constitution - code style and architecture preferences enforcement
+program
+  .command('constitution-init')
+  .alias('constitution')
+  .description('Initialize AI Constitution for code style and architecture enforcement')
+  .option('-p, --preset <preset>', 'Preset: senior, minimal, strict, custom')
+  .option('-f, --force', 'Overwrite existing constitution')
+  .option('-q, --quiet', 'Non-interactive mode')
+  .action(async (options) => {
+    await runConstitutionInit(options);
   });
 
 // Parse and run

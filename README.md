@@ -196,6 +196,41 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 ---
 
+## AI Constitution Framework
+
+Enforce project-specific coding standards and architecture patterns with automatic validation.
+
+### Quick Start
+
+```bash
+ccasp constitution-init --preset senior    # 5% sampling, all sections
+ccasp constitution-init --preset minimal   # 2% sampling, security only
+ccasp constitution-init --preset strict    # 15% sampling, maximum coverage
+```
+
+### Features
+
+- **YAML-based rules** at `.claude/config/constitution.yaml`
+- **Hook enforcement** with configurable sampling (1-in-20 default)
+- **Sensitive pattern bypass** - security rules always checked
+- **Stop → Explain → Suggest → Refactor** violation flow
+- **Neovim integration** - edit constitution from sidebar
+
+### Rule Sections
+
+| Section | Examples |
+|---------|----------|
+| `code_style` | Naming, types, imports |
+| `architecture` | Patterns, boundaries |
+| `security` | Credentials, validation |
+| `performance` | Async, memoization |
+| `git` | Commits, branches |
+| `dependencies` | Versions, security |
+
+See `/ai-constitution-framework` in Claude Code for full documentation.
+
+---
+
 ## See It In Action
 
 <details>

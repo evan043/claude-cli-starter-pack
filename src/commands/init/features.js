@@ -194,6 +194,20 @@ export const OPTIONAL_FEATURES = [
       '(Optional) Create GitHub Project board for Vision tracking',
     ],
   },
+  {
+    name: 'aiConstitution',
+    label: 'AI Constitution Framework',
+    description: 'Code style and architecture preferences enforcement system with YAML schema, hook-based validation (1-in-20 sampling), and configurable presets (senior, minimal, strict, custom). Ensures Claude follows project coding standards.',
+    commands: ['ai-constitution-framework'],
+    hooks: ['constitution-enforcer'],
+    default: false,
+    requiresPostConfig: true,
+    postConfigSteps: [
+      'Run ccasp constitution-init to create constitution.yaml',
+      'Customize rules in .claude/config/constitution.yaml',
+      'Optionally adjust sampling rate for performance vs coverage',
+    ],
+  },
 ];
 
 /**
@@ -510,6 +524,14 @@ export const AVAILABLE_COMMANDS = [
     category: 'VDB',
     selected: false,
     feature: 'visionDriverBot',
+  },
+  // AI Constitution commands
+  {
+    name: 'ai-constitution-framework',
+    description: 'AI Constitution - code style and architecture preferences enforcement',
+    category: 'Code Quality',
+    selected: false,
+    feature: 'aiConstitution',
   },
 ];
 
