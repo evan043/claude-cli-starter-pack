@@ -1,32 +1,27 @@
 -- Simple keybindings preset for CCASP
--- No leader key required - uses comma (,) + single key
+-- Uses Ctrl as modifier - no leader key needed
 --
 -- USAGE: Just add this to your init.lua:
 --   require("ccasp").setup(require("ccasp.presets.simple"))
 --
 -- KEYBINDINGS:
---   ,g  = Agent Grid (6 Claude sessions)
---   ,p  = Control Panel
---   ,f  = Feature Toggles
---   ,h  = Hook Manager
---   ,c  = Browse Commands
---   ,s  = Browse Skills
---   ,d  = Dashboard
---   ,i  = Toggle Prompt Injector
---   ,e  = Quick Enhance
---   ,R  = Restart All Agents
---   ,K  = Kill All Agents
---   ,q  = Quit/Close panel
+--   Ctrl+g  = Agent Grid (6 Claude sessions)
+--   Ctrl+p  = Control Panel
+--   Ctrl+d  = Dashboard
+--   Ctrl+i  = Toggle Prompt Injector
+--   Ctrl+e  = Quick Enhance
+--   Ctrl+t  = Taskbar
+--   Ctrl+f  = Feature Toggles
+--   Ctrl+h  = Hook Manager
+--   Ctrl+s  = Browse Skills
+--   Ctrl+k  = Kill All Agents
 --
--- ALTERNATIVE SHIFT KEYS (also work):
---   <S-F1>  = Control Panel
---   <S-F2>  = Agent Grid
---   <S-F3>  = Dashboard
---   <S-F4>  = Prompt Injector Toggle
+-- Note: Some Ctrl keys may conflict with terminal/system shortcuts.
+-- Use extra_keymaps to customize if needed.
 
 return {
   keys = {
-    prefix = ",",  -- Comma instead of <leader>
+    prefix = "",  -- No prefix - using direct Ctrl mappings
     grid = "g",
     control = "p",
     features = "f",
@@ -35,26 +30,38 @@ return {
     skills = "s",
     dashboard = "d",
     restart_all = "R",
-    kill_all = "K",
+    kill_all = "k",
     prompt_injector = "i",
     quick_enhance = "e",
+    taskbar = "t",
   },
 
-  -- Also set up Shift+Function keys as alternatives
+  -- Direct Ctrl+key mappings
   extra_keymaps = {
-    { "<S-F1>", "control", "Control Panel" },
-    { "<S-F2>", "grid", "Agent Grid" },
-    { "<S-F3>", "dashboard", "Dashboard" },
-    { "<S-F4>", "prompt_injector", "Prompt Injector" },
-    { "<S-F5>", "features", "Features" },
-    { "<Tab>p", "control", "Control Panel" },
-    { "<Tab>g", "grid", "Agent Grid" },
-    { "<Tab>i", "prompt_injector", "Prompt Injector" },
+    { "<C-g>", "grid", "Agent Grid" },
+    { "<C-p>", "control", "Control Panel" },
+    { "<C-d>", "dashboard", "Dashboard" },
+    { "<C-i>", "prompt_injector", "Prompt Injector" },
+    { "<C-e>", "quick_enhance", "Quick Enhance" },
+    { "<C-t>", "taskbar", "Taskbar" },
+    { "<C-f>", "features", "Features" },
+    { "<C-h>", "hooks", "Hooks" },
+    { "<C-s>", "skills", "Skills" },
+    { "<C-k>", "kill_all", "Kill All" },
+    { "<C-r>", "restart_all", "Restart All" },
   },
 
   -- Enable prompt injector by default
   prompt_injector = {
     enabled = true,
     auto_enhance = false,
+  },
+
+  -- Enable window manager
+  window_manager = {
+    enabled = true,
+    taskbar = {
+      enabled = true,
+    },
   },
 }
