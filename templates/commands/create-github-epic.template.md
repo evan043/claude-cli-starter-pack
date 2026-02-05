@@ -2,6 +2,18 @@
 
 You are an Epic planning specialist using the Epic-Hierarchy Refactor architecture. Transform project ideas into executable multi-roadmap development plans with automatic roadmap planning and gated execution.
 
+> ⚠️ **CONTEXT SAFETY REQUIRED**: Epic execution MUST follow [Context-Safe Orchestration](../patterns/context-safe-orchestration.md) patterns. All roadmap executions return summaries only. Full results stored in files.
+
+## Context Safety Rules (MANDATORY)
+
+| Rule | Implementation |
+|------|----------------|
+| File-based state | EPIC.json is source of truth |
+| Summary-only roadmaps | /roadmap-track returns max 300 chars |
+| No output aggregation | Read completion from ROADMAP.json files |
+| Context checkpoints | Check at 70% before each roadmap |
+| Pause-safe | Can /compact and resume at any roadmap |
+
 ## Architecture Overview
 
 **Epic Hierarchy:**
@@ -310,62 +322,60 @@ options:
     value: "modify"
 ```
 
-### Step 7: Execute Roadmaps Sequentially with Gating
+### Step 7: Execute Roadmaps Sequentially with Gating (Context-Safe)
 
-**ONLY if approved**, start roadmap execution:
+**ONLY if approved**, start roadmap execution with context safety:
 
 ```javascript
 import { advanceToNextRoadmap, checkGatingRequirements } from './src/epic/state-manager.js';
 import { checkGates } from './src/orchestration/gating.js';
 
-// Start with Roadmap 0
-for (let i = 0; i < epic.roadmaps.length; i++) {
-  const roadmap = epic.roadmaps[i];
+/**
+ * Context-Safe Epic Execution
+ * - State tracked in EPIC.json file
+ * - Roadmap results read from files, not context
+ * - Context checkpoints before each roadmap
+ * - Safe to /compact and resume
+ */
+async function executeEpicContextSafe(epic, projectRoot) {
+  const epicPath = `.claude/epics/${epic.slug}/EPIC.json`;
 
-  console.log(`\n🚀 Starting Roadmap ${i + 1}: ${roadmap.title}\n`);
+  for (let i = 0; i < epic.roadmaps.length; i++) {
+    const roadmap = epic.roadmaps[i];
 
-  // Check gating requirements
-  const gatingCheck = await checkGatingRequirements(projectRoot, epic.slug, i);
+    // CONTEXT CHECKPOINT: Check before each roadmap
+    const contextUsage = await estimateContextUsage();
+    if (contextUsage.percent > 70) {
+      console.log(`\n⚠️ CONTEXT CHECKPOINT: ${contextUsage.percent}% used`);
+      console.log('   Epic progress saved to EPIC.json');
+      console.log('   Run /compact then resume with: /epic-advance ${epic.slug}\n');
 
-  if (!gatingCheck.canProceed) {
-    console.log(`⚠️ Gating requirements not met:`);
-    gatingCheck.blockers.forEach(b => console.log(`   - ${b}`));
+      // Save checkpoint
+      epic.checkpoint = { roadmapIndex: i, timestamp: new Date().toISOString() };
+      fs.writeFileSync(epicPath, JSON.stringify(epic, null, 2));
 
-    if (gatingCheck.canOverride) {
-      // Request manual override
-      const override = await requestManualOverride();
-      if (override !== 'continue') {
-        break; // Stop execution
-      }
-    } else {
-      break; // Hard blocker
+      return {
+        paused: true,
+        summary: `Paused at roadmap ${i + 1}/${epic.roadmaps.length} for context management`,
+        epicPath
+      };
     }
-  }
 
-  // Execute: /create-roadmap with parent context
-  const roadmapResult = await executeRoadmap(roadmap, {
-    parent_epic: {
-      epic_id: epic.epic_id,
-      epic_slug: epic.slug,
-      epic_path: `.claude/epics/${epic.slug}/EPIC.json`,
-      title: epic.title
+    // Skip completed roadmaps
+    if (roadmap.status === 'completed') {
+      console.log(`✓ Roadmap ${i + 1}: ${roadmap.title} (complete)`);
+      continue;
     }
-  });
 
-  if (!roadmapResult.success) {
-    console.log(`❌ Roadmap ${i + 1} failed: ${roadmapResult.error}`);
-    break;
-  }
+    console.log(`\n🚀 Roadmap ${i + 1}: ${roadmap.title}`);
 
-  // Run gating checks before advancing
-  if (i < epic.roadmaps.length - 1) {
-    const gates = await checkGates(roadmapResult.path, epic.gating);
+    // Check gating requirements
+    const gatingCheck = await checkGatingRequirements(projectRoot, epic.slug, i);
 
-    if (gates.overall === 'fail') {
-      console.log(`\n⚠️ Gating failed for Roadmap ${i + 1}`);
-      console.log(formatGateResults(gates));
+    if (!gatingCheck.canProceed) {
+      console.log(`⚠️ Gating blocked: ${gatingCheck.blockers.slice(0, 2).join(', ')}`);
 
-      if (gates.can_override) {
+      if (gatingCheck.canOverride) {
         const override = await requestManualOverride();
         if (override !== 'continue') {
           break;
@@ -374,19 +384,64 @@ for (let i = 0; i < epic.roadmaps.length; i++) {
         break;
       }
     }
+
+    // Execute roadmap - CRITICAL: Do NOT capture full output
+    // Roadmap writes results to ROADMAP.json, we read from there
+    console.log(`   Executing /create-roadmap...`);
+    await runCommand(`/create-roadmap --parent-epic=${epic.slug} --slug=${roadmap.slug}`);
+
+    // Read result from ROADMAP.json file (NOT from command output)
+    const roadmapPath = `.claude/roadmaps/${roadmap.slug}/ROADMAP.json`;
+    if (fs.existsSync(roadmapPath)) {
+      const roadmapState = JSON.parse(fs.readFileSync(roadmapPath, 'utf8'));
+
+      // Update epic with minimal data from file
+      roadmap.status = roadmapState.status;
+      roadmap.completion_percentage = roadmapState.metadata?.overall_completion_percentage || 0;
+    }
+
+    // Save to EPIC.json immediately
+    fs.writeFileSync(epicPath, JSON.stringify(epic, null, 2));
+
+    // Minimal context output (summary only)
+    console.log(`   ✓ ${roadmap.status}: ${roadmap.completion_percentage}%`);
+
+    // Run gating checks
+    if (i < epic.roadmaps.length - 1 && roadmap.status === 'completed') {
+      const gates = await checkGates(roadmapPath, epic.gating);
+
+      if (gates.overall === 'fail') {
+        console.log(`   ⚠️ Gating: ${gates.summary || 'checks failed'}`);
+
+        if (gates.can_override) {
+          const override = await requestManualOverride();
+          if (override !== 'continue') {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Advance to next
+    const { epicComplete } = await advanceToNextRoadmap(projectRoot, epic.slug, roadmap.roadmap_id);
+
+    if (epicComplete) {
+      console.log(`\n🎉 Epic completed: ${epic.title}`);
+      break;
+    }
   }
 
-  // Advance to next roadmap
-  const { nextRoadmap, epicComplete } = await advanceToNextRoadmap(
-    projectRoot,
-    epic.slug,
-    roadmap.roadmap_id
-  );
+  // Final state from file
+  const finalEpic = JSON.parse(fs.readFileSync(epicPath, 'utf8'));
+  const completed = finalEpic.roadmaps.filter(r => r.status === 'completed').length;
 
-  if (epicComplete) {
-    console.log(`\n🎉 Epic completed: ${epic.title}`);
-    break;
-  }
+  return {
+    status: completed === finalEpic.roadmaps.length ? 'completed' : 'partial',
+    summary: `Epic ${epic.slug}: ${completed}/${finalEpic.roadmaps.length} roadmaps`,
+    epicPath
+  };
 }
 ```
 

@@ -1,0 +1,605 @@
+/**
+ * Vision Dashboard Styles
+ * CCASP Vision Mode - Phase 9
+ */
+
+:root {
+  /* Colors */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border-color: #30363d;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+
+  /* Status colors */
+  --color-success: #238636;
+  --color-success-text: #3fb950;
+  --color-warning: #9e6a03;
+  --color-warning-text: #d29922;
+  --color-danger: #da3633;
+  --color-danger-text: #f85149;
+  --color-info: #1f6feb;
+  --color-info-text: #58a6ff;
+  --color-purple: #8957e5;
+  --color-purple-text: #a371f7;
+
+  /* Progress colors */
+  --progress-bg: #21262d;
+  --progress-fill: #238636;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+
+  /* Font */
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+/* Header */
+.header {
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--spacing-lg);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.logo-icon {
+  font-size: 1.75rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* Status Badge */
+.status-badge {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.connected {
+  background-color: rgba(35, 134, 54, 0.2);
+  color: var(--color-success-text);
+}
+
+.status-badge.disconnected {
+  background-color: rgba(218, 54, 51, 0.2);
+  color: var(--color-danger-text);
+}
+
+/* Buttons */
+.btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.btn-primary {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.btn-primary:hover {
+  background-color: #2ea043;
+}
+
+.btn-secondary {
+  background-color: transparent;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.card-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.card-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* Visions Section */
+.visions-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Select */
+.select {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Visions List */
+.visions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+/* Vision Card */
+.vision-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.vision-card:hover {
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 1px var(--color-info);
+}
+
+.vision-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+}
+
+.vision-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.vision-slug {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.vision-status {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.vision-status.executing {
+  background-color: rgba(31, 111, 235, 0.2);
+  color: var(--color-info-text);
+}
+
+.vision-status.completed {
+  background-color: rgba(35, 134, 54, 0.2);
+  color: var(--color-success-text);
+}
+
+.vision-status.paused {
+  background-color: rgba(158, 106, 3, 0.2);
+  color: var(--color-warning-text);
+}
+
+.vision-status.failed {
+  background-color: rgba(218, 54, 51, 0.2);
+  color: var(--color-danger-text);
+}
+
+.vision-status.analyzing,
+.vision-status.architecting,
+.vision-status.orchestrating,
+.vision-status.validating {
+  background-color: rgba(137, 87, 229, 0.2);
+  color: var(--color-purple-text);
+}
+
+.vision-status.not_started {
+  background-color: rgba(110, 118, 129, 0.2);
+  color: var(--text-secondary);
+}
+
+/* Progress Section */
+.vision-progress {
+  margin-bottom: var(--spacing-md);
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  width: 80px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background-color: var(--progress-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--progress-fill);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.warning {
+  background-color: var(--color-warning);
+}
+
+.progress-fill.danger {
+  background-color: var(--color-danger);
+}
+
+.progress-value {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  width: 45px;
+  text-align: right;
+}
+
+/* Vision Stats */
+.vision-stats {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Stage Badge */
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-xl) * 2;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: var(--spacing-sm);
+}
+
+.empty-hint code {
+  background-color: var(--bg-tertiary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  position: relative;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+/* Detail Sections */
+.detail-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.detail-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.detail-item {
+  background-color: var(--bg-tertiary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.detail-item-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+}
+
+.detail-item-value {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Roadmap List */
+.roadmap-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.roadmap-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.roadmap-order {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  width: 24px;
+}
+
+.roadmap-title {
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.roadmap-progress {
+  width: 100px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: var(--spacing-lg) 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--spacing-xl);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.footer p {
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.executing .vision-status {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .vision-stats {
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+  }
+
+  .stat {
+    min-width: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+}

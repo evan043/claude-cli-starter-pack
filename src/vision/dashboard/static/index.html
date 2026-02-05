@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Dashboard - CCASP</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">
+          <span class="logo-icon">&#128065;</span>
+          Vision Dashboard
+        </h1>
+        <div class="header-actions">
+          <span id="connection-status" class="status-badge disconnected">Disconnected</span>
+          <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Summary Cards -->
+      <section class="summary-cards">
+        <div class="card summary-card">
+          <div class="card-icon">&#128640;</div>
+          <div class="card-content">
+            <span class="card-value" id="total-visions">0</span>
+            <span class="card-label">Total Visions</span>
+          </div>
+        </div>
+        <div class="card summary-card">
+          <div class="card-icon">&#9889;</div>
+          <div class="card-content">
+            <span class="card-value" id="active-visions">0</span>
+            <span class="card-label">In Progress</span>
+          </div>
+        </div>
+        <div class="card summary-card">
+          <div class="card-icon">&#127881;</div>
+          <div class="card-content">
+            <span class="card-value" id="completed-visions">0</span>
+            <span class="card-label">Completed</span>
+          </div>
+        </div>
+        <div class="card summary-card">
+          <div class="card-icon">&#128680;</div>
+          <div class="card-content">
+            <span class="card-value" id="drift-events">0</span>
+            <span class="card-label">Drift Events</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Visions List -->
+      <section class="visions-section">
+        <div class="section-header">
+          <h2>Visions</h2>
+          <div class="section-actions">
+            <select id="filter-status" class="select">
+              <option value="">All Status</option>
+              <option value="executing">Executing</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="visions-list" class="visions-list">
+          <!-- Visions will be rendered here -->
+          <div class="empty-state">
+            <div class="empty-icon">&#128065;</div>
+            <p>No visions found</p>
+            <p class="empty-hint">Create a vision with <code>/vision-init</code></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Vision Detail Modal -->
+    <div id="vision-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Vision Details</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div id="modal-body" class="modal-body">
+          <!-- Detail content -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>CCASP Vision Mode Dashboard - Phase 9</p>
+      <p id="last-update">Last update: --</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

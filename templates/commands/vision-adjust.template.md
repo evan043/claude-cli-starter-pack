@@ -11,7 +11,7 @@ options:
 
 # Vision Adjust - Dynamic Plan Adjustment
 
-Adjust Vision plan when drift is detected, requirements change, or execution reveals new constraints. Maintains alignment between vision and reality.
+Adjust Vision plan when drift is detected, requirements change, or execution reveals new constraints. Uses the Phase 7 Orchestrator to maintain alignment between vision and reality.
 
 **Adjustment Triggers:**
 - Drift events with severity HIGH or CRITICAL
@@ -23,12 +23,27 @@ Adjust Vision plan when drift is detected, requirements change, or execution rev
 
 ---
 
-## Execution Protocol
+## Execution Protocol (Phase 7 Orchestrator Integration)
 
 ### Step 1: Load Vision and Assess State
 
 ```javascript
-import { loadVision, updateVision } from './src/vision/state-manager.js';
+import { createOrchestrator, loadVision, formatDriftReport } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/index.js';
+
+// Create orchestrator and resume from vision
+const orchestrator = createOrchestrator(projectRoot);
+const resumeResult = await orchestrator.resume(visionSlug);
+
+if (!resumeResult.success) {
+  console.error(`Failed to load vision: ${resumeResult.error}`);
+  return;
+}
+
+const vision = resumeResult.vision;
+const status = orchestrator.getStatus();
+
+// Legacy import for direct updates
+import { loadVision, updateVision } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/state-manager.js';
 
 const vision = loadVision(projectRoot, visionSlug);
 
@@ -826,4 +841,33 @@ If adjustment fails:
 
 ---
 
-*Vision Adjust - Part of CCASP Vision Mode Autonomous Development Framework*
+## CLI Alternative
+
+```bash
+# Interactive adjustment
+ccasp vision adjust <slug>
+
+# Quick adjustments
+ccasp vision adjust <slug> --add-feature "Export to CSV"
+ccasp vision adjust <slug> --remove-constraint "Must use MySQL"
+ccasp vision adjust <slug> --change-backend "Express"
+```
+
+## Re-analysis with Orchestrator
+
+For major changes, re-run orchestrator phases:
+
+```javascript
+// After making adjustments, re-run analysis
+const analysisResult = await orchestrator.analyze();
+
+// Re-generate architecture
+const archResult = await orchestrator.architect();
+
+// Re-run security scan
+const securityResult = await orchestrator.scanSecurity();
+```
+
+---
+
+*Vision Adjust - Part of CCASP Vision Mode Autonomous Development Framework (Phase 7)*

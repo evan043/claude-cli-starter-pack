@@ -1,17 +1,18 @@
 /**
- * Vision Observer Hook
+ * Vision Observer Hook (Phase 7 Integration)
  *
  * Monitors Epic and Roadmap updates to track Vision alignment:
- * - Triggers on EPIC.json, ROADMAP.json, or PROGRESS.json changes
+ * - Triggers on EPIC.json, ROADMAP.json, PROGRESS.json, or VISION.json changes
  * - Loads associated VISION.json via parent context
  * - Calculates current alignment against Vision plan
  * - Detects drift and logs drift events
  * - Generates adjustments if significant drift detected
  * - Updates VISION.json with observation results
  * - Posts progress to GitHub if integrated
+ * - Integrates with Phase 7 VisionOrchestrator for alignment tracking
  *
  * Event: PostToolUse
- * Triggers: After Edit/Write on EPIC.json, ROADMAP.json, or PROGRESS.json files
+ * Triggers: After Edit/Write on EPIC.json, ROADMAP.json, PROGRESS.json, or VISION.json files
  */
 
 const fs = require('fs');
@@ -48,7 +49,7 @@ function safeAddIssueComment({ owner, repo, issueNumber, body }) {
   }
 }
 
-// Configuration
+// Configuration (matches Phase 7 Orchestrator defaults)
 const CONFIG = {
   visionsDir: '.claude/visions',
   epicsDir: '.claude/epics',
@@ -56,12 +57,25 @@ const CONFIG = {
   stateFile: '.claude/hooks/cache/vision-observer-state.json',
   githubEnabled: true,
   verboseLogging: false,
-  // Alignment threshold (below this = significant drift)
-  driftThreshold: 0.8,
+  // Alignment threshold (below this = significant drift) - matches orchestrator.observer.replanThreshold
+  driftThreshold: 0.85,
+  // Critical threshold for escalation
+  criticalThreshold: 0.60,
   // Milestone thresholds for progress reporting
   milestoneThresholds: [25, 50, 75, 100],
   // Minimum change to trigger observation
   minChangePercentage: 5,
+  // Orchestrator stage tracking
+  orchestratorStages: [
+    'initialization',
+    'analysis',
+    'architecture',
+    'planning',
+    'security',
+    'execution',
+    'validation',
+    'completion'
+  ],
 };
 
 /**
@@ -761,3 +775,35 @@ module.exports.CONFIG = CONFIG;
 module.exports.calculateAlignment = calculateAlignment;
 module.exports.aggregateCurrentState = aggregateCurrentState;
 module.exports.generateAdjustments = generateAdjustments;
+
+/**
+ * Check if orchestrator stage changed
+ * @param {Object} vision - Vision data
+ * @param {Object} previousState - Previous state
+ * @returns {boolean} True if stage changed
+ */
+module.exports.checkOrchestratorStageChange = function(vision, previousState) {
+  const currentStage = vision.orchestrator?.stage;
+  const previousStage = previousState?.orchestratorStage;
+
+  if (currentStage && currentStage !== previousStage) {
+    return {
+      changed: true,
+      from: previousStage || 'none',
+      to: currentStage
+    };
+  }
+
+  return { changed: false };
+};
+
+/**
+ * Get orchestrator progress from stage
+ * @param {string} stage - Current stage
+ * @returns {number} Progress percentage based on stage
+ */
+module.exports.getOrchestratorProgress = function(stage) {
+  const stageIndex = CONFIG.orchestratorStages.indexOf(stage);
+  if (stageIndex === -1) return 0;
+  return Math.round((stageIndex / (CONFIG.orchestratorStages.length - 1)) * 100);
+};

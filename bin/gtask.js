@@ -43,6 +43,7 @@ import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
 import { runDevDeploy } from '../src/commands/dev-deploy.js';
 import devModeSync from '../src/commands/dev-mode-sync.js';
 import { runModelMode } from '../src/commands/model-mode.js';
+import { runVision } from '../src/commands/vision.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 
 program
@@ -446,6 +447,27 @@ program
   .action(async (subcommand, options) => {
     const { vdbCommand } = await import('../src/commands/vdb.js');
     await vdbCommand(subcommand || 'status', options);
+  });
+
+// Vision Mode - autonomous MVP development from natural language prompts
+program
+  .command('vision [subcommand] [args...]')
+  .alias('v')
+  .description('Vision Mode - autonomous MVP development from prompts (init, status, run, list)')
+  .option('-p, --prompt <prompt>', 'Vision prompt (for init)')
+  .option('-t, --title <title>', 'Custom vision title')
+  .option('--tags <tags>', 'Comma-separated tags')
+  .option('--priority <level>', 'Priority: low, medium, high')
+  .option('--no-security', 'Skip security scanning')
+  .option('--skip-analysis', 'Skip analysis phase')
+  .option('--skip-architecture', 'Skip architecture phase')
+  .option('--manual', 'Disable autonomous execution')
+  .option('--max-iterations <n>', 'Max execution iterations')
+  .option('--json', 'Output as JSON')
+  .option('-s, --slug <slug>', 'Vision slug (for status/run/resume)')
+  .option('--threshold <level>', 'Security threshold: low, moderate, high, critical')
+  .action(async (subcommand, args, options) => {
+    await runVision(subcommand || 'help', { ...options, args });
   });
 
 // Parse and run

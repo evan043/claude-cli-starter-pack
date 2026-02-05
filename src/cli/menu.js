@@ -19,6 +19,7 @@ import { runExploreMcp, showExploreMcpMenu } from '../commands/explore-mcp.js';
 import { runClaudeAudit, showClaudeAuditMenu } from '../commands/claude-audit.js';
 import { runRoadmap, showRoadmapMenu } from '../commands/roadmap.js';
 import { showGitHubEpicMenu } from '../commands/github-epic-menu.js';
+import { runVision } from '../commands/vision.js';
 import { launchPanel, launchPanelInline } from '../commands/panel.js';
 import { hasTestingConfig } from '../testing/config.js';
 import { showHelp } from '../commands/help.js';
@@ -791,6 +792,90 @@ async function configureGitHubTask(techStack) {
 }
 
 /**
+ * Show Vision Mode menu
+ * Autonomous MVP development from natural language prompts
+ */
+async function showVisionModeMenu() {
+  console.log('');
+  console.log(chalk.cyan('\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557'));
+  console.log(chalk.cyan('\u2551') + chalk.bold('                      \u{1F441} VISION MODE - Autonomous MVP Development                ') + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563'));
+  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + chalk.dim('  Transform natural language prompts into complete, working MVPs              ') + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + chalk.dim('  through intelligent planning, agent orchestration, and self-healing.       ') + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [1] Initialize Vision     Create vision from natural language prompt        ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [2] View Status           Show all visions with progress                    ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [3] Run Vision            Execute autonomous development                    ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [4] Start Dashboard       Web UI with real-time updates                     ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [5] Security Scan         Scan packages for vulnerabilities                 ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '   [B] Back to main menu                                                       ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
+  console.log(chalk.cyan('\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D'));
+  console.log('');
+
+  const { action } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'action',
+      message: 'Select an option:',
+      choices: [
+        { name: '1. Initialize Vision', value: 'init' },
+        { name: '2. View Status', value: 'status' },
+        { name: '3. Run Vision', value: 'run' },
+        { name: '4. Start Dashboard', value: 'dashboard' },
+        { name: '5. Security Scan', value: 'scan' },
+        new inquirer.Separator(),
+        { name: 'Back to main menu', value: 'back' },
+      ],
+    },
+  ]);
+
+  if (action === 'back') {
+    return;
+  }
+
+  switch (action) {
+    case 'init': {
+      const { prompt: visionPrompt } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'prompt',
+          message: 'Describe what you want to build:',
+        },
+      ]);
+      if (visionPrompt?.trim()) {
+        await runVision('init', { prompt: visionPrompt.trim() });
+      }
+      break;
+    }
+    case 'status':
+      await runVision('status', {});
+      break;
+    case 'run': {
+      const { slug } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'slug',
+          message: 'Vision slug (leave empty to list):',
+        },
+      ]);
+      await runVision(slug?.trim() ? 'run' : 'list', { args: slug?.trim() ? [slug.trim()] : [] });
+      break;
+    }
+    case 'dashboard':
+      console.log(chalk.yellow('\n  Starting Vision Dashboard...'));
+      console.log(chalk.dim('  This will block until you press Ctrl+C\n'));
+      await runVision('dashboard', {});
+      break;
+    case 'scan':
+      await runVision('scan', {});
+      break;
+  }
+}
+
+/**
  * Configure Vision & Epics
  * Interactive configuration flow that reviews codebase and tech stack
  */
@@ -1281,6 +1366,11 @@ export async function showMainMenu() {
       short: 'Phase Dev',
     },
     {
+      name: `${chalk.bold.magenta('\u{1F441}')} ${chalk.bold('Vision Mode')}             Autonomous MVP from natural language`,
+      value: 'vision-mode',
+      short: 'Vision Mode',
+    },
+    {
       name: `${chalk.green('M)')} ${chalk.bold('MCP Explorer')}            Discover & install MCP servers`,
       value: 'explore-mcp',
       short: 'MCP Explorer',
@@ -1484,6 +1574,11 @@ export async function showMainMenu() {
 
     case 'phase-dev':
       await showPhasDevMainMenu();
+      await returnToMenu();
+      break;
+
+    case 'vision-mode':
+      await showVisionModeMenu();
       await returnToMenu();
       break;
 

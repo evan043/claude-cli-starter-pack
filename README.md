@@ -131,6 +131,18 @@ Critical commands auto-update on every init.
 
 </td>
 </tr>
+<tr>
+<td colspan="2">
+
+#### 👁️ Vision Mode — Autonomous MVP Development
+**Transform natural language into complete MVPs:**
+- `ccasp vision init "Build a todo app with React"` — Initialize from prompt
+- 8-stage orchestrator: Analyze → Architect → Security → Agents → Execute → Validate
+- Real-time web dashboard at `http://localhost:3847`
+- Self-healing execution loop with drift detection
+
+</td>
+</tr>
 </table>
 
 ### Upgrade Now
@@ -383,6 +395,52 @@ Works with [Happy.engineering](https://github.com/slopus/happy):
 - Card-based layouts
 - Single-character inputs
 - Auto-detected via environment
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+### 👁️ Vision Mode — Autonomous MVP Development
+
+Transform natural language into complete, working MVPs:
+```bash
+ccasp vision init "Build a kanban board with real-time collaboration"
+```
+
+**8-Stage Orchestrated Workflow:**
+1. **Initialize** — Parse prompt, detect intent, extract features
+2. **Analyze** — Web search for inspiration, discover npm/pip packages, match MCP servers
+3. **Architect** — Generate Mermaid diagrams, API contracts, ASCII wireframes
+4. **Security** — Scan dependencies with npm audit, pip-audit, OSV Scanner
+5. **Create Agents** — Spawn specialized agents for detected tech stack
+6. **Execute** — Autonomous development loop with self-healing
+7. **Validate** — Run tests, verify MVP completeness
+8. **Complete** — Final verification and checkpoint creation
+
+**Features:**
+- 🎯 **Natural Language Input** — "Build a todo app with React and FastAPI"
+- 🔍 **Analysis Engine** — Similar apps search, tool discovery, MCP matching
+- 🏗️ **Architecture Planning** — Mermaid diagrams, API contracts, state design
+- 👁️ **Drift Detection** — Hook-based observer with automatic plan adjustment
+- 🔒 **Security Scanning** — Pre-install vulnerability detection
+- 🤖 **Dynamic Agents** — Creates specialists based on tech stack
+- 🔄 **Self-Healing** — Automatic test failure resolution
+- 📊 **Web Dashboard** — Real-time status at `http://localhost:3847`
+
+```bash
+# Initialize and run
+ccasp vision init "Your app idea here"
+ccasp vision run my-app
+
+# Monitor with web dashboard
+ccasp vision dashboard
+
+# Or use slash commands
+/vision-init
+/vision-status
+/vision-run
+```
 
 </td>
 </tr>

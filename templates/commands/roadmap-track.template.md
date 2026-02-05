@@ -2,6 +2,17 @@
 
 You are a roadmap execution coordinator. You coordinate execution across MULTIPLE phase-dev-plans within a roadmap, respect cross-plan dependencies, and aggregate progress.
 
+> ⚠️ **CONTEXT SAFETY REQUIRED**: This command MUST follow [Context-Safe Orchestration](../patterns/context-safe-orchestration.md) patterns. All plan executions return summaries only. Full results stored in files.
+
+## Context Safety Rules
+
+| Rule | Implementation |
+|------|----------------|
+| File-based state | ROADMAP.json is source of truth |
+| Summary-only delegation | /phase-track returns max 200 chars |
+| No full output aggregation | Read completion from files |
+| Context checkpoints | Check before each plan |
+
 ## NEW ARCHITECTURE (Epic-Hierarchy)
 
 Roadmap now coordinates MULTIPLE phase-dev-plans instead of direct phases:
@@ -240,55 +251,88 @@ async function autoAdvance(roadmap) {
 }
 ```
 
-#### Run All Plans (Autonomous Mode)
+#### Run All Plans (Autonomous Mode - Context-Safe)
 ```javascript
-// Execute ALL plans sequentially without user intervention
+/**
+ * Execute ALL plans sequentially without user intervention
+ * CRITICAL: Follows context-safe orchestration pattern
+ */
 async function runAllPlans(roadmap) {
-  console.log('🚀 AUTONOMOUS MODE: Running all phase-dev-plans sequentially...\n');
+  console.log('🚀 AUTONOMOUS MODE (Context-Safe): Running all phase-dev-plans...\n');
+  console.log('📋 State tracked in: ROADMAP.json (not context)\n');
 
   // Get plans in dependency order
   const orderedPlans = topologicalSortPlans(roadmap);
+  const roadmapPath = `.claude/roadmaps/${roadmap.slug}/ROADMAP.json`;
 
   for (const planRef of orderedPlans) {
+    // CONTEXT CHECKPOINT: Check before each plan
+    const contextUsage = await estimateContextUsage();
+    if (contextUsage.percent > 70) {
+      console.log(`\n⚠️ CONTEXT CHECKPOINT: ${contextUsage.percent}% used`);
+      console.log('   Consider: /compact to free context before continuing');
+      console.log('   Progress is saved - you can safely compact and resume.\n');
+      // Could pause here for user decision
+    }
+
     // Skip already completed plans
     if (planRef.status === 'completed') {
-      console.log(`✓ Plan ${planRef.slug} already completed, skipping...`);
+      console.log(`✓ Plan ${planRef.slug} already complete`);
       continue;
     }
 
     // Check dependencies
     const depCheck = checkPlanDependencies(roadmap, planRef.slug);
     if (!depCheck.satisfied) {
-      console.log(`⚠️ Plan ${planRef.slug} has unmet dependencies: ${depCheck.missing.join(', ')}`);
-      console.log('   Dependencies will be resolved by prior iterations...');
+      console.log(`⚠️ Plan ${planRef.slug} blocked: ${depCheck.missing.join(', ')}`);
+      continue;
     }
 
-    // Start plan
-    console.log(`\n▶ Starting Plan ${planRef.slug}: ${planRef.title}`);
+    // Start plan - update FILE immediately
+    console.log(`\n▶ Plan: ${planRef.slug}`);
     updatePlanReference(roadmap, planRef.slug, { status: 'in_progress' });
+    fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
 
-    // Delegate to /phase-track for plan execution
-    console.log(`   Delegating to /phase-track ${planRef.slug}...`);
+    // Delegate to /phase-track (returns summary only)
+    // CRITICAL: Do NOT capture full output - read result from file
+    console.log(`   Executing /phase-track ${planRef.slug} run-all...`);
     await runCommand(`/phase-track ${planRef.slug} run-all`);
 
-    // Sync plan reference after completion
-    await syncPlanRef(roadmap, planRef.slug);
+    // Read result from PROGRESS.json file (not from command output)
+    const progressPath = planRef.path;
+    const planProgress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
 
-    console.log(`✓ Plan ${planRef.slug} completed (${planRef.completion_percentage}%)`);
+    // Update roadmap with minimal data from file
+    planRef.status = planProgress.status || 'completed';
+    planRef.completion_percentage = planProgress.completion_percentage || 100;
 
-    // Update overall completion
+    // Save to file immediately
     roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
-    console.log(`   Overall roadmap progress: ${roadmap.metadata.overall_completion_percentage}%`);
+    fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
 
-    // Optional: sync to parent epic after each plan
+    // Minimal context output (summary only)
+    console.log(`   ✓ ${planRef.status}: ${planRef.completion_percentage}%`);
+    console.log(`   Roadmap: ${roadmap.metadata.overall_completion_percentage}%`);
+
+    // Sync to parent epic (file update, not context)
     if (roadmap.parent_epic) {
       await syncToParentEpic(roadmap);
     }
   }
 
-  console.log('\n🎉 ALL PLANS COMPLETE!');
-  roadmap.status = 'completed';
-  return { success: true, completedPlans: roadmap.phase_dev_plan_refs.length };
+  // Final status from file
+  const allComplete = roadmap.phase_dev_plan_refs.every(p => p.status === 'completed');
+  roadmap.status = allComplete ? 'completed' : 'partial';
+  fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+  console.log(`\n${allComplete ? '🎉 ALL PLANS COMPLETE!' : '⚠️ Some plans incomplete'}`);
+
+  // Return minimal summary (not full results)
+  return {
+    success: allComplete,
+    summary: `${roadmap.phase_dev_plan_refs.filter(p => p.status === 'completed').length}/${roadmap.phase_dev_plan_refs.length} plans complete`,
+    roadmapPath // Reference to file for full details
+  };
 }
 
 // Topological sort for dependency-ordered execution
@@ -323,14 +367,17 @@ function topologicalSortPlans(roadmap) {
 }
 ```
 
-**Run-All Execution Rules (Multi-Plan):**
+**Run-All Execution Rules (Multi-Plan, Context-Safe):**
 1. Plans execute in dependency order (topological sort)
 2. Each plan delegates to /phase-track for detailed execution
-3. Plan references synced after each plan completes
-4. Overall roadmap completion updated incrementally
-5. Execution continues until all plans complete or error occurs
-6. User can interrupt at any time
-7. If a plan fails, execution pauses and offers recovery options
+3. **Context checkpoint before each plan (pause at 70%)**
+4. **Results read from files, not from command output**
+5. Plan references synced from PROGRESS.json files
+6. Overall roadmap completion updated incrementally in ROADMAP.json
+7. Execution continues until all plans complete or error occurs
+8. User can interrupt, /compact, and resume at any time
+9. If a plan fails, execution pauses and offers recovery options
+10. **Full details in files, only summaries in context**
 
 ### Step 5: Progress Visualization (Multi-Plan)
 

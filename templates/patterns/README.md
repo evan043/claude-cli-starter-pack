@@ -2,13 +2,33 @@
 
 Reusable patterns for Claude Code agent orchestration.
 
+> ⚠️ **IMPORTANT**: All patterns MUST follow [Context-Safe Orchestration](context-safe-orchestration.md) to prevent context window overflow.
+
 ## Quick Reference
 
-| Pattern | Use Case | Complexity |
-|---------|----------|------------|
-| [Two-Tier Query Pipeline](two-tier-query-pipeline.md) | Intent classification + execution | Medium |
-| [L1→L2 Orchestration](l1-l2-orchestration.md) | Master-worker parallel tasks | Medium |
-| [Multi-Phase Orchestration](multi-phase-orchestration.md) | Sequential phases with parallel tasks | High |
+| Pattern | Use Case | Complexity | Context Safe |
+|---------|----------|------------|--------------|
+| [Context-Safe Orchestration](context-safe-orchestration.md) | **Required reading** - prevents overflow | Foundation | ✅ Core |
+| [Two-Tier Query Pipeline](two-tier-query-pipeline.md) | Intent classification + execution | Medium | ⚠️ Apply AOP |
+| [L1→L2 Orchestration](l1-l2-orchestration.md) | Master-worker parallel tasks | Medium | ✅ Updated |
+| [Multi-Phase Orchestration](multi-phase-orchestration.md) | Sequential phases with parallel tasks | High | ✅ Updated |
+
+## Context Safety (MANDATORY)
+
+Before using ANY pattern:
+
+1. **Read [Context-Safe Orchestration](context-safe-orchestration.md)** - Core principles
+2. **Apply [Agent Output Protocol (AOP)](../docs/agent-output-protocol.md)** - Output format standard
+3. **Use file-based state** - PROGRESS.json, not context variables
+4. **Return summaries only** - Full details go to cache files
+
+### Context Safety Checklist
+
+- [ ] All agent prompts include AOP instructions
+- [ ] Cache directory configured: `.claude/cache/agent-outputs/`
+- [ ] Summary extraction handles AOP format
+- [ ] Context checkpoints at 70% utilization
+- [ ] File-based progress tracking enabled
 
 ## Choosing a Pattern
 
@@ -80,8 +100,21 @@ Always have fallback behavior when agents fail.
 ### 4. Log Extensively
 Track agent launches, completions, and aggregations for debugging.
 
-### 5. Use Background Agents
+### 5. Use Background Agents (with Context Safety)
 For long-running tasks, use `run_in_background: true` to avoid blocking.
+**CRITICAL**: Always add AOP instructions to background agent prompts so they return summaries, not full outputs.
+
+### 6. Implement Context Checkpoints
+Add context utilization checks before major operations:
+```javascript
+const usage = await estimateContextUsage();
+if (usage.percent > 70) {
+  console.log('Consider /compact before continuing');
+}
+```
+
+### 7. Store State in Files
+Never accumulate large state in context. Use PROGRESS.json, ROADMAP.json, EPIC.json as sources of truth.
 
 ## Creating New Patterns
 
