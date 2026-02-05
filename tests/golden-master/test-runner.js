@@ -77,13 +77,17 @@ function verifySnapshot(name, current) {
     return null;
   }
 
-  if (deepEqual(saved, current)) {
+  // Ignore capturedAt timestamps when comparing (they always differ between runs)
+  const savedComparable = { ...saved, capturedAt: undefined };
+  const currentComparable = { ...current, capturedAt: undefined };
+
+  if (deepEqual(savedComparable, currentComparable)) {
     RESULTS.passed++;
     log(`  ✓ ${name}`, 'success');
     return true;
   } else {
     RESULTS.failed++;
-    RESULTS.errors.push({ name, expected: saved, actual: current });
+    RESULTS.errors.push({ name, expected: savedComparable, actual: currentComparable });
     log(`  ✗ ${name} - MISMATCH`, 'error');
     return false;
   }

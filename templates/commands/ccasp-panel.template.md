@@ -1,3 +1,8 @@
+---
+description: CCASP Control Panel dashboard
+model: sonnet
+---
+
 # CCASP Control Panel
 
 Launch the CCASP Control Panel in a separate terminal window.

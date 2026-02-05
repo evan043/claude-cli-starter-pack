@@ -1,3 +1,8 @@
+---
+description: Generate stack-specific agents
+model: sonnet
+---
+
 # /generate-agents - Stack-Specific Agent Generator
 
 Generate tech stack-specific specialist agents based on your project's detected technologies.

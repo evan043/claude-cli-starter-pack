@@ -1,3 +1,8 @@
+---
+description: GitHub Epic management dashboard
+model: sonnet
+---
+
 # GitHub Epic Menu - Epic Management Dashboard
 
 You are an Epic management specialist using the CCASP GitHub Epic System. Display and manage GitHub Epics with a mobile and desktop-friendly interface.

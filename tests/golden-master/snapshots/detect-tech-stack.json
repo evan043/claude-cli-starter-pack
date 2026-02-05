@@ -1,0 +1,31 @@
+{
+  "path": "src/commands/detect-tech-stack.js",
+  "capturedAt": "2026-02-05T19:53:16.419Z",
+  "exports": {
+    "default": {
+      "type": "object",
+      "keys": [
+        "detectTechStack",
+        "runDetection"
+      ],
+      "length": 2
+    },
+    "detectTechStack": {
+      "type": "function",
+      "name": "detectTechStack",
+      "params": [
+        "projectRoot",
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "runDetection": {
+      "type": "function",
+      "name": "runDetection",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": true
+    }
+  }
+}

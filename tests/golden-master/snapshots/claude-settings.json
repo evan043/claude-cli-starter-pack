@@ -1,0 +1,146 @@
+{
+  "path": "src/commands/claude-settings.js",
+  "capturedAt": "2026-02-05T19:53:16.376Z",
+  "exports": {
+    "DEFAULT_GITHUB_SETTINGS": {
+      "type": "object",
+      "keys": [
+        "repository",
+        "project",
+        "defaults",
+        "workflow",
+        "pr"
+      ],
+      "length": 5
+    },
+    "PERMISSION_MODES": {
+      "type": "object",
+      "keys": [
+        "bypassPermissions",
+        "acceptEdits",
+        "ask"
+      ],
+      "length": 3
+    },
+    "configureGitHubSettings": {
+      "type": "function",
+      "name": "configureGitHubSettings",
+      "params": [
+        "returnToMain"
+      ],
+      "isAsync": true
+    },
+    "configurePermissionMode": {
+      "type": "function",
+      "name": "configurePermissionMode",
+      "params": [],
+      "isAsync": true
+    },
+    "configurePermissions": {
+      "type": "function",
+      "name": "configurePermissions",
+      "params": [],
+      "isAsync": true
+    },
+    "configureTechStackSettings": {
+      "type": "function",
+      "name": "configureTechStackSettings",
+      "params": [
+        "returnToMain"
+      ],
+      "isAsync": true
+    },
+    "createAgentOnlyLauncher": {
+      "type": "function",
+      "name": "createAgentOnlyLauncher",
+      "params": [],
+      "isAsync": true
+    },
+    "default": {
+      "type": "function",
+      "name": "runClaudeSettings",
+      "params": [
+        "options"
+      ],
+      "isAsync": true
+    },
+    "generateAgentOnlyPolicy": {
+      "type": "function",
+      "name": "generateAgentOnlyPolicy",
+      "params": [],
+      "isAsync": false
+    },
+    "generateAgentsJson": {
+      "type": "function",
+      "name": "generateAgentsJson",
+      "params": [],
+      "isAsync": false
+    },
+    "generateBashLauncher": {
+      "type": "function",
+      "name": "generateBashLauncher",
+      "params": [],
+      "isAsync": false
+    },
+    "generateGitHubSettingsUpdater": {
+      "type": "function",
+      "name": "generateGitHubSettingsUpdater",
+      "params": [],
+      "isAsync": false
+    },
+    "generatePowerShellLauncher": {
+      "type": "function",
+      "name": "generatePowerShellLauncher",
+      "params": [],
+      "isAsync": false
+    },
+    "generateWindowsBatch": {
+      "type": "function",
+      "name": "generateWindowsBatch",
+      "params": [],
+      "isAsync": false
+    },
+    "loadGitHubSettings": {
+      "type": "function",
+      "name": "loadGitHubSettings",
+      "params": [],
+      "isAsync": false
+    },
+    "loadTechStack": {
+      "type": "function",
+      "name": "loadTechStack",
+      "params": [],
+      "isAsync": false
+    },
+    "runClaudeSettings": {
+      "type": "function",
+      "name": "runClaudeSettings",
+      "params": [
+        "options"
+      ],
+      "isAsync": true
+    },
+    "saveGitHubSettings": {
+      "type": "function",
+      "name": "saveGitHubSettings",
+      "params": [
+        "settings"
+      ],
+      "isAsync": false
+    },
+    "saveTechStack": {
+      "type": "function",
+      "name": "saveTechStack",
+      "params": [
+        "techStack"
+      ],
+      "isAsync": false
+    },
+    "viewCurrentSettings": {
+      "type": "function",
+      "name": "viewCurrentSettings",
+      "params": [],
+      "isAsync": true
+    }
+  }
+}

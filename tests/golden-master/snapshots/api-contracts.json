@@ -1,7 +1,7 @@
 {
   "claude-settings": {
     "name": "claude-settings",
-    "capturedAt": "2026-02-01T22:36:45.525Z",
+    "capturedAt": "2026-02-05T19:53:15.750Z",
     "exports": {
       "DEFAULT_GITHUB_SETTINGS": {
         "name": "DEFAULT_GITHUB_SETTINGS",
@@ -163,9 +163,33 @@
       }
     }
   },
+  "init": {
+    "name": "init",
+    "capturedAt": "2026-02-05T19:53:16.370Z",
+    "exports": {
+      "runInit": {
+        "name": "runInit",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "verifyLegacyInstallation": {
+        "name": "verifyLegacyInstallation",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "projectDir"
+        ],
+        "length": 0
+      }
+    }
+  },
   "claude-audit": {
     "name": "claude-audit",
-    "capturedAt": "2026-02-01T22:36:45.919Z",
+    "capturedAt": "2026-02-05T19:53:16.408Z",
     "exports": {
       "ENHANCEMENT_TEMPLATES": {
         "name": "ENHANCEMENT_TEMPLATES",
@@ -212,7 +236,7 @@
   },
   "menu": {
     "name": "menu",
-    "capturedAt": "2026-02-01T22:36:45.920Z",
+    "capturedAt": "2026-02-05T19:53:16.408Z",
     "exports": {
       "showError": {
         "name": "showError",
@@ -277,9 +301,49 @@
       }
     }
   },
+  "setup-wizard": {
+    "name": "setup-wizard",
+    "capturedAt": "2026-02-05T19:53:16.409Z",
+    "exports": {
+      "createBackup": {
+        "name": "createBackup",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "filePath"
+        ],
+        "length": 1
+      },
+      "default": {
+        "name": "default",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      },
+      "generateSlashCommand": {
+        "name": "generateSlashCommand",
+        "type": "function",
+        "isAsync": false,
+        "params": [],
+        "length": 0
+      },
+      "runSetupWizard": {
+        "name": "runSetupWizard",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
+      }
+    }
+  },
   "explore-mcp": {
     "name": "explore-mcp",
-    "capturedAt": "2026-02-01T22:36:45.920Z",
+    "capturedAt": "2026-02-05T19:53:16.409Z",
     "exports": {
       "runExploreMcp": {
         "name": "runExploreMcp",
@@ -308,7 +372,7 @@
   },
   "detect-tech-stack": {
     "name": "detect-tech-stack",
-    "capturedAt": "2026-02-01T22:36:45.921Z",
+    "capturedAt": "2026-02-05T19:53:16.409Z",
     "exports": {
       "default": {
         "name": "default",

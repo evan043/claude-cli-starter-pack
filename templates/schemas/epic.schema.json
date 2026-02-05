@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CCASP Epic",
+  "description": "Schema for EPIC.json files containing top-level epic definitions",
+  "type": "object",
+  "required": ["epic_id", "title", "description", "status", "roadmaps"],
+  "properties": {
+    "epic_id": {
+      "type": "string",
+      "description": "Unique epic identifier (slug format)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Epic title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Epic description and goals"
+    },
+    "vision_slug": {
+      "type": "string",
+      "description": "Parent vision identifier (for Vision Mode)"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "active", "completed", "blocked", "cancelled"],
+      "description": "Current epic status"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium",
+      "description": "Epic priority level"
+    },
+    "completion_percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall completion percentage"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when epic was created"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last update"
+    },
+    "github_issue": {
+      "type": ["integer", "null"],
+      "description": "Linked GitHub epic issue number"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tags for categorization"
+    },
+    "roadmaps": {
+      "type": "array",
+      "description": "Child roadmaps in this epic",
+      "items": {
+        "type": "object",
+        "required": ["roadmap_slug", "title", "order"],
+        "properties": {
+          "roadmap_slug": {
+            "type": "string",
+            "description": "Roadmap identifier"
+          },
+          "title": {
+            "type": "string",
+            "description": "Roadmap title"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Execution order"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "active", "completed", "blocked"]
+          },
+          "completion_percentage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "estimated_phases": {
+            "type": "integer"
+          },
+          "github_issue": {
+            "type": ["integer", "null"]
+          }
+        }
+      }
+    },
+    "success_criteria": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "High-level success criteria for epic completion"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["epic", "roadmap", "external"]
+          },
+          "identifier": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "estimated_duration": { "type": "string" },
+        "tech_stack": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "team_size": { "type": "integer" }
+      }
+    }
+  }
+}

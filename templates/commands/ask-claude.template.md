@@ -1,5 +1,6 @@
 ---
-description: Natural language command discovery - find the right command for any task
+description: Natural language command discovery
+model: haiku
 ---
 
 # Ask Claude

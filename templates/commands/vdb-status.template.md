@@ -1,3 +1,8 @@
+---
+description: Vision Driver Bot status
+model: haiku
+---
+
 # Vision Driver Bot Status
 
 Check the current status of the Vision Driver Bot, including queue status, recent executions, and recommendations.

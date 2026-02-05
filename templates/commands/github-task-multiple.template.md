@@ -1,3 +1,8 @@
+---
+description: Batch GitHub task operations
+model: sonnet
+---
+
 # /github-task-multiple
 
 Create multiple GitHub issues from a complex prompt by intelligently breaking it into distinct tasks and creating issues in parallel.

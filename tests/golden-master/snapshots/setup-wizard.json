@@ -1,0 +1,36 @@
+{
+  "path": "src/commands/setup-wizard.js",
+  "capturedAt": "2026-02-05T19:53:16.418Z",
+  "exports": {
+    "createBackup": {
+      "type": "function",
+      "name": "createBackup",
+      "params": [
+        "filePath"
+      ],
+      "isAsync": false
+    },
+    "default": {
+      "type": "function",
+      "name": "runSetupWizard",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "generateSlashCommand": {
+      "type": "function",
+      "name": "generateSlashCommand",
+      "params": [],
+      "isAsync": false
+    },
+    "runSetupWizard": {
+      "type": "function",
+      "name": "runSetupWizard",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": true
+    }
+  }
+}

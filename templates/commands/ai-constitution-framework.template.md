@@ -1,3 +1,8 @@
+---
+description: Code style enforcement framework
+model: sonnet
+---
+
 # AI Constitution Framework
 
 Code style and architecture preferences enforcement system.

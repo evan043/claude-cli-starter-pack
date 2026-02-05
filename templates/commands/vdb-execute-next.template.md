@@ -1,3 +1,8 @@
+---
+description: Vision Driver Bot execute next task
+model: sonnet
+---
+
 # Vision Driver Bot - Execute Next Task
 
 Execute the next task from the VDB queue. This runs the full autonomous execution cycle.

@@ -1,3 +1,8 @@
+---
+description: Vision Driver Bot initialization
+model: sonnet
+---
+
 # Vision Driver Bot - Initialize
 
 Set up Vision Driver Bot for this project. This configures autonomous development from your Vision/Epic board.

@@ -1,3 +1,8 @@
+---
+description: Smart CCASP update manager
+model: sonnet
+---
+
 # Smart Update Manager
 
 Explore and manage updates for your customized CCASP assets with intelligent merge suggestions.

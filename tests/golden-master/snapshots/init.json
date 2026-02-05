@@ -1,0 +1,22 @@
+{
+  "path": "src/commands/init.js",
+  "capturedAt": "2026-02-05T19:53:16.416Z",
+  "exports": {
+    "runInit": {
+      "type": "function",
+      "name": "runInit",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "verifyLegacyInstallation": {
+      "type": "function",
+      "name": "verifyLegacyInstallation",
+      "params": [
+        "projectDir = process.cwd("
+      ],
+      "isAsync": true
+    }
+  }
+}

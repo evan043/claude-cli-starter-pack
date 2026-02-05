@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CCASP Skill Package",
+  "description": "Schema for skill.json files defining RAG-based skill packages",
+  "type": "object",
+  "required": ["id", "name", "version", "type", "description"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Unique skill identifier (kebab-case)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name for the skill"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version (e.g., '1.0.0')"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["rag", "tool", "agent", "mcp"],
+      "description": "Skill type"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of skill capabilities"
+    },
+    "author": {
+      "type": "string",
+      "description": "Skill author name or organization"
+    },
+    "license": {
+      "type": "string",
+      "default": "MIT",
+      "description": "License identifier (SPDX format)"
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Keywords for skill discovery"
+    },
+    "activation": {
+      "type": "object",
+      "description": "Skill activation conditions",
+      "properties": {
+        "auto": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-activate on session start"
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Keywords that trigger skill activation"
+        },
+        "file_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "File glob patterns that trigger activation"
+        },
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Slash commands this skill provides"
+        }
+      }
+    },
+    "rag_config": {
+      "type": "object",
+      "description": "RAG-specific configuration",
+      "properties": {
+        "corpus_path": {
+          "type": "string",
+          "description": "Relative path to corpus files"
+        },
+        "chunk_size": {
+          "type": "integer",
+          "default": 1000,
+          "description": "Chunk size for text splitting (characters)"
+        },
+        "overlap": {
+          "type": "integer",
+          "default": 200,
+          "description": "Overlap between chunks (characters)"
+        },
+        "top_k": {
+          "type": "integer",
+          "default": 5,
+          "description": "Number of top results to return"
+        },
+        "similarity_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7,
+          "description": "Minimum similarity score for matches"
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "description": "Claude Code tools this skill uses",
+      "items": {
+        "type": "string",
+        "enum": ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Task", "AskUserQuestion"]
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "External dependencies",
+      "properties": {
+        "npm": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required npm packages"
+        },
+        "pip": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required Python packages"
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required skill dependencies"
+        },
+        "mcp_servers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required MCP servers"
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "description": "Usage examples",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "prompt": { "type": "string" },
+          "expected_behavior": { "type": "string" }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": ["development", "testing", "deployment", "documentation", "analysis", "other"]
+        },
+        "complexity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "estimated_setup_time": { "type": "string" },
+        "homepage": { "type": "string", "format": "uri" },
+        "repository": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}

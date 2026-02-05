@@ -1,3 +1,8 @@
+---
+description: Agent orchestration patterns guide
+model: haiku
+---
+
 # Agent Orchestration Guide
 
 Quick reference for executing phased development plans with hierarchical agent orchestration.

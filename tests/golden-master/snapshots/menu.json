@@ -1,0 +1,60 @@
+{
+  "path": "src/cli/menu.js",
+  "capturedAt": "2026-02-05T19:53:16.417Z",
+  "exports": {
+    "showError": {
+      "type": "function",
+      "name": "showError",
+      "params": [
+        "title",
+        "message"
+      ],
+      "isAsync": false
+    },
+    "showHeader": {
+      "type": "function",
+      "name": "showHeader",
+      "params": [
+        "title"
+      ],
+      "isAsync": false
+    },
+    "showInfo": {
+      "type": "function",
+      "name": "showInfo",
+      "params": [
+        "message"
+      ],
+      "isAsync": false
+    },
+    "showMainMenu": {
+      "type": "function",
+      "name": "showMainMenu",
+      "params": [],
+      "isAsync": true
+    },
+    "showProjectSettingsMenu": {
+      "type": "function",
+      "name": "showProjectSettingsMenu",
+      "params": [],
+      "isAsync": true
+    },
+    "showSuccess": {
+      "type": "function",
+      "name": "showSuccess",
+      "params": [
+        "title",
+        "details = []"
+      ],
+      "isAsync": false
+    },
+    "showWarning": {
+      "type": "function",
+      "name": "showWarning",
+      "params": [
+        "message"
+      ],
+      "isAsync": false
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CCASP Phase Progress",
+  "description": "Schema for PROGRESS.json files tracking phase-dev-plan execution state",
+  "type": "object",
+  "required": ["plan_id", "phase_id", "project_name", "status", "phases"],
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "description": "Unique identifier for this phase-dev-plan"
+    },
+    "phase_id": {
+      "type": "string",
+      "description": "Current active phase ID"
+    },
+    "roadmap_id": {
+      "type": "string",
+      "description": "Parent roadmap identifier (optional)"
+    },
+    "project_name": {
+      "type": "string",
+      "description": "Human-readable project name"
+    },
+    "scale": {
+      "type": "string",
+      "enum": ["S", "M", "L"],
+      "description": "Project scale: Small (S), Medium (M), or Large (L)"
+    },
+    "target_success": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Target success rate (0-1)"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "active", "completed", "failed", "paused"],
+      "description": "Current execution status"
+    },
+    "github_issue": {
+      "type": ["integer", "null"],
+      "description": "Linked GitHub issue number (if applicable)"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when plan was created"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last update"
+    },
+    "completion_percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall completion percentage"
+    },
+    "agent_assignments": {
+      "type": "object",
+      "properties": {
+        "suggested": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "current": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Array of phases in this plan",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "status", "tasks"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Numeric phase ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Phase name"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "active", "completed", "failed", "paused"],
+            "description": "Phase execution status"
+          },
+          "tasks": {
+            "type": "array",
+            "description": "Tasks within this phase",
+            "items": {
+              "type": "object",
+              "required": ["id", "description", "completed"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Task identifier (e.g., '1.1', '1.2')"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Task description"
+                },
+                "completed": {
+                  "type": "boolean",
+                  "description": "Whether task is completed"
+                },
+                "agent": {
+                  "type": "string",
+                  "description": "Assigned agent (optional)"
+                }
+              }
+            }
+          },
+          "success_criteria": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Success criteria for this phase"
+          }
+        }
+      }
+    },
+    "testing_config": {
+      "type": "object",
+      "properties": {
+        "test_command": {
+          "type": "string",
+          "description": "Command to run tests"
+        },
+        "ralph_loop": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "maxIterations": { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}

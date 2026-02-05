@@ -1,0 +1,56 @@
+{
+  "path": "src/commands/claude-audit.js",
+  "capturedAt": "2026-02-05T19:53:16.417Z",
+  "exports": {
+    "ENHANCEMENT_TEMPLATES": {
+      "type": "object",
+      "keys": [
+        "quickStart",
+        "techStackTable",
+        "keyLocations",
+        "importPatterns",
+        "testingInstructions",
+        "deploymentSection",
+        "referenceLinks",
+        "architectureRules",
+        "criticalRules",
+        "fullTemplate"
+      ],
+      "length": 10
+    },
+    "runClaudeAudit": {
+      "type": "function",
+      "name": "runClaudeAudit",
+      "params": [
+        "options = {}"
+      ],
+      "isAsync": true
+    },
+    "runEnhancement": {
+      "type": "function",
+      "name": "runEnhancement",
+      "params": [
+        "cwd"
+      ],
+      "isAsync": true
+    },
+    "showClaudeAuditMenu": {
+      "type": "function",
+      "name": "showClaudeAuditMenu",
+      "params": [],
+      "isAsync": true
+    }
+  },
+  "enhancementTemplatesKeys": [
+    "quickStart",
+    "techStackTable",
+    "keyLocations",
+    "importPatterns",
+    "testingInstructions",
+    "deploymentSection",
+    "referenceLinks",
+    "architectureRules",
+    "criticalRules",
+    "fullTemplate"
+  ]
+}

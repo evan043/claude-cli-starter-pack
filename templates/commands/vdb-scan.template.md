@@ -1,3 +1,8 @@
+---
+description: Vision Driver Bot board scan
+model: haiku
+---
+
 # Vision Driver Bot - Scan Board
 
 Scan the Vision/Epic board for actionable items and queue them for execution.

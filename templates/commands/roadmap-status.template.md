@@ -1,3 +1,8 @@
+---
+description: Roadmap progress dashboard
+model: haiku
+---
+
 # Roadmap Status - Multi-Phase Progress Dashboard
 
 You are a roadmap progress tracking specialist. Display comprehensive status for roadmaps and their phases.

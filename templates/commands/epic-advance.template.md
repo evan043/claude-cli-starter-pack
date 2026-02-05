@@ -1,3 +1,8 @@
+---
+description: Advance epic to next roadmap
+model: sonnet
+---
+
 # Epic Advance - Manual Epic Progression
 
 You are an Epic execution specialist. Allow manual advancement through epic roadmaps with gating override support and decision logging.

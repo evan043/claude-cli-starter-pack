@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CCASP Roadmap",
+  "description": "Schema for ROADMAP.json files containing high-level project roadmaps",
+  "type": "object",
+  "required": ["roadmap_id", "title", "description", "status", "phases"],
+  "properties": {
+    "roadmap_id": {
+      "type": "string",
+      "description": "Unique roadmap identifier (slug format)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Roadmap title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Roadmap description/scope"
+    },
+    "epic_slug": {
+      "type": "string",
+      "description": "Parent epic identifier (if part of epic hierarchy)"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "active", "completed", "blocked", "paused"],
+      "description": "Current roadmap status"
+    },
+    "order": {
+      "type": "integer",
+      "description": "Execution order relative to other roadmaps in same epic"
+    },
+    "estimated_phases": {
+      "type": "integer",
+      "description": "Estimated number of phases"
+    },
+    "completion_percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall completion percentage"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when roadmap was created"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last update"
+    },
+    "github_issue": {
+      "type": ["integer", "null"],
+      "description": "Linked GitHub issue number"
+    },
+    "phase_dev_plan_refs": {
+      "type": "array",
+      "description": "References to child phase-dev-plan identifiers",
+      "items": {
+        "type": "object",
+        "required": ["plan_id", "title"],
+        "properties": {
+          "plan_id": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "string" },
+          "completion_percentage": { "type": "number" }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "High-level phases in this roadmap",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "estimated_tasks": { "type": "integer" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "active", "completed", "failed"]
+          }
+        }
+      }
+    },
+    "exploration": {
+      "type": "object",
+      "description": "Exploration phase artifacts",
+      "properties": {
+        "completed": { "type": "boolean" },
+        "findings_path": { "type": "string" },
+        "summary_path": { "type": "string" }
+      }
+    },
+    "token_allocation": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer" },
+        "used": { "type": "integer" },
+        "remaining": { "type": "integer" }
+      }
+    }
+  }
+}

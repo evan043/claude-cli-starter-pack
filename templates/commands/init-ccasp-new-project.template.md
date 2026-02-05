@@ -1,3 +1,8 @@
+---
+description: Initialize CCASP for new project
+model: sonnet
+---
+
 # Initialize CCASP New Project
 
 You are setting up a fresh project with CCASP (Claude CLI Advanced Starter Pack) Full preset. This command is for Happy Engineering users who cannot run the terminal wizard.
