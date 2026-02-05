@@ -449,6 +449,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Status |
 |---------|--------|
+| **Vision Mode Orchestration** | ✅ Complete |
 | **Jira Integration** | 🔨 In Development |
 | **Linear Sync** | 🔨 In Development |
 | **ClickUp Integration** | 📋 Planned |
@@ -565,6 +566,34 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Top Features
+
+### Vision Mode Orchestration *(NEW in v2.3.0)*
+
+Autonomous MVP development from natural language:
+
+```bash
+/vision-init "Build a task management app with drag-and-drop"
+```
+
+Vision Mode is an L0+ orchestration layer above Epics, enabling:
+- **Natural Language → MVP**: Describe your product, Claude builds it autonomously
+- **8-Phase Architecture**: Schema → Analysis → Architecture → Observer → Agent Factory → Security → Autonomous Execution → Integration
+- **Drift Detection**: Observer hook monitors PROGRESS.json and ROADMAP.json for alignment
+- **Self-Healing**: Autonomous loop retries failed tasks with intelligent fixes
+
+```
+Vision Hierarchy:
+VISION (L0+) ← Natural language prompt
+├── EPIC (L0) ← Generated epic with milestones
+│   ├── ROADMAP (L1) ← Multi-phase roadmap
+│   │   └── PHASE-DEV (L2) ← Individual phases
+│   │       └── TASKS (L3) ← Atomic work units
+```
+
+Commands:
+- `/vision-init` — Initialize from prompt
+- `/vision-status` — View progress and alignment
+- `/vision-adjust` — Adjust when drift detected
 
 ### Vision Driver Bot (VDB) *(Actively Being Developed)*
 
@@ -703,6 +732,9 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `/create-github-epic` | Epic workflows |
 | `/refactor-workflow` | Guided refactoring |
 | `/golden-master` | Characterization tests |
+| `/vision-init` | Autonomous MVP from prompt |
+| `/vision-status` | Vision progress dashboard |
+| `/vision-adjust` | Adjust Vision plan |
 
 [Full Commands Reference →](./docs/WIKI.md)
 

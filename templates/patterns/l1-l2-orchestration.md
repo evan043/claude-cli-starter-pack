@@ -2,11 +2,22 @@
 
 Hierarchical agent coordination with parallel L2 spawning.
 
+> ⚠️ **CRITICAL**: This pattern MUST follow [Context-Safe Orchestration](./context-safe-orchestration.md) to prevent context overflow.
+
 ## Overview
 
 A master-worker pattern where:
-- **L1 (Orchestrator)**: Decomposes task, coordinates workers, aggregates results
-- **L2 (Specialists)**: Execute specific subtasks in parallel
+- **L1 (Orchestrator)**: Decomposes task, coordinates workers, aggregates **summaries only**
+- **L2 (Specialists)**: Execute specific subtasks in parallel, write details to files
+
+## Context Safety Rules
+
+| Rule | Implementation |
+|------|----------------|
+| Summary-only returns | L2 agents return max 500 chars summary |
+| File-based details | Full output → `.claude/cache/agent-outputs/` |
+| AOP compliance | All agents follow Agent Output Protocol |
+| Context checkpoints | Check at 70% utilization |
 
 ## When to Use
 
@@ -55,23 +66,66 @@ async function orchestrate(task: string) {
 }
 ```
 
-### L2 Launcher
+### L2 Launcher (Context-Safe)
 
 ```typescript
 async function launchParallelL2s(subtasks: Subtask[]) {
+  const cacheDir = '.claude/cache/agent-outputs';
+  const batchId = `l2-batch-${Date.now()}`;
+
   // Launch all in single message for true parallelism
-  const agents = subtasks.map(subtask => ({
+  // CRITICAL: Add AOP (Agent Output Protocol) instructions to each prompt
+  const agents = subtasks.map((subtask, index) => ({
     description: subtask.title,
-    prompt: subtask.prompt,
+    prompt: `${subtask.prompt}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write detailed results to: ${cacheDir}/${batchId}-${index}.json
+2. Return ONLY a summary (max 500 chars) in this format:
+   [AOP:SUMMARY] {brief findings - what you found/did}
+   [AOP:DETAILS_FILE] ${cacheDir}/${batchId}-${index}.json
+   [AOP:STATUS] success|failure|partial
+3. DO NOT return full file contents, search results, or verbose output
+4. The parent orchestrator will read details from the file if needed`,
     subagent_type: subtask.type,
+    model: 'haiku', // Prefer haiku for parallel work
     run_in_background: true
   }));
 
   // All agents start simultaneously
   const handles = await Promise.all(agents.map(a => Task(a)));
 
-  // Wait for all to complete
-  return Promise.all(handles.map(h => waitForAgent(h)));
+  // Collect SUMMARIES ONLY (not full outputs)
+  const summaries = [];
+  for (const handle of handles) {
+    const status = await TaskOutput({
+      task_id: handle.task_id,
+      block: true,
+      timeout: 120000
+    });
+
+    // Extract only the AOP summary portion
+    summaries.push(extractAOPSummary(status.output));
+  }
+
+  return {
+    summaries,           // Summary-only for context
+    detailsDir: cacheDir, // Where full details live
+    batchId              // For later reference
+  };
+}
+
+// Extract only summary from AOP-formatted output
+function extractAOPSummary(output: string): AgentSummary {
+  const summaryMatch = output.match(/\[AOP:SUMMARY\]([\s\S]*?)\[AOP:/);
+  const fileMatch = output.match(/\[AOP:DETAILS_FILE\]\s*(\S+)/);
+  const statusMatch = output.match(/\[AOP:STATUS\]\s*(\w+)/);
+
+  return {
+    summary: summaryMatch ? summaryMatch[1].trim().slice(0, 500) : output.slice(-200),
+    detailsFile: fileMatch ? fileMatch[1] : null,
+    status: statusMatch ? statusMatch[1] : 'unknown'
+  };
 }
 ```
 
@@ -107,16 +161,36 @@ function decomposeTask(task: string): Subtask[] {
 }
 ```
 
-### Result Aggregation
+### Result Aggregation (Context-Safe)
 
 ```typescript
-function aggregateResults(results: AgentResult[]): FinalResult {
+// IMPORTANT: Aggregation stays minimal for context safety
+function aggregateResults(summaries: AgentSummary[]): AggregatedResult {
+  // Only aggregate summaries - details stay in files
+  const combinedSummary = summaries
+    .map((s, i) => `${i + 1}. ${s.summary}`)
+    .join('\n');
+
+  // Collect detail file paths for reference
+  const detailFiles = summaries
+    .filter(s => s.detailsFile)
+    .map(s => s.detailsFile);
+
   return {
-    summary: results.map(r => r.summary).join('\n\n'),
-    files: results.flatMap(r => r.files || []),
-    insights: results.flatMap(r => r.insights || []),
-    recommendations: prioritizeRecommendations(results)
+    summary: combinedSummary.slice(0, 2000), // Cap total summary
+    detailFiles,                              // Paths only, not contents
+    successCount: summaries.filter(s => s.status === 'success').length,
+    totalCount: summaries.length
   };
+}
+
+// If full details needed later, read from files (not in main context)
+async function getFullDetails(detailFiles: string[]): Promise<any[]> {
+  // Read files into a separate context (e.g., via subagent)
+  // or process incrementally to avoid context bloat
+  return Promise.all(
+    detailFiles.map(f => JSON.parse(fs.readFileSync(f, 'utf8')))
+  );
 }
 ```
 
@@ -182,8 +256,20 @@ async function orchestrateWithRecovery(task) {
 }
 ```
 
+## Context Safety Checklist
+
+Before deploying L1→L2 orchestration:
+
+- [ ] All L2 prompts include AOP output instructions
+- [ ] Cache directory exists: `.claude/cache/agent-outputs/`
+- [ ] Summary extraction function handles malformed output
+- [ ] Aggregation caps total summary at 2000 chars
+- [ ] Detail files cleaned up after processing
+- [ ] Context checkpoint added for long-running orchestration
+
 ## Related Patterns
 
+- [Context-Safe Orchestration](./context-safe-orchestration.md) - **Required reading**
 - Two-Tier Query Pipeline
 - Multi-Phase Orchestration
 - Dependency Ordering

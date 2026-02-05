@@ -2,12 +2,24 @@
 
 Sequential phase execution with parallel agents within phases.
 
+> ⚠️ **CRITICAL**: This pattern MUST follow [Context-Safe Orchestration](./context-safe-orchestration.md) to prevent context overflow.
+
 ## Overview
 
 Organizes work into distinct phases where:
 - Phases execute sequentially (each depends on previous)
 - Tasks within a phase can run in parallel
 - Validation gates between phases ensure quality
+- **All state lives in files, not context**
+
+## Context Safety Rules
+
+| Rule | Implementation |
+|------|----------------|
+| File-based state | PROGRESS.json is source of truth |
+| Summary-only returns | Phase results return max 300 chars |
+| Context checkpoints | Check at 70% before each phase |
+| AOP compliance | All parallel agents follow Agent Output Protocol |
 
 ## When to Use
 
@@ -48,7 +60,7 @@ Organizes work into distinct phases where:
 
 ## Implementation
 
-### Phase Controller
+### Phase Controller (Context-Safe)
 
 ```typescript
 interface Phase {
@@ -59,47 +71,75 @@ interface Phase {
   parallel: boolean;
 }
 
-async function executePhases(phases: Phase[]): Promise<PhaseResults> {
-  const results: PhaseResult[] = [];
-  let context = {}; // Accumulates data across phases
+// CRITICAL: State lives in files, not in context variable
+async function executePhases(phases: Phase[], progressPath: string): Promise<PhaseResults> {
+  // Results stored in file, not accumulated in memory
+  const cacheDir = '.claude/cache/agent-outputs';
 
   for (const phase of phases) {
+    // Context checkpoint before each phase
+    const contextCheck = await checkContextUtilization();
+    if (contextCheck.percent > 70) {
+      console.log(`⚠️ Context at ${contextCheck.percent}%. Consider /compact before continuing.`);
+      // Could pause here for user decision
+    }
+
     console.log(`Starting Phase ${phase.id}: ${phase.name}`);
 
-    // Execute phase tasks
+    // Execute phase tasks (summaries only returned to context)
     const phaseResult = phase.parallel
-      ? await executeParallel(phase.tasks, context)
-      : await executeSequential(phase.tasks, context);
+      ? await executeParallelContextSafe(phase.tasks, cacheDir)
+      : await executeSequentialContextSafe(phase.tasks, cacheDir);
 
     // Run validation gate
     const validation = await phase.validation.check(phaseResult);
 
+    // Update PROGRESS.json file (not context)
+    await updateProgressFile(progressPath, phase.id, {
+      status: validation.passed ? 'completed' : 'failed',
+      summary: phaseResult.summary.slice(0, 300), // Summary only!
+      detailsDir: phaseResult.detailsDir,
+      validation: validation
+    });
+
     if (!validation.passed) {
       return {
-        completed: results,
-        failed: phase,
+        status: 'failed',
+        failedPhase: phase.id,
         reason: validation.reason,
-        context
+        summary: `Failed at phase ${phase.id}: ${validation.reason}`
       };
     }
 
-    // Update context with phase results
-    context = { ...context, [phase.id]: phaseResult };
-    results.push({ phase, result: phaseResult, validation });
+    // Minimal context output
+    console.log(`✓ Phase ${phase.id} complete: ${phaseResult.summary.slice(0, 100)}`);
   }
 
-  return { completed: results, context };
+  return {
+    status: 'completed',
+    summary: `All ${phases.length} phases completed successfully`
+  };
 }
 ```
 
-### Parallel Task Execution
+### Parallel Task Execution (Context-Safe)
 
 ```typescript
-async function executeParallel(tasks: Task[], context: Context) {
-  // Prepare prompts with context
-  const preparedTasks = tasks.map(task => ({
+async function executeParallelContextSafe(tasks: Task[], cacheDir: string) {
+  const batchId = `phase-${Date.now()}`;
+
+  // Prepare prompts with AOP instructions
+  const preparedTasks = tasks.map((task, index) => ({
     ...task,
-    prompt: injectContext(task.prompt, context)
+    prompt: `${task.prompt}
+
+**OUTPUT REQUIREMENTS (MANDATORY - Context Safety):**
+1. Write detailed results to: ${cacheDir}/${batchId}-task-${index}.json
+2. Return ONLY a summary (max 400 chars):
+   [AOP:SUMMARY] {what you accomplished}
+   [AOP:DETAILS_FILE] ${cacheDir}/${batchId}-task-${index}.json
+   [AOP:STATUS] success|failure|partial
+3. DO NOT include full file contents or verbose logs in your response`
   }));
 
   // Launch all in parallel
@@ -107,13 +147,31 @@ async function executeParallel(tasks: Task[], context: Context) {
     description: task.title,
     prompt: task.prompt,
     subagent_type: task.type,
+    model: 'haiku',
     run_in_background: true
   }));
 
   const handles = await Promise.all(agents);
 
-  // Wait for all to complete
-  return Promise.all(handles.map(waitForCompletion));
+  // Collect summaries only
+  const summaries = [];
+  for (const handle of handles) {
+    const result = await TaskOutput({
+      task_id: handle.task_id,
+      block: true,
+      timeout: 120000
+    });
+    summaries.push(extractAOPSummary(result.output));
+  }
+
+  // Return aggregated summary (not full results)
+  return {
+    summary: summaries.map(s => s.summary).join('; ').slice(0, 800),
+    detailsDir: cacheDir,
+    batchId,
+    successCount: summaries.filter(s => s.status === 'success').length,
+    totalCount: summaries.length
+  };
 }
 ```
 
@@ -251,8 +309,20 @@ async function resumeFromCheckpoint(progressPath: string) {
 }
 ```
 
+## Context Safety Checklist
+
+Before deploying multi-phase orchestration:
+
+- [ ] PROGRESS.json created for state tracking
+- [ ] All task prompts include AOP instructions
+- [ ] Cache directory exists: `.claude/cache/agent-outputs/`
+- [ ] Context checkpoint added before each phase
+- [ ] Phase results capped at 300 chars summary
+- [ ] Detail files cleaned up after phase completion
+
 ## Related Patterns
 
+- [Context-Safe Orchestration](./context-safe-orchestration.md) - **Required reading**
 - L1→L2 Orchestration
 - Phase Validation Gates
 - Two-Tier Query Pipeline
