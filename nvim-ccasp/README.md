@@ -15,7 +15,39 @@ Neovim integration for Claude CLI Advanced Starter Pack (CCASP). Build a termina
 
 ## Installation
 
-### lazy.nvim
+### Quick Start (Simple Keys - Recommended)
+
+No leader key needed! Uses `,` (comma) + single key:
+
+```lua
+-- lazy.nvim
+{
+  "your-username/ccasp.nvim",
+  dependencies = { "nvim-lua/plenary.nvim" },
+  config = function()
+    require("ccasp").setup(require("ccasp.presets.simple"))
+  end,
+}
+```
+
+**Simple keybindings:**
+| Key | Action |
+|-----|--------|
+| `,p` | Control Panel |
+| `,g` | Agent Grid |
+| `,d` | Dashboard |
+| `,i` | Toggle Prompt Injector |
+| `,e` | Quick Enhance |
+| `,f` | Features |
+| `,h` | Hooks |
+| `,c` | Commands |
+| `,s` | Skills |
+| `Shift+F1` | Control Panel |
+| `Shift+F2` | Agent Grid |
+| `Shift+F3` | Dashboard |
+| `Shift+F4` | Prompt Injector |
+
+### lazy.nvim (Custom Config)
 
 ```lua
 {

@@ -127,20 +127,48 @@ function M.setup_keymaps()
   local prefix = M.config.keys.prefix
   local keys = M.config.keys
 
-  local mappings = {
-    { keys.grid, M.agents.open_grid, "Open Agent Grid" },
-    { keys.control, M.panels.control.toggle, "Control Panel" },
-    { keys.features, M.panels.features.open, "Feature Toggles" },
-    { keys.hooks, M.panels.hooks.open, "Hook Manager" },
-    { keys.commands, M.telescope.commands, "Browse Commands" },
-    { keys.skills, M.telescope.skills, "Browse Skills" },
-    { keys.dashboard, M.panels.dashboard.open, "Dashboard" },
-    { keys.restart_all, M.agents.restart_all, "Restart All Agents" },
-    { keys.kill_all, M.agents.kill_all, "Kill All Agents" },
+  -- Function lookup table
+  local actions = {
+    grid = function() M.agents.open_grid() end,
+    control = function() M.panels.control.toggle() end,
+    features = function() M.panels.features.open() end,
+    hooks = function() M.panels.hooks.open() end,
+    commands = function() M.telescope.commands() end,
+    skills = function() M.telescope.skills() end,
+    dashboard = function() M.panels.dashboard.open() end,
+    restart_all = function() M.agents.restart_all() end,
+    kill_all = function() M.agents.kill_all() end,
+    prompt_injector = function() M.prompt_injector.toggle() end,
+    quick_enhance = function() M.prompt_injector.quick_enhance() end,
   }
 
+  local mappings = {
+    { keys.grid, actions.grid, "Open Agent Grid" },
+    { keys.control, actions.control, "Control Panel" },
+    { keys.features, actions.features, "Feature Toggles" },
+    { keys.hooks, actions.hooks, "Hook Manager" },
+    { keys.commands, actions.commands, "Browse Commands" },
+    { keys.skills, actions.skills, "Browse Skills" },
+    { keys.dashboard, actions.dashboard, "Dashboard" },
+    { keys.restart_all, actions.restart_all, "Restart All Agents" },
+    { keys.kill_all, actions.kill_all, "Kill All Agents" },
+    { keys.prompt_injector, actions.prompt_injector, "Toggle Prompt Injector" },
+    { keys.quick_enhance, actions.quick_enhance, "Quick Enhance" },
+  }
+
+  -- Standard prefix mappings (e.g., ,g or <leader>cg)
   for _, map in ipairs(mappings) do
     vim.keymap.set("n", prefix .. map[1], map[2], { desc = "CCASP: " .. map[3] })
+  end
+
+  -- Extra keymaps from presets (e.g., <S-F1>, <Tab>p)
+  if M.config.extra_keymaps then
+    for _, map in ipairs(M.config.extra_keymaps) do
+      local key, action_name, desc = map[1], map[2], map[3]
+      if actions[action_name] then
+        vim.keymap.set("n", key, actions[action_name], { desc = "CCASP: " .. desc })
+      end
+    end
   end
 end
 
