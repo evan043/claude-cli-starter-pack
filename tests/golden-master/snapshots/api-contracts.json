@@ -1,7 +1,7 @@
 {
   "claude-settings": {
     "name": "claude-settings",
-    "capturedAt": "2026-02-05T22:16:49.280Z",
+    "capturedAt": "2026-02-05T22:26:15.105Z",
     "exports": {
       "DEFAULT_GITHUB_SETTINGS": {
         "name": "DEFAULT_GITHUB_SETTINGS",
@@ -165,7 +165,7 @@
   },
   "init": {
     "name": "init",
-    "capturedAt": "2026-02-05T22:16:49.874Z",
+    "capturedAt": "2026-02-05T22:26:15.643Z",
     "exports": {
       "runInit": {
         "name": "runInit",
@@ -189,7 +189,7 @@
   },
   "claude-audit": {
     "name": "claude-audit",
-    "capturedAt": "2026-02-05T22:16:49.933Z",
+    "capturedAt": "2026-02-05T22:26:15.683Z",
     "exports": {
       "ENHANCEMENT_TEMPLATES": {
         "name": "ENHANCEMENT_TEMPLATES",
@@ -236,7 +236,7 @@
   },
   "menu": {
     "name": "menu",
-    "capturedAt": "2026-02-05T22:16:49.934Z",
+    "capturedAt": "2026-02-05T22:26:15.684Z",
     "exports": {
       "showError": {
         "name": "showError",
@@ -303,7 +303,7 @@
   },
   "setup-wizard": {
     "name": "setup-wizard",
-    "capturedAt": "2026-02-05T22:16:49.934Z",
+    "capturedAt": "2026-02-05T22:26:15.684Z",
     "exports": {
       "createBackup": {
         "name": "createBackup",
@@ -343,7 +343,7 @@
   },
   "explore-mcp": {
     "name": "explore-mcp",
-    "capturedAt": "2026-02-05T22:16:49.934Z",
+    "capturedAt": "2026-02-05T22:26:15.684Z",
     "exports": {
       "runExploreMcp": {
         "name": "runExploreMcp",
@@ -372,7 +372,7 @@
   },
   "detect-tech-stack": {
     "name": "detect-tech-stack",
-    "capturedAt": "2026-02-05T22:16:49.934Z",
+    "capturedAt": "2026-02-05T22:26:15.684Z",
     "exports": {
       "default": {
         "name": "default",

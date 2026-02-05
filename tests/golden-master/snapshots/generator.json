@@ -1,6 +1,6 @@
 {
   "path": "src/agents/generator.js",
-  "capturedAt": "2026-02-05T22:07:50.428Z",
+  "capturedAt": "2026-02-05T22:22:59.816Z",
   "exports": {
     "deleteGeneratedAgent": {
       "type": "function",
@@ -26,6 +26,15 @@
       "params": [
         "techStack",
         "projectRoot = process.cwd("
+      ],
+      "isAsync": false
+    },
+    "getAgentContent": {
+      "type": "function",
+      "name": "getAgentContent",
+      "params": [
+        "agent",
+        "techStack"
       ],
       "isAsync": false
     },
