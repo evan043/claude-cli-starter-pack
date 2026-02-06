@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                          v2.2.19  •  Production Ready                         ║
+║                           v2.5.0  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,160 +38,82 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## 🚀 v2.2.19 Feature Update — Neovim Integration + Multi-Session Claude CLI
+## 🚀 v2.5.0 Feature Update — Neovim Plugin Refactoring + Site Intelligence + MCP Registry
 
 </div>
 
-> **Feb 2026** — CCASP now includes a full Neovim plugin with multi-session Claude CLI terminals, collapsible sidebar, and zero-setup launcher. Transform your terminal into an AI command center.
+> **Feb 2026** — Major release: 7-phase Neovim plugin refactoring (health score 87/100), 5-layer Website Intelligence System with MCP server, Anthropic MCP Registry API integration, and JS module decomposition.
 
-### 🆕 Neovim Integration (nvim-ccasp)
-
-<table>
-<tr>
-<td width="50%">
-
-**Multi-Session Claude CLI**
-
-![Multi-Session Claude CLI](docs/images/nvim-multi-session.jpg)
-
-*4 Claude sessions with quadrant stacking, color-coded titlebars*
-
-</td>
-<td width="50%">
-
-**CCASP Dashboard**
-
-![CCASP Dashboard](docs/images/ccasp-dashboard.jpg)
-
-*Project status, token usage, installed components overview*
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-**Vision Mode Dashboard**
-
-![Vision Dashboard](docs/images/vision-dashboard.jpg)
-
-*Roadmap progress tracking with phase completion metrics*
-
-</td>
-</tr>
-</table>
-
-**Features:**
-- 🚀 **Zero Setup**: `ccasp neovim` launches instantly (auto-installs Neovim if needed)
-- 🎨 **8 Session Colors**: Blue, Green, Purple, Orange, Red, Cyan, Pink, Yellow
-- ⌨️ **Auto-Insert Mode**: Click session → instantly start typing
-- 📁 **Collapsible Sidebar**: Mouse-clickable sections, collapsed by default
-- 🔌 **Prompt Injector**: Intercept prompts, optionally enhance with GPT-5.2
-
-**Quick Start:**
-```bash
-# Zero-setup launch (auto-installs Neovim if missing)
-ccasp neovim
-
-# Permanent installation
-ccasp nvim-setup
-```
-
-### What's New
+### 🆕 What's New in v2.5.0
 
 <table>
 <tr>
 <td width="50%">
 
-#### 📊 Graduated Task/Phase/Roadmap Architecture
-**Three planning scales, one unified system:**
-- **Tasks** → `/create-task-list` for single features
-- **Phases** → `/phase-dev-plan` for multi-step implementations
-- **Roadmaps** → `/create-roadmap` for epics spanning phases
-
-All three generate the **same 6-file exploration structure**, enabling consistent agent delegation and progress tracking.
+#### 🔧 Neovim Plugin Refactoring (7-Phase)
+**Complete modular rewrite of nvim-ccasp (39 files, 12,505 lines):**
+- **sidebar.lua** 1,718 → 831 lines (-52%) with 3 submodules
+- **browser_tabs.lua** 1,436 → 1,267 lines with picker factory
+- **5 panel modules** refactored with shared `helpers.lua`
+- **7 infrastructure modules** cleaned up (-141 lines)
+- Health score: **87/100**, 0 broken requires, 100% module compliance
 
 </td>
 <td width="50%">
 
-#### 🔄 Hook-Based GitHub Auto-Sync
-**PROGRESS.json changes trigger automatic GitHub updates:**
-- Checkboxes auto-update as tasks complete
-- Completion % refreshes in real-time
-- Background L3 worker syncs without blocking work
-- Execution logs posted on phase milestones
+#### 🌐 Website Intelligence System (Site-Intel)
+**5-layer MCP server for site analysis:**
+- **Discovery** — Crawl pages, parse routes, accessibility audit
+- **Summarizer** — AI-powered page content analysis
+- **Graph** — Build site structure and link maps
+- **Memory** — ChromaDB-backed persistent knowledge
+- **Judgment** — Recommendations engine with scoring
+- Web dashboard at `http://localhost:3848`
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### 📝 Type-Specific Issue Templates
-**4 intelligent templates optimized for each workflow:**
-- **Feature** — User Story, API Contract, Implementation Plan
-- **Refactor** — Current vs Target State, Code Smells
-- **Bug** — Problem/Expected, Root Cause, Evidence
-- **Testing** — Test Scope, Coverage Gaps, Scenarios Matrix
+#### 🔍 Anthropic MCP Registry Integration
+**Official MCP server discovery from Anthropic's registry API:**
+- Browse 50+ verified MCP servers
+- Auto-recommend servers for your tech stack
+- One-command install with API key hooks
+- PostgreSQL, Sentry, Serena adapters added
 
 </td>
 <td width="50%">
 
-#### 🧠 CCASP-META Machine-Parseable Structure
-**Every GitHub issue includes hidden metadata for automation:**
-```html
-<!-- CCASP-META
-source: /phase-dev-plan
-slug: auth-system
-progress_file: .claude/docs/auth-system/PROGRESS.json
--->
-```
-Enables agents to find and update issues programmatically.
+#### 📦 JS Module Decomposition (Epic 3)
+**Codebase cleanup across 3 phases:**
+- Phase 1: phase-dev command family (5 files → 16 submodules)
+- Phase 2: standalone commands (6 files → 20 submodules)
+- Phase 3: CLI flows & remaining commands (9 files → 38 modules)
+- New shared utilities: `json-io.js`, `constants.js`, `index.js`
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### 📁 Mandatory L2 Exploration Files
-**6 files generated BEFORE any GitHub issue:**
-1. `EXPLORATION_SUMMARY.md` — Executive overview
-2. `CODE_SNIPPETS.md` — Patterns to follow
-3. `REFERENCE_FILES.md` — Files to modify
-4. `AGENT_DELEGATION.md` — L2 specialist assignments
-5. `PHASE_BREAKDOWN.md` — Detailed task specs
-6. `findings.json` — Machine-readable data
-
-L2 specialists read these files for full context.
+#### 🪝 New Hook Templates
+**5 new enforcement hooks:**
+- `agent-guardrails` — Prevent agent scope creep
+- `file-collision-detector` — Detect parallel edit conflicts
+- `quality-check` — Code quality gates
+- `ralph-bdd-mode` — BDD-style test enforcement
+- `tdd-enforcer` — Test-first development guard
 
 </td>
 <td width="50%">
 
-#### 🔄 11-Category Template Sync
-**`/update-check` now syncs ALL template categories:**
-1. Commands
-2. Commands-Dev
-3. Agents
-4. Skills
-5. Hooks (42 total, including `.cjs` support)
-6. Docs
-7. Patterns
-8. Scripts
-9. GitHub Issue Templates
-10. Workflows
-11. MCP configs
-
-Critical commands auto-update on every init.
-
-</td>
-</tr>
-<tr>
-<td colspan="2">
-
-#### 👁️ Vision Mode — Autonomous MVP Development
-**Transform natural language into complete MVPs:**
-- `ccasp vision init "Build a todo app with React"` — Initialize from prompt
-- 8-stage orchestrator: Analyze → Architect → Security → Agents → Execute → Validate
-- Real-time web dashboard at `http://localhost:3847`
-- Self-healing execution loop with drift detection
+#### 🎯 New Skills & Templates
+**Additions to the template library:**
+- `github-actions-generator` skill with best practices & security refs
+- `site-intel.template.md` slash command
+- `update-check.template.md` enhancements
+- 15+ new test files for coverage expansion
 
 </td>
 </tr>
@@ -200,7 +122,7 @@ Critical commands auto-update on every init.
 ### Upgrade Now
 
 ```bash
-# Update to v2.2.18
+# Update to v2.5.0
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync all new features to your project
@@ -595,16 +517,29 @@ npx claude-cli-advanced-starter-pack init
 | Feature | Status |
 |---------|--------|
 | **Vision Mode Orchestration** | ✅ Complete |
+| **Website Intelligence (Site-Intel)** | ✅ Complete |
+| **Anthropic MCP Registry** | ✅ Complete |
+| **nvim-ccasp Modular Refactoring** | ✅ Complete |
+| **JS Module Decomposition (Epic 3)** | ✅ Complete |
 | **Jira Integration** | 🔨 In Development |
 | **Linear Sync** | 🔨 In Development |
 | **ClickUp Integration** | 📋 Planned |
 | **Vision Driver Bot (VDB) v2** | 🔨 In Development |
-| **Autonomous Lint Fixing** | 🔨 In Development |
 | **Multi-Repo Orchestration** | 📋 Planned |
 
 ---
 
 ## Version History
+
+### v2.5.0
+**Neovim Plugin Refactoring + Site Intelligence + MCP Registry** — Feb 2026
+- **nvim-ccasp 7-Phase Refactoring**: 39 files, 12,505 lines. sidebar.lua -52%, 10 new modules, health score 87/100
+- **Website Intelligence System**: 5-layer MCP server (discovery, summarizer, graph, memory, judgment) with web dashboard
+- **Anthropic MCP Registry**: Official API integration for 50+ verified MCP servers with auto-recommendations
+- **JS Module Decomposition (Epic 3)**: 20 files decomposed into 74 focused submodules across 3 phases
+- **New Hooks**: agent-guardrails, file-collision-detector, quality-check, ralph-bdd-mode, tdd-enforcer
+- **New Skills**: github-actions-generator with security references
+- **Test Coverage**: 15+ new test files (site-intel, token-budget, roadmap-schema, delegation-protocol, etc.)
 
 ### v2.2.19
 **Neovim Integration (nvim-ccasp)** — Feb 2026
