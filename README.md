@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.6.1  •  Production Ready                         ║
+║                           v2.7.0  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,66 +38,67 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## v2.6.1 Feature Update — Smart Todo List with AI Intent Routing
+## v2.7.0 Feature Update — Vision Multi-Instance & Decision Engine
 
 </div>
 
-> **Feb 2026** — New Smart Todo system: quick-add with auto-paraphrasing, interactive menu, AI-powered "Work on item" that suggests the best CCASP workflow (Vision/Epic/Roadmap/Phase-Dev/Task List), plus full Neovim integration with sidebar, floating panel, and Telescope picker.
+> **Feb 2026** — Vision Mode now supports multiple concurrent visions with a centralized registry, cross-process file locking, slug uniqueness enforcement, and an intelligent decision engine that automatically selects the right planning hierarchy (task-list / phase-dev-plan / roadmap / epic / vision-full) based on prompt complexity.
 
-### What's New in v2.6.1
+### What's New in v2.7.0
 
 <table>
 <tr>
 <td width="50%">
 
-#### Smart Todo CLI Commands
-**Two new slash commands for fast todo management:**
-- **`/todo-add`** — Quick-add with auto-paraphrasing to 5-6 word titles
-- **`/todo`** — Interactive menu: list, navigate, work-on, complete, delete
-- **AI Paraphrasing** — Claude condenses verbose input to concise titles
-- **Priority Detection** — Auto-detects urgency from keywords
-- **Persistent Storage** — Single `.claude/todos.json` file
+#### Vision Registry & Multi-Instance
+**Run multiple visions in parallel safely:**
+- **Centralized Registry** — `VISION_REGISTRY.json` indexes all visions
+- **Cross-Process Locking** — File-based `.lock` files with PID-alive detection
+- **Slug Uniqueness** — Auto-appends `-2`, `-3` on collision
+- **Atomic Writes** — Temp file + rename for corruption safety
+- **Auto-Rebuild** — Registry rebuilds from filesystem if missing/corrupt
 
 </td>
 <td width="50%">
 
-#### AI-Powered Intent Routing
-**"Work on item" analyzes your todo and suggests the right workflow:**
-- **Vision** — Autonomous MVP development (large scope)
-- **Epic** — GitHub Epic with sub-issues (project tracking)
-- **Roadmap** — Multi-milestone planning (long-term)
-- **Phase-Dev** — Phased development plan (3-5 phases)
-- **Task List** — Simple checklist (small scope)
-- **Just do it** — Skip planning, start coding directly
+#### Decision Engine
+**Automatically picks the right plan type for your prompt:**
+- **task-list** (score 0-6) — Simple flat task list
+- **phase-dev-plan** (score 7-14) — Phased development plan
+- **roadmap** (score 15-25) — Multi-phase roadmap
+- **epic** (score 26-40) — Epic with roadmaps
+- **vision-full** (score 41+) — Full hierarchy with agents
+- **`--plan-type` override** — Force any plan type manually
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### Neovim Integration (3 Views)
-**Full nvim-ccasp plugin support:**
-- **Sidebar Section** — Todo items in existing sidebar with priority indicators
-- **Floating Panel** — Full CRUD in centered floating window
-- **Telescope Picker** — Fuzzy-find todos with markdown preview
-- Keybindings: Enter=work, a=add, c=complete, x=delete, d=detail
+#### Enhanced CLI & UX
+**Multi-vision management commands:**
+- **`ccasp vision list`** — Registry-backed listing with plan type column
+- **`ccasp vision cleanup`** — Remove orphaned/failed visions
+- **Vision Menu** — Shows vision count, multi-vision selector
+- **Init Display** — Shows active visions and decision engine result
+- **`/vision-list`** — New slash command for vision management
 
 </td>
 <td width="50%">
 
-#### Data Schema
-**Simple, portable JSON storage:**
-```json
-{
-  "id": "a1b2c3d4",
-  "title": "Fix login redirect on mobile",
-  "detail": "original verbose description...",
-  "status": "pending",
-  "priority": "medium",
-  "routed_to": null
-}
-```
-Cross-platform: same data in CLI and Neovim
+#### Scoring Factors
+**Weighted scoring determines plan complexity:**
+
+| Factor | Weight |
+|--------|--------|
+| Feature count | 2.0x |
+| Domain diversity | 3.0x |
+| Technology count | 1.5x |
+| Constraints | 1.0x |
+| Intent modifier | 1.0x |
+| Prompt length | 0.3x |
+
+Intent multipliers: BUILD (1.2x), MODIFY (0.8x), OPTIMIZE (0.6x)
 
 </td>
 </tr>
@@ -106,12 +107,26 @@ Cross-platform: same data in CLI and Neovim
 ### Upgrade Now
 
 ```bash
-# Update to v2.6.1
+# Update to v2.7.0
 npm update -g claude-cli-advanced-starter-pack
 
-# Sync new todo commands to your project
+# Sync new commands to your project
 ccasp init
 ```
+
+---
+
+<details>
+<summary><strong>v2.6.1 — Smart Todo List with AI Intent Routing</strong> (click to expand)</summary>
+
+> **Feb 2026** — New Smart Todo system: quick-add with auto-paraphrasing, interactive menu, AI-powered "Work on item" that suggests the best CCASP workflow (Vision/Epic/Roadmap/Phase-Dev/Task List), plus full Neovim integration with sidebar, floating panel, and Telescope picker.
+
+- **`/todo-add`** — Quick-add with auto-paraphrasing to 5-6 word titles
+- **`/todo`** — Interactive menu: list, navigate, work-on, complete, delete
+- **AI Intent Routing** — Analyzes todo and suggests Vision/Epic/Roadmap/Phase-Dev/Task List/Just do it
+- **Neovim Integration** — Sidebar section, floating panel, Telescope picker
+
+</details>
 
 ---
 
@@ -212,7 +227,7 @@ npx claude-cli-advanced-starter-pack init
 
 CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright?), and deploys a complete `.claude/` folder with:
 
-- ✅ **56 slash commands** — deployment, testing, refactoring, GitHub sync
+- ✅ **58 slash commands** — deployment, testing, refactoring, GitHub sync
 - ✅ **42 enforcement hooks** — validation, progress tracking, agent orchestration
 - ✅ **Stack-specific agents** — specialists that know your frameworks
 - ✅ **Smart updates** — add features without losing customizations
@@ -223,7 +238,7 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 | Component | Count | Examples |
 |-----------|-------|----------|
-| **Slash Commands** | 57 | `/deploy-full`, `/pr-merge`, `/ralph`, `/site-intel-dashboard` |
+| **Slash Commands** | 58 | `/deploy-full`, `/pr-merge`, `/ralph`, `/vision-list` |
 | **Enforcement Hooks** | 42 | Token tracking, agent orchestration, refactor safety |
 | **Tech Stack Detection** | 55+ | React, Vue, FastAPI, Express, Prisma, Playwright |
 | **Agent Templates** | L1/L2/L3 | Orchestrators → Specialists → Workers |
@@ -504,12 +519,17 @@ ccasp vision init "Build a kanban board with real-time collaboration"
 ccasp vision init "Your app idea here"
 ccasp vision run my-app
 
+# Multi-vision management (v2.7.0)
+ccasp vision list           # Registry-backed listing
+ccasp vision cleanup        # Remove orphaned visions
+
 # Monitor with web dashboard
 ccasp vision dashboard
 
 # Or use slash commands
-/vision-init
-/vision-status
+/vision-init                # Decision engine auto-selects plan type
+/vision-status              # Shows plan type indicators
+/vision-list                # Multi-vision registry management
 /vision-run
 ```
 
@@ -525,7 +545,7 @@ After running `ccasp init`, your project gets:
 
 ```
 .claude/
-├── commands/              # 56 slash commands
+├── commands/              # 58 slash commands
 │   ├── menu.md           # Interactive navigation
 │   ├── deploy-full.md    # Full-stack deployment
 │   ├── ralph.md          # Test-fix loops
@@ -578,6 +598,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Status |
 |---------|--------|
+| **Vision Multi-Instance & Decision Engine** | ✅ Complete |
 | **Smart Site Intel Dev-Scan** | ✅ Complete |
 | **Vision Mode Orchestration** | ✅ Complete |
 | **Website Intelligence (Site-Intel)** | ✅ Complete |
@@ -593,6 +614,16 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.7.0
+**Vision Multi-Instance & Decision Engine** — Feb 2026
+- **Vision Registry**: Centralized `VISION_REGISTRY.json` with atomic writes, auto-rebuild from filesystem, cross-process file locking
+- **Decision Engine**: Weighted scoring selects plan type (task-list / phase-dev-plan / roadmap / epic / vision-full) based on prompt complexity
+- **Slug Uniqueness**: `generateUniqueSlug()` appends `-2`/`-3` on collision, registry-backed enforcement
+- **Enhanced CLI**: `ccasp vision list` (registry-backed with plan type column), `ccasp vision cleanup` (orphaned/failed removal)
+- **New Slash Command**: `/vision-list` for multi-vision management
+- **Templates Updated**: `/vision-init` shows decision engine result, `/vision-status` shows plan type indicators
+- **32 New Tests**: Registry, slug uniqueness, decision engine, file locking, edge cases, backward compatibility (489 total)
 
 ### v2.6.0
 **Smart Site Intel Dev-Scan System** — Feb 2026
@@ -757,8 +788,9 @@ VISION (L0+) ← Natural language prompt
 ```
 
 Commands:
-- `/vision-init` — Initialize from prompt
-- `/vision-status` — View progress and alignment
+- `/vision-init` — Initialize from prompt (decision engine auto-selects plan type)
+- `/vision-status` — View progress, alignment, and plan type
+- `/vision-list` — Multi-vision registry management
 - `/vision-adjust` — Adjust when drift detected
 
 ### Vision Driver Bot (VDB) *(Actively Being Developed)*
@@ -929,6 +961,7 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `/vision-init` | Autonomous MVP from prompt |
 | `/vision-status` | Vision progress dashboard |
 | `/vision-adjust` | Adjust Vision plan |
+| `/vision-list` | Multi-vision registry management |
 | `/site-intel` | Website intelligence + dev scanning |
 | `/site-intel-dashboard` | Dev scan dashboard viewer |
 
