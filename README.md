@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.6.0  •  Production Ready                         ║
+║                           v2.6.1  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -33,6 +33,85 @@ npx claude-cli-advanced-starter-pack init
 [Quick Start](#quick-start) • [What You Get](#what-you-get) • [📚 Wiki](https://github.com/evan043/claude-cli-advanced-starter-pack/wiki) • [Roadmap](#roadmap)
 
 </div>
+
+---
+
+<div align="center">
+
+## v2.6.1 Feature Update — Smart Todo List with AI Intent Routing
+
+</div>
+
+> **Feb 2026** — New Smart Todo system: quick-add with auto-paraphrasing, interactive menu, AI-powered "Work on item" that suggests the best CCASP workflow (Vision/Epic/Roadmap/Phase-Dev/Task List), plus full Neovim integration with sidebar, floating panel, and Telescope picker.
+
+### What's New in v2.6.1
+
+<table>
+<tr>
+<td width="50%">
+
+#### Smart Todo CLI Commands
+**Two new slash commands for fast todo management:**
+- **`/todo-add`** — Quick-add with auto-paraphrasing to 5-6 word titles
+- **`/todo`** — Interactive menu: list, navigate, work-on, complete, delete
+- **AI Paraphrasing** — Claude condenses verbose input to concise titles
+- **Priority Detection** — Auto-detects urgency from keywords
+- **Persistent Storage** — Single `.claude/todos.json` file
+
+</td>
+<td width="50%">
+
+#### AI-Powered Intent Routing
+**"Work on item" analyzes your todo and suggests the right workflow:**
+- **Vision** — Autonomous MVP development (large scope)
+- **Epic** — GitHub Epic with sub-issues (project tracking)
+- **Roadmap** — Multi-milestone planning (long-term)
+- **Phase-Dev** — Phased development plan (3-5 phases)
+- **Task List** — Simple checklist (small scope)
+- **Just do it** — Skip planning, start coding directly
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+#### Neovim Integration (3 Views)
+**Full nvim-ccasp plugin support:**
+- **Sidebar Section** — Todo items in existing sidebar with priority indicators
+- **Floating Panel** — Full CRUD in centered floating window
+- **Telescope Picker** — Fuzzy-find todos with markdown preview
+- Keybindings: Enter=work, a=add, c=complete, x=delete, d=detail
+
+</td>
+<td width="50%">
+
+#### Data Schema
+**Simple, portable JSON storage:**
+```json
+{
+  "id": "a1b2c3d4",
+  "title": "Fix login redirect on mobile",
+  "detail": "original verbose description...",
+  "status": "pending",
+  "priority": "medium",
+  "routed_to": null
+}
+```
+Cross-platform: same data in CLI and Neovim
+
+</td>
+</tr>
+</table>
+
+### Upgrade Now
+
+```bash
+# Update to v2.6.1
+npm update -g claude-cli-advanced-starter-pack
+
+# Sync new todo commands to your project
+ccasp init
+```
 
 ---
 
@@ -105,7 +184,7 @@ npx claude-cli-advanced-starter-pack init
 ### Upgrade Now
 
 ```bash
-# Update to v2.6.0
+# Update to latest
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync all new features to your project
