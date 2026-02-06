@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "neovim": {
+      "command": "node",
+      "args": ["path/to/mcp-neovim-bridge/index.js"],
+      "env": {
+        "NVIM_LISTEN_ADDRESS": "/tmp/nvim.sock"
+      },
+      "tools": {
+        "nvim_eval": {
+          "description": "Evaluate a Neovim Lua expression",
+          "parameters": {
+            "expr": { "type": "string", "description": "Lua expression to evaluate" }
+          }
+        },
+        "nvim_command": {
+          "description": "Execute a Neovim command",
+          "parameters": {
+            "cmd": { "type": "string", "description": "Ex command to run" }
+          }
+        },
+        "nvim_get_windows": {
+          "description": "Get all window configurations",
+          "parameters": {}
+        },
+        "nvim_capture_snapshot": {
+          "description": "Capture CCASP layout snapshot",
+          "parameters": {
+            "format": { "type": "string", "enum": ["text", "json"], "default": "text" }
+          }
+        }
+      }
+    }
+  }
+}

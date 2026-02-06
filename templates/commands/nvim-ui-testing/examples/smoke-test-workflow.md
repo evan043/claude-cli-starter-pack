@@ -1,0 +1,34 @@
+# Example: Smoke Test Workflow
+
+## Scenario
+You've made changes to the appshell icon rail and want to verify nothing broke.
+
+## Steps
+
+1. Run smoke test:
+   ```
+   /ui-smoke
+   ```
+
+2. Claude will execute `scripts/nvim-smoke.ps1` which:
+   - Opens Neovim headless with minimal_init.lua
+   - Loads ccasp in appshell layout
+   - Traverses icon rail sections
+   - Opens/closes flyout
+   - Validates floating windows
+   - Reports pass/fail
+
+3. If failures occur, run the fix workflow:
+   ```
+   /ui-fix
+   ```
+
+## Expected Output
+```
+=== CCASP Smoke Test ===
+[PASS] Plugin loads without errors
+[PASS] Appshell opens with 6 zones
+[PASS] Flyout toggles correctly
+[PASS] Close tears down cleanly
+4/4 tests passed
+```
