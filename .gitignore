@@ -49,6 +49,23 @@ build/
 .ccasp-dev/.ccasp-build-state.json
 .ccasp-dev/ccasp-state.json
 
+# Phase development reports & personal markdown artifacts
+PHASE*.md
+HAPPY_MOBILE_IMPLEMENTATION_SUMMARY.md
+OVERVIEW.md
+ROADMAP-85-RECOMMENDATIONS.md
+
+# Windows artifact
+NUL
+
+# Test temp fixtures
+tests/.test-tmp-json-io/
+
+# Site-intel dashboard (generated, has its own README)
+src/site-intel/dashboard/
+
 # Temp files
 npm-output.txt
 .claude-backup/
+test-output.txt
+*.backup
