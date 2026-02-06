@@ -1,5 +1,10 @@
 /**
  * Main Flow - Main menu, navigation, and top-level handlers
+ *
+ * SUBMODULES:
+ * - main/vision-menu.js - Vision Mode submenu
+ * - main/handlers.js - Worktree sync handler
+ * - main/mobile.js - Mobile menu handlers
  */
 
 import chalk from 'chalk';
@@ -19,179 +24,27 @@ import { showExploreMcpMenu } from '../../commands/explore-mcp.js';
 import { showClaudeAuditMenu } from '../../commands/claude-audit.js';
 import { showRoadmapMenu } from '../../commands/roadmap.js';
 import { showGitHubEpicMenu } from '../../commands/github-epic-menu.js';
-import { runVision } from '../../commands/vision.js';
 import { launchPanel } from '../../commands/panel.js';
 import { hasTestingConfig } from '../../testing/config.js';
 import { showHelp } from '../../commands/help.js';
 import { hasValidConfig, getVersion, loadTechStack } from '../../utils.js';
 import { performVersionCheck, formatUpdateBanner } from '../../utils/version-check.js';
 import { shouldUseMobileUI } from '../../utils/happy-detect.js';
-import { showMobileMenu, mobileReturnPrompt } from '../mobile-menu.js';
 import { BANNER } from '../menu/constants.js';
 import {
   showDevModeIndicator,
   checkPendingRestore,
   getDevModeSyncStatus,
   formatDevModeSyncBanner,
-  executeWorktreeSync,
 } from '../menu/helpers.js';
 import { launchAgentOnlySession } from '../menu/agent-launch.js';
 import { isDevMode } from '../../utils/dev-mode-state.js';
 import { showProjectSettingsMenu } from './settings.js';
 
-/**
- * Show Vision Mode menu
- */
-async function showVisionModeMenu() {
-  console.log('');
-  console.log(chalk.cyan('\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557'));
-  console.log(chalk.cyan('\u2551') + chalk.bold('                      \u{1F441} VISION MODE - Autonomous MVP Development                ') + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2560\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2563'));
-  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + chalk.dim('  Transform natural language prompts into complete, working MVPs              ') + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + chalk.dim('  through intelligent planning, agent orchestration, and self-healing.       ') + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [1] Initialize Vision     Create vision from natural language prompt        ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [2] View Status           Show all visions with progress                    ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [3] Run Vision            Execute autonomous development                    ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [4] Start Dashboard       Web UI with real-time updates                     ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [5] Security Scan         Scan packages for vulnerabilities                 ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '   [B] Back to main menu                                                       ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u2551') + '                                                                               ' + chalk.cyan('\u2551'));
-  console.log(chalk.cyan('\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D'));
-  console.log('');
-
-  const { action } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'action',
-      message: 'Select an option:',
-      choices: [
-        { name: '1. Initialize Vision', value: 'init' },
-        { name: '2. View Status', value: 'status' },
-        { name: '3. Run Vision', value: 'run' },
-        { name: '4. Start Dashboard', value: 'dashboard' },
-        { name: '5. Security Scan', value: 'scan' },
-        new inquirer.Separator(),
-        { name: 'Back to main menu', value: 'back' },
-      ],
-    },
-  ]);
-
-  if (action === 'back') {
-    return;
-  }
-
-  switch (action) {
-    case 'init': {
-      const { prompt: visionPrompt } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'prompt',
-          message: 'Describe what you want to build:',
-        },
-      ]);
-      if (visionPrompt?.trim()) {
-        await runVision('init', { prompt: visionPrompt.trim() });
-      }
-      break;
-    }
-    case 'status':
-      await runVision('status', {});
-      break;
-    case 'run': {
-      const { slug } = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'slug',
-          message: 'Vision slug (leave empty to list):',
-        },
-      ]);
-      await runVision(slug?.trim() ? 'run' : 'list', { args: slug?.trim() ? [slug.trim()] : [] });
-      break;
-    }
-    case 'dashboard':
-      console.log(chalk.yellow('\n  Starting Vision Dashboard...'));
-      console.log(chalk.dim('  This will block until you press Ctrl+C\n'));
-      await runVision('dashboard', {});
-      break;
-    case 'scan':
-      await runVision('scan', {});
-      break;
-  }
-}
-
-/**
- * Handle worktree sync from menu
- */
-async function handleWorktreeSync() {
-  console.log('');
-  console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════════════╗'));
-  console.log(chalk.cyan('║') + chalk.bold('                       WORKTREE SYNC                                          ') + chalk.cyan('║'));
-  console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
-  console.log('');
-
-  // First, show preview (dry run)
-  console.log(chalk.dim('  Analyzing sync actions...\n'));
-
-  const previewResult = await executeWorktreeSync({ dryRun: true });
-
-  if (previewResult.error) {
-    console.log(chalk.red(`  ✗ ${previewResult.error}\n`));
-    return;
-  }
-
-  console.log(previewResult.formatted);
-  console.log('');
-
-  // Count files that would be updated
-  const { results } = previewResult;
-  const willUpdate = results.executed.length;
-  const willSkip = results.skipped.length;
-
-  if (willUpdate === 0) {
-    console.log(chalk.green('  ✓ Project is already up to date with worktree.\n'));
-    return;
-  }
-
-  // Ask for confirmation
-  const { action } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'action',
-      message: 'Proceed with sync?',
-      choices: [
-        { name: `Yes, sync ${willUpdate} file(s)`, value: 'sync' },
-        { name: 'Force sync (overwrite customizations)', value: 'force' },
-        { name: 'Cancel', value: 'cancel' }
-      ]
-    }
-  ]);
-
-  if (action === 'cancel') {
-    console.log(chalk.dim('\n  Sync cancelled.\n'));
-    return;
-  }
-
-  // Execute sync
-  console.log('');
-  console.log(chalk.dim('  Syncing files...\n'));
-
-  const syncResult = await executeWorktreeSync({
-    dryRun: false,
-    force: action === 'force'
-  });
-
-  if (syncResult.error) {
-    console.log(chalk.red(`  ✗ ${syncResult.error}\n`));
-    return;
-  }
-
-  console.log(syncResult.formatted);
-  console.log('');
-  console.log(chalk.green('  ✓ Sync complete. Restart Claude Code CLI to see command changes.\n'));
-}
+// Submodule imports
+import { showVisionModeMenu } from './main/vision-menu.js';
+import { handleWorktreeSync } from './main/handlers.js';
+import { showMobileMainMenu } from './main/mobile.js';
 
 /**
  * Prompt to return to main menu
@@ -360,7 +213,7 @@ export async function showMainMenu() {
       short: 'Phase Dev',
     },
     {
-      name: `${chalk.bold.magenta('\u{1F441}')} ${chalk.bold('Vision Mode')}             Autonomous MVP from natural language`,
+      name: `${chalk.bold.magenta('👁')} ${chalk.bold('Vision Mode')}             Autonomous MVP from natural language`,
       value: 'vision-mode',
       short: 'Vision Mode',
     },
@@ -604,183 +457,5 @@ export async function showMainMenu() {
     case 'exit':
       console.log(chalk.dim('Goodbye!'));
       process.exit(0);
-  }
-}
-
-/**
- * Mobile-optimized main menu handler
- */
-async function showMobileMainMenu() {
-  const action = await showMobileMenu();
-
-  switch (action) {
-    case 'create': {
-      const configured = hasValidConfig();
-      if (!configured) {
-        console.log(chalk.yellow('Setup required first.'));
-        const { proceed } = await inquirer.prompt([
-          { type: 'confirm', name: 'proceed', message: 'Run setup?', default: true }
-        ]);
-        if (proceed) await runSetup({});
-      } else {
-        await runCreate({});
-      }
-      break;
-    }
-
-    case 'decompose':
-      if (!hasValidConfig()) {
-        console.log(chalk.yellow('Setup required first.'));
-      } else {
-        await runDecompose({});
-      }
-      break;
-
-    case 'sync':
-      if (!hasValidConfig()) {
-        console.log(chalk.yellow('Setup required first.'));
-      } else {
-        await runSync({ subcommand: 'status' });
-      }
-      break;
-
-    case 'setup':
-      await runSetup({});
-      break;
-
-    case 'list':
-      if (!hasValidConfig()) {
-        console.log(chalk.yellow('Setup required first.'));
-      } else {
-        await runList({});
-      }
-      break;
-
-    case 'install':
-      await runInstall({});
-      break;
-
-    case 'panel-inline':
-      // Show panel inline instead of launching new window
-      await showMobilePanelLoop();
-      break;
-
-    case 'test-setup':
-      await runTestSetup({});
-      break;
-
-    case 'agent-creator':
-      await runCreateAgent({});
-      break;
-
-    case 'explore-mcp':
-      await showExploreMcpMenu();
-      break;
-
-    case 'launch-agent-only':
-      await launchAgentOnlySession();
-      break;
-
-    case 'project-settings':
-      await showMobileSettingsLoop();
-      break;
-
-    case 'help':
-      showHelp();
-      break;
-
-    case 'exit':
-      console.log(chalk.dim('Goodbye!'));
-      process.exit(0);
-  }
-
-  // Return to menu unless exiting
-  if (action !== 'exit') {
-    const back = await mobileReturnPrompt();
-    if (back) {
-      await showMobileMainMenu();
-    } else {
-      console.log(chalk.dim('Goodbye!'));
-      process.exit(0);
-    }
-  }
-}
-
-/**
- * Mobile panel loop - inline panel without new window
- */
-async function showMobilePanelLoop() {
-  const { showMobilePanel } = await import('../mobile-menu.js');
-
-  while (true) {
-    const action = await showMobilePanel();
-
-    if (action === 'back') {
-      return;
-    }
-
-    // Copy command to clipboard and show instructions
-    console.log('');
-    console.log(chalk.cyan(`Command: ${action}`));
-    console.log(chalk.dim('Paste in Claude Code'));
-    console.log('');
-
-    // Try to copy to clipboard
-    try {
-      const { copyToClipboard } = await import('../../panel/queue.js');
-      if (copyToClipboard(action)) {
-        console.log(chalk.green('✓ Copied to clipboard'));
-      }
-    } catch {
-      // Clipboard not available
-    }
-
-    await inquirer.prompt([
-      { type: 'input', name: 'continue', message: 'Enter to continue...' }
-    ]);
-  }
-}
-
-/**
- * Mobile settings loop
- */
-async function showMobileSettingsLoop() {
-  const { showMobileSettings } = await import('../mobile-menu.js');
-
-  while (true) {
-    const action = await showMobileSettings();
-
-    if (action === 'back') {
-      return;
-    }
-
-    const techStack = loadTechStack();
-
-    // Import configuration functions from settings flow
-    const {
-      configureGitHub,
-      configureDeployment,
-      configureTunnel,
-      configureToken,
-      configureHappy
-    } = await import('./settings.js');
-
-    switch (action) {
-      case 'github':
-        await configureGitHub(techStack);
-        break;
-      case 'deployment':
-        await configureDeployment(techStack);
-        break;
-      case 'tunnel':
-        await configureTunnel(techStack);
-        break;
-      case 'token':
-        await configureToken(techStack);
-        break;
-      case 'happy':
-        await configureHappy(techStack);
-        break;
-    }
   }
 }

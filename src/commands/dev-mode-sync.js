@@ -8,121 +8,17 @@
  *   --dry-run    Preview changes without applying
  *   --force      Overwrite all files (skip customization check)
  *   --project    Sync specific project by name
+ *
+ * Submodules:
+ *   sync/file-ops.js - Git change detection and file synchronization helpers
  */
 
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
-import { join, dirname, basename } from 'path';
-import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import chalk from 'chalk';
 import { loadDevState } from '../utils/dev-mode-state.js';
 import { loadRegistry } from '../utils/global-registry.js';
-
-/**
- * Get all modified and new files from git
- * @param {string} worktreePath - Path to worktree
- * @returns {Object} { modified: string[], added: string[], all: string[] }
- */
-function getChangedFiles(worktreePath) {
-  try {
-    const output = execSync('git status --porcelain', {
-      cwd: worktreePath,
-      encoding: 'utf8',
-      stdio: 'pipe'
-    });
-
-    const modified = [];
-    const added = [];
-
-    for (const line of output.trim().split('\n')) {
-      if (!line) continue;
-      const status = line.substring(0, 2).trim();
-      const file = line.substring(3).trim();
-
-      // Skip worktree-specific files
-      if (file.startsWith('.ccasp-dev/') || file === '.dev-worktree-config.json') {
-        continue;
-      }
-
-      if (status === '??' || status === 'A') {
-        added.push(file);
-      } else if (status === 'M' || status === 'MM' || status === ' M') {
-        modified.push(file);
-      }
-    }
-
-    return {
-      modified,
-      added,
-      all: [...modified, ...added]
-    };
-  } catch (error) {
-    console.error(chalk.red('Failed to get git status:'), error.message);
-    return { modified: [], added: [], all: [] };
-  }
-}
-
-/**
- * Ensure directory exists
- * @param {string} filePath - File path
- */
-function ensureDir(filePath) {
-  const dir = dirname(filePath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-}
-
-/**
- * Sync a single file from worktree to project
- * @param {string} worktreePath - Source worktree path
- * @param {string} projectPath - Target project path
- * @param {string} relativePath - Relative file path
- * @returns {Object} { success: boolean, action: string }
- */
-function syncFile(worktreePath, projectPath, relativePath) {
-  const srcPath = join(worktreePath, relativePath);
-  const destPath = join(projectPath, relativePath);
-
-  if (!existsSync(srcPath)) {
-    return { success: false, action: 'missing' };
-  }
-
-  try {
-    ensureDir(destPath);
-    copyFileSync(srcPath, destPath);
-    return { success: true, action: existsSync(destPath) ? 'updated' : 'added' };
-  } catch (error) {
-    return { success: false, action: 'error', error: error.message };
-  }
-}
-
-/**
- * Deploy command template to .claude/commands/
- * Strips .template from filename
- * @param {string} worktreePath - Source worktree path
- * @param {string} projectPath - Target project path
- * @param {string} templatePath - Relative template path
- * @returns {Object} { success: boolean, action: string }
- */
-function deployTemplate(worktreePath, projectPath, templatePath) {
-  const srcPath = join(worktreePath, templatePath);
-
-  // Convert templates/commands/foo.template.md -> .claude/commands/foo.md
-  const filename = basename(templatePath).replace('.template.md', '.md');
-  const destPath = join(projectPath, '.claude', 'commands', filename);
-
-  if (!existsSync(srcPath)) {
-    return { success: false, action: 'missing' };
-  }
-
-  try {
-    ensureDir(destPath);
-    copyFileSync(srcPath, destPath);
-    return { success: true, action: 'deployed' };
-  } catch (error) {
-    return { success: false, action: 'error', error: error.message };
-  }
-}
+import { getChangedFiles, syncFile, deployTemplate } from './sync/file-ops.js';
 
 /**
  * Run the sync operation
@@ -321,7 +217,7 @@ export async function runDevModeSync(options = {}) {
   }
 
   // Final summary
-  console.log(chalk.bold('\n' + '═'.repeat(50)));
+  console.log(chalk.bold(`\n${  '═'.repeat(50)}`));
   console.log(chalk.bold('  SYNC COMPLETE'));
   console.log('═'.repeat(50));
   console.log(chalk.white(`  Projects: ${projects.length}`));
