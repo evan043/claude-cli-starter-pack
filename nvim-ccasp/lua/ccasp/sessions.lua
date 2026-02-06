@@ -187,6 +187,27 @@ function M.spawn()
 
   -- Apply pure black terminal background
   vim.wo[winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg"
+  -- Prevent scrolloff from interfering with TUI rendering (causes cursor jumpiness)
+  vim.wo[winid].scrolloff = 0
+
+  -- Auto-scroll: keep terminal tailed to bottom as output arrives (even when unfocused)
+  vim.api.nvim_buf_attach(bufnr, false, {
+    on_lines = function(_, buf)
+      vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+        for _, winid_iter in ipairs(vim.fn.win_findbuf(buf)) do
+          if vim.api.nvim_win_is_valid(winid_iter) then
+            vim.api.nvim_win_call(winid_iter, function()
+              local mode = vim.api.nvim_get_mode().mode
+              if mode == "n" or mode == "nt" then
+                vim.cmd("normal! G")
+              end
+            end)
+          end
+        end
+      end)
+    end,
+  })
 
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
