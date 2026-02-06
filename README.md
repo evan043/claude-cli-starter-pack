@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.7.0  •  Production Ready                         ║
+║                           v2.8.0  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,67 +38,63 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## v2.7.0 Feature Update — Vision Multi-Instance & Decision Engine
+## v2.8.0 Feature Update — Neovim UI Testing Framework + Appshell Layout
 
 </div>
 
-> **Feb 2026** — Vision Mode now supports multiple concurrent visions with a centralized registry, cross-process file locking, slug uniqueness enforcement, and an intelligent decision engine that automatically selects the right planning hierarchy (task-list / phase-dev-plan / roadmap / epic / vision-full) based on prompt complexity.
+> **Feb 2026** — New deterministic headless Neovim UI testing framework for the nvim-ccasp plugin with plenary.nvim-based test harness, UI driver/snapshot modules, appshell layout (VS Code-inspired zone-based UI), and a complete Claude workflow system with 6 commands, 3 agents, 2 hooks, and per-folder documentation.
 
-### What's New in v2.7.0
+### What's New in v2.8.0
 
 <table>
 <tr>
 <td width="50%">
 
-#### Vision Registry & Multi-Instance
-**Run multiple visions in parallel safely:**
-- **Centralized Registry** — `VISION_REGISTRY.json` indexes all visions
-- **Cross-Process Locking** — File-based `.lock` files with PID-alive detection
-- **Slug Uniqueness** — Auto-appends `-2`, `-3` on collision
-- **Atomic Writes** — Temp file + rename for corruption safety
-- **Auto-Rebuild** — Registry rebuilds from filesystem if missing/corrupt
+#### Neovim UI Testing Framework
+**Deterministic headless testing for nvim-ccasp:**
+- **Test Harness** — plenary.nvim with smoke, keymap, and layout tests
+- **UI Driver** — Automated UI traversal (open, navigate, close) — 534 lines
+- **Layout Snapshots** — Capture and diff window layouts — 512 lines
+- **Runner Scripts** — `nvim-test.ps1`, `nvim-smoke.ps1`, `nvim-snapshot.ps1`
+- **Headless Execution** — CI-ready with `minimal_init.lua`
 
 </td>
 <td width="50%">
 
-#### Decision Engine
-**Automatically picks the right plan type for your prompt:**
-- **task-list** (score 0-6) — Simple flat task list
-- **phase-dev-plan** (score 7-14) — Phased development plan
-- **roadmap** (score 15-25) — Multi-phase roadmap
-- **epic** (score 26-40) — Epic with roadmaps
-- **vision-full** (score 41+) — Full hierarchy with agents
-- **`--plan-type` override** — Force any plan type manually
+#### Appshell Layout (nvim-ccasp v1.5.0)
+**VS Code / Discord-inspired zone-based UI:**
+- **Icon Rail** — 3-column vertical navigation strip
+- **Flyout** — Expandable 35-column sidebar panel
+- **Header/Footer** — Tabline + status bar zones
+- **Content Zone** — Adaptive main editing area
+- **Right Panel** — Optional context/logs panel
+- **Zone-Aware Panels** — All panels respect appshell bounds
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### Enhanced CLI & UX
-**Multi-vision management commands:**
-- **`ccasp vision list`** — Registry-backed listing with plan type column
-- **`ccasp vision cleanup`** — Remove orphaned/failed visions
-- **Vision Menu** — Shows vision count, multi-vision selector
-- **Init Display** — Shows active visions and decision engine result
-- **`/vision-list`** — New slash command for vision management
+#### Claude Workflow System
+**6 new slash commands for UI testing:**
+- `/ui-test` — Run full test suite
+- `/ui-smoke` — Quick smoke test
+- `/ui-snapshot` — Layout snapshot + diff
+- `/ui-bug` — Structured bug reporting
+- `/ui-fix` — Guided debug/fix workflow
+- `/repo-guard` — Pre-commit quality gate
 
 </td>
 <td width="50%">
 
-#### Scoring Factors
-**Weighted scoring determines plan complexity:**
-
-| Factor | Weight |
-|--------|--------|
-| Feature count | 2.0x |
-| Domain diversity | 3.0x |
-| Technology count | 1.5x |
-| Constraints | 1.0x |
-| Intent modifier | 1.0x |
-| Prompt length | 0.3x |
-
-Intent multipliers: BUILD (1.2x), MODIFY (0.8x), OPTIMIZE (0.6x)
+#### Agents, Hooks & Documentation
+**3 agents + 2 hooks + per-folder docs:**
+- **ui-driver** agent — Drives UI, validates windows
+- **ui-debugger** agent — Diagnoses and fixes bugs
+- **nvim-test-runner** agent — Runs tests, reports results
+- **nvim-after-edit-test** hook — Auto-smoke on `.lua` edit
+- **agent-limit-compact** hook — Limits to 3 concurrent agents
+- **15 doc files** across 4 `nvim-ui-testing/` subfolders
 
 </td>
 </tr>
@@ -107,7 +103,7 @@ Intent multipliers: BUILD (1.2x), MODIFY (0.8x), OPTIMIZE (0.6x)
 ### Upgrade Now
 
 ```bash
-# Update to v2.7.0
+# Update to v2.8.0
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync new commands to your project
@@ -115,6 +111,18 @@ ccasp init
 ```
 
 ---
+
+<details>
+<summary><strong>v2.7.0 — Vision Multi-Instance & Decision Engine</strong> (click to expand)</summary>
+
+> **Feb 2026** — Vision Mode now supports multiple concurrent visions with a centralized registry, cross-process file locking, slug uniqueness enforcement, and an intelligent decision engine.
+
+- **Vision Registry**: Centralized `VISION_REGISTRY.json` with atomic writes, auto-rebuild
+- **Decision Engine**: Weighted scoring selects plan type (task-list / phase-dev-plan / roadmap / epic / vision-full)
+- **Slug Uniqueness**: `generateUniqueSlug()` appends `-2`/`-3` on collision
+- **New Commands**: `ccasp vision list`, `ccasp vision cleanup`, `/vision-list`
+
+</details>
 
 <details>
 <summary><strong>v2.6.1 — Smart Todo List with AI Intent Routing</strong> (click to expand)</summary>
@@ -227,8 +235,8 @@ npx claude-cli-advanced-starter-pack init
 
 CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright?), and deploys a complete `.claude/` folder with:
 
-- ✅ **58 slash commands** — deployment, testing, refactoring, GitHub sync
-- ✅ **42 enforcement hooks** — validation, progress tracking, agent orchestration
+- ✅ **64 slash commands** — deployment, testing, refactoring, GitHub sync, UI testing
+- ✅ **44 enforcement hooks** — validation, progress tracking, agent orchestration
 - ✅ **Stack-specific agents** — specialists that know your frameworks
 - ✅ **Smart updates** — add features without losing customizations
 
@@ -238,12 +246,12 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 | Component | Count | Examples |
 |-----------|-------|----------|
-| **Slash Commands** | 58 | `/deploy-full`, `/pr-merge`, `/ralph`, `/vision-list` |
-| **Enforcement Hooks** | 42 | Token tracking, agent orchestration, refactor safety |
+| **Slash Commands** | 64 | `/deploy-full`, `/pr-merge`, `/ralph`, `/ui-test`, `/vision-list` |
+| **Enforcement Hooks** | 44 | Token tracking, agent orchestration, refactor safety, UI test auto-run |
 | **Tech Stack Detection** | 55+ | React, Vue, FastAPI, Express, Prisma, Playwright |
-| **Agent Templates** | L1/L2/L3 | Orchestrators → Specialists → Workers |
+| **Agent Templates** | L1/L2/L3 | Orchestrators → Specialists → Workers + UI testing agents |
 | **MCP Integrations** | 50+ | Railway, Cloudflare, GitHub, Playwright |
-| **Skills (RAG)** | 5 | agent-creator, hook-creator, refactor patterns |
+| **Skills (RAG)** | 6 | agent-creator, hook-creator, refactor patterns, nvim-ui-test |
 
 ---
 
@@ -545,7 +553,7 @@ After running `ccasp init`, your project gets:
 
 ```
 .claude/
-├── commands/              # 58 slash commands
+├── commands/              # 64 slash commands
 │   ├── menu.md           # Interactive navigation
 │   ├── deploy-full.md    # Full-stack deployment
 │   ├── ralph.md          # Test-fix loops
@@ -554,7 +562,7 @@ After running `ccasp init`, your project gets:
 │   ├── react-specialist.md
 │   ├── fastapi-specialist.md
 │   └── ...
-├── hooks/                 # 42 enforcement hooks
+├── hooks/                 # 44 enforcement hooks
 │   ├── ralph-loop-enforcer.js
 │   ├── progress-tracker.js
 │   └── ...
@@ -598,6 +606,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Status |
 |---------|--------|
+| **Neovim UI Testing + Appshell Layout** | ✅ Complete |
 | **Vision Multi-Instance & Decision Engine** | ✅ Complete |
 | **Smart Site Intel Dev-Scan** | ✅ Complete |
 | **Vision Mode Orchestration** | ✅ Complete |
@@ -614,6 +623,17 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.8.0
+**Neovim UI Testing Framework + Appshell Layout** — Feb 2026
+- **UI Testing Framework**: Deterministic headless testing with plenary.nvim — driver (534 lines), snapshot (512 lines), 4 spec files, 3 runner scripts
+- **Appshell Layout**: VS Code-inspired zone-based UI with icon rail, flyout, header, footer, content zone, right panel
+- **6 New Commands**: `/ui-test`, `/ui-smoke`, `/ui-snapshot`, `/ui-bug`, `/ui-fix`, `/repo-guard`
+- **3 New Agents**: ui-driver, ui-debugger, nvim-test-runner with clear delegation boundaries
+- **2 New Hooks**: nvim-after-edit-test (auto-smoke on Lua edit), agent-limit-compact (3 concurrent max)
+- **Per-Folder Documentation**: 15 files across `nvim-ui-testing/` subfolders (READMEs, examples, checklists)
+- **Integration Templates**: MCP-Neovim bridge config, claude-code.nvim compatibility guide
+- **CLAUDE_WORKFLOW.md**: Development workflow documentation for the nvim-ccasp plugin
 
 ### v2.7.0
 **Vision Multi-Instance & Decision Engine** — Feb 2026
@@ -858,13 +878,12 @@ ccasp nvim-setup          # Install permanently to Neovim config
 
 **Features:**
 - **Multi-Session Terminals**: Up to 8 Claude CLI sessions with quadrant stacking
+- **Appshell Layout**: VS Code-inspired zone-based UI (icon rail, flyout, header, footer, content, right panel)
+- **UI Testing Framework**: Headless tests with plenary.nvim (`/ui-test`, `/ui-smoke`, `/ui-snapshot`)
 - **Color-Coded Titlebars**: 8 colors with rename, minimize, close buttons
-- **Auto-Insert Mode**: Click session to start typing immediately
 - **Collapsible Sidebar**: Mouse-clickable sections, all collapsed by default
 - **Control Panel**: Toggle features, change models, restart agents
-- **Prompt Injector**: Intercept and enhance prompts with GPT-5.2
 - **Telescope Integration**: Browse commands, skills, hooks with fuzzy finding
-- **Statusline**: Token usage, agent status, version info
 
 **Keybindings:**
 | Key | Action |
@@ -962,6 +981,11 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `/vision-status` | Vision progress dashboard |
 | `/vision-adjust` | Adjust Vision plan |
 | `/vision-list` | Multi-vision registry management |
+| `/ui-test` | Neovim UI full test suite |
+| `/ui-smoke` | Quick Neovim smoke test |
+| `/ui-snapshot` | Layout snapshot + diff |
+| `/ui-fix` | Guided UI debug/fix workflow |
+| `/repo-guard` | Pre-commit quality gate |
 | `/site-intel` | Website intelligence + dev scanning |
 | `/site-intel-dashboard` | Dev scan dashboard viewer |
 
@@ -969,7 +993,7 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 
 ---
 
-## Hook Templates (42)
+## Hook Templates (44)
 
 | Category | Hooks |
 |----------|-------|
@@ -977,6 +1001,7 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | **Deployment** | branch-merge-checker, deployment-orchestrator |
 | **Refactoring** | ralph-loop-enforcer, refactor-verify, refactor-transaction |
 | **Agent Orchestration** | hierarchy-validator, progress-tracker, l2-completion-reporter |
+| **Neovim UI Testing** | nvim-after-edit-test, agent-limit-compact |
 | **Happy.engineering** | happy-mode-detector, happy-checkpoint-manager |
 
 ---
