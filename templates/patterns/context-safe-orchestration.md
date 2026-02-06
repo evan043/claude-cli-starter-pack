@@ -62,12 +62,14 @@ Progress state lives in files, NOT in conversation context.
 const progress = JSON.parse(fs.readFileSync('.claude/phase-plans/slug/PROGRESS.json'));
 ```
 
-### Principle 3: 70% Context Ceiling
+### Principle 3: 70% Context Ceiling (60% in Parallel Mode)
 
-Treat 70% context utilization as the maximum safe threshold.
+Treat 70% context utilization as the maximum safe threshold for sequential mode.
 - 0-70%: Normal operation
 - 70-80%: Warning - consider compaction
 - 80%+: Critical - pause and compact
+
+When running with `--parallel`, the threshold tightens to 60% used (40% remaining) by default. This is configurable via `/orchestration-settings`.
 
 ### Principle 4: Non-Blocking Status Checks
 
@@ -388,13 +390,117 @@ When updating existing CCASP commands to be context-safe:
 | Epic state | `.claude/epics/{slug}/EPIC.json` |
 | Context checkpoints | `.claude/cache/context-checkpoints.json` |
 
+## Controlled Parallelism (--parallel Flag)
+
+The `--parallel` flag on existing commands introduces **controlled parallelism** while preserving context safety. These rules apply when executing with `--parallel`:
+
+- `/phase-track {slug} --run-all --parallel` — parallel tasks within each phase
+- `/roadmap-track {slug} run-all --parallel` — parallel plans within a roadmap
+- Epic-level: parallel roadmaps via `/github-epic-status` orchestration
+
+All parallelism settings are configurable via `/orchestration-settings` or CLI menu option 8.
+
+### Parallelism Hierarchy
+
+| Level | Default (Sequential) | --parallel Mode | Configurable? |
+|-------|---------------------|-----------------|---------------|
+| Tasks within a phase | 1 at a time | **Max 2 parallel** background agents | `maxTasks` (1-4) |
+| Phases within a plan | 1 at a time (hard gate) | 1 at a time (hard gate - unchanged) | No |
+| Plans within a roadmap | 1 at a time | **Max 2 parallel** (if independent) | `maxPlans` (1-3) |
+| Roadmaps within an epic | 1 at a time | **Max 2 parallel** (if independent) | `maxRoadmaps` (1-3) |
+| Context auto-compact | 70% = offer compact | **60% = aggressive auto-compact** | `remainingThreshold` |
+
+### Task-Level Parallelism Rules
+
+Tasks within a phase can run in parallel (max 2, configurable) ONLY when:
+- Tasks have no `depends_on` overlap (task B doesn't depend on task A)
+- Tasks don't modify the same files (no `files`/`scope` overlap)
+- If dependency metadata is unavailable or only 1 independent task exists, fall back to sequential
+
+Each parallel task uses the Agent Output Protocol (AOP) and runs as a background agent with `run_in_background: true`. Results are written to `.claude/cache/agent-outputs/` and PROGRESS.json is updated immediately after each task completes.
+
+### Plan/Roadmap-Level Parallelism Rules
+
+Plans within a roadmap (or roadmaps within an epic) can run in parallel (max 2, configurable) ONLY when:
+- No `cross_plan_dependencies` exist between them (neither blocks the other)
+- Both have all prerequisite dependencies satisfied
+- The dependency graph (topological sort) confirms independence
+
+Each parallel plan/roadmap agent runs the full sequential execution internally (`/phase-track --run-all` or `/roadmap-track run-all`). The parent orchestrator monitors via `TaskOutput` with `block: true` and reads PROGRESS.json/ROADMAP.json for ground truth.
+
+### Aggressive Compacting Protocol (--parallel Mode)
+
+When `--parallel` is active, compacting follows a strict protocol to keep context safe:
+
+1. **Compact after launch**: Immediately after spinning up background agents, run `/compact` to free the launch context
+2. **Poll every 2 minutes**: Check background agents via `TaskOutput` with `timeout: 120000` (configurable via `pollIntervalSec`)
+3. **Compact after each poll**: After every `TaskOutput` check, run `/compact` to free the poll results from context
+4. **Stop at threshold**: If remaining context drops below the threshold (default 40%), stop launching new agents and wait for running ones to finish
+
+This ensures context never accumulates from multiple poll cycles or launch sequences.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Parallel Execution Loop                                         │
+│  ════════════════════════════════════════════════════════════    │
+│                                                                  │
+│  1. Select independent batch (max 2 items)                       │
+│  2. Launch background agents (run_in_background: true)           │
+│  3. /compact  ← immediately after launch                         │
+│  4. Poll: TaskOutput(timeout: 120000)  ← wait 2 min             │
+│  5. /compact  ← after each poll result                           │
+│  6. Repeat 4-5 until all agents complete                         │
+│  7. Update PROGRESS.json / ROADMAP.json                          │
+│  8. Check remaining context — if < 40%, stop                     │
+│  9. Next batch → go to step 1                                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Configuration via tech-stack.json
+
+Settings are stored in `tech-stack.json` under the `orchestration` key and can be modified via:
+- **CLI**: `ccasp` → Settings → option 8 (Orchestration)
+- **Slash command**: `/orchestration-settings` (with optional flags like `--max-tasks N`, `--compact-at N`)
+- **Neovim**: Appshell icon rail → Orchestration section
+
+```json
+{
+  "orchestration": {
+    "parallel": {
+      "maxTasks": 2,
+      "maxPlans": 2,
+      "maxRoadmaps": 2
+    },
+    "compacting": {
+      "remainingThreshold": 40,
+      "pollIntervalSec": 120,
+      "compactAfterLaunch": true,
+      "compactAfterPoll": true
+    }
+  }
+}
+```
+
+| Setting | Default | Range | Description |
+|---------|---------|-------|-------------|
+| `maxTasks` | 2 | 1-4 | Max parallel background agents per phase |
+| `maxPlans` | 2 | 1-3 | Max parallel plans per roadmap |
+| `maxRoadmaps` | 2 | 1-3 | Max parallel roadmaps per epic |
+| `remainingThreshold` | 40 | 20-50 | Stop launching at N% remaining context |
+| `pollIntervalSec` | 120 | 60-300 | Seconds between TaskOutput polls |
+| `compactAfterLaunch` | true | bool | Compact immediately after launching agents |
+| `compactAfterPoll` | true | bool | Compact after each poll cycle |
+
+---
+
 ## Related Patterns
 
 - L1→L2 Orchestration (updated for context safety)
 - Multi-Phase Orchestration (updated for context safety)
 - Agent Output Protocol (new)
+- Controlled Parallelism (--parallel flag)
 
 ---
 
-*Context-Safe Orchestration Pattern - CCASP v2.3.0*
+*Context-Safe Orchestration Pattern - CCASP v2.6.2*
 *Prevents context window overflow in parallel agent workflows*

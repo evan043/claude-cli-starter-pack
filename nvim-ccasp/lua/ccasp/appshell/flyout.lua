@@ -119,6 +119,44 @@ local section_renderers = {
     end
   end,
 
+  orchestration = function(lines, item_lines)
+    table.insert(lines, "  " .. icons.agents .. " Orchestration")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+
+    -- Read current settings from tech-stack.json
+    local config_ok, config = pcall(require, "ccasp.config")
+    local orch = {}
+    if config_ok then
+      local ts = config.load_tech_stack()
+      if ts then orch = ts.orchestration or {} end
+    end
+    local parallel = orch.parallel or {}
+    local compacting = orch.compacting or {}
+
+    table.insert(lines, "  Parallel Agents")
+    table.insert(lines, "    Tasks/phase:   " .. (parallel.maxTasks or 2))
+    table.insert(lines, "    Plans/roadmap:  " .. (parallel.maxPlans or 2))
+    table.insert(lines, "    Roadmaps/epic:  " .. (parallel.maxRoadmaps or 2))
+    table.insert(lines, "")
+    table.insert(lines, "  Context Compacting")
+    table.insert(lines, "    Compact at:     " .. (compacting.remainingThreshold or 40) .. "% remaining")
+    table.insert(lines, "    Poll interval:  " .. (compacting.pollIntervalSec or 120) .. "s")
+    table.insert(lines, "    After launch:   " .. (compacting.compactAfterLaunch ~= false and "Yes" or "No"))
+    table.insert(lines, "    After poll:     " .. (compacting.compactAfterPoll ~= false and "Yes" or "No"))
+    table.insert(lines, "")
+
+    table.insert(lines, "  " .. string.rep("─", 30))
+    local actions = {
+      { icon = icons.settings, label = "Open Settings (CLI)", action = "orchestration_settings" },
+      { icon = icons.reload,   label = "Refresh", action = "refresh" },
+    }
+    for _, a in ipairs(actions) do
+      table.insert(lines, "  " .. a.icon .. " " .. a.label)
+      item_lines[#lines] = { action = a.action }
+    end
+  end,
+
   system = function(lines, item_lines)
     table.insert(lines, "  " .. icons.settings .. " System")
     table.insert(lines, "  " .. string.rep("─", 30))
@@ -253,6 +291,12 @@ function M.execute_action(item)
     skills = function()
       M.close()
       if ccasp.telescope then ccasp.telescope.skills() end
+    end,
+
+    -- Orchestration
+    orchestration_settings = function()
+      M.close()
+      vim.fn.termopen("ccasp settings orchestration", { cwd = vim.fn.getcwd() })
     end,
 
     -- System

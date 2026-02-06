@@ -212,4 +212,10 @@ export const CORE_COMMANDS = [
     category: 'Planning',
     selected: true,
   },
+  {
+    name: 'orchestration-settings',
+    description: 'View and modify parallel agent and compacting settings',
+    category: 'Orchestration',
+    selected: true,
+  },
 ];

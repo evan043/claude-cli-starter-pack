@@ -174,6 +174,154 @@ Executes ALL remaining phases **one at a time, in order**. "Run-all" does NOT me
 - When you want Claude to handle the entire implementation
 - **Long-running sessions that may hit context limits**
 
+### Run All Phases with Parallel Tasks (--parallel)
+
+```
+/phase-track <project-slug> --run-all --parallel
+```
+
+Same as `--run-all` but runs up to **2 tasks at a time** within each phase using background agents. Phases are still strictly sequential (hard gate unchanged).
+
+**Parallel Execution Protocol:**
+
+1. **Phases remain STRICTLY SEQUENTIAL** — Phase N+1 cannot start until Phase N completes
+2. Within a phase, pick up to 2 independent tasks (no shared files, no `depends_on` overlap)
+3. Launch both as background agents (`run_in_background: true`)
+4. **Compact IMMEDIATELY** after launching agents — do not wait, compact right away
+5. **Poll every 2 minutes** using `TaskOutput` with `timeout: 120000`
+6. **Compact after EVERY poll** — whether the agent finished or not
+7. When an agent completes, update PROGRESS.json immediately and pick the next available task
+8. If fewer than 2 independent tasks remain, fall back to sequential (batch of 1)
+
+**Context auto-compact threshold: 40% remaining (60% used)**
+- Before each batch: if context >= 60% used, save state and STOP
+- This is more aggressive than sequential mode (which stops at 70%)
+
+**Why compact so aggressively?**
+- Background agents return their full output into context when polled
+- Each poll injects agent results — compacting after each prevents accumulation
+- The 2-minute cadence gives agents time to work while keeping context lean
+
+```javascript
+/**
+ * Parallel mode: 2 tasks at a time within each phase.
+ * Compact after launching agents, compact after every poll.
+ * Phases are still strictly sequential.
+ */
+async function runAllPhasesParallel(progressPath) {
+  const cacheDir = '.claude/cache/agent-outputs';
+  const batchId = `phase-par-${Date.now()}`;
+  let progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+
+  for (const phase of progress.phases) {
+    if (phase.status === 'completed') continue;
+
+    // HARD GATE: context check (40% remaining = 60% used)
+    const usage = await estimateContextUsage();
+    if (usage.percent > 60) {
+      console.log(`⛔ CONTEXT: ${usage.percent}% used (40% remaining threshold). STOPPING.`);
+      console.log(`   /compact then /phase-track ${slug} --run-all --parallel`);
+      fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+      return { paused: true, atPhase: phase.id };
+    }
+
+    // HARD GATE: previous phase must be completed
+    const idx = progress.phases.indexOf(phase);
+    if (idx > 0 && progress.phases[idx - 1].status !== 'completed') {
+      return { blocked: true, atPhase: phase.id };
+    }
+
+    phase.status = 'in_progress';
+    let pending = phase.tasks.filter(t => !t.completed);
+
+    while (pending.length > 0) {
+      // Pick up to 2 independent tasks
+      const batch = selectIndependentBatch(pending, 2);
+
+      if (batch.length > 1) {
+        // Launch both as background agents
+        const handles = [];
+        for (const task of batch) {
+          const h = await Task({
+            description: `Task ${task.id}: ${task.description.slice(0, 40)}`,
+            prompt: buildAOPPrompt(task, cacheDir, batchId),
+            subagent_type: task.assignedAgent || 'l2-specialist',
+            model: 'haiku',
+            run_in_background: true
+          });
+          handles.push({ handle: h, task });
+        }
+
+        // COMPACT IMMEDIATELY after launching agents
+        await compactContext();
+
+        // Poll every 2 minutes, compact after each poll
+        for (const { handle, task } of handles) {
+          const result = await TaskOutput({
+            task_id: handle.task_id,
+            block: true,
+            timeout: 120000  // 2 minutes
+          });
+
+          // Update PROGRESS.json immediately
+          const aop = parseAOPResult(result);
+          task.completed = aop.status === 'success';
+          task.resultSummary = aop.summary.slice(0, 200);
+          task.resultFile = aop.detailsFile;
+          task.completedAt = new Date().toISOString();
+          fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+
+          // COMPACT after each poll result
+          await compactContext();
+        }
+      } else {
+        // Single task — run inline (same as sequential mode)
+        const task = batch[0];
+        const result = await executeTaskContextSafe(task, cacheDir, batchId);
+        task.completed = result.status === 'success';
+        task.resultSummary = result.summary.slice(0, 200);
+        task.resultFile = result.detailsFile;
+        fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+      }
+
+      // Refresh pending
+      progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+      const p = progress.phases.find(p => p.id === phase.id);
+      pending = p.tasks.filter(t => !t.completed);
+    }
+
+    // Mark phase complete if all tasks done
+    const allDone = phase.tasks.every(t => t.completed);
+    phase.status = allDone ? 'completed' : 'partial';
+    fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
+
+    if (!allDone) return { status: 'partial', atPhase: phase.id };
+  }
+
+  return { status: 'completed' };
+}
+
+function selectIndependentBatch(pending, max) {
+  const batch = [];
+  const usedFiles = new Set();
+
+  for (const task of pending) {
+    if (batch.length >= max) break;
+
+    // Skip if depends on unfinished task
+    if (task.depends_on?.some(dep => pending.some(p => p.id === dep && !p.completed))) continue;
+
+    // Skip if file conflict with batch
+    if (task.files?.some(f => usedFiles.has(f))) continue;
+
+    batch.push(task);
+    task.files?.forEach(f => usedFiles.add(f));
+  }
+
+  return batch.length > 0 ? batch : [pending[0]];
+}
+```
+
 ## Progress Visualization
 
 ```

@@ -23,6 +23,7 @@ import {
   configureRalphLoop,
   configureGitHubTask,
   configureVisionEpics,
+  configureOrchestration,
 } from './settings/advanced.js';
 
 /**
@@ -77,6 +78,9 @@ export async function showProjectSettingsMenu() {
   console.log(`${chalk.cyan('║')  }   [7] GitHub Task                                                             ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('║') + chalk.dim('       └─ Auto-split detection, parallel agents, post-creation                ') + chalk.cyan('║'));
   console.log(`${chalk.cyan('║')  }                                                                               ${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }   [8] Orchestration (Parallel & Compacting)                                   ${  chalk.cyan('║')}`);
+  console.log(chalk.cyan('║') + chalk.dim('       └─ Max parallel agents, compact threshold, poll interval               ') + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }                                                                               ${  chalk.cyan('║')}`);
   console.log(`${chalk.cyan('║')  }   [B] Back to main menu                                                       ${  chalk.cyan('║')}`);
   console.log(`${chalk.cyan('║')  }                                                                               ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════════════════════╝'));
@@ -98,6 +102,7 @@ export async function showProjectSettingsMenu() {
         { name: '5. Happy Mode', value: 'happy' },
         { name: '6. Ralph Loop', value: 'ralph-loop' },
         { name: '7. GitHub Task', value: 'github-task' },
+        { name: '8. Orchestration (Parallel & Compacting)', value: 'orchestration' },
         new inquirer.Separator(),
         { name: 'Back to main menu', value: 'back' },
       ],
@@ -155,6 +160,9 @@ export async function showProjectSettingsMenu() {
       break;
     case 'github-task':
       await configureGitHubTask(techStack);
+      break;
+    case 'orchestration':
+      await configureOrchestration(techStack);
       break;
   }
 

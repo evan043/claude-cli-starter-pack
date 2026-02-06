@@ -426,6 +426,112 @@ function topologicalSortPlans(roadmap) {
 12. **Full details in files, only summaries in context**
 13. **NEVER launch background agents for plan execution** - all plan execution is foreground, sequential
 
+#### Run All Plans with Parallel Mode (--parallel)
+
+```
+/roadmap-track {slug} run-all --parallel
+```
+
+Runs up to **2 plans concurrently** as background agents (if their dependencies are satisfied). Each plan internally calls `/phase-track {slug} --run-all`.
+
+**Parallel Execution Protocol:**
+
+1. Topological sort plans by `cross_plan_dependencies`
+2. Find up to 2 plans whose dependencies are all satisfied
+3. Launch both as background agents (`run_in_background: true`)
+4. **Compact IMMEDIATELY** after launching agents
+5. **Poll every 2 minutes** using `TaskOutput` with `timeout: 120000`
+6. **Compact after EVERY poll** — whether the agent finished or not
+7. When an agent completes, read its PROGRESS.json (ground truth), update ROADMAP.json, fill the next slot
+8. If only 1 plan is available (due to dependencies), run it alone
+
+**Context auto-compact threshold: 40% remaining (60% used)**
+- Before each launch cycle: if context >= 60% used, save ROADMAP.json and STOP
+- Resume with `/roadmap-track {slug} run-all --parallel`
+
+```javascript
+/**
+ * Parallel mode: 2 plans at a time (if dependency-free).
+ * Compact after launching, compact after every poll.
+ */
+async function runAllPlansParallel(roadmap) {
+  const roadmapPath = `.claude/roadmaps/${roadmap.slug}/ROADMAP.json`;
+  const orderedPlans = topologicalSortPlans(roadmap);
+  const completedSlugs = new Set(
+    orderedPlans.filter(p => p.status === 'completed').map(p => p.slug)
+  );
+
+  while (completedSlugs.size < orderedPlans.length) {
+    // Context check (40% remaining = 60% used)
+    const usage = await estimateContextUsage();
+    if (usage.percent > 60) {
+      console.log(`⛔ CONTEXT: ${usage.percent}% used. STOPPING.`);
+      console.log(`   /compact then /roadmap-track ${roadmap.slug} run-all --parallel`);
+      fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+      return { paused: true };
+    }
+
+    // Find plans with satisfied dependencies
+    const available = orderedPlans.filter(p =>
+      !completedSlugs.has(p.slug) &&
+      p.status !== 'in_progress' &&
+      checkPlanDependencies(roadmap, p.slug).satisfied
+    );
+
+    if (available.length === 0) break;
+
+    // Launch up to 2
+    const batch = available.slice(0, 2);
+    const handles = [];
+
+    for (const plan of batch) {
+      plan.status = 'in_progress';
+      fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+      const h = await Task({
+        description: `Plan: ${plan.slug}`,
+        prompt: `Execute /phase-track ${plan.slug} --run-all\nReturn only: [PLAN:${plan.slug}] {status}: {summary}`,
+        subagent_type: 'phase-orchestrator',
+        model: 'sonnet',
+        run_in_background: true
+      });
+      handles.push({ handle: h, plan });
+    }
+
+    // COMPACT IMMEDIATELY after launching
+    await compactContext();
+
+    // Poll every 2 minutes, compact after each
+    for (const { handle, plan } of handles) {
+      const result = await TaskOutput({
+        task_id: handle.task_id,
+        block: true,
+        timeout: 120000  // 2 minutes
+      });
+
+      // Read PROGRESS.json for ground truth
+      const planRef = roadmap.phase_dev_plan_refs.find(r => r.slug === plan.slug);
+      const progress = JSON.parse(fs.readFileSync(planRef.path, 'utf8'));
+      planRef.status = progress.status || 'completed';
+      planRef.completion_percentage = progress.completion_percentage || 100;
+      completedSlugs.add(plan.slug);
+
+      roadmap.metadata.overall_completion_percentage = calculateOverallCompletion(roadmap);
+      fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+      // COMPACT after each poll
+      await compactContext();
+    }
+  }
+
+  const allDone = roadmap.phase_dev_plan_refs.every(p => p.status === 'completed');
+  roadmap.status = allDone ? 'completed' : 'partial';
+  fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+  return { status: roadmap.status };
+}
+```
+
 ### Step 5: Progress Visualization (Multi-Plan)
 
 Generate ASCII progress bars for plans:
@@ -485,6 +591,7 @@ async function syncToParentEpic(roadmap) {
 - `/roadmap-track {slug} sync-all` - Sync all plan references
 - `/roadmap-track {slug} auto` - Auto-advance to next available plan
 - `/roadmap-track {slug} run-all` - Run ALL plans sequentially (autonomous mode)
+- `/roadmap-track {slug} run-all --parallel` - Run up to 2 plans concurrently (background agents, aggressive compacting)
 - `/roadmap-track {slug} report` - Generate completion report
 - `/roadmap-track {slug} track {plan-slug}` - Delegate to /phase-track for detailed plan execution
 

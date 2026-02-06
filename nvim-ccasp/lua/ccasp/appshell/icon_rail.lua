@@ -14,11 +14,12 @@ local state = {
 
 -- Section definitions: { icon, name, section_key }
 M.sections = {
-  { icon = icons.terminal,  name = "Sessions", key = "terminal" },
-  { icon = icons.dashboard, name = "Panels",   key = "panels" },
-  { icon = icons.agents,    name = "Agents",    key = "agents" },
-  { icon = icons.search,    name = "Browse",    key = "browse" },
-  { icon = icons.settings,  name = "System",    key = "system" },
+  { icon = icons.terminal,  name = "Sessions",       key = "terminal" },
+  { icon = icons.dashboard, name = "Panels",          key = "panels" },
+  { icon = icons.agents,    name = "Agents",           key = "agents" },
+  { icon = icons.search,    name = "Browse",           key = "browse" },
+  { icon = icons.reload,    name = "Orchestration",    key = "orchestration" },
+  { icon = icons.settings,  name = "System",           key = "system" },
 }
 
 -- Create rail buffer content

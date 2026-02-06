@@ -153,6 +153,7 @@ export const CORE_FEATURES = [
       'completion-verifier',
       'agent-error-recovery',
       'orchestrator-audit-logger',
+      'run-all-offer',
     ],
     default: true,
     requiresPostConfig: false,

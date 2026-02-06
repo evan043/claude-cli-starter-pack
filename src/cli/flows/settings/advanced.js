@@ -457,6 +457,93 @@ export async function configureVisionSettings(techStack) {
 }
 
 /**
+ * Configure Orchestration (parallel agents, compacting)
+ */
+export async function configureOrchestration(techStack) {
+  console.log('');
+  showHeader('Orchestration Settings');
+
+  console.log(chalk.dim('  Configure parallel agent execution and context compacting behavior.\n'));
+
+  const current = techStack.orchestration || {};
+  const parallel = current.parallel || {};
+  const compacting = current.compacting || {};
+
+  const answers = await inquirer.prompt([
+    {
+      type: 'number',
+      name: 'maxParallelTasks',
+      message: 'Max parallel task agents (within a phase):',
+      default: parallel.maxTasks || 2,
+    },
+    {
+      type: 'number',
+      name: 'maxParallelPlans',
+      message: 'Max parallel plan agents (within a roadmap):',
+      default: parallel.maxPlans || 2,
+    },
+    {
+      type: 'number',
+      name: 'maxParallelRoadmaps',
+      message: 'Max parallel roadmap agents (within an epic):',
+      default: parallel.maxRoadmaps || 2,
+    },
+    {
+      type: 'list',
+      name: 'compactThreshold',
+      message: 'Auto-compact when remaining context drops below:',
+      choices: [
+        { name: '50% remaining (aggressive - for parallel mode)', value: 50 },
+        { name: '40% remaining (recommended for parallel mode)', value: 40 },
+        { name: '30% remaining (default for sequential mode)', value: 30 },
+        { name: '20% remaining (risky - not recommended)', value: 20 },
+      ],
+      default: compacting.remainingThreshold || 40,
+    },
+    {
+      type: 'number',
+      name: 'pollIntervalSec',
+      message: 'Background agent poll interval (seconds):',
+      default: compacting.pollIntervalSec || 120,
+    },
+    {
+      type: 'confirm',
+      name: 'compactAfterLaunch',
+      message: 'Compact immediately after launching background agents?',
+      default: compacting.compactAfterLaunch !== false,
+    },
+    {
+      type: 'confirm',
+      name: 'compactAfterPoll',
+      message: 'Compact after every agent poll/result check?',
+      default: compacting.compactAfterPoll !== false,
+    },
+  ]);
+
+  techStack.orchestration = {
+    parallel: {
+      maxTasks: answers.maxParallelTasks,
+      maxPlans: answers.maxParallelPlans,
+      maxRoadmaps: answers.maxParallelRoadmaps,
+    },
+    compacting: {
+      remainingThreshold: answers.compactThreshold,
+      pollIntervalSec: answers.pollIntervalSec,
+      compactAfterLaunch: answers.compactAfterLaunch,
+      compactAfterPoll: answers.compactAfterPoll,
+    },
+  };
+
+  saveTechStack(techStack);
+  showSuccess('Orchestration settings saved!', [
+    '',
+    `Parallel tasks: ${answers.maxParallelTasks}  |  plans: ${answers.maxParallelPlans}  |  roadmaps: ${answers.maxParallelRoadmaps}`,
+    `Compact at: ${answers.compactThreshold}% remaining  |  poll: ${answers.pollIntervalSec}s`,
+    `Compact after launch: ${answers.compactAfterLaunch ? 'Yes' : 'No'}  |  after poll: ${answers.compactAfterPoll ? 'Yes' : 'No'}`,
+  ]);
+}
+
+/**
  * Configure Epic defaults
  */
 export async function configureEpicDefaults(techStack) {
