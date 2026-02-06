@@ -30,6 +30,14 @@ export function isWindows() {
  * @returns {Object} Server configuration object
  */
 export function generateMcpConfig(mcp, envValues = {}) {
+  // Remote HTTP/SSE servers (from Anthropic registry)
+  if (mcp.transport === 'http' || mcp.transport === 'sse' || (mcp.remoteUrl && !mcp.npmPackage && mcp.command !== 'uvx')) {
+    return {
+      type: mcp.transport || 'http',
+      url: mcp.remoteUrl,
+    };
+  }
+
   const config = {
     env: { ...envValues },
   };
@@ -182,7 +190,7 @@ export function displayApiKeyInfo(mcp) {
     // Wrap note text if too long
     const noteLines = providerInfo.note.match(/.{1,55}/g) || [providerInfo.note];
     noteLines.forEach((line) => {
-      console.log(chalk.yellow('║') + chalk.gray('  ' + line).padEnd(62) + chalk.yellow('║'));
+      console.log(chalk.yellow('║') + chalk.gray(`  ${  line}`).padEnd(62) + chalk.yellow('║'));
     });
   }
   console.log(chalk.yellow('╚═══════════════════════════════════════════════════════════════╝'));
@@ -279,6 +287,20 @@ export async function promptForEnvVars(mcp) {
  */
 export async function installMcp(mcp, options = {}) {
   const cwd = options.cwd || process.cwd();
+
+  // Remote HTTP servers: show OAuth info and skip env var prompting
+  if (mcp.transport === 'http' || mcp.transport === 'sse') {
+    if (!mcp.isAuthless) {
+      console.log(chalk.cyan('\n  This server uses OAuth authentication.'));
+      console.log(chalk.dim('  You\'ll be prompted to authenticate via your browser on first use.'));
+      console.log(chalk.dim('  Run /mcp in Claude Code to authenticate.\n'));
+      if (mcp.documentationUrl) {
+        console.log(chalk.dim(`  Documentation: ${mcp.documentationUrl}`));
+      }
+    }
+    // Skip to installation (no env var prompts needed)
+    options = { ...options, skipApiKeyPrompt: true, skipEnvPrompt: true };
+  }
 
   // Check if API key is required and prompt user BEFORE installation
   if (!options.skipApiKeyPrompt && mcpRequiresApiKey(mcp)) {

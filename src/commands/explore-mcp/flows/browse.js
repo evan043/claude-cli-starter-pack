@@ -44,9 +44,10 @@ export async function runBrowseFlow() {
   const choices = mcps.map((mcp) => {
     const isInstalled = installed.includes(mcp.id);
     const status = isInstalled ? chalk.green(' [installed]') : '';
+    const sourceTag = mcp.source === 'anthropic-registry' ? chalk.magenta(' [registry]') : '';
 
     return {
-      name: `${mcp.name}${status}\n   ${chalk.dim(mcp.description)}`,
+      name: `${mcp.name}${sourceTag}${status}\n   ${chalk.dim(mcp.description)}`,
       value: mcp.id,
       short: mcp.name,
     };

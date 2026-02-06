@@ -28,3 +28,15 @@ export {
   getMcpsWithoutApiKeys,
   normalizeDiscoveredMcp,
 } from './registry/api-keys.js';
+
+// Anthropic Registry API exports
+export {
+  fetchAnthropicRegistry,
+  transformApiServer,
+  getAnthropicRegistryMcps,
+} from './registry/anthropic-registry.js';
+
+// Individual MCP entries (for direct import)
+export { SERENA_MCP } from './registry/serena.js';
+export { SENTRY_MCP, SENTRY_DETECTION_PATTERNS } from './registry/sentry.js';
+export { POSTGRESQL_MCP, POSTGRES_DETECTION_PATTERNS, validatePostgresUrl } from './registry/postgresql.js';

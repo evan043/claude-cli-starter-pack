@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 // Cache TTL: 24 hours in milliseconds
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -16,8 +17,8 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
  */
 function getStatePath() {
   const possiblePaths = [
-    path.join(process.cwd(), '.claude', 'config', 'ccasp-state.json'),
-    path.join(process.cwd(), '.claude', 'ccasp-state.json'),
+    claudeAbsolutePath(process.cwd(), 'config', 'ccasp-state.json'),
+    claudeAbsolutePath(process.cwd(), 'ccasp-state.json'),
   ];
 
   for (const statePath of possiblePaths) {
@@ -27,7 +28,7 @@ function getStatePath() {
   }
 
   // Default to .claude/config/ path
-  const defaultPath = path.join(process.cwd(), '.claude', 'config', 'ccasp-state.json');
+  const defaultPath = claudeAbsolutePath(process.cwd(), 'config', 'ccasp-state.json');
   const configDir = path.dirname(defaultPath);
 
   if (!fs.existsSync(configDir)) {
@@ -182,4 +183,61 @@ export function getCacheStats() {
     expiresIn: cached.expiresIn,
     searchKeywords: cached.searchKeywords,
   };
+}
+
+// --- Anthropic Registry Cache ---
+
+/**
+ * Load cached Anthropic registry results
+ * @returns {Object|null} { mcps, timestamp, age, expiresIn } or null if expired/missing
+ */
+export function loadCachedRegistry() {
+  const state = loadState();
+
+  if (!state.anthropicRegistry) {
+    return null;
+  }
+
+  const { timestamp, mcps } = state.anthropicRegistry;
+  const age = Date.now() - timestamp;
+
+  if (age > CACHE_TTL_MS) {
+    return null;
+  }
+
+  return {
+    mcps: mcps || [],
+    timestamp,
+    age,
+    expiresIn: CACHE_TTL_MS - age,
+  };
+}
+
+/**
+ * Save Anthropic registry results to cache
+ * @param {Array} mcps - Transformed MCP entries from the API
+ */
+export function saveCachedRegistry(mcps) {
+  const state = loadState();
+
+  state.anthropicRegistry = {
+    timestamp: Date.now(),
+    mcps,
+  };
+
+  saveState(state);
+
+  return {
+    saved: mcps.length,
+    expiresAt: new Date(Date.now() + CACHE_TTL_MS).toISOString(),
+  };
+}
+
+/**
+ * Clear the Anthropic registry cache
+ */
+export function clearCachedRegistry() {
+  const state = loadState();
+  delete state.anthropicRegistry;
+  saveState(state);
 }

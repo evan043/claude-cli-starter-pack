@@ -2,22 +2,47 @@
  * MCP Registry Search & Recommendations
  *
  * Query, search, and recommendation functions for the MCP registry.
+ * Merges curated catalog with cached Anthropic registry data.
  */
 
 import { MCP_REGISTRY, CORE_TESTING_MCPS } from './catalog.js';
+import { loadCachedRegistry } from '../mcp-cache.js';
 
 /**
- * Get all MCPs as flat list
+ * Get all MCPs as flat list (curated + cached registry, deduped)
  */
 export function getAllMcps() {
-  return Object.values(MCP_REGISTRY).flat();
+  const staticMcps = Object.values(MCP_REGISTRY).flat();
+
+  const cached = loadCachedRegistry();
+  if (!cached || !cached.mcps?.length) {
+    return staticMcps;
+  }
+
+  // Curated catalog wins on ID collisions
+  const staticIds = new Set(staticMcps.map((m) => m.id));
+  const registryMcps = cached.mcps.filter((m) => !staticIds.has(m.id));
+
+  return [...staticMcps, ...registryMcps];
 }
 
 /**
- * Get MCPs by category
+ * Get MCPs by category (curated + cached registry)
  */
 export function getMcpsByCategory(category) {
-  return MCP_REGISTRY[category] || [];
+  const staticMcps = MCP_REGISTRY[category] || [];
+
+  const cached = loadCachedRegistry();
+  if (!cached || !cached.mcps?.length) {
+    return staticMcps;
+  }
+
+  const staticIds = new Set(staticMcps.map((m) => m.id));
+  const registryMcps = cached.mcps.filter(
+    (m) => m.category === category && !staticIds.has(m.id)
+  );
+
+  return [...staticMcps, ...registryMcps];
 }
 
 /**
@@ -131,7 +156,7 @@ export function searchMcps(query) {
       mcp.name.toLowerCase().includes(queryLower) ||
       mcp.description.toLowerCase().includes(queryLower) ||
       mcp.id.toLowerCase().includes(queryLower) ||
-      mcp.tools.some((t) => t.toLowerCase().includes(queryLower))
+      (mcp.tools || []).some((t) => t.toLowerCase().includes(queryLower))
   );
 }
 
@@ -143,14 +168,36 @@ export function getMcpById(id) {
 }
 
 /**
- * Get all categories
+ * Get all categories (built dynamically from all MCPs)
  */
 export function getCategories() {
-  return Object.keys(MCP_REGISTRY).map((key) => ({
-    id: key,
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    count: MCP_REGISTRY[key].length,
-  }));
+  const allMcps = getAllMcps();
+  const categories = {};
+
+  // Start with static catalog categories
+  for (const key of Object.keys(MCP_REGISTRY)) {
+    categories[key] = {
+      id: key,
+      name: key.charAt(0).toUpperCase() + key.slice(1),
+      count: 0,
+    };
+  }
+
+  // Count all MCPs including registry
+  for (const mcp of allMcps) {
+    const cat = mcp.category || 'utilities';
+    if (!categories[cat]) {
+      categories[cat] = {
+        id: cat,
+        name: cat.charAt(0).toUpperCase() + cat.slice(1),
+        count: 0,
+      };
+    }
+    categories[cat].count++;
+  }
+
+  // Filter out empty categories
+  return Object.values(categories).filter((c) => c.count > 0);
 }
 
 /**

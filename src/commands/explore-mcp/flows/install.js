@@ -184,7 +184,18 @@ export async function showMcpDetails(mcp) {
   console.log(chalk.cyan.bold(`\n📦 ${mcp.name}\n`));
   console.log(`${chalk.white('Description:')} ${mcp.description}`);
   console.log(`${chalk.white('Category:')} ${mcp.category}`);
-  console.log(`${chalk.white('Package:')} ${mcp.npmPackage || mcp.command}`);
+
+  // Remote HTTP servers (from Anthropic registry)
+  if (mcp.remoteUrl) {
+    console.log(`${chalk.white('Transport:')} Remote ${(mcp.transport || 'http').toUpperCase()}`);
+    console.log(`${chalk.white('URL:')} ${mcp.remoteUrl}`);
+    console.log(`${chalk.white('Auth:')} ${mcp.isAuthless ? 'None required' : 'OAuth (browser-based via /mcp)'}`);
+    if (mcp.author) {
+      console.log(`${chalk.white('Author:')} ${mcp.author}`);
+    }
+  } else {
+    console.log(`${chalk.white('Package:')} ${mcp.npmPackage || mcp.command}`);
+  }
 
   if (mcp.tools && mcp.tools.length > 0) {
     console.log(`${chalk.white('Tools:')} ${mcp.tools.join(', ')}`);
@@ -194,7 +205,15 @@ export async function showMcpDetails(mcp) {
     console.log(`${chalk.white('Required Env:')} ${Object.keys(mcp.requiredEnv).join(', ')}`);
   }
 
-  if (mcp.note) {
+  if (mcp.documentationUrl) {
+    console.log(`${chalk.white('Docs:')} ${mcp.documentationUrl}`);
+  }
+
+  if (mcp.claudeCodeCopyText) {
+    console.log(`\n${chalk.white('Quick Install:')} ${chalk.cyan(mcp.claudeCodeCopyText)}`);
+  }
+
+  if (mcp.note && !mcp.documentationUrl) {
     console.log(`${chalk.yellow('Note:')} ${mcp.note}`);
   }
 

@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import ora from 'ora';
 import { analyzeCodebase, displayAnalysisResults } from '../../create-phase-dev/codebase-analyzer.js';
 import {
   getRecommendedMcps,
@@ -17,9 +18,10 @@ import {
   getInstalledMcps,
 } from '../mcp-installer.js';
 import { updateClaudeMd } from '../claude-md-updater.js';
-import { loadCachedDiscovery } from '../mcp-cache.js';
+import { loadCachedDiscovery, loadCachedRegistry, saveCachedRegistry } from '../mcp-cache.js';
 import { displayInstallResults } from '../display.js';
 import { ensureTechStackAnalysis, buildSearchKeywords } from '../tech-stack.js';
+import { getAnthropicRegistryMcps } from '../registry/anthropic-registry.js';
 
 /**
  * Smart recommendations flow with tech stack check
@@ -84,6 +86,8 @@ export async function runRecommendedFlow(options) {
       sourceTag = chalk.magenta(' [web]');
     } else if (mcp.source === 'core-testing') {
       sourceTag = chalk.blue(' [core]');
+    } else if (mcp.source === 'anthropic-registry') {
+      sourceTag = chalk.magenta(' [registry]');
     }
 
     return {
@@ -155,112 +159,213 @@ export async function runRecommendedFlow(options) {
 }
 
 /**
- * Dynamic MCP discovery flow using web search
- * This generates instructions for Claude Code to perform web searches
+ * Fetch registry servers with spinner and error handling
+ * @returns {Promise<Array>} Registry MCPs or empty array on failure
+ */
+async function fetchWithSpinner() {
+  const spinner = ora('Fetching from Anthropic MCP Registry...').start();
+  try {
+    const mcps = await getAnthropicRegistryMcps({ timeout: 15000, maxPages: 3 });
+    saveCachedRegistry(mcps);
+    spinner.succeed(`Fetched ${mcps.length} servers from Anthropic registry`);
+    return mcps;
+  } catch (error) {
+    spinner.fail(`Registry unavailable: ${error.message}`);
+    console.log(chalk.dim('Falling back to curated catalog only.\n'));
+    return [];
+  }
+}
+
+/**
+ * Official Anthropic MCP Registry discovery flow
+ * Fetches live data from the Anthropic registry API
  */
 export async function runDiscoverFlow() {
-  console.log(chalk.magenta.bold('\n🔎 Dynamic MCP Discovery\n'));
-  console.log(chalk.dim('This feature uses web search to find MCPs relevant to your tech stack.'));
-  console.log(chalk.dim('It requires Claude Code CLI to execute the search.\n'));
+  console.log(chalk.magenta.bold('\n🌐 Anthropic Official MCP Registry\n'));
+  console.log(chalk.dim('Browse 100+ commercial MCP servers from the official Anthropic registry.'));
+  console.log(chalk.dim('These servers are verified to work with Claude Code.\n'));
 
-  // First check/run tech stack detection
-  const { analysis } = await ensureTechStackAnalysis();
+  // Check cache first
+  const cached = loadCachedRegistry();
+  let registryMcps;
 
-  if (!analysis) {
-    console.log(chalk.yellow('\nTech stack analysis required for discovery.'));
+  if (cached && cached.mcps.length > 0) {
+    const ageHours = Math.round(cached.age / (60 * 60 * 1000));
+    console.log(chalk.dim(`  Cached: ${cached.mcps.length} servers (${ageHours}h old)\n`));
+
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'Registry data cached. What would you like to do?',
+        choices: [
+          { name: 'Browse cached results', value: 'use-cache' },
+          { name: 'Refresh from live API', value: 'refresh' },
+          { name: 'Back', value: 'back' },
+        ],
+      },
+    ]);
+
+    if (action === 'back') return;
+
+    if (action === 'refresh') {
+      registryMcps = await fetchWithSpinner();
+    } else {
+      registryMcps = cached.mcps;
+    }
+  } else {
+    registryMcps = await fetchWithSpinner();
+  }
+
+  if (!registryMcps || registryMcps.length === 0) {
+    console.log(chalk.yellow('\nNo servers found. Check your internet connection.'));
     return;
   }
 
-  // Build search keywords from analysis
-  const keywords = buildSearchKeywords(analysis);
-
-  if (keywords.length === 0) {
-    console.log(chalk.yellow('\nNo specific frameworks detected. Using generic search.\n'));
-    keywords.push('general');
+  // Group by category and display summary
+  const byCat = {};
+  for (const mcp of registryMcps) {
+    const cat = mcp.category || 'utilities';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(mcp);
   }
 
-  console.log(chalk.cyan('Detected stack keywords:'), keywords.join(', '));
+  console.log(chalk.green(`\n  Found ${registryMcps.length} Claude Code-compatible servers\n`));
 
-  // Display instructions for Claude Code
-  console.log(chalk.cyan.bold('\n📋 Discovery Instructions\n'));
-  console.log(chalk.white('To discover new MCPs, ask Claude Code to run this search:'));
-  console.log('');
-  console.log(chalk.dim('─'.repeat(60)));
-  console.log(chalk.yellow(`
-Use WebSearch to find MCP servers for: ${keywords.join(', ')}
+  for (const [cat, mcps] of Object.entries(byCat).sort((a, b) => b[1].length - a[1].length)) {
+    const catName = cat.charAt(0).toUpperCase() + cat.slice(1);
+    console.log(
+      chalk.cyan(`  ${catName} (${mcps.length}): `) +
+      chalk.dim(mcps.slice(0, 4).map((m) => m.name).join(', ') + (mcps.length > 4 ? `, +${mcps.length - 4} more` : ''))
+    );
+  }
 
-Search queries to run:
-${keywords.map((k) => `  - "MCP server ${k} Claude"`).join('\n')}
-  - "@modelcontextprotocol npm packages"
-  - "Claude MCP server list ${new Date().getFullYear()}"
+  console.log(chalk.dim('\nThese servers are now available in Browse and Search.\n'));
 
-For each MCP found, extract:
-  - name: Display name
-  - npmPackage: npm package name (e.g., @playwright/mcp)
-  - description: What it does
-  - tools: List of available tools
-  - apiKeyRequired: Does it need an API key? (true/false)
-  - apiKeyUrl: Where to get the API key (if required)
-  - apiKeyFree: Is there a free tier? (true/false)
-
-Save results using /explore-mcp --save-discovery
-`));
-  console.log(chalk.dim('─'.repeat(60)));
-  console.log('');
-
-  // Offer to save placeholder for manual discovery
-  const { savePrompt } = await inquirer.prompt([
+  // Offer to browse or install
+  const installed = getInstalledMcps();
+  const { nextAction } = await inquirer.prompt([
     {
-      type: 'confirm',
-      name: 'savePrompt',
-      message: 'Copy these instructions to clipboard? (requires xclip/pbcopy)',
-      default: false,
+      type: 'list',
+      name: 'nextAction',
+      message: 'What next?',
+      choices: [
+        { name: 'Browse by category', value: 'browse' },
+        { name: 'Search registry', value: 'search' },
+        { name: 'Done', value: 'done' },
+      ],
     },
   ]);
 
-  if (savePrompt) {
-    const instructions = `Use WebSearch to find MCP servers for: ${keywords.join(', ')}
+  if (nextAction === 'browse') {
+    // Quick category browse within registry results
+    const catChoices = Object.entries(byCat)
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([cat, mcps]) => ({
+        name: `${cat.charAt(0).toUpperCase() + cat.slice(1)} (${mcps.length} servers)`,
+        value: cat,
+        short: cat,
+      }));
 
-Search queries:
-${keywords.map((k) => `- "MCP server ${k} Claude"`).join('\n')}
-- "@modelcontextprotocol npm packages"
+    catChoices.push(new inquirer.Separator());
+    catChoices.push({ name: 'Back', value: 'back' });
 
-For each MCP found, provide: name, npmPackage, description, tools list.`;
+    const { category } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'category',
+        message: 'Select category:',
+        choices: catChoices,
+        pageSize: 15,
+      },
+    ]);
 
-    try {
-      const { spawnSync } = await import('child_process');
-      const platform = process.platform;
+    if (category !== 'back' && byCat[category]) {
+      const mcpChoices = byCat[category].map((mcp) => {
+        const isInstalled = installed.includes(mcp.id);
+        const status = isInstalled ? chalk.green(' [installed]') : '';
+        const auth = mcp.isAuthless ? chalk.dim(' (no auth)') : chalk.dim(' (OAuth)');
 
-      let result;
-      if (platform === 'darwin') {
-        result = spawnSync('pbcopy', [], {
-          input: instructions,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-      } else if (platform === 'linux') {
-        result = spawnSync('xclip', ['-selection', 'clipboard'], {
-          input: instructions,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
-      } else if (platform === 'win32') {
-        result = spawnSync('clip', [], {
-          input: instructions,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe']
-        });
+        return {
+          name: `${mcp.name}${auth}${status}\n   ${chalk.dim(mcp.description)}`,
+          value: mcp.id,
+          short: mcp.name,
+        };
+      });
+
+      mcpChoices.push(new inquirer.Separator());
+      mcpChoices.push({ name: 'Back', value: 'back' });
+
+      const { mcpSelection } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'mcpSelection',
+          message: `${category} servers:`,
+          choices: mcpChoices,
+          pageSize: 12,
+        },
+      ]);
+
+      if (mcpSelection !== 'back') {
+        const mcp = registryMcps.find((m) => m.id === mcpSelection);
+        if (mcp) {
+          const { showMcpDetails } = await import('./install.js');
+          await showMcpDetails(mcp);
+        }
       }
+    }
+  } else if (nextAction === 'search') {
+    const { query } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'query',
+        message: 'Search registry:',
+        validate: (input) => input.length >= 2 || 'Enter at least 2 characters',
+      },
+    ]);
 
-      if (result && result.status === 0) {
-        console.log(chalk.green('\n✓ Instructions copied to clipboard'));
-      } else {
-        console.log(chalk.yellow('\nCould not copy to clipboard. Please copy manually.'));
+    const queryLower = query.toLowerCase();
+    const results = registryMcps.filter(
+      (mcp) =>
+        mcp.name.toLowerCase().includes(queryLower) ||
+        mcp.description.toLowerCase().includes(queryLower) ||
+        mcp.id.toLowerCase().includes(queryLower)
+    );
+
+    if (results.length === 0) {
+      console.log(chalk.yellow(`\nNo servers found matching "${query}".`));
+      return;
+    }
+
+    const resultChoices = results.map((mcp) => {
+      const isInstalled = installed.includes(mcp.id);
+      const status = isInstalled ? chalk.green(' [installed]') : '';
+
+      return {
+        name: `${mcp.name}${status} (${mcp.category})\n   ${chalk.dim(mcp.description)}`,
+        value: mcp.id,
+        short: mcp.name,
+      };
+    });
+
+    resultChoices.push(new inquirer.Separator());
+    resultChoices.push({ name: 'Back', value: 'back' });
+
+    const { resultSelection } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'resultSelection',
+        message: `Results for "${query}":`,
+        choices: resultChoices,
+      },
+    ]);
+
+    if (resultSelection !== 'back') {
+      const mcp = registryMcps.find((m) => m.id === resultSelection);
+      if (mcp) {
+        const { showMcpDetails } = await import('./install.js');
+        await showMcpDetails(mcp);
       }
-    } catch {
-      console.log(chalk.yellow('\nCould not copy to clipboard. Please copy manually.'));
     }
   }
-
-  console.log(chalk.dim('\nTip: Run "/explore-mcp" in Claude Code CLI to use discovered MCPs.\n'));
 }

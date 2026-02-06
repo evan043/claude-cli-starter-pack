@@ -17,6 +17,9 @@ export {
   mergeMcpResults,
   mcpRequiresApiKey,
   getMcpApiKeyInfo,
+  fetchAnthropicRegistry,
+  transformApiServer,
+  getAnthropicRegistryMcps,
 } from './mcp-registry.js';
 
 // Installer exports
@@ -34,7 +37,13 @@ export {
 export { updateClaudeMd, removeMcpSection } from './claude-md-updater.js';
 
 // Cache exports
-export { loadCachedDiscovery, saveCachedDiscovery } from './mcp-cache.js';
+export {
+  loadCachedDiscovery,
+  saveCachedDiscovery,
+  loadCachedRegistry,
+  saveCachedRegistry,
+  clearCachedRegistry,
+} from './mcp-cache.js';
 
 // Display exports
 export { displayInstallResults, showExploreMcpHelp } from './display.js';
