@@ -255,6 +255,162 @@ if (archResult.success) {
 - API contracts (OpenAPI format)
 - State design (stores and actions)
 
+### Step 4b: HTML Mockup Preview (Optional - UI Work Only)
+
+After architecture generation, detect if this vision involves frontend/UI work and offer a browser-rendered HTML mockup preview.
+
+**Skip this step if:**
+- User passed `--skip-mockup` flag
+- No frontend features or technologies detected
+- Architecture phase was skipped (`--skip-architecture`)
+
+```javascript
+// Detect frontend/UI work from parsed prompt data
+const features = initResult.vision?.metadata?.features || [];
+const technologies = initResult.vision?.prompt?.parsed?.technologies || [];
+
+const hasFrontendFeatures = features.some(f =>
+  (f.domain === 'frontend') ||
+  ['dashboard', 'forms', 'navigation', 'calendar', 'drag-drop', 'modal', 'data-display', 'charts'].includes(f.feature || f)
+);
+const hasFrontendTech = technologies.some(t =>
+  ['react', 'vue', 'angular', 'svelte', 'next.js', 'nuxt'].includes(t?.toLowerCase())
+);
+
+const shouldOfferMockup = (hasFrontendFeatures || hasFrontendTech) && !skipMockup;
+```
+
+**If frontend work detected, offer mockup preview using `AskUserQuestion`:**
+
+```javascript
+if (shouldOfferMockup && archResult.success) {
+  // Offer mockup preview
+  const wantsMockup = await AskUserQuestion({
+    question: 'Frontend work detected. Generate an HTML mockup preview in the browser before planning?',
+    options: [
+      { label: 'Yes - Preview mockup', description: 'Generate HTML from wireframes, render in browser via Playwright' },
+      { label: 'No - Continue', description: 'Skip mockup and proceed to security scan + planning' }
+    ]
+  });
+
+  if (wantsMockup === 'Yes - Preview mockup') {
+    await generateAndPreviewMockup(orchestrator, archResult.artifacts);
+  }
+}
+```
+
+**Mockup generation and preview flow:**
+
+```javascript
+async function generateAndPreviewMockup(orchestrator, artifacts) {
+  const visionSlug = orchestrator.vision.slug;
+  const visionDir = `.claude/visions/${visionSlug}`;
+  const mockupPath = `${visionDir}/mockup.html`;
+
+  console.log('🎨 Generating HTML mockup from wireframes...');
+
+  // 1. Analyze the ASCII wireframes and componentList to determine page structure
+  const wireframes = artifacts.wireframes || '';
+  const componentList = artifacts.componentList || [];
+  const features = orchestrator.vision.metadata?.features || [];
+
+  // 2. Generate a single-file HTML page using Tailwind CDN
+  //    Claude should write the HTML based on:
+  //    - Detected components (navbar, sidebar, form, table, card, modal, grid)
+  //    - Feature list (dashboard, calendar, drag-drop, charts, etc.)
+  //    - Vision title for headings and branding
+  //    - ASCII wireframe layout structure
+  //
+  //    HTML structure:
+  //    <!DOCTYPE html>
+  //    <html>
+  //    <head>
+  //      <meta charset="UTF-8">
+  //      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  //      <title>{vision.title} - Mockup Preview</title>
+  //      <script src="https://cdn.tailwindcss.com"></script>
+  //      <style>
+  //        /* Inline fallback styles for offline rendering */
+  //        body { margin: 0; font-family: system-ui, sans-serif; }
+  //      </style>
+  //    </head>
+  //    <body class="bg-gray-50">
+  //      <!-- Map each detected component to Tailwind HTML -->
+  //      <!-- navbar → <nav class="bg-gray-800 text-white p-4 ..."> -->
+  //      <!-- sidebar → <aside class="w-64 bg-gray-100 ..."> -->
+  //      <!-- form → <form class="bg-white p-6 rounded shadow ..."> -->
+  //      <!-- table → <table class="w-full ..."> with sample rows -->
+  //      <!-- card → <div class="border rounded p-4 ..."> with stat data -->
+  //      <!-- modal → <div class="fixed inset-0 bg-black/50 ..."> -->
+  //    </body>
+  //    </html>
+
+  // 3. Write the HTML file using the Write tool
+  // Write(mockupPath, generatedHtml);
+  console.log(`  ✓ Mockup saved: ${mockupPath}`);
+
+  // 4. Render in browser via Playwright MCP
+  console.log('  🌐 Launching browser preview...');
+  const fileUrl = `file://${mockupPath.replace(/\\/g, '/')}`;
+
+  // Navigate to mockup (opens browser)
+  // Use: mcp__playwright-ext__playwright_navigate({ url: fileUrl })
+  // Wait 2 seconds for Tailwind CDN to load and render
+
+  // 5. Take screenshot
+  // Use: mcp__playwright-ext__playwright_screenshot({ name: 'mockup-preview', fullPage: true })
+  // Save screenshot to visionDir
+  console.log(`  ✓ Screenshot saved: ${visionDir}/mockup-preview.png`);
+
+  // 6. Display screenshot to user
+  // Use: Read tool to display the screenshot image
+  console.log('\n📸 Mockup Preview:');
+
+  // 7. Ask for approval
+  const approval = await AskUserQuestion({
+    question: 'How does the mockup look?',
+    options: [
+      { label: 'Looks good - Continue', description: 'Approve layout and proceed to planning' },
+      { label: 'Adjust', description: 'Describe changes and regenerate mockup (max 2 iterations)' },
+      { label: 'Skip', description: 'Continue without approving mockup' }
+    ]
+  });
+
+  if (approval === 'Adjust') {
+    // Ask what to adjust, regenerate HTML, re-render (max 2 iterations)
+    for (let i = 0; i < 2; i++) {
+      const feedback = await AskUserQuestion({
+        question: 'What would you like to adjust in the mockup?'
+      });
+
+      console.log(`📝 Adjusting mockup (iteration ${i + 1}/2)...`);
+
+      // Regenerate HTML incorporating feedback
+      // Re-render via Playwright, take new screenshot, show to user
+      // Ask again: "Looks good?" / "Adjust again" / "Skip"
+
+      // Store feedback in vision metadata for planning phase
+      await updateVision(projectRoot, visionSlug, (v) => {
+        v.metadata.mockup_feedback = feedback;
+        return v;
+      });
+
+      // Break if user approves
+      break; // Simplified — actual implementation checks user response
+    }
+  }
+
+  console.log('✅ Mockup preview complete.\n');
+}
+```
+
+**Important notes for Claude executing this step:**
+- The HTML generation is done by YOU (Claude) at runtime — analyze the wireframes and write appropriate HTML
+- Use placeholder/sample data in tables, forms, and cards (e.g., "John Doe", "$12,345")
+- Keep the mockup simple — it's a layout preview, not pixel-perfect design
+- If Playwright MCP is unavailable, fall back to just saving the HTML file and telling the user to open it manually
+- The mockup.html file persists in the vision directory for future reference
+
 ### Step 5: Security Scan
 
 ```javascript
@@ -490,6 +646,9 @@ ccasp vision init "Add dark mode" --plan-type phase-dev-plan
 
 # Skip phases
 ccasp vision init "Quick app" --skip-analysis --skip-architecture
+
+# Skip mockup preview (frontend work still planned, just no browser preview)
+ccasp vision init "React dashboard" --skip-mockup
 ```
 
 ## Argument Handling
@@ -498,6 +657,7 @@ ccasp vision init "Quick app" --skip-analysis --skip-architecture
 - `/vision-init {prompt}` - Quick start with prompt
 - `/vision-init --quick` - Skip confirmation steps
 - `/vision-init --manual` - Don't enable autonomous execution
+- `/vision-init --skip-mockup` - Skip HTML mockup preview even for frontend work
 
 ## Validation Checklist
 
@@ -508,6 +668,7 @@ Before marking complete, verify:
 [ ] Prompt parsed successfully
 [ ] Analysis completed (web search, tools)
 [ ] Architecture generated (diagrams, components)
+[ ] Mockup preview offered (if frontend work detected)
 [ ] Security scan completed
 [ ] PLANNING PHASE COMPLETED:
     [ ] EPIC.json created in .claude/epics/{slug}/
