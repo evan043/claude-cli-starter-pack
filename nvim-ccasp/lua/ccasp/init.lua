@@ -5,7 +5,7 @@
 local M = {}
 
 -- Plugin version
-M.version = "1.4.0"
+M.version = "1.5.0"
 
 -- Helper: Check if classic layout is active
 function M.is_classic()
