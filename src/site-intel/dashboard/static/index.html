@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CCASP Site Intelligence Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+
+    /* Header */
+    header {
+      background: #16213e;
+      padding: 1.5rem 2rem;
+      border-bottom: 2px solid #0f3460;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      color: #e94560;
+      font-weight: 600;
+    }
+
+    .site-selector {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .site-selector label {
+      font-size: 0.9rem;
+      color: #a0a0a0;
+    }
+
+    .site-selector select {
+      background: #0f3460;
+      color: #e0e0e0;
+      border: 1px solid #1a3a5f;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .site-selector select:focus {
+      outline: none;
+      border-color: #e94560;
+    }
+
+    /* Layout */
+    .container {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      height: calc(100vh - 80px - 60px);
+    }
+
+    /* Sidebar */
+    aside {
+      background: #16213e;
+      border-right: 2px solid #0f3460;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+
+    aside h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: #a0a0a0;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .site-list {
+      list-style: none;
+    }
+
+    .site-item {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: #0f3460;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .site-item:hover {
+      background: #1a3a5f;
+    }
+
+    .site-item.active {
+      background: #e94560;
+      color: #fff;
+    }
+
+    .site-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .site-meta {
+      font-size: 0.75rem;
+      color: #a0a0a0;
+      margin-top: 0.25rem;
+    }
+
+    .layer-status {
+      display: flex;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+
+    .layer-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .layer-dot.ok {
+      background: #4caf50;
+    }
+
+    .layer-dot.ready {
+      background: #2196f3;
+    }
+
+    .layer-dot.not-run {
+      background: #555;
+    }
+
+    /* Main area */
+    main {
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #0f3460;
+    }
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #e0e0e0;
+    }
+
+    .tab.active {
+      color: #e94560;
+      border-bottom-color: #e94560;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards */
+    .card {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #0f3460;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: #e94560;
+    }
+
+    /* Overview */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: #0f3460;
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #e94560;
+      display: block;
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: #a0a0a0;
+      margin-top: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .health-score {
+      font-size: 4rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .health-score.grade-a { color: #4caf50; }
+    .health-score.grade-b { color: #8bc34a; }
+    .health-score.grade-c { color: #ffc107; }
+    .health-score.grade-d { color: #ff9800; }
+    .health-score.grade-f { color: #f44336; }
+
+    /* Graph */
+    #cy {
+      width: 100%;
+      height: 600px;
+      background: #0f3460;
+      border-radius: 8px;
+    }
+
+    .graph-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      background: #e94560;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #d63850;
+    }
+
+    .btn-secondary {
+      background: #0f3460;
+    }
+
+    .btn-secondary:hover {
+      background: #1a3a5f;
+    }
+
+    /* Recommendations */
+    .recommendations-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .recommendations-table th {
+      background: #0f3460;
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #a0a0a0;
+    }
+
+    .recommendations-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .recommendations-table tbody tr:hover {
+      background: #1a2840;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .priority-high {
+      background: #f44336;
+      color: #fff;
+    }
+
+    .priority-medium {
+      background: #ff9800;
+      color: #fff;
+    }
+
+    .priority-low {
+      background: #2196f3;
+      color: #fff;
+    }
+
+    .effort-badge, .risk-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      background: #0f3460;
+    }
+
+    /* Pages */
+    .pages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    .page-card {
+      background: #0f3460;
+      padding: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .page-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(233, 69, 96, 0.2);
+    }
+
+    .page-path {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #e94560;
+      font-size: 0.9rem;
+    }
+
+    .page-type-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      background: #1a3a5f;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-stats {
+      font-size: 0.8rem;
+      color: #a0a0a0;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+    }
+
+    /* Footer */
+    footer {
+      background: #16213e;
+      padding: 1rem 2rem;
+      border-top: 2px solid #0f3460;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+    }
+
+    .health-bar {
+      flex: 1;
+      max-width: 400px;
+      height: 20px;
+      background: #0f3460;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f44336, #ff9800, #ffc107, #8bc34a, #4caf50);
+      transition: width 0.3s;
+    }
+
+    .health-label {
+      font-size: 0.9rem;
+      color: #a0a0a0;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #a0a0a0;
+    }
+
+    .error {
+      color: #f44336;
+      padding: 1rem;
+      background: rgba(244, 67, 54, 0.1);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CCASP Site Intelligence Dashboard</h1>
+    <div class="site-selector">
+      <label for="site-select">Site:</label>
+      <select id="site-select">
+        <option value="">Select a site...</option>
+      </select>
+      <button class="btn btn-secondary" id="refresh-btn">Refresh</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside>
+      <h2>Scanned Sites</h2>
+      <ul class="site-list" id="site-list">
+        <li class="loading">Loading sites...</li>
+      </ul>
+    </aside>
+
+    <main>
+      <div id="no-site" class="card">
+        <h3>Welcome to Site Intelligence</h3>
+        <p>Select a site from the dropdown or sidebar to view its intelligence data.</p>
+      </div>
+
+      <div id="site-content" style="display: none;">
+        <div class="tabs">
+          <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="graph">Graph</button>
+          <button class="tab" data-tab="recommendations">Recommendations</button>
+          <button class="tab" data-tab="pages">Pages</button>
+        </div>
+
+        <div class="tab-content active" id="overview">
+          <div class="card">
+            <h3>Health Score</h3>
+            <div style="text-align: center;">
+              <span class="health-score" id="health-score">-</span>
+              <p class="metric-label">Overall Grade</p>
+            </div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-value" id="metric-pages">-</span>
+              <span class="metric-label">Total Pages</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="metric-smells">-</span>
+              <span class="metric-label">Total Issues</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="metric-orphans">-</span>
+              <span class="metric-label">Orphan Pages</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="metric-apis">-</span>
+              <span class="metric-label">Shared APIs</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Top Recommendations</h3>
+            <div id="top-recommendations">Loading...</div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="graph-tab">
+          <div class="card">
+            <h3>Site Graph</h3>
+            <div class="graph-controls">
+              <button class="btn btn-secondary" id="fit-graph">Fit to Screen</button>
+              <button class="btn btn-secondary" id="center-graph">Center</button>
+            </div>
+            <div id="cy"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="recommendations-tab">
+          <div class="card">
+            <h3>All Recommendations</h3>
+            <table class="recommendations-table">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Title</th>
+                  <th>Impact</th>
+                  <th>Effort</th>
+                  <th>Risk</th>
+                  <th>Category</th>
+                </tr>
+              </thead>
+              <tbody id="recommendations-body">
+                <tr><td colspan="6" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-content" id="pages-tab">
+          <div class="card">
+            <h3>All Pages</h3>
+            <div class="pages-grid" id="pages-grid">
+              <div class="loading">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer>
+    <div class="health-bar">
+      <div class="health-bar-fill" id="health-bar-fill" style="width: 0%;"></div>
+    </div>
+    <span class="health-label" id="scan-timestamp">No scan loaded</span>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <script>
+    // State
+    let currentDomain = null;
+    let cytoscape = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSites();
+      setupEventListeners();
+    });
+
+    // Event listeners
+    function setupEventListeners() {
+      document.getElementById('site-select').addEventListener('change', (e) => {
+        if (e.target.value) {
+          loadSite(e.target.value);
+        }
+      });
+
+      document.getElementById('refresh-btn').addEventListener('click', () => {
+        if (currentDomain) {
+          loadSite(currentDomain);
+        } else {
+          loadSites();
+        }
+      });
+
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabName = tab.dataset.tab;
+          switchTab(tabName);
+        });
+      });
+
+      document.getElementById('fit-graph')?.addEventListener('click', () => {
+        if (cytoscape) cytoscape.fit();
+      });
+
+      document.getElementById('center-graph')?.addEventListener('click', () => {
+        if (cytoscape) cytoscape.center();
+      });
+    }
+
+    // Load sites list
+    async function loadSites() {
+      try {
+        const response = await fetch('/api/sites');
+        const data = await response.json();
+
+        const siteList = document.getElementById('site-list');
+        const siteSelect = document.getElementById('site-select');
+
+        if (!data.sites || data.sites.length === 0) {
+          siteList.innerHTML = '<li style="padding: 1rem; color: #a0a0a0;">No sites scanned yet</li>';
+          return;
+        }
+
+        // Update sidebar
+        siteList.innerHTML = data.sites.map(site => `
+          <li class="site-item" onclick="loadSite('${site.domain}')">
+            <div class="site-name">${site.domain}</div>
+            <div class="site-meta">${site.lastScan ? new Date(site.lastScan).toLocaleDateString() : 'No scan'}</div>
+            <div class="layer-status">
+              <div class="layer-dot" title="L1: Discovery"></div>
+              <div class="layer-dot" title="L2: Summaries"></div>
+              <div class="layer-dot" title="L3: Graph"></div>
+              <div class="layer-dot" title="L4: Memory"></div>
+              <div class="layer-dot" title="L5: Judgment"></div>
+            </div>
+          </li>
+        `).join('');
+
+        // Update dropdown
+        siteSelect.innerHTML = '<option value="">Select a site...</option>' +
+          data.sites.map(site => `<option value="${site.domain}">${site.domain}</option>`).join('');
+      } catch (error) {
+        console.error('Error loading sites:', error);
+        document.getElementById('site-list').innerHTML = `<li class="error">Error loading sites</li>`;
+      }
+    }
+
+    // Load site data
+    async function loadSite(domain) {
+      currentDomain = domain;
+      document.getElementById('site-select').value = domain;
+      document.getElementById('no-site').style.display = 'none';
+      document.getElementById('site-content').style.display = 'block';
+
+      // Highlight active site in sidebar
+      document.querySelectorAll('.site-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.textContent.includes(domain)) {
+          item.classList.add('active');
+        }
+      });
+
+      // Load all data
+      await Promise.all([
+        loadStatus(domain),
+        loadRecommendations(domain),
+        loadPages(domain)
+      ]);
+
+      // Update layer status in sidebar
+      const status = await fetch(`/api/sites/${encodeURIComponent(domain)}/status`).then(r => r.json());
+      updateLayerStatus(domain, status);
+    }
+
+    // Update layer status dots
+    function updateLayerStatus(domain, status) {
+      const item = Array.from(document.querySelectorAll('.site-item')).find(el => el.textContent.includes(domain));
+      if (!item) return;
+
+      const dots = item.querySelectorAll('.layer-dot');
+      status.layers.forEach((layer, i) => {
+        if (dots[i]) {
+          dots[i].className = `layer-dot ${layer.status.toLowerCase().replace('_', '-')}`;
+        }
+      });
+    }
+
+    // Load status and health
+    async function loadStatus(domain) {
+      try {
+        const response = await fetch(`/api/sites/${encodeURIComponent(domain)}/status`);
+        const status = await response.json();
+
+        // Update health score
+        const healthScore = document.getElementById('health-score');
+        healthScore.textContent = `${status.healthScore}/100`;
+        healthScore.className = `health-score grade-${status.healthGrade.toLowerCase()}`;
+
+        // Update health bar
+        document.getElementById('health-bar-fill').style.width = `${status.healthScore}%`;
+
+        // Update metrics
+        document.getElementById('metric-pages').textContent = status.totalPages;
+
+        // Get graph data for additional metrics
+        const graphResponse = await fetch(`/api/sites/${encodeURIComponent(domain)}/graph`);
+        if (graphResponse.ok) {
+          const graphData = await graphResponse.json();
+          document.getElementById('metric-smells').textContent = graphData.graph.nodes.reduce((sum, n) => sum + (n.smellCount || 0), 0);
+          document.getElementById('metric-orphans').textContent = graphData.graph.metrics.orphanCount || 0;
+          document.getElementById('metric-apis').textContent = graphData.graph.sharedAPIs.length || 0;
+        }
+
+        // Update timestamp
+        document.getElementById('scan-timestamp').textContent = status.lastScan
+          ? `Last scan: ${new Date(status.lastScan).toLocaleString()}`
+          : 'No scan data';
+      } catch (error) {
+        console.error('Error loading status:', error);
+      }
+    }
+
+    // Load recommendations
+    async function loadRecommendations(domain, limit = 10) {
+      try {
+        const response = await fetch(`/api/sites/${encodeURIComponent(domain)}/recommendations?limit=${limit}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          document.getElementById('recommendations-body').innerHTML = `<tr><td colspan="6" class="error">${data.error}</td></tr>`;
+          return;
+        }
+
+        // Top recommendations (overview)
+        const topRecs = document.getElementById('top-recommendations');
+        if (data.recommendations.length === 0) {
+          topRecs.innerHTML = '<p style="color: #4caf50;">No issues found!</p>';
+        } else {
+          topRecs.innerHTML = data.recommendations.slice(0, 3).map(rec => `
+            <div style="margin-bottom: 1rem;">
+              <span class="priority-badge priority-${rec.priority.toLowerCase()}">${rec.priority}</span>
+              <strong>${rec.title}</strong>
+              <p style="color: #a0a0a0; font-size: 0.85rem; margin-top: 0.25rem;">${rec.description}</p>
+            </div>
+          `).join('');
+        }
+
+        // All recommendations table
+        const tbody = document.getElementById('recommendations-body');
+        if (data.recommendations.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #4caf50;">No recommendations - site looks healthy!</td></tr>';
+        } else {
+          tbody.innerHTML = data.recommendations.map(rec => `
+            <tr>
+              <td><span class="priority-badge priority-${rec.priority.toLowerCase()}">${rec.priority}</span></td>
+              <td>
+                <strong>${rec.title}</strong><br>
+                <span style="font-size: 0.85rem; color: #a0a0a0;">${rec.description}</span>
+              </td>
+              <td>${rec.impact_score.toFixed(1)}</td>
+              <td><span class="effort-badge">${rec.effort}</span></td>
+              <td><span class="risk-badge">${rec.risk}</span></td>
+              <td>${rec.category}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error loading recommendations:', error);
+      }
+    }
+
+    // Load pages
+    async function loadPages(domain) {
+      try {
+        const response = await fetch(`/api/sites/${encodeURIComponent(domain)}/pages`);
+        const data = await response.json();
+
+        const grid = document.getElementById('pages-grid');
+        if (!data.pages || data.pages.length === 0) {
+          grid.innerHTML = '<p class="error">No pages found</p>';
+          return;
+        }
+
+        grid.innerHTML = data.pages.map(page => {
+          let pathname;
+          try {
+            pathname = new URL(page.url).pathname;
+          } catch {
+            pathname = page.url;
+          }
+
+          return `
+            <div class="page-card">
+              <div class="page-path">${pathname}</div>
+              <span class="page-type-badge">${page.classification?.type || 'unknown'}</span>
+              <p style="font-size: 0.85rem; color: #a0a0a0; margin-top: 0.5rem;">${page.purpose}</p>
+              <div class="page-stats">
+                <span>Value: ${page.businessValue?.score || 0}/10</span>
+                <span>Issues: ${page.smells?.length || 0}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Error loading pages:', error);
+      }
+    }
+
+    // Switch tabs
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      document.getElementById(tabName === 'graph' ? 'graph-tab' : tabName === 'recommendations' ? 'recommendations-tab' : tabName === 'pages' ? 'pages-tab' : tabName).classList.add('active');
+
+      if (tabName === 'graph' && currentDomain && !cytoscape) {
+        loadGraph(currentDomain);
+      }
+    }
+
+    // Load graph
+    async function loadGraph(domain) {
+      try {
+        const response = await fetch(`/api/sites/${encodeURIComponent(domain)}/graph`);
+        const data = await response.json();
+
+        if (!data.graph) {
+          document.getElementById('cy').innerHTML = '<p class="error" style="padding: 2rem;">No graph data</p>';
+          return;
+        }
+
+        const graph = data.graph;
+
+        // Convert to Cytoscape format
+        const elements = [
+          ...graph.nodes.map(node => ({
+            data: {
+              id: node.id,
+              label: node.label,
+              type: node.type,
+              businessValue: node.businessValue,
+              smellCount: node.smellCount
+            }
+          })),
+          ...graph.edges.map(edge => ({
+            data: {
+              source: edge.source,
+              target: edge.target,
+              type: edge.type,
+              label: edge.label
+            }
+          }))
+        ];
+
+        cytoscape = window.cytoscape({
+          container: document.getElementById('cy'),
+          elements: elements,
+          style: [
+            {
+              selector: 'node',
+              style: {
+                'background-color': '#2196f3',
+                'label': 'data(label)',
+                'color': '#fff',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'font-size': '10px',
+                'width': '30px',
+                'height': '30px'
+              }
+            },
+            {
+              selector: 'node[type="homepage"]',
+              style: {
+                'background-color': '#4caf50',
+                'width': '40px',
+                'height': '40px'
+              }
+            },
+            {
+              selector: 'node[type="authentication"]',
+              style: {
+                'background-color': '#ffc107',
+                'shape': 'diamond'
+              }
+            },
+            {
+              selector: 'node[type="error"]',
+              style: {
+                'background-color': '#f44336'
+              }
+            },
+            {
+              selector: 'edge',
+              style: {
+                'width': 2,
+                'line-color': '#0f3460',
+                'target-arrow-color': '#0f3460',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier'
+              }
+            },
+            {
+              selector: 'edge[type="shared-api"]',
+              style: {
+                'line-style': 'dashed',
+                'line-color': '#e94560',
+                'target-arrow-color': '#e94560'
+              }
+            }
+          ],
+          layout: {
+            name: 'cose',
+            animate: false,
+            padding: 30
+          }
+        });
+
+        cytoscape.on('tap', 'node', function(evt) {
+          const node = evt.target;
+          console.log('Clicked node:', node.data());
+        });
+      } catch (error) {
+        console.error('Error loading graph:', error);
+        document.getElementById('cy').innerHTML = '<p class="error" style="padding: 2rem;">Error loading graph</p>';
+      }
+    }
+
+    // Make loadSite available globally
+    window.loadSite = loadSite;
+  </script>
+</body>
+</html>

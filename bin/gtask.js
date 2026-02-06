@@ -47,6 +47,7 @@ import { runVision } from '../src/commands/vision.js';
 import { runConstitutionInit } from '../src/commands/constitution-init.js';
 import { runNvimSetup } from '../src/commands/nvim-setup.js';
 import { runNvimLaunch } from '../src/commands/nvim-launch.js';
+import { registerSiteIntelCommands } from '../src/commands/site-intel.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
 import { setLogLevel, LOG_LEVELS } from '../src/utils/logger.js';
 import chalk from 'chalk';
@@ -366,6 +367,8 @@ program
   .command('install-skill')
   .description('Install skills to your project')
   .option('--list', 'List available skills')
+  .option('--from-repo <url>', 'Import skill from external GitHub repo (owner/repo format)')
+  .option('--skill-path <path>', 'Path within the repo to the skill directory (default: ".")')
   .action(async (options) => {
     if (options.list) {
       listSkills();
@@ -514,6 +517,9 @@ program
     const args = directory ? [directory, ...files] : files;
     await runNvimLaunch(args, options);
   });
+
+// Site Intelligence - website analysis system
+registerSiteIntelCommands(program);
 
 // Apply log level from flags
 program.hook('preAction', (thisCommand) => {

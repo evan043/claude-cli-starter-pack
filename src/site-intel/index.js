@@ -1,0 +1,37 @@
+/**
+ * CCASP Website Intelligence System
+ *
+ * 5-layer agentic system for understanding any website:
+ * L1: Discovery (Playwright crawler)
+ * L2: Semantic Summarization (Claude)
+ * L3: Cross-Page Graph
+ * L4: Semantic Memory (ChromaDB)
+ * L5: Judgment Agent (Priority Engine)
+ *
+ * Dual interface: CLI commands + MCP server
+ */
+
+// Orchestrator (main entry point)
+export { runFullScan, getRecommendations, getStatus, listSites } from './orchestrator.js';
+
+// Layer 1: Discovery
+export { crawlSite, normalizeUrl, isInternalUrl } from './discovery/index.js';
+export { extractComponents, detectSharedComponents } from './discovery/component-extractor.js';
+
+// Layer 2: Summarization
+export { classifyPage, detectFeatures, mapDependencies, detectSmells, summarizePage, summarizeAllPages, generateDeepAnalysisPrompt } from './summarizer/index.js';
+
+// Layer 3: Graph
+export { buildSiteGraph, toMermaid } from './graph/index.js';
+
+// Layer 4: Memory
+export { saveScan, loadLatestScan, loadScan, listScans, listDomains, toChromaDocuments } from './memory/index.js';
+
+// Layer 5: Judgment
+export { generateRecommendations, generateJudgmentPrompt, calculateHealthScore } from './judgment/index.js';
+
+// Dashboard
+export { startDashboard, SiteIntelDashboardServer } from './dashboard/index.js';
+
+export const VERSION = '0.1.0';
+export const LAYERS = ['discovery', 'summarizer', 'graph', 'memory', 'judgment'];
