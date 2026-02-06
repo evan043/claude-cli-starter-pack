@@ -200,4 +200,16 @@ export const CORE_COMMANDS = [
     category: 'Analysis',
     selected: true,
   },
+  {
+    name: 'todo-add',
+    description: 'Quick-add todo with auto-paraphrasing',
+    category: 'Planning',
+    selected: true,
+  },
+  {
+    name: 'todo',
+    description: 'Smart todo manager with AI intent routing',
+    category: 'Planning',
+    selected: true,
+  },
 ];

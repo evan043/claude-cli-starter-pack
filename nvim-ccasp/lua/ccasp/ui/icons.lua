@@ -81,6 +81,7 @@ M.docs        = ""    -- nf-fa-book
 M.workflow    = "󰃻"    -- nf-md-sitemap
 M.ai          = "󰧑"    -- nf-md-creation
 M.config      = ""    -- nf-fa-wrench
+M.todo        = "☑"    -- nf-fa-check_square_o
 
 -- Decorative separators
 M.separator   = "─"
