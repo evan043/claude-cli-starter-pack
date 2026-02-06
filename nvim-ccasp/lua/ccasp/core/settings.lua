@@ -15,6 +15,12 @@ local defaults = {
     sync_hooks = true,
     sync_agents = false,
   },
+  onboarding = {
+    first_launch_completed = false,
+    last_page_viewed = 1,
+    steps_completed = {},
+    help_opened_count = 0,
+  },
 }
 
 -- Get the settings file path

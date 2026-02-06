@@ -536,6 +536,17 @@ function M.render_help_tab(lines, state, ccasp)
     },
   }
 
+  -- Quick Actions
+  table.insert(lines, nf.welcome .. "  Getting Started & Help")
+  table.insert(lines, string.rep("─", 42))
+  table.insert(lines, "")
+  table.insert(lines, "  " .. nf.star_filled .. "  :CcaspWelcome  Getting Started guide")
+  table.insert(lines, "  " .. nf.help .. "  :CcaspHelp     Searchable help panel")
+  table.insert(lines, "  " .. nf.search_help .. "  <leader>c?     Quick help search")
+  table.insert(lines, "")
+  table.insert(lines, string.rep("─", 42))
+  table.insert(lines, "")
+
   -- Render each section
   for _, section in ipairs(key_sections) do
     -- Initialize expanded state if not set (collapsed by default)

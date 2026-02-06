@@ -113,6 +113,20 @@ ccasp init
 ---
 
 <details>
+<summary><strong>v2.8.1 — Getting Started Onboarding + Help System (nvim-ccasp)</strong> (click to expand)</summary>
+
+> **Feb 2026** — Interactive 8-page Getting Started guide with first-launch detection, ASCII diagrams, try-it actions, and a persistent Help system with 11 searchable wiki topics embedded offline.
+
+- **Getting Started Guide** — 8-page onboarding with ASCII diagrams, keybinding tables, try-it actions
+- **First-Launch Detection** — Auto-opens on first launch, remembers completion state
+- **Help System** — 11 wiki topics with Telescope fuzzy search + vim.ui.select fallback
+- **Navigation** — Page dots, `n/p` keys, `1-8` jump, `h/l` arrow support
+- **New Commands** — `:CcaspWelcome`, `:CcaspHelp`, `<leader>c?`, `<leader>cw`
+- **Sidebar Integration** — Help tab now shows Getting Started and Help links
+
+</details>
+
+<details>
 <summary><strong>v2.7.0 — Vision Multi-Instance & Decision Engine</strong> (click to expand)</summary>
 
 > **Feb 2026** — Vision Mode now supports multiple concurrent visions with a centralized registry, cross-process file locking, slug uniqueness enforcement, and an intelligent decision engine.

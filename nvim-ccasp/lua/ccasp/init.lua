@@ -133,6 +133,12 @@ M.config = {
     write_files = true,
     run_tests = true,
   },
+  -- Onboarding / Getting Started
+  onboarding = {
+    auto_open = true,       -- Open welcome on first launch
+    show_on_update = false, -- Show welcome on version update
+  },
+
   -- Keymaps
   keys = {
     prefix = "<leader>c",
@@ -332,6 +338,19 @@ function M.setup(opts)
   M.state.initialized = true
 
   vim.notify("CCASP.nvim v" .. M.version .. " loaded (" .. M.config.layout .. " layout)", vim.log.levels.INFO)
+
+  -- Check for first-launch onboarding (deferred to let UI settle)
+  if M.config.onboarding and M.config.onboarding.auto_open then
+    vim.defer_fn(function()
+      local ob_ok, onboarding_state = pcall(require, "ccasp.onboarding.state")
+      if ob_ok and onboarding_state.check_first_launch() then
+        local ob_init_ok, onboarding = pcall(require, "ccasp.onboarding")
+        if ob_init_ok and onboarding.open_welcome then
+          onboarding.open_welcome()
+        end
+      end
+    end, 500)
+  end
 end
 
 -- Open CCASP (classic layout: sidebar + terminal, appshell: full chrome)
@@ -739,6 +758,16 @@ function M.setup_keymaps()
   if M.is_appshell() then
     setup_appshell_keymaps()
   end
+
+  -- Help & Onboarding keymaps (all layouts)
+  local prefix = M.config.keys and M.config.keys.prefix or "<leader>c"
+  vim.keymap.set("n", prefix .. "?", function()
+    require("ccasp.help").toggle()
+  end, { desc = "CCASP: Toggle Help panel" })
+
+  vim.keymap.set("n", prefix .. "w", function()
+    require("ccasp.onboarding").toggle_welcome()
+  end, { desc = "CCASP: Toggle Getting Started" })
 end
 
 -- Setup autocommands

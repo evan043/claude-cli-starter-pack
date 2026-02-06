@@ -114,6 +114,23 @@ M.groups = {
   -- ─── Appshell: Right Panel ────────────────────────────────
   CcaspRightPanelBg   = { bg = "#0d1117", fg = "#c9d1d9" },     -- Right panel background
   CcaspRightPanelBorder = { fg = "#1e3a5f" },                   -- Right panel border
+
+  -- ─── Onboarding / Getting Started ───────────────────────
+  CcaspOnboardingTitle   = { fg = "#e5c07b", bold = true },       -- Page title (gold)
+  CcaspOnboardingHeader  = { fg = "#61afef", bold = true },       -- Section header (blue)
+  CcaspOnboardingDiagram = { fg = "#56b6c2" },                    -- ASCII diagram (cyan)
+  CcaspOnboardingKey     = { fg = "#bd93f9", bold = true },       -- Keybinding highlight (purple)
+  CcaspOnboardingTip     = { fg = "#98c379", italic = true },     -- Tip text (green)
+  CcaspOnboardingTryIt   = { fg = "#ff79c6", bold = true },       -- Try-it action (pink)
+  CcaspOnboardingNav     = { fg = "#6272a4" },                    -- Navigation hints (muted)
+  CcaspOnboardingPage    = { fg = "#5c6370", italic = true },     -- Page indicator (dim)
+  CcaspOnboardingLink    = { fg = "#8be9fd", underline = true },  -- Clickable links (cyan)
+  CcaspOnboardingLogo    = { fg = "#00ff88", bold = true },       -- Logo text (bright green)
+
+  -- ─── Help System ────────────────────────────────────────
+  CcaspHelpTitle   = { fg = "#e5c07b", bold = true },             -- Help panel title
+  CcaspHelpTopic   = { fg = "#61afef" },                          -- Topic list item
+  CcaspHelpSearch  = { fg = "#f1fa8c", bold = true },             -- Search match
 }
 
 -- Apply all highlight groups

@@ -83,6 +83,17 @@ M.ai          = "󰧑"    -- nf-md-creation
 M.config      = ""    -- nf-fa-wrench
 M.todo        = "☑"    -- nf-fa-check_square_o
 
+-- Onboarding / Getting Started
+M.welcome     = "󰋗"    -- nf-md-help_circle
+M.book        = ""    -- nf-fa-book
+M.lightbulb   = ""    -- nf-fa-lightbulb_o
+M.check       = ""    -- nf-fa-check
+M.star_filled = ""    -- nf-fa-star (filled)
+M.wiki        = "󰖬"    -- nf-md-wikipedia
+M.search_help = ""    -- nf-fa-search
+M.topic       = ""    -- nf-fa-file_text_o
+M.breadcrumb  = ""    -- nf-fa-chevron_right
+
 -- Decorative separators
 M.separator   = "─"
 M.dot         = "·"

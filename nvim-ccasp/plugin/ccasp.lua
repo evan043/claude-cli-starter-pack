@@ -114,6 +114,15 @@ vim.api.nvim_create_user_command("CcaspToggleRightPanel", function()
   end
 end, { desc = "Toggle CCASP right panel" })
 
+-- Onboarding commands (Getting Started)
+vim.api.nvim_create_user_command("CcaspWelcome", function()
+  require("ccasp.onboarding").open_welcome()
+end, { desc = "Open CCASP Getting Started guide" })
+
+vim.api.nvim_create_user_command("CcaspHelp", function()
+  require("ccasp.help").open()
+end, { desc = "Open CCASP Help panel" })
+
 -- Health check registration
 vim.api.nvim_create_autocmd("User", {
   pattern = "LazyHealth",
