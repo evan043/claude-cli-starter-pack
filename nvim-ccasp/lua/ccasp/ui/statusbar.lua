@@ -1,23 +1,26 @@
 -- CCASP Statusbar Component
--- Shows CCASP status in the statusline
+-- Shows CCASP status in the statusline with Nerd Font icons
 
 local M = {}
+local nf = require("ccasp.ui.icons")
 
 -- Get short status string for statusline
 function M.get()
   local ccasp = require("ccasp")
   local status = ccasp.get_status()
 
+  local sync_icon = status.sync_status == "synced" and nf.sync_ok or nf.sync_warn
+
   local parts = {
-    "CCASP",
+    nf.ccasp .. " CCASP",
     "v" .. status.version,
-    "Perms: " .. status.permissions_mode,
-    "Updates: " .. status.update_mode,
-    "Protected: " .. status.protected_count,
-    "Sync: " .. (status.sync_status == "synced" and "✓" or "✗"),
+    nf.perm_mode(status.permissions_mode) .. " " .. status.permissions_mode,
+    nf.update_mode(status.update_mode) .. " " .. status.update_mode,
+    nf.shield .. " " .. status.protected_count,
+    sync_icon,
   }
 
-  return table.concat(parts, " │ ")
+  return table.concat(parts, " " .. nf.pipe .. " ")
 end
 
 -- Get full status line for sidebar footer
@@ -25,33 +28,21 @@ function M.get_full()
   local ccasp = require("ccasp")
   local status = ccasp.get_status()
 
-  -- Permission mode indicator with icon
-  local perm_icons = {
-    auto = "🤖",
-    plan = "📝",
-    ask = "❓",
-  }
-  local perm_icon = perm_icons[status.permissions_mode] or "⚙️"
-
-  -- Update mode indicator
-  local update_icons = {
-    auto = "🔄",
-    manual = "✋",
-    prompt = "💬",
-  }
-  local update_icon = update_icons[status.update_mode] or "⚙️"
-
-  -- Sync status
-  local sync_icon = status.sync_status == "synced" and "✅" or "⚠️"
+  local perm_icon = nf.perm_mode(status.permissions_mode)
+  local update_icon = nf.update_mode(status.update_mode)
+  local sync_icon = status.sync_status == "synced" and nf.sync_ok or nf.sync_warn
 
   return string.format(
-    "CCASP v%s │ %s %s │ %s %s │ 🛡️ %d │ %s",
+    "CCASP v%s %s %s %s %s %s %s %s %d %s %s",
     status.version,
-    perm_icon,
-    status.permissions_mode:sub(1, 1):upper() .. status.permissions_mode:sub(2),
-    update_icon,
-    status.update_mode:sub(1, 1):upper() .. status.update_mode:sub(2),
+    nf.pipe,
+    perm_icon .. " " .. status.permissions_mode:sub(1, 1):upper() .. status.permissions_mode:sub(2),
+    nf.pipe,
+    update_icon .. " " .. status.update_mode:sub(1, 1):upper() .. status.update_mode:sub(2),
+    nf.pipe,
+    nf.shield,
     status.protected_count,
+    nf.pipe,
     sync_icon
   )
 end
@@ -63,9 +54,9 @@ function M.get_minimal()
 
   local perm_char = status.permissions_mode:sub(1, 1):upper()
   local update_char = status.update_mode:sub(1, 1):upper()
-  local sync_char = status.sync_status == "synced" and "✓" or "✗"
+  local sync_icon = status.sync_status == "synced" and nf.sync_ok or nf.sync_warn
 
-  return string.format("[%s|%s|%d|%s]", perm_char, update_char, status.protected_count, sync_char)
+  return string.format("[%s%s%s%s%d%s%s]", perm_char, nf.pipe, update_char, nf.pipe, status.protected_count, nf.pipe, sync_icon)
 end
 
 -- Update statusbar (trigger redraw)

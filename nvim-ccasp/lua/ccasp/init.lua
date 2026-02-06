@@ -281,6 +281,26 @@ function M.setup(opts)
   M.session_titlebar = safe_require("ccasp.session_titlebar")
   setup_module("session_titlebar", M.session_titlebar, {})
 
+  -- Initialize modern UI modules (highlights, topbar, logo)
+  if M.ui then
+    -- Apply all highlight groups
+    if M.ui.highlights then
+      M.ui.highlights.setup()
+    end
+
+    -- Initialize topbar (horizontal command strip)
+    if M.ui.topbar then
+      M.ui.topbar.setup()
+      -- Enable tabline display
+      vim.o.showtabline = 2
+    end
+
+    -- Initialize logo module
+    if M.ui.logo then
+      M.ui.logo.setup()
+    end
+  end
+
   -- Setup keymaps
   M.setup_keymaps()
 
@@ -297,6 +317,14 @@ function M.open()
   if M.is_classic() then
     M.ui.sidebar.open()
     M.state.sidebar_open = true
+    -- Show animated logo
+    if M.ui.logo then
+      M.ui.logo.show()
+    end
+    -- Refresh topbar
+    if M.ui.topbar then
+      M.ui.topbar.refresh()
+    end
   else
     M.panels.dashboard.open()
   end
@@ -308,6 +336,10 @@ function M.close()
     M.ui.sidebar.close()
     M.terminal.close()
     M.state.sidebar_open = false
+    -- Hide logo
+    if M.ui.logo then
+      M.ui.logo.hide()
+    end
   else
     -- Close any open panels
     if M.panels.dashboard.is_open then
@@ -369,6 +401,11 @@ function M.run_command(cmd_name)
 
     -- Execute in terminal
     M.terminal.run_command(cmd_name, options)
+
+    -- Record usage in topbar
+    if M.ui and M.ui.topbar then
+      M.ui.topbar.record_usage(cmd_name)
+    end
 
     -- Save as last command
     M.state.last_command = cmd_name

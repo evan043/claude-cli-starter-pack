@@ -11,121 +11,123 @@ local last_scan_time = 0
 -- Command sections mapping (organized by developer workflow lifecycle)
 -- Setup → Explore → Plan → Build → Refactor → Test → Deploy → Operate → Maintain
 -- NOTE: Pattern order matters! More specific patterns should come before general ones
+local nf = require("ccasp.ui.icons")
+
 local SECTION_PATTERNS = {
-  -- 🧭 CORE NAVIGATION & ENTRY POINTS
-  { name = "🧭 NAVIGATION", pattern = "^menu$", order = 1 },
-  { name = "🧭 NAVIGATION", pattern = "^menu%-", order = 1 },
-  { name = "🧭 NAVIGATION", pattern = "^ccasp%-panel", order = 1 },
-  { name = "🧭 NAVIGATION", pattern = "^INDEX$", order = 1 },
-  { name = "🧭 NAVIGATION", pattern = "^README$", order = 1 },
+  -- CORE NAVIGATION & ENTRY POINTS
+  { name = nf.dashboard .. " NAVIGATION", pattern = "^menu$", order = 1 },
+  { name = nf.dashboard .. " NAVIGATION", pattern = "^menu%-", order = 1 },
+  { name = nf.dashboard .. " NAVIGATION", pattern = "^ccasp%-panel", order = 1 },
+  { name = nf.dashboard .. " NAVIGATION", pattern = "^INDEX$", order = 1 },
+  { name = nf.dashboard .. " NAVIGATION", pattern = "^README$", order = 1 },
 
-  -- 🛠 PROJECT INITIALIZATION & SETUP
-  { name = "🛠 SETUP", pattern = "^init%-ccasp", order = 2 },
-  { name = "🛠 SETUP", pattern = "^ccasp%-setup", order = 2 },
-  { name = "🛠 SETUP", pattern = "^project%-implementation", order = 2 },
-  { name = "🛠 SETUP", pattern = "^detect%-tech", order = 2 },
-  { name = "🛠 SETUP", pattern = "^generate%-agents", order = 2 },
-  { name = "🛠 SETUP", pattern = "^orchestration%-guide", order = 2 },
+  -- PROJECT INITIALIZATION & SETUP
+  { name = nf.config .. " SETUP", pattern = "^init%-ccasp", order = 2 },
+  { name = nf.config .. " SETUP", pattern = "^ccasp%-setup", order = 2 },
+  { name = nf.config .. " SETUP", pattern = "^project%-implementation", order = 2 },
+  { name = nf.config .. " SETUP", pattern = "^detect%-tech", order = 2 },
+  { name = nf.config .. " SETUP", pattern = "^generate%-agents", order = 2 },
+  { name = nf.config .. " SETUP", pattern = "^orchestration%-guide", order = 2 },
 
-  -- 🔍 EXPLORATION & DISCOVERY
-  { name = "🔍 EXPLORE", pattern = "^project%-explorer", order = 3 },
-  { name = "🔍 EXPLORE", pattern = "^codebase%-explorer", order = 3 },
-  { name = "🔍 EXPLORE", pattern = "^explore%-mcp", order = 3 },
-  { name = "🔍 EXPLORE", pattern = "^research%-", order = 3 },
-  { name = "🔍 EXPLORE", pattern = "^context%-audit", order = 3 },
-  { name = "🔍 EXPLORE", pattern = "^claude%-audit", order = 3 },
+  -- EXPLORATION & DISCOVERY
+  { name = nf.search .. " EXPLORE", pattern = "^project%-explorer", order = 3 },
+  { name = nf.search .. " EXPLORE", pattern = "^codebase%-explorer", order = 3 },
+  { name = nf.search .. " EXPLORE", pattern = "^explore%-mcp", order = 3 },
+  { name = nf.search .. " EXPLORE", pattern = "^research%-", order = 3 },
+  { name = nf.search .. " EXPLORE", pattern = "^context%-audit", order = 3 },
+  { name = nf.search .. " EXPLORE", pattern = "^claude%-audit", order = 3 },
 
-  -- 🧠 PLANNING & ROADMAP
-  { name = "🧠 PLANNING", pattern = "^phase%-dev%-plan", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^phase%-track", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^phase%-", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^roadmap%-edit", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^roadmap%-status", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^roadmap%-track", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^roadmap%-", order = 4 },
-  { name = "🧠 PLANNING", pattern = "^create%-roadmap", order = 4 },
+  -- PLANNING & ROADMAP
+  { name = nf.model .. " PLANNING", pattern = "^phase%-dev%-plan", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^phase%-track", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^phase%-", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^roadmap%-edit", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^roadmap%-status", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^roadmap%-track", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^roadmap%-", order = 4 },
+  { name = nf.model .. " PLANNING", pattern = "^create%-roadmap", order = 4 },
 
-  -- 🤖 AGENTS, SKILLS & AUTOMATION
-  { name = "🤖 AUTOMATION", pattern = "^create%-agent", order = 5 },
-  { name = "🤖 AUTOMATION", pattern = "^create%-skill", order = 5 },
-  { name = "🤖 AUTOMATION", pattern = "^create%-hook", order = 5 },
-  { name = "🤖 AUTOMATION", pattern = "^create%-smoke%-test", order = 5 },
-  { name = "🤖 AUTOMATION", pattern = "^create%-task%-list%-for%-issue", order = 5 },
-  { name = "🤖 AUTOMATION", pattern = "^create%-task%-list", order = 5 },
+  -- AGENTS, SKILLS & AUTOMATION
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-agent", order = 5 },
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-skill", order = 5 },
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-hook", order = 5 },
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-smoke%-test", order = 5 },
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-task%-list%-for%-issue", order = 5 },
+  { name = nf.auto .. " AUTOMATION", pattern = "^create%-task%-list", order = 5 },
 
-  -- 🧩 TASKS, ISSUES & GITHUB FLOW
-  { name = "🧩 GITHUB", pattern = "^github%-epic%-menu", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-epic%-status", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-menu%-issues%-list", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-project%-menu", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-task%-multiple", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-task%-start", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-task", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^github%-", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^create%-github%-epic", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^issue%-templates%-sync%-executor", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^issue%-templates%-sync", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^issue%-templates", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^pr%-merge", order = 6 },
-  { name = "🧩 GITHUB", pattern = "^pr%-", order = 6 },
+  -- TASKS, ISSUES & GITHUB FLOW
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-epic%-menu", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-epic%-status", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-menu%-issues%-list", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-project%-menu", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-task%-multiple", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-task%-start", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-task", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^github%-", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^create%-github%-epic", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^issue%-templates%-sync%-executor", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^issue%-templates%-sync", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^issue%-templates", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^pr%-merge", order = 6 },
+  { name = nf.git_branch .. " GITHUB", pattern = "^pr%-", order = 6 },
 
-  -- 🧱 DEVELOPMENT & EXECUTION
-  { name = "🧱 DEVELOP", pattern = "^dev%-mode%-deploy%-to%-projects", order = 7 },
-  { name = "🧱 DEVELOP", pattern = "^dev%-mode%-merge", order = 7 },
-  { name = "🧱 DEVELOP", pattern = "^dev%-mode", order = 7 },
-  { name = "🧱 DEVELOP", pattern = "^ask%-claude", order = 7 },
-  { name = "🧱 DEVELOP", pattern = "^ralph$", order = 7 },
+  -- DEVELOPMENT & EXECUTION
+  { name = nf.dev .. " DEVELOP", pattern = "^dev%-mode%-deploy%-to%-projects", order = 7 },
+  { name = nf.dev .. " DEVELOP", pattern = "^dev%-mode%-merge", order = 7 },
+  { name = nf.dev .. " DEVELOP", pattern = "^dev%-mode", order = 7 },
+  { name = nf.dev .. " DEVELOP", pattern = "^ask%-claude", order = 7 },
+  { name = nf.dev .. " DEVELOP", pattern = "^ralph$", order = 7 },
 
-  -- ♻️ REFACTORING & CODE HEALTH
-  { name = "♻️ REFACTOR", pattern = "^enhanced%-refactor%-analyze%-executor", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^enhanced%-refactor%-analyze", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^enhanced%-refactor", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-analyze", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-check", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-cleanup", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-prep", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-workflow", order = 8 },
-  { name = "♻️ REFACTOR", pattern = "^refactor%-", order = 8 },
+  -- REFACTORING & CODE HEALTH
+  { name = nf.reload .. " REFACTOR", pattern = "^enhanced%-refactor%-analyze%-executor", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^enhanced%-refactor%-analyze", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^enhanced%-refactor", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-analyze", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-check", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-cleanup", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-prep", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-workflow", order = 8 },
+  { name = nf.reload .. " REFACTOR", pattern = "^refactor%-", order = 8 },
 
-  -- 🧪 TESTING & QUALITY
-  { name = "🧪 TESTING", pattern = "^e2e%-test", order = 9 },
-  { name = "🧪 TESTING", pattern = "^e2e%-", order = 9 },
-  { name = "🧪 TESTING", pattern = "^golden%-master", order = 9 },
+  -- TESTING & QUALITY
+  { name = nf.test .. " TESTING", pattern = "^e2e%-test", order = 9 },
+  { name = nf.test .. " TESTING", pattern = "^e2e%-", order = 9 },
+  { name = nf.test .. " TESTING", pattern = "^golden%-master", order = 9 },
 
-  -- 🚀 DEPLOYMENT
-  { name = "🚀 DEPLOY", pattern = "^deploy%-full", order = 10 },
-  { name = "🚀 DEPLOY", pattern = "^deploy%-", order = 10 },
-  { name = "🚀 DEPLOY", pattern = "^tunnel%-start", order = 10 },
-  { name = "🚀 DEPLOY", pattern = "^tunnel%-stop", order = 10 },
-  { name = "🚀 DEPLOY", pattern = "^tunnel%-", order = 10 },
+  -- DEPLOYMENT
+  { name = nf.deploy .. " DEPLOY", pattern = "^deploy%-full", order = 10 },
+  { name = nf.deploy .. " DEPLOY", pattern = "^deploy%-", order = 10 },
+  { name = nf.deploy .. " DEPLOY", pattern = "^tunnel%-start", order = 10 },
+  { name = nf.deploy .. " DEPLOY", pattern = "^tunnel%-stop", order = 10 },
+  { name = nf.deploy .. " DEPLOY", pattern = "^tunnel%-", order = 10 },
 
-  -- 👁 VISION MODE
-  { name = "👁 VISION", pattern = "^vision%-init", order = 11 },
-  { name = "👁 VISION", pattern = "^vision%-status", order = 11 },
-  { name = "👁 VISION", pattern = "^vision%-adjust", order = 11 },
-  { name = "👁 VISION", pattern = "^vision%-run", order = 11 },
-  { name = "👁 VISION", pattern = "^vision%-dashboard", order = 11 },
-  { name = "👁 VISION", pattern = "^vision%-", order = 11 },
+  -- VISION MODE
+  { name = nf.ai .. " VISION", pattern = "^vision%-init", order = 11 },
+  { name = nf.ai .. " VISION", pattern = "^vision%-status", order = 11 },
+  { name = nf.ai .. " VISION", pattern = "^vision%-adjust", order = 11 },
+  { name = nf.ai .. " VISION", pattern = "^vision%-run", order = 11 },
+  { name = nf.ai .. " VISION", pattern = "^vision%-dashboard", order = 11 },
+  { name = nf.ai .. " VISION", pattern = "^vision%-", order = 11 },
 
-  -- 🧬 VDB (VECTOR/DATA/BRAIN)
-  { name = "🧬 VDB", pattern = "^vdb%-execute%-next", order = 12 },
-  { name = "🧬 VDB", pattern = "^vdb%-init", order = 12 },
-  { name = "🧬 VDB", pattern = "^vdb%-scan", order = 12 },
-  { name = "🧬 VDB", pattern = "^vdb%-status", order = 12 },
-  { name = "🧬 VDB", pattern = "^vdb%-", order = 12 },
+  -- VDB (VECTOR/DATA/BRAIN)
+  { name = nf.model .. " VDB", pattern = "^vdb%-execute%-next", order = 12 },
+  { name = nf.model .. " VDB", pattern = "^vdb%-init", order = 12 },
+  { name = nf.model .. " VDB", pattern = "^vdb%-scan", order = 12 },
+  { name = nf.model .. " VDB", pattern = "^vdb%-status", order = 12 },
+  { name = nf.model .. " VDB", pattern = "^vdb%-", order = 12 },
 
-  -- 😊 HAPPY / UX FLOW
-  { name = "😊 HAPPY", pattern = "^happy%-start%-cd", order = 13 },
-  { name = "😊 HAPPY", pattern = "^happy%-start", order = 13 },
-  { name = "😊 HAPPY", pattern = "^happy%-", order = 13 },
+  -- HAPPY / UX FLOW
+  { name = nf.primary .. " HAPPY", pattern = "^happy%-start%-cd", order = 13 },
+  { name = nf.primary .. " HAPPY", pattern = "^happy%-start", order = 13 },
+  { name = nf.primary .. " HAPPY", pattern = "^happy%-", order = 13 },
 
-  -- 🔄 UPDATES & MAINTENANCE
-  { name = "🔄 MAINTAIN", pattern = "^update%-check", order = 14 },
-  { name = "🔄 MAINTAIN", pattern = "^update%-smart", order = 14 },
-  { name = "🔄 MAINTAIN", pattern = "^update%-", order = 14 },
+  -- UPDATES & MAINTENANCE
+  { name = nf.reload .. " MAINTAIN", pattern = "^update%-check", order = 14 },
+  { name = nf.reload .. " MAINTAIN", pattern = "^update%-smart", order = 14 },
+  { name = nf.reload .. " MAINTAIN", pattern = "^update%-", order = 14 },
 
   -- CATCH-ALL (must be last)
-  { name = "📦 OTHER", pattern = ".*", order = 99 },
+  { name = nf.commands .. " OTHER", pattern = ".*", order = 99 },
 }
 
 -- Get commands directory path
@@ -190,7 +192,7 @@ local function get_section(cmd_name)
       return section.name, section.order
     end
   end
-  return "📦 OTHER", 99
+  return nf.commands .. " OTHER", 99
 end
 
 -- Initialize empty sections

@@ -1,10 +1,12 @@
 -- CCASP Sidebar UI Component
 -- Tabbed sidebar with command browser, settings, protected commands, and status
+-- Modernized with Nerd Font icons and dark theme
 
 local M = {}
 local renderers = require("ccasp.ui.sidebar.renderers")
 local keybindings = require("ccasp.ui.sidebar.keybindings")
 local helpers = require("ccasp.ui.sidebar.helpers")
+local nf = require("ccasp.ui.icons")
 
 -- UI state
 local state = {
@@ -36,22 +38,18 @@ local function render_content()
   state.section_lines = {}
   state.description_lines = {}
 
-  -- Tab bar (compact vertical format)
-  local tabs = {
-    { num = "1", name = "Commands" },
-    { num = "2", name = "Settings" },
-    { num = "3", name = "Protected" },
-    { num = "4", name = "Status" },
-    { num = "5", name = "Keys" },
-    { num = "6", name = "Assets" },
-    { num = "7", name = "Shortcuts" },
-  }
-  for i, tab in ipairs(tabs) do
-    local indicator = (i == ccasp.state.active_tab) and "▸" or " "
-    local bracket_l = (i == ccasp.state.active_tab) and "[" or " "
-    local bracket_r = (i == ccasp.state.active_tab) and "]" or " "
-    table.insert(lines, string.format("%s%s%s%s %s", indicator, bracket_l, tab.num, bracket_r, tab.name))
+  -- Compact tab indicator (single line instead of vertical list)
+  local tab_names = { "Cmds", "Set", "Prot", "Stat", "Keys", "Ast", "Act" }
+  local tab_icons = { nf.commands, nf.settings, nf.shield, nf.status, nf.keyboard, nf.assets, nf.shortcuts }
+  local tab_parts = {}
+  for i, name in ipairs(tab_names) do
+    if i == ccasp.state.active_tab then
+      table.insert(tab_parts, "[" .. tab_icons[i] .. name .. "]")
+    else
+      table.insert(tab_parts, " " .. i .. " ")
+    end
   end
+  table.insert(lines, table.concat(tab_parts, ""))
   table.insert(lines, string.rep("─", 40))
 
   -- Dispatch to tab-specific renderer
@@ -86,22 +84,27 @@ local function render_content()
   table.insert(lines, string.rep("─", 42))
 
   -- Status indicators row 1: Mode & Updates
-  local perm_icon = ({ auto = "🤖", plan = "📝", ask = "❓" })[status.permissions_mode] or "⚙️"
-  local update_icon = ({ auto = "🔄", manual = "✋", prompt = "💬" })[status.update_mode] or "⚙️"
-  table.insert(lines, string.format(" %s %s │ %s %s │ 🛡️ %d",
+  local perm_icon = nf.perm_mode(status.permissions_mode)
+  local update_icon = nf.update_mode(status.update_mode)
+  table.insert(lines, string.format(" %s %s %s %s %s %s %d",
     perm_icon,
     status.permissions_mode:sub(1, 1):upper() .. status.permissions_mode:sub(2),
-    update_icon,
-    status.update_mode:sub(1, 1):upper() .. status.update_mode:sub(2),
+    nf.pipe,
+    update_icon .. " " .. status.update_mode:sub(1, 1):upper() .. status.update_mode:sub(2),
+    nf.pipe,
+    nf.shield,
     status.protected_count
   ))
 
   -- Status indicators row 2: Claude CLI & Sync
-  local claude_status = terminal.is_claude_running() and "✅ Claude" or "⏳ Claude"
-  local sync_icon = status.sync_status == "synced" and "✅" or "⚠️"
-  table.insert(lines, string.format(" %s │ Sync: %s │ v%s",
+  local claude_icon = terminal.is_claude_running() and nf.claude_on or nf.claude_off
+  local claude_status = claude_icon .. " Claude"
+  local sync_icon = status.sync_status == "synced" and nf.sync_ok or nf.sync_warn
+  table.insert(lines, string.format(" %s %s Sync: %s %s v%s",
     claude_status,
+    nf.pipe,
     sync_icon,
+    nf.pipe,
     status.version
   ))
 
@@ -133,6 +136,9 @@ function M.open()
   vim.wo[state.win].relativenumber = false
   vim.wo[state.win].signcolumn = "no"
   vim.wo[state.win].winfixwidth = true
+
+  -- Modern dark theme
+  vim.wo[state.win].winhighlight = "Normal:CcaspSidebarBg,EndOfBuffer:CcaspSidebarBg,WinSeparator:CcaspBorderGlow"
 
   -- Set up keybindings
   M._setup_keybindings()
@@ -245,16 +251,36 @@ function M.refresh()
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   vim.bo[state.buf].modifiable = false
 
-  -- Apply highlights for description lines (italic, different color)
-  -- Create namespace for highlights if not exists
+  -- Apply highlights
   local ns_id = vim.api.nvim_create_namespace("ccasp_sidebar")
   vim.api.nvim_buf_clear_namespace(state.buf, ns_id, 0, -1)
 
-  -- Apply each highlight
+  -- Apply explicit highlights from renderers
   for _, hl in ipairs(highlights) do
     local line_num, col_start, col_end, hl_group = hl[1], hl[2], hl[3], hl[4]
-    -- Line numbers are 1-indexed in our array but 0-indexed for nvim API
     pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, hl_group, line_num - 1, col_start, col_end)
+  end
+
+  -- Apply modern highlights to structural elements
+  local total_lines = vim.api.nvim_buf_line_count(state.buf)
+  for i = 0, total_lines - 1 do
+    local line = vim.api.nvim_buf_get_lines(state.buf, i, i + 1, false)[1] or ""
+    -- Tab indicator line (first line)
+    if i == 0 then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, "CcaspTopbarBg", i, 0, -1)
+    -- Separator lines
+    elseif line:match("^[─]+$") then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, "CcaspSeparator", i, 0, -1)
+    -- Section headers (▼ or ► prefix)
+    elseif line:match("^[▼►]") then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, "CcaspCmdSection", i, 0, -1)
+    -- Selected command (► prefix with indent)
+    elseif line:match("^  ► ") then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, "CcaspCmdSelected", i, 0, -1)
+    -- Regular command (indented)
+    elseif state.command_lines[i + 1] then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns_id, "CcaspCmdName", i, 0, -1)
+    end
   end
 end
 

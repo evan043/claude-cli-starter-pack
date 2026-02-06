@@ -134,10 +134,11 @@ function M.update(session_id)
   vim.wo[session.winid].winbar = winbar
 
   -- Set window border highlight based on active state
+  local color_idx_val = session_colors[session_id] or 1
   if is_active then
-    vim.wo[session.winid].winhighlight = "Normal:Normal,WinBar:CcaspWinbarActive" .. (session_colors[session_id] or 1) .. ",WinBarNC:CcaspWinbar" .. (session_colors[session_id] or 1)
+    vim.wo[session.winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg,WinBar:CcaspWinbarActive" .. color_idx_val .. ",WinBarNC:CcaspWinbar" .. color_idx_val .. ",WinSeparator:CcaspBorderActive"
   else
-    vim.wo[session.winid].winhighlight = "Normal:Normal"
+    vim.wo[session.winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg,WinSeparator:CcaspBorderInactive"
   end
 
   -- Setup keymaps for this buffer
@@ -383,9 +384,8 @@ local function handle_session_terminal_focus()
   if session then
     local bufnr = vim.api.nvim_win_get_buf(current_win)
     if vim.bo[bufnr].buftype == "terminal" then
-      -- Move cursor to last line (input prompt) before entering terminal mode
-      local line_count = vim.api.nvim_buf_line_count(bufnr)
-      vim.api.nvim_win_set_cursor(current_win, { line_count, 0 })
+      -- Scroll to bottom using native motion (respects terminal viewport, unlike buf_line_count)
+      vim.cmd("normal! G")
       vim.cmd("startinsert")
     end
   end

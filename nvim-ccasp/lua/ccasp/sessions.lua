@@ -85,8 +85,36 @@ end
 -- Equalize all session windows
 function M.rearrange()
   cleanup_invalid()
-  -- Just equalize - let Vim handle the layout
-  vim.cmd("wincmd =")
+  local sessions = M.list()
+  local count = #sessions
+  if count == 0 then return end
+
+  -- Calculate available space (minus sidebar width)
+  local sidebar_ok, sidebar = pcall(require, "ccasp.ui.sidebar")
+  local sidebar_width = 0
+  if sidebar_ok and sidebar.get_win then
+    local sidebar_win = sidebar.get_win()
+    if sidebar_win and vim.api.nvim_win_is_valid(sidebar_win) then
+      sidebar_width = vim.api.nvim_win_get_width(sidebar_win) + 1
+    end
+  end
+  local total_width = vim.o.columns - sidebar_width - 1
+  local total_height = vim.o.lines - 4 -- minus topbar, bottombar, cmdline
+
+  -- Calculate grid dimensions
+  local cols = count <= 2 and count or 2
+  local rows = math.ceil(count / cols)
+  local cell_width = math.floor(total_width / cols)
+  local cell_height = math.floor(total_height / rows)
+
+  -- Apply exact dimensions to each window
+  for _, session in ipairs(sessions) do
+    if session.winid and vim.api.nvim_win_is_valid(session.winid) then
+      vim.api.nvim_win_set_width(session.winid, cell_width)
+      vim.api.nvim_win_set_height(session.winid, cell_height)
+    end
+  end
+
   -- Update all titlebars
   get_titlebar().update_all()
 end
@@ -156,6 +184,9 @@ function M.spawn()
   vim.cmd("terminal")
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+
+  -- Apply pure black terminal background
+  vim.wo[winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg"
 
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
@@ -240,10 +271,8 @@ function M.focus(id)
   local session = state.sessions[id]
   if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
     vim.api.nvim_set_current_win(session.winid)
-    -- Move cursor to last line (input prompt) before entering terminal mode
-    local bufnr = vim.api.nvim_win_get_buf(session.winid)
-    local line_count = vim.api.nvim_buf_line_count(bufnr)
-    vim.api.nvim_win_set_cursor(session.winid, { line_count, 0 })
+    -- Scroll to bottom using native motion (respects terminal viewport, unlike buf_line_count)
+    vim.cmd("normal! G")
     vim.cmd("startinsert")
   end
 end
@@ -421,5 +450,15 @@ end
 function M.update_titlebars()
   get_titlebar().update_all()
 end
+
+-- Re-arrange on resize
+vim.api.nvim_create_autocmd("VimResized", {
+  group = vim.api.nvim_create_augroup("CcaspSessionResize", { clear = true }),
+  callback = function()
+    vim.defer_fn(function()
+      M.rearrange()
+    end, 100)
+  end,
+})
 
 return M

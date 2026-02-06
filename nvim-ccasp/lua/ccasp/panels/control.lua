@@ -1,11 +1,17 @@
--- ccasp/panels/control.lua - Main control panel for CCASP
+-- ccasp/panels/control.lua - CCASP Control Panel (Bottom Stripe)
+-- Fixed 4-line horizontal stripe at the bottom of the editor
+-- Dense, information-rich layout with Nerd Font icons and glow styling
 local M = {}
 local helpers = require("ccasp.panels.helpers")
+local nf = require("ccasp.ui.icons")
 
 -- State
 M.bufnr = nil
 M.winid = nil
 M.is_open = false
+
+-- Height of the bottom stripe (lines)
+local STRIPE_HEIGHT = 4
 
 -- Get dependencies
 local function get_ccasp()
@@ -24,43 +30,24 @@ local function get_prompt_injector()
   return require("ccasp.prompt_injector")
 end
 
-local function get_openai()
-  return require("ccasp.openai")
-end
-
--- Icons and formatting
-local icons = {
-  enabled = "",
-  disabled = "",
-  running = "",
-  stopped = "",
-  failed = "",
-  model = "",
-  agents = "",
-  tokens = "",
-  hook = "",
-  section = "─",
-}
-
 -- Feature definitions with their config paths
 M.features = {
-  { key = "a", name = "Auto Commit", path = "hooks.autoCommit", default = false },
-  { key = "w", name = "Write Files", path = "hooks.writeFiles", default = true },
-  { key = "t", name = "Run Tests", path = "hooks.runTests", default = true },
-  { key = "g", name = "GitHub Sync", path = "versionControl.autoSync", default = false },
-  { key = "p", name = "Phased Dev", path = "phasedDevelopment.enabled", default = true },
+  { key = "a", name = "Commit", path = "hooks.autoCommit", default = false },
+  { key = "w", name = "Write", path = "hooks.writeFiles", default = true },
+  { key = "t", name = "Test", path = "hooks.runTests", default = true },
+  { key = "g", name = "GitHub", path = "versionControl.autoSync", default = false },
+  { key = "p", name = "Phased", path = "phasedDevelopment.enabled", default = true },
   { key = "h", name = "Hooks", path = "hooks.enabled", default = true },
-  { key = "k", name = "Token Tracking", path = "tokenManagement.enabled", default = false },
-  { key = "i", name = "Prompt Injector", path = "promptInjector.enabled", default = false, special = "prompt_injector" },
+  { key = "k", name = "Tokens", path = "tokenManagement.enabled", default = false },
+  { key = "i", name = "PI", path = "promptInjector.enabled", default = false, special = "prompt_injector" },
 }
 
 -- Model options
 M.models = { "haiku", "sonnet", "opus" }
-M.current_model_idx = 2 -- Default to sonnet
+M.current_model_idx = 2
 
--- Create the control panel content
+-- Render the dense bottom stripe content (4 lines)
 function M.render()
-  local ccasp = get_ccasp()
   local config = get_config()
   local agents = get_agents()
 
@@ -68,183 +55,116 @@ function M.render()
   local agent_status = agents.get_status()
   local token_usage = config.get_token_usage()
 
-  local lines = {}
-  local highlights = {} -- { {line, col_start, col_end, hl_group} }
-
-  -- Header
-  table.insert(lines, "")
-  table.insert(lines, "  ╔═══════════════════════════════════════╗")
-  table.insert(lines, "  ║       CCASP Control Panel             ║")
-  table.insert(lines, "  ╚═══════════════════════════════════════╝")
-  table.insert(lines, "")
-
-  -- Agent Status Section
-  table.insert(lines, "  " .. icons.agents .. " Agents")
-  table.insert(lines, "  " .. string.rep(icons.section, 39))
-
-  local agent_line = string.format(
-    "    Running: %d  │  Stopped: %d  │  Failed: %d",
-    agent_status.running,
-    agent_status.stopped,
-    agent_status.failed
-  )
-  table.insert(lines, agent_line)
-  table.insert(lines, "")
-
-  -- Show individual agents if grid is open
-  if agents.grid_open then
-    for slot, agent in pairs(agents.agents) do
-      local status_icon = agent.status == "running" and icons.running
-        or agent.status == "failed" and icons.failed
-        or icons.stopped
-      local status_hl = agent.status == "running" and "DiagnosticOk"
-        or agent.status == "failed" and "DiagnosticError"
-        or "Comment"
-
-      local line = string.format("    [%d] %s %s (%s)", slot, status_icon, agent.name, agent.model)
-      table.insert(lines, line)
-    end
-    table.insert(lines, "")
-  end
-
-  -- Model Selection Section
-  table.insert(lines, "  " .. icons.model .. " Default Model")
-  table.insert(lines, "  " .. string.rep(icons.section, 39))
-
-  local model_line = "    "
-  for i, model in ipairs(M.models) do
-    local is_selected = i == M.current_model_idx
-    if is_selected then
-      model_line = model_line .. "[" .. model .. "]"
-    else
-      model_line = model_line .. " " .. model .. " "
-    end
-    if i < #M.models then
-      model_line = model_line .. "  "
-    end
-  end
-  table.insert(lines, model_line)
-  table.insert(lines, "    (Press m to cycle)")
-  table.insert(lines, "")
-
-  -- Token Usage Section (if enabled)
-  if token_usage then
-    table.insert(lines, "  " .. icons.tokens .. " Token Usage")
-    table.insert(lines, "  " .. string.rep(icons.section, 39))
-
-    local used = token_usage.used or 0
-    local budget = token_usage.budget or 200000
-    local pct = math.floor((used / budget) * 100)
-    local bar_width = 30
-    local filled = math.floor((pct / 100) * bar_width)
-
-    local bar = string.rep("█", filled) .. string.rep("░", bar_width - filled)
-    table.insert(lines, string.format("    [%s] %d%%", bar, pct))
-    table.insert(lines, string.format("    %d / %d tokens", used, budget))
-    table.insert(lines, "")
-  end
-
-  -- Prompt Injector Status Section
+  -- Get prompt injector status
+  local pi_state = "OFF"
   local pi_ok, prompt_injector = pcall(get_prompt_injector)
   if pi_ok then
     local pi_status = prompt_injector.get_status()
-    table.insert(lines, "   Prompt Injector")
-    table.insert(lines, "  " .. string.rep(icons.section, 39))
-
-    local pi_state = pi_status.enabled and "ENABLED" or "DISABLED"
-    local pi_icon = pi_status.enabled and icons.enabled or icons.disabled
-    table.insert(lines, string.format("    %s Status: %s", pi_icon, pi_state))
-
-    if pi_status.openai_available then
-      local openai = get_openai()
-      table.insert(lines, string.format("    %s Model: %s", icons.model, pi_status.openai_model or "gpt-5.2"))
-      table.insert(lines, string.format("      Requests: %d", pi_status.request_count or 0))
-    else
-      table.insert(lines, "     OpenAI: Not configured")
-      table.insert(lines, "      Add OPENAI_API_KEY to .env")
-    end
-
-    if pi_status.auto_enhance then
-      table.insert(lines, "    ✨ Auto-enhance: ON")
-    end
-
-    table.insert(lines, "")
+    pi_state = pi_status.enabled and "ON" or "OFF"
   end
 
-  -- Feature Toggles Section
-  table.insert(lines, "  " .. icons.hook .. " Features")
-  table.insert(lines, "  " .. string.rep(icons.section, 39))
+  -- Get sync status
+  local ccasp = get_ccasp()
+  local status = ccasp.get_status()
+  local sync_icon = status.sync_status == "synced" and nf.sync_ok or nf.sync_warn
 
+  -- Get current model
+  local current_model = M.models[M.current_model_idx]
+
+  -- Token info
+  local token_str = ""
+  if token_usage then
+    local used = token_usage.used or 0
+    local budget = token_usage.budget or 200000
+    local pct = math.floor((used / budget) * 100)
+    token_str = string.format("%s %dK/%dK (%d%%)", nf.tokens, math.floor(used / 1000), math.floor(budget / 1000), pct)
+  end
+
+  -- Agent counts
+  local agent_str = string.format("%s %d%s/%d%s/%d%s",
+    nf.agents,
+    agent_status.running, nf.running,
+    agent_status.stopped, nf.stopped,
+    agent_status.failed, nf.failed
+  )
+
+  -- ─── Line 1: Status indicators ──────────────────────────────
+  local line1 = string.format(
+    " %s CCASP  %s  %s %s  %s  %s  %s %s  %s  %s PI:%s",
+    nf.ccasp,
+    nf.pipe,
+    nf.model, current_model,
+    nf.pipe,
+    agent_str,
+    nf.pipe,
+    token_str ~= "" and token_str or (nf.tokens .. " --"),
+    nf.pipe,
+    nf.pipe,
+    pi_state
+  )
+
+  -- ─── Line 2: Feature toggles ───────────────────────────────
+  local toggle_parts = {}
   for _, feat in ipairs(M.features) do
     local enabled = config.get_nested(tech_stack, feat.path)
     if enabled == nil then
       enabled = feat.default
     end
-
-    local icon = enabled and icons.enabled or icons.disabled
-    local status = enabled and "ON " or "OFF"
-    local line = string.format("    [%s] %s %s  %s", feat.key, icon, feat.name, status)
-    table.insert(lines, line)
+    local icon = enabled and nf.enabled or nf.disabled
+    table.insert(toggle_parts, string.format("[%s]%s %s", feat.key, icon, feat.name))
   end
+  local line2 = " " .. table.concat(toggle_parts, "  ")
 
-  table.insert(lines, "")
+  -- ─── Line 3: Actions & Navigation ──────────────────────────
+  local line3 = string.format(
+    " [G]rid  [R]estart  [K]ill  [S]ave  [D]etect  [I]njector  [E]nhance  %s  [m]odel  [c]mds  [s]kills  [d]ash",
+    nf.pipe
+  )
 
-  -- Actions Section
-  table.insert(lines, "  Actions")
-  table.insert(lines, "  " .. string.rep(icons.section, 39))
-  table.insert(lines, "    [G] Open Agent Grid")
-  table.insert(lines, "    [R] Restart All Agents")
-  table.insert(lines, "    [K] Kill All Agents")
-  table.insert(lines, "    [S] Save Settings")
-  table.insert(lines, "    [D] Detect Tech Stack")
-  table.insert(lines, "")
-  table.insert(lines, "    [I] Toggle Prompt Injector")
-  table.insert(lines, "    [A] Toggle Auto-Enhance")
-  table.insert(lines, "    [E] Quick Enhance Selection")
-  table.insert(lines, "")
-  table.insert(lines, "  Navigation")
-  table.insert(lines, "  " .. string.rep(icons.section, 39))
-  table.insert(lines, "    [c] Browse Commands")
-  table.insert(lines, "    [s] Browse Skills")
-  table.insert(lines, "    [d] Dashboard")
-  table.insert(lines, "    [q] Close Panel")
-  table.insert(lines, "")
+  -- ─── Line 4: Version + mode + help ─────────────────────────
+  local perm_icon = nf.perm_mode(status.permissions_mode)
+  local update_icon = nf.update_mode(status.update_mode)
+  local line4 = string.format(
+    " v%s  %s  %s %s  %s %s  %s %d protected  %s Sync:%s  %s  [?]help  [q]close",
+    status.version,
+    nf.pipe,
+    perm_icon, status.permissions_mode,
+    nf.pipe,
+    update_icon .. " " .. status.update_mode,
+    nf.pipe,
+    status.protected_count,
+    nf.pipe,
+    sync_icon,
+    nf.pipe
+  )
 
-  return lines
+  return { line1, line2, line3, line4 }
 end
 
--- Open the control panel
+-- Open the control panel as a bottom stripe
 function M.open()
-  local ccasp = get_ccasp()
-  local panel_config = ccasp.config.control_panel
-
   if helpers.focus_if_open(M.winid) then
     return
   end
 
   -- Create buffer
-  M.bufnr = helpers.create_buffer("ccasp://control-panel")
+  M.bufnr = helpers.create_buffer("ccasp://control-stripe")
 
-  -- Calculate position
-  local pos = helpers.calculate_position({
-    width = panel_config.width,
-    height = panel_config.height,
-    position = panel_config.position,
-  })
+  -- Create bottom-anchored split
+  vim.cmd("botright " .. STRIPE_HEIGHT .. "new")
+  M.winid = vim.api.nvim_get_current_win()
 
-  -- Create floating window
-  M.winid = helpers.create_window(M.bufnr, {
-    width = pos.width,
-    height = pos.height,
-    row = pos.row,
-    col = pos.col,
-    border = panel_config.border,
-    title = " CCASP ",
-  })
+  -- Replace the new buffer with our named buffer
+  vim.api.nvim_win_set_buf(M.winid, M.bufnr)
 
-  -- Set window options
-  vim.wo[M.winid].cursorline = true
+  -- Set window options for bottom stripe
+  vim.wo[M.winid].number = false
+  vim.wo[M.winid].relativenumber = false
+  vim.wo[M.winid].signcolumn = "no"
+  vim.wo[M.winid].winfixheight = true
   vim.wo[M.winid].wrap = false
+  vim.wo[M.winid].cursorline = false
+  vim.wo[M.winid].winhighlight = "Normal:CcaspBottomBarBg,NormalFloat:CcaspBottomBarBg,WinBar:CcaspBarLabel,EndOfBuffer:CcaspBottomBarBg"
 
   -- Render content
   M.refresh()
@@ -263,12 +183,10 @@ function M.refresh()
 
   local lines = M.render()
   helpers.set_buffer_content(M.bufnr, lines)
-
-  -- Apply highlights
   M.apply_highlights()
 end
 
--- Apply syntax highlighting
+-- Apply syntax highlighting to the stripe
 function M.apply_highlights()
   if not M.bufnr or not vim.api.nvim_buf_is_valid(M.bufnr) then
     return
@@ -278,35 +196,51 @@ function M.apply_highlights()
   local lines = vim.api.nvim_buf_get_lines(M.bufnr, 0, -1, false)
 
   for i, line in ipairs(lines) do
-    -- Highlight headers
-    if line:match("^  ╔") or line:match("^  ║") or line:match("^  ╚") then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Title", i - 1, 0, -1)
-    elseif line:match("^  " .. icons.section) then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Comment", i - 1, 0, -1)
-    elseif line:match(icons.enabled) then
-      local start = line:find(icons.enabled)
-      if start then
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticOk", i - 1, start - 1, start + #icons.enabled)
+    local line_idx = i - 1
+
+    -- Line 1: Status line - highlight labels and values
+    if i == 1 then
+      -- Highlight "CCASP" brand
+      local ccasp_start = line:find("CCASP")
+      if ccasp_start then
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspTitle", line_idx, 0, ccasp_start + 5)
       end
-    elseif line:match(icons.disabled) then
-      local start = line:find(icons.disabled)
-      if start then
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticError", i - 1, start - 1, start + #icons.disabled)
+      -- Highlight pipe separators
+      for s in line:gmatch("()" .. nf.pipe) do
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspBarSep", line_idx, s - 1, s + #nf.pipe - 1)
       end
-    elseif line:match("ON ") then
-      local start = line:find("ON ")
-      if start then
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticOk", i - 1, start - 1, start + 2)
+      -- Highlight PI status
+      local pi_on = line:find("PI:ON")
+      if pi_on then
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspToggleOn", line_idx, pi_on - 1, pi_on + 4)
       end
-    elseif line:match("OFF") then
-      local start = line:find("OFF")
-      if start then
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticError", i - 1, start - 1, start + 3)
+      local pi_off = line:find("PI:OFF")
+      if pi_off then
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspToggleOff", line_idx, pi_off - 1, pi_off + 5)
       end
-    elseif line:match("%[%w%]") then
-      -- Highlight key bindings
-      for s, e in line:gmatch("()%[%w%]()") do
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Special", i - 1, s - 1, e - 1)
+    end
+
+    -- Line 2: Feature toggles - highlight toggle icons
+    if i == 2 then
+      -- Highlight ON toggles (nf.enabled)
+      for s in line:gmatch("()" .. nf.enabled) do
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspToggleOn", line_idx, s - 1, s + #nf.enabled - 1)
+      end
+      -- Highlight OFF toggles (nf.disabled)
+      for s in line:gmatch("()" .. nf.disabled) do
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspToggleOff", line_idx, s - 1, s + #nf.disabled - 1)
+      end
+    end
+
+    -- All lines: Highlight [key] patterns
+    for s, e in line:gmatch("()%[%w+%]()") do
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspToggleKey", line_idx, s - 1, e - 1)
+    end
+
+    -- Line 4: version and mode info
+    if i == 4 then
+      for s in line:gmatch("()" .. nf.pipe) do
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspBarSep", line_idx, s - 1, s + #nf.pipe - 1)
       end
     end
   end
@@ -317,8 +251,11 @@ function M.setup_keymaps()
   local config = get_config()
   local agents = get_agents()
 
-  -- Standard panel keymaps (window manager, minimize, close)
-  local opts = helpers.setup_standard_keymaps(M.bufnr, M.winid, "Control Panel", M, M.close)
+  local opts = { buffer = M.bufnr, nowait = true, silent = true }
+
+  -- Close
+  vim.keymap.set("n", "q", M.close, opts)
+  vim.keymap.set("n", "<Esc>", M.close, opts)
 
   -- Feature toggles
   for _, feat in ipairs(M.features) do
@@ -359,9 +296,7 @@ function M.setup_keymaps()
   -- Detect tech stack
   vim.keymap.set("n", "D", function()
     vim.cmd("!ccasp detect-stack")
-    vim.defer_fn(function()
-      M.refresh()
-    end, 1000)
+    vim.defer_fn(function() M.refresh() end, 1000)
   end, opts)
 
   -- Prompt Injector actions
@@ -371,7 +306,7 @@ function M.setup_keymaps()
       prompt_injector.toggle()
       M.refresh()
     else
-      vim.notify("CCASP: Prompt Injector module not available", vim.log.levels.ERROR)
+      vim.notify("CCASP: Prompt Injector not available", vim.log.levels.ERROR)
     end
   end, opts)
 
@@ -409,6 +344,18 @@ function M.setup_keymaps()
     M.close()
     require("ccasp.panels.dashboard").open()
   end, opts)
+
+  -- Help
+  vim.keymap.set("n", "?", function()
+    vim.notify(table.concat({
+      "CCASP Control Stripe Keys:",
+      "  [a-k] Toggle features  [m] Cycle model",
+      "  [G] Agent grid  [R] Restart  [K] Kill",
+      "  [S] Save  [D] Detect  [I] Injector",
+      "  [c] Commands  [s] Skills  [d] Dashboard",
+      "  [q/Esc] Close",
+    }, "\n"), vim.log.levels.INFO)
+  end, opts)
 end
 
 -- Toggle a feature
@@ -431,18 +378,20 @@ end
 -- Save all settings
 function M.save_all_settings()
   local config = get_config()
-
-  -- Build settings from current state
   local settings = config.load_settings()
   settings.defaultModel = M.models[M.current_model_idx]
-
   config.save_settings(settings)
   vim.notify("CCASP: Settings saved", vim.log.levels.INFO)
 end
 
 -- Close the panel
 function M.close()
-  helpers.close_panel(M)
+  if M.winid and vim.api.nvim_win_is_valid(M.winid) then
+    vim.api.nvim_win_close(M.winid, true)
+  end
+  M.winid = nil
+  M.bufnr = nil
+  M.is_open = false
 end
 
 -- Toggle panel visibility

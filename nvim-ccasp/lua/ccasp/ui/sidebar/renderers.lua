@@ -1,15 +1,17 @@
 -- CCASP Sidebar Tab Renderers
 -- Each tab's rendering logic extracted from the main render_content function
+-- Modernized with Nerd Font icons and smart command organization
 
 local M = {}
 local helpers = require("ccasp.ui.sidebar.helpers")
+local nf = require("ccasp.ui.icons")
 
 -- Tab 0: Commands (originally tab 1)
 function M.render_commands_tab(lines, state, ccasp, query)
   local commands = require("ccasp.core.commands")
   local highlights = {}
 
-  table.insert(lines, "🔍 " .. (query ~= "" and query or "Search commands...") .. "  [/]")
+  table.insert(lines, nf.search .. " " .. (query ~= "" and query or "Search commands...") .. "  [/]")
   table.insert(lines, string.rep("─", 38))
   table.insert(lines, "")
 
@@ -103,7 +105,7 @@ function M.render_assets_tab(lines, state, ccasp, query)
   local highlights = {}
 
   table.insert(lines, "")
-  table.insert(lines, "🔧 Assets Manager")
+  table.insert(lines, nf.assets .. " Assets Manager")
   table.insert(lines, string.rep("─", 42))
   table.insert(lines, "")
 
@@ -263,7 +265,7 @@ end
 
 -- Helper: Render AI Constitution section
 function M._render_constitution_section(lines)
-  table.insert(lines, "📜 AI Constitution:")
+  table.insert(lines, nf.shield .. " AI Constitution:")
   local ce_ok, constitution_editor = pcall(require, "ccasp.ui.constitution-editor")
   if ce_ok and constitution_editor then
     local has_constitution = constitution_editor.exists()
@@ -360,7 +362,7 @@ function M.render_shortcuts_tab(lines, state, ccasp)
   local highlights = {}
 
   table.insert(lines, "")
-  table.insert(lines, "⚡ Quick Actions")
+  table.insert(lines, nf.shortcuts .. " Quick Actions")
   table.insert(lines, string.rep("─", 42))
   table.insert(lines, "")
 
@@ -440,7 +442,7 @@ function M.render_help_tab(lines, state, ccasp)
   local highlights = {}
 
   table.insert(lines, "")
-  table.insert(lines, "⌨️  Keyboard Shortcuts")
+  table.insert(lines, nf.keyboard .. "  Keyboard Shortcuts")
   table.insert(lines, string.rep("─", 42))
   table.insert(lines, "")
   table.insert(lines, "Click section header to expand/collapse")
