@@ -9,6 +9,7 @@
  */
 export function generateStarterAgent(agentName) {
   return `---
+name: ${agentName}
 description: ${agentName} agent - Add your description here
 tools:
   - Read
