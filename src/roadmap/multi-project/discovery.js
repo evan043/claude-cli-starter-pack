@@ -9,7 +9,7 @@ import {
   initProjectOrchestratorState,
   markProjectDiscoveryComplete,
 } from '../../agents/state-manager.js';
-import { runL2Exploration } from '../../commands/create-phase-dev/l2-orchestrator.js';
+import { runL2Exploration } from '../../orchestration/l2-exploration.js';
 import { analyzeProjectForL2Delegation } from '../intelligence.js';
 import { generateSlug } from '../schema.js';
 

@@ -155,7 +155,7 @@ export function copyToClipboard(text) {
         stdio: ['pipe', 'pipe', 'pipe']
       });
       return result.status === 0;
-    } else {
+    } 
       // Linux: try xclip, fallback to xsel
       let result = spawnSync('xclip', ['-selection', 'clipboard'], {
         input: text,
@@ -172,7 +172,7 @@ export function copyToClipboard(text) {
       }
 
       return result.status === 0;
-    }
+    
   } catch {
     return false;
   }

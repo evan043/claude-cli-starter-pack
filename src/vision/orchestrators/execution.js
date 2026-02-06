@@ -62,7 +62,7 @@ export async function execute(orchestrator, options = {}) {
     // Load Epic
     const epicPath = path.join(orchestrator.projectRoot, orchestrator.vision.planning.epic_path);
     if (!fs.existsSync(epicPath)) {
-      throw new Error('Epic not found at: ' + orchestrator.vision.planning.epic_path);
+      throw new Error(`Epic not found at: ${  orchestrator.vision.planning.epic_path}`);
     }
 
     const epic = JSON.parse(fs.readFileSync(epicPath, 'utf8'));

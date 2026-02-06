@@ -116,6 +116,7 @@ function M.get_error()
 end
 
 -- Make API request using curl (via plenary or vim.fn.system)
+-- Uses a temp header file to avoid exposing API key in process list
 local function make_request(endpoint, body, callback)
   local url = M.config.base_url .. endpoint
 
@@ -125,14 +126,18 @@ local function make_request(endpoint, body, callback)
   -- Escape for shell
   json_body = json_body:gsub("'", "'\\''")
 
+  -- Write auth header to temp file (avoids API key in ps output)
+  local header_file = vim.fn.tempname()
+  vim.fn.writefile({ "Authorization: Bearer " .. M.config.api_key }, header_file)
+
   local curl_cmd = string.format(
     "curl -s -X POST '%s' " ..
     "-H 'Content-Type: application/json' " ..
-    "-H 'Authorization: Bearer %s' " ..
+    "-H @%s " ..
     "-d '%s' " ..
     "--max-time %d",
     url,
-    M.config.api_key,
+    vim.fn.shellescape(header_file),
     json_body,
     math.floor(M.config.timeout / 1000)
   )
@@ -147,11 +152,14 @@ local function make_request(endpoint, body, callback)
       args = {
         "-s", "-X", "POST", url,
         "-H", "Content-Type: application/json",
-        "-H", "Authorization: Bearer " .. M.config.api_key,
+        "-H", "@" .. header_file,
         "-d", json_body,
         "--max-time", tostring(math.floor(M.config.timeout / 1000)),
       },
       on_exit = function(j, return_val)
+        -- Clean up temp header file
+        os.remove(header_file)
+
         vim.schedule(function()
           if return_val ~= 0 then
             callback(nil, "Request failed with code " .. return_val)
@@ -178,6 +186,9 @@ local function make_request(endpoint, body, callback)
   else
     -- Sync fallback
     local result = vim.fn.system(curl_cmd)
+    -- Clean up temp header file
+    os.remove(header_file)
+
     local ok, decoded = pcall(vim.fn.json_decode, result)
 
     if not ok then
@@ -244,82 +255,9 @@ function M.enhance_prompt(prompt, callback)
   end)
 end
 
--- Synchronous version for simpler use cases
-function M.enhance_prompt_sync(prompt)
-  if not M.is_available() then
-    return nil, M.state.last_error or "OpenAI not initialized"
-  end
-
-  M.state.request_count = M.state.request_count + 1
-
-  local body = {
-    model = M.config.model,
-    messages = {
-      { role = "system", content = M.ENHANCE_SYSTEM_PROMPT },
-      { role = "user", content = "Original prompt:\n" .. prompt .. "\n\nEnhanced prompt:" },
-    },
-    max_tokens = M.config.max_tokens,
-    temperature = M.config.temperature,
-  }
-
-  -- Build curl command for sync execution
-  local json_body = vim.fn.json_encode(body)
-  json_body = json_body:gsub("'", "'\\''")
-
-  local curl_cmd = string.format(
-    "curl -s -X POST '%s/chat/completions' " ..
-    "-H 'Content-Type: application/json' " ..
-    "-H 'Authorization: Bearer %s' " ..
-    "-d '%s' " ..
-    "--max-time %d",
-    M.config.base_url,
-    M.config.api_key,
-    json_body,
-    math.floor(M.config.timeout / 1000)
-  )
-
-  local result = vim.fn.system(curl_cmd)
-  local ok, decoded = pcall(vim.fn.json_decode, result)
-
-  if not ok then
-    M.state.last_error = "Failed to parse response"
-    return nil, M.state.last_error
-  end
-
-  if decoded.error then
-    M.state.last_error = decoded.error.message or "Unknown API error"
-    return nil, M.state.last_error
-  end
-
-  -- Extract enhanced prompt
-  if decoded.choices and decoded.choices[1] and decoded.choices[1].message then
-    local enhanced = decoded.choices[1].message.content
-    enhanced = enhanced:gsub("^%s+", ""):gsub("%s+$", "")
-    return enhanced, nil
-  end
-
-  return nil, "No response content"
-end
-
 -- Get current model
 function M.get_model()
   return M.config.model
-end
-
--- Set model
-function M.set_model(model)
-  M.config.model = model
-end
-
--- Get available models (static list based on Feb 2026)
-function M.get_available_models()
-  return {
-    { id = "gpt-5.2", name = "GPT-5.2", description = "Best balance of quality and cost" },
-    { id = "gpt-5.2-codex", name = "GPT-5.2 Codex", description = "Optimized for code" },
-    { id = "o3", name = "o3", description = "Advanced reasoning" },
-    { id = "o4-mini", name = "o4-mini", description = "Fast and lightweight" },
-    { id = "gpt-4.1", name = "GPT-4.1", description = "1M token context" },
-  }
 end
 
 -- Get status for display

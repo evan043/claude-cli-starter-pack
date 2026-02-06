@@ -216,10 +216,10 @@ export async function createGitCheckpoint(projectSlug) {
       spinner.succeed(`Created checkpoint: ${stashName}`);
 
       return stashName;
-    } else {
+    } 
       spinner.info('No uncommitted changes to checkpoint');
       return null;
-    }
+    
   } catch (error) {
     spinner.warn(`Checkpoint skipped: ${error.message}`);
     return null;

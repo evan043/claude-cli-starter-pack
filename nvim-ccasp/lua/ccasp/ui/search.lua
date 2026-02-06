@@ -111,28 +111,6 @@ function M._fallback_search()
   end)
 end
 
--- Inline search - filters sidebar list without popup
-function M.inline_search()
-  local ccasp = require("ccasp")
-
-  vim.ui.input({
-    prompt = "Search commands: ",
-    default = ccasp.state.search_query or "",
-  }, function(input)
-    if input ~= nil then
-      ccasp.state.search_query = input
-      require("ccasp.ui.sidebar").refresh()
-    end
-  end)
-end
-
--- Clear search
-function M.clear()
-  local ccasp = require("ccasp")
-  ccasp.state.search_query = ""
-  require("ccasp.ui.sidebar").refresh()
-end
-
 -- Simple fuzzy match function
 function M.fuzzy_match(str, pattern)
   if not pattern or pattern == "" then
@@ -171,45 +149,6 @@ function M.fuzzy_match(str, pattern)
   end
 
   return false, 0
-end
-
--- Filter and sort commands by search query
-function M.filter_commands(commands_table, query)
-  if not query or query == "" then
-    return commands_table
-  end
-
-  local results = {}
-
-  for name, cmd in pairs(commands_table) do
-    local match_name, score_name = M.fuzzy_match(name, query)
-    local match_desc, score_desc = false, 0
-
-    if cmd.description then
-      match_desc, score_desc = M.fuzzy_match(cmd.description, query)
-    end
-
-    if match_name or match_desc then
-      table.insert(results, {
-        name = name,
-        cmd = cmd,
-        score = math.max(score_name * 2, score_desc), -- Prioritize name matches
-      })
-    end
-  end
-
-  -- Sort by score descending
-  table.sort(results, function(a, b)
-    return a.score > b.score
-  end)
-
-  -- Return filtered commands table
-  local filtered = {}
-  for _, result in ipairs(results) do
-    filtered[result.name] = result.cmd
-  end
-
-  return filtered
 end
 
 return M

@@ -4,7 +4,7 @@
  */
 
 // State
-let state = {
+const state = {
   visions: [],
   filter: '',
   connected: false,

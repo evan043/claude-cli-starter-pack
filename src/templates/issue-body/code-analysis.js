@@ -100,7 +100,7 @@ export function getAgentRecommendation(registry, description, labels = [], files
 
   const descLower = description.toLowerCase();
   const labelStr = labels.join(' ').toLowerCase();
-  const combined = descLower + ' ' + labelStr;
+  const combined = `${descLower  } ${  labelStr}`;
 
   const domainScores = {};
   const matchedKeywords = [];

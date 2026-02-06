@@ -13,6 +13,7 @@ import { execSync } from 'child_process';
 import { showHeader } from '../../cli/menu.js';
 import { loadConfig } from '../../utils.js';
 import { checkGhCli, getRepoOwner, getRepoName, extractPriority } from './display.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 export async function runRoadmapCreate(options) {
   showHeader('Create Roadmap from GitHub Issues');
@@ -103,7 +104,7 @@ export async function runRoadmapCreate(options) {
       last_github_sync: new Date().toISOString(),
     };
 
-    const docsDir = join(process.cwd(), '.claude', 'docs', roadmapSlug);
+    const docsDir = claudeAbsolutePath(process.cwd(), 'docs', roadmapSlug);
     mkdirSync(docsDir, { recursive: true });
 
     const roadmapPath = join(docsDir, 'ROADMAP.json');

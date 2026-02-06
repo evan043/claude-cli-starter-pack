@@ -194,4 +194,10 @@ export const CORE_COMMANDS = [
     category: 'Discovery',
     selected: true,
   },
+  {
+    name: 'site-intel',
+    description: 'Website Intelligence - 5-layer site analysis',
+    category: 'Analysis',
+    selected: true,
+  },
 ];

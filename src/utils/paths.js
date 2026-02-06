@@ -58,7 +58,7 @@ export function getPathSegment(filePath) {
  * @returns {string} Path string like ".claude/hooks/file.js"
  */
 export function claudeRelativePath(...segments) {
-  return '.claude/' + segments.join('/');
+  return `.claude/${  segments.join('/')}`;
 }
 
 /**

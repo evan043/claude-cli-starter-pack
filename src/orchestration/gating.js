@@ -122,7 +122,7 @@ export async function checkTestGate(roadmapPath) {
     return {
       result: GateResults.SKIP,
       message: 'No test command found',
-      details: 'Tried: ' + testCommands.join(', ')
+      details: `Tried: ${  testCommands.join(', ')}`
     };
   } catch (error) {
     return {
@@ -277,7 +277,7 @@ export function applyGateOverride(gateResult, decision, reason) {
  */
 export function formatGateResults(results) {
   let output = `\nGate Check Results: ${results.overall}\n`;
-  output += '='.repeat(50) + '\n\n';
+  output += `${'='.repeat(50)  }\n\n`;
 
   for (const [gateType, gateResult] of Object.entries(results.gates)) {
     output += `${gateType.toUpperCase()}: ${gateResult.result}\n`;

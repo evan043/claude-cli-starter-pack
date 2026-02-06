@@ -1,4 +1,4 @@
 /**
  * Website Intelligence - Layer 3: Graph
  */
-export { buildSiteGraph, toMermaid } from './builder.js';
+export { buildSiteGraph, addRouteEdges, toMermaid } from './builder.js';

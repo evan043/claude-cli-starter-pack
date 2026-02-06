@@ -14,7 +14,7 @@ export function formatProgressSummary(progressSummary) {
   const level = progressSummary.level || 'unknown';
 
   let output = `\n${level.toUpperCase()} Progress Summary\n`;
-  output += '='.repeat(60) + '\n\n';
+  output += `${'='.repeat(60)  }\n\n`;
   output += `Completion: ${progressSummary.completion}%\n`;
   output += `Status: ${progressSummary.status}\n\n`;
 

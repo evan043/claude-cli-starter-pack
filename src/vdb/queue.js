@@ -389,7 +389,7 @@ export class TaskQueue {
       completed: completed.length,
       failed: failed.length,
       successRate: history.length > 0
-        ? (completed.length / history.length * 100).toFixed(1) + '%'
+        ? `${(completed.length / history.length * 100).toFixed(1)  }%`
         : 'N/A',
       avgDurationMs: Math.round(avgDuration),
       avgDurationMinutes: (avgDuration / 60000).toFixed(1)

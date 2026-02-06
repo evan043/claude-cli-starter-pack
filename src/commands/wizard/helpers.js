@@ -10,6 +10,7 @@ import boxen from 'boxen';
 import { existsSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -62,7 +63,7 @@ export function getTemplateCounts() {
 export function createBackup(filePath) {
   if (!existsSync(filePath)) return null;
 
-  const backupDir = join(process.cwd(), '.claude', 'backups');
+  const backupDir = claudeAbsolutePath(process.cwd(), 'backups');
   if (!existsSync(backupDir)) {
     mkdirSync(backupDir, { recursive: true });
   }
@@ -168,11 +169,11 @@ export function showSetupHeader() {
 export function showRestartReminder() {
   console.log(
     boxen(
-      chalk.bold.green('Setup Complete!\n\n') +
+      `${chalk.bold.green('Setup Complete!\n\n') +
         chalk.white('To start using your new commands:\n\n') +
-        chalk.dim('Run this command in your project directory:\n\n') +
-        `  ${chalk.yellow('claude')}\n\n` +
-        chalk.dim('Then try: ') + chalk.cyan('/menu') + chalk.dim(' or ') + chalk.cyan('/project-implementation-for-ccasp'),
+        chalk.dim('Run this command in your project directory:\n\n') 
+        }  ${chalk.yellow('claude')}\n\n${ 
+        chalk.dim('Then try: ')  }${chalk.cyan('/menu')  }${chalk.dim(' or ')  }${chalk.cyan('/project-implementation-for-ccasp')}`,
       {
         padding: 1,
         borderStyle: 'round',
@@ -188,10 +189,10 @@ export function showRestartReminder() {
 export function showCompletionMessage() {
   console.log(
     boxen(
-      chalk.bold.green('Setup Complete!\n\n') +
+      `${chalk.bold.green('Setup Complete!\n\n') +
         chalk.white('Your .claude folder is ready.\n\n') +
-        chalk.dim('Next steps:\n') +
-        `  ${chalk.cyan('1.')} ${chalk.bold.yellow('RESTART')} Claude Code CLI for changes to take effect\n` +
+        chalk.dim('Next steps:\n') 
+        }  ${chalk.cyan('1.')} ${chalk.bold.yellow('RESTART')} Claude Code CLI for changes to take effect\n` +
         `  ${chalk.cyan('2.')} Type ${chalk.yellow('/menu')} to see commands\n` +
         `  ${chalk.cyan('3.')} Or type ${chalk.yellow('/ccasp-setup')} for this menu`,
       {

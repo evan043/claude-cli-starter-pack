@@ -14,7 +14,7 @@ import { isDevMode } from '../utils/dev-mode-state.js';
 // Mobile-friendly banner (40 chars max)
 const MOBILE_BANNER = `
 ${chalk.cyan('╔══════════════════════════════════╗')}
-${chalk.cyan('║')} ${chalk.bold('CCASP')} ${chalk.dim('v' + getVersion().slice(0, 5))}${' '.repeat(17)}${chalk.cyan('║')}
+${chalk.cyan('║')} ${chalk.bold('CCASP')} ${chalk.dim(`v${  getVersion().slice(0, 5)}`)}${' '.repeat(17)}${chalk.cyan('║')}
 ${chalk.cyan('║')} ${chalk.dim('Mobile Menu')}${' '.repeat(21)}${chalk.cyan('║')}
 ${chalk.cyan('╚══════════════════════════════════╝')}`;
 
@@ -36,7 +36,7 @@ function truncate(text, maxLen = 30) {
   // eslint-disable-next-line no-control-regex
   const plainText = text.replace(/\x1B\[[0-9;]*m/g, '');
   if (plainText.length <= maxLen) return text;
-  return text.slice(0, maxLen - 2) + '..';
+  return `${text.slice(0, maxLen - 2)  }..`;
 }
 
 /**
@@ -47,7 +47,7 @@ function truncate(text, maxLen = 30) {
  */
 function formatMobileItem(key, label) {
   const truncLabel = truncate(label, 28);
-  return `${chalk.yellow(key + ')')} ${truncLabel}`;
+  return `${chalk.yellow(`${key  })`)} ${truncLabel}`;
 }
 
 /**
@@ -213,13 +213,13 @@ export function showMobileError(message) {
 export function showMobileBox(title, lines = []) {
   const width = getMobileWidth() - 4; // Account for borders
   console.log('');
-  console.log(chalk.cyan('┌' + '─'.repeat(width) + '┐'));
+  console.log(chalk.cyan(`┌${  '─'.repeat(width)  }┐`));
   console.log(chalk.cyan('│') + ` ${truncate(title, width - 2)}`.padEnd(width) + chalk.cyan('│'));
-  console.log(chalk.cyan('├' + '─'.repeat(width) + '┤'));
+  console.log(chalk.cyan(`├${  '─'.repeat(width)  }┤`));
   for (const line of lines) {
     console.log(chalk.cyan('│') + ` ${truncate(line, width - 2)}`.padEnd(width) + chalk.cyan('│'));
   }
-  console.log(chalk.cyan('└' + '─'.repeat(width) + '┘'));
+  console.log(chalk.cyan(`└${  '─'.repeat(width)  }┘`));
   console.log('');
 }
 

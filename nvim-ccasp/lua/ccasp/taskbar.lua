@@ -38,77 +38,71 @@ local function generate_id()
   return string.format("win_%d_%d", os.time(), id_counter)
 end
 
--- Minimize a floating window
-function M.minimize(winid, name, icon)
-  if not M.config.enabled then
-    return nil
-  end
+-- Extract row/col from window config (handles number or table)
+local function extract_position(value)
+  return type(value) == "table" and (value[false] or value[true] or 0) or value
+end
+
+-- Create minimal window config for storage
+local function create_window_config(config)
+  return {
+    relative = config.relative,
+    row = extract_position(config.row),
+    col = extract_position(config.col),
+    width = config.width,
+    height = config.height,
+    style = config.style,
+    border = config.border,
+    title = config.title,
+    title_pos = config.title_pos,
+    zindex = config.zindex,
+  }
+end
+
+-- Validate window for minimization
+local function validate_minimize(winid)
+  if not M.config.enabled then return false, nil end
 
   if not winid or not vim.api.nvim_win_is_valid(winid) then
     vim.notify("CCASP: Cannot minimize - invalid window", vim.log.levels.WARN)
-    return nil
+    return false, nil
   end
 
-  -- Check if at max capacity
   if #M.taskbar.order >= M.config.max_items then
     vim.notify("CCASP: Taskbar full - restore a window first", vim.log.levels.WARN)
-    return nil
+    return false, nil
   end
 
-  -- Get window config before closing
   local config = vim.api.nvim_win_get_config(winid)
   if config.relative == "" then
     vim.notify("CCASP: Can only minimize floating windows", vim.log.levels.WARN)
-    return nil
+    return false, nil
   end
 
-  -- Get buffer
-  local bufnr = vim.api.nvim_win_get_buf(winid)
+  return true, config
+end
 
-  -- Generate ID
+-- Minimize a floating window
+function M.minimize(winid, name, icon)
+  local valid, config = validate_minimize(winid)
+  if not valid then return nil end
+
   local id = generate_id()
-
-  -- Handle row/col which can be number or table with [false] key
-  local row = type(config.row) == "table" and (config.row[false] or config.row[true] or 0) or config.row
-  local col = type(config.col) == "table" and (config.col[false] or config.col[true] or 0) or config.col
-
-  -- Store state
   M.taskbar.minimized[id] = {
-    bufnr = bufnr,
-    config = {
-      relative = config.relative,
-      row = row,
-      col = col,
-      width = config.width,
-      height = config.height,
-      style = config.style,
-      border = config.border,
-      title = config.title,
-      title_pos = config.title_pos,
-      zindex = config.zindex,
-    },
+    bufnr = vim.api.nvim_win_get_buf(winid),
+    config = create_window_config(config),
     name = name or "Window",
     icon = icon or "",
     minimized_at = os.time(),
   }
 
-  -- Add to order
   table.insert(M.taskbar.order, id)
-
-  -- Close the window (keep buffer)
   vim.api.nvim_win_close(winid, false)
 
-  -- Notify
-  local index = #M.taskbar.order
-  vim.notify(string.format("CCASP: %s minimized to taskbar [%d]", name or "Window", index), vim.log.levels.INFO)
-
-  -- Trigger statusline update
+  vim.notify(string.format("CCASP: %s minimized to taskbar [%d]", name or "Window", #M.taskbar.order), vim.log.levels.INFO)
   vim.cmd("redrawstatus")
 
-  -- Persist if enabled
-  if M.config.persist then
-    M.save_state()
-  end
+  if M.config.persist then M.save_state() end
 
   return id
 end
@@ -205,58 +199,40 @@ function M.list()
   return items
 end
 
--- Statusline component
-function M.statusline()
-  if not M.config.enabled or #M.taskbar.order == 0 then
-    return ""
+-- Format statusline item
+local function format_item(i, item, with_highlight)
+  local icon = M.config.show_icons and item.icon ~= "" and item.icon .. " " or ""
+
+  if with_highlight then
+    return string.format("%%#DiagnosticInfo#[%d]%%* %s%s", i, icon, item.name)
+  else
+    return string.format("[%d:%s%s]", i, icon, item.name)
   end
+end
+
+-- Build statusline items
+local function build_statusline_items(with_highlight)
+  if not M.config.enabled or #M.taskbar.order == 0 then return "" end
 
   local items = {}
   for i, id in ipairs(M.taskbar.order) do
     local item = M.taskbar.minimized[id]
     if item then
-      local text
-      if M.config.show_icons and item.icon ~= "" then
-        text = string.format("[%d:%s %s]", i, item.icon, item.name)
-      else
-        text = string.format("[%d:%s]", i, item.name)
-      end
-      table.insert(items, text)
+      table.insert(items, format_item(i, item, with_highlight))
     end
   end
 
-  if #items == 0 then
-    return ""
-  end
+  return #items > 0 and " " .. table.concat(items, " ") or ""
+end
 
-  return " " .. table.concat(items, " ")
+-- Statusline component
+function M.statusline()
+  return build_statusline_items(false)
 end
 
 -- Statusline component with highlight groups
 function M.statusline_hl()
-  if not M.config.enabled or #M.taskbar.order == 0 then
-    return ""
-  end
-
-  local items = {}
-  for i, id in ipairs(M.taskbar.order) do
-    local item = M.taskbar.minimized[id]
-    if item then
-      local text
-      if M.config.show_icons and item.icon ~= "" then
-        text = string.format("%%#DiagnosticInfo#[%d]%%* %s %s", i, item.icon, item.name)
-      else
-        text = string.format("%%#DiagnosticInfo#[%d]%%* %s", i, item.name)
-      end
-      table.insert(items, text)
-    end
-  end
-
-  if #items == 0 then
-    return ""
-  end
-
-  return " " .. table.concat(items, " ")
+  return build_statusline_items(true)
 end
 
 -- Show taskbar picker (floating window with all items)
@@ -289,8 +265,8 @@ function M.show_picker()
   -- Create buffer
   local bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
-  vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+  vim.bo[bufnr].modifiable = false
+  vim.bo[bufnr].bufhidden = "wipe"
 
   -- Calculate size
   local width = 39

@@ -39,7 +39,7 @@ export function createBackup(filePath, projectDir = process.cwd()) {
 
     // Determine asset type from path
     const claudeDir = join(projectDir, '.claude');
-    const relativePath = filePath.replace(claudeDir + '/', '').replace(claudeDir + '\\', '');
+    const relativePath = filePath.replace(`${claudeDir  }/`, '').replace(`${claudeDir  }\\`, '');
     const backupSubdir = dirname(relativePath);
     const filename = basename(filePath);
 
@@ -73,7 +73,7 @@ export function listBackups(assetType, assetName, projectDir = process.cwd()) {
   const localPath = pathConfig.local(projectDir, assetName);
   const filename = basename(localPath);
   const claudeDir = join(projectDir, '.claude');
-  const relativePath = localPath.replace(claudeDir + '/', '').replace(claudeDir + '\\', '');
+  const relativePath = localPath.replace(`${claudeDir  }/`, '').replace(`${claudeDir  }\\`, '');
   const backupSubdir = dirname(relativePath);
 
   const backupDir = join(projectDir, '.claude', 'backups', backupSubdir);
@@ -115,7 +115,7 @@ export function restoreBackup(backupPath, projectDir = process.cwd()) {
 
   // Parse the backup path to determine original location
   const backupDir = join(projectDir, '.claude', 'backups');
-  const relativePath = backupPath.replace(backupDir + '/', '').replace(backupDir + '\\', '');
+  const relativePath = backupPath.replace(`${backupDir  }/`, '').replace(`${backupDir  }\\`, '');
 
   // Remove the .timestamp.bak suffix
   const parts = basename(relativePath).split('.');

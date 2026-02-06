@@ -28,10 +28,10 @@ export async function runIntegrationWizard(options = {}) {
   console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.bold('          PROJECT MANAGEMENT INTEGRATIONS                      ') + chalk.cyan('║'));
   console.log(chalk.cyan('╠═══════════════════════════════════════════════════════════════╣'));
-  console.log(chalk.cyan('║') + '                                                               ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }                                                               ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('║') + chalk.dim('  Configure additional PM tools beyond GitHub:                 ') + chalk.cyan('║'));
   console.log(chalk.cyan('║') + chalk.dim('  Jira, Linear, ClickUp                                        ') + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + '                                                               ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }                                                               ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════╝'));
   console.log('');
 

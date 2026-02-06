@@ -1,54 +1,35 @@
 /**
  * Tech Stack File I/O Operations
  *
- * Reading and writing tech-stack.json.
+ * Delegates to the canonical loadTechStack/saveTechStack in src/utils.js.
+ * Maintains loadTechStackJson/saveTechStackJson names for backward compatibility.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { dirname } from 'path';
-import { TECH_STACK_PATHS } from './constants.js';
+import {
+  loadTechStack,
+  saveTechStack,
+  getTechStackPath,
+} from '../../utils.js';
+
+export { getTechStackPath };
 
 /**
- * Get path to tech-stack.json (prefers .claude/tech-stack.json)
- */
-export function getTechStackPath() {
-  for (const path of TECH_STACK_PATHS) {
-    if (existsSync(path)) {
-      return path;
-    }
-  }
-  return TECH_STACK_PATHS[0];
-}
-
-/**
- * Load tech-stack.json
+ * Load tech-stack.json (delegates to canonical utils.js)
  */
 export function loadTechStackJson() {
-  const techStackPath = getTechStackPath();
-  if (existsSync(techStackPath)) {
-    try {
-      return JSON.parse(readFileSync(techStackPath, 'utf8'));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+  const result = loadTechStack();
+  // Canonical loadTechStack returns default obj, but callers here expect null
+  if (result && result._pendingConfiguration) return result;
+  return result || null;
 }
 
 /**
- * Save tech-stack.json
+ * Save tech-stack.json (delegates to canonical utils.js)
+ * @returns {string} Path that was written to
  */
 export function saveTechStackJson(techStack) {
-  const techStackPath = getTechStackPath();
-  const configDir = dirname(techStackPath);
-
-  if (!existsSync(configDir)) {
-    mkdirSync(configDir, { recursive: true });
-  }
-
-  techStack._lastModified = new Date().toISOString();
-  writeFileSync(techStackPath, JSON.stringify(techStack, null, 2), 'utf8');
-  return techStackPath;
+  saveTechStack(techStack);
+  return getTechStackPath();
 }
 
 /**

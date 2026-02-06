@@ -81,12 +81,12 @@ export function createMobileCard({ header, fields, isLast = false }) {
   const lines = [];
 
   // Top border
-  lines.push('┌' + '─'.repeat(width + 2) + '┐');
+  lines.push(`┌${  '─'.repeat(width + 2)  }┐`);
 
   // Header
   if (header) {
-    lines.push('│ ' + padToWidth(header, width) + ' │');
-    lines.push('├' + '─'.repeat(width + 2) + '┤');
+    lines.push(`│ ${  padToWidth(header, width)  } │`);
+    lines.push(`├${  '─'.repeat(width + 2)  }┤`);
   }
 
   // Fields
@@ -99,24 +99,24 @@ export function createMobileCard({ header, fields, isLast = false }) {
       const labelLine = `${label}: ${value}`;
       const wrappedLines = wrapText(labelLine, width);
       wrappedLines.forEach(line => {
-        lines.push('│ ' + padToWidth(line, width) + ' │');
+        lines.push(`│ ${  padToWidth(line, width)  } │`);
       });
     } else {
       // Just value, wrapped
       const wrappedLines = wrapText(value, width);
       wrappedLines.forEach(line => {
-        lines.push('│ ' + padToWidth(line, width) + ' │');
+        lines.push(`│ ${  padToWidth(line, width)  } │`);
       });
     }
 
     // Add separator between fields (but not after last field)
     if (i < fields.length - 1) {
-      lines.push('├' + '─'.repeat(width + 2) + '┤');
+      lines.push(`├${  '─'.repeat(width + 2)  }┤`);
     }
   }
 
   // Bottom border
-  lines.push('└' + '─'.repeat(width + 2) + '┘');
+  lines.push(`└${  '─'.repeat(width + 2)  }┘`);
 
   return lines.join('\n');
 }
@@ -174,9 +174,9 @@ export function createMobileMenu({ title, items, width = 36 }) {
 
   // Title box
   if (title) {
-    lines.push('┌' + '─'.repeat(width + 2) + '┐');
-    lines.push('│ ' + padToWidth(title, width) + ' │');
-    lines.push('└' + '─'.repeat(width + 2) + '┘');
+    lines.push(`┌${  '─'.repeat(width + 2)  }┐`);
+    lines.push(`│ ${  padToWidth(title, width)  } │`);
+    lines.push(`└${  '─'.repeat(width + 2)  }┘`);
     lines.push('');
   }
 
@@ -184,19 +184,19 @@ export function createMobileMenu({ title, items, width = 36 }) {
   items.forEach(item => {
     if (item.separator) {
       // Separator line
-      lines.push('  ' + '─'.repeat(width - 2));
+      lines.push(`  ${  '─'.repeat(width - 2)}`);
     } else {
       const { key, label, description } = item;
 
       // Key and label on one line
       const mainLine = `[${key}] ${label}`;
-      lines.push('  ' + mainLine);
+      lines.push(`  ${  mainLine}`);
 
       // Optional description (indented)
       if (description) {
         const wrappedDesc = wrapText(description, width - 6);
         wrappedDesc.forEach(line => {
-          lines.push('      ' + line);
+          lines.push(`      ${  line}`);
         });
       }
 

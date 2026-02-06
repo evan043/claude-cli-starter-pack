@@ -5,8 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { AGENT_CONFIGS, PROJECT_L2_AGENT_TYPES } from './config.js';
-import { detectTaskDomain } from './config.js';
+import { AGENT_CONFIGS, PROJECT_L2_AGENT_TYPES, detectTaskDomain } from './config.js';
 
 /**
  * Generate L2 agent spawn configuration
@@ -178,7 +177,7 @@ function generateProjectL2Prompt(project, agentType, roadmapContext) {
 - **Project ID:** ${project.project_id}
 - **Domain:** ${project.domain || 'general'}
 - **Description:** ${project.description || 'No description'}
-- **Exploration Path:** ${project.exploration_path || '.claude/exploration/' + project.slug + '/'}
+- **Exploration Path:** ${project.exploration_path || `.claude/exploration/${  project.slug  }/`}
 
 ## Roadmap Context
 - **Roadmap:** ${roadmapContext.title || 'Multi-Project Roadmap'}

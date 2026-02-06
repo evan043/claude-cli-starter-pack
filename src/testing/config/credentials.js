@@ -169,7 +169,7 @@ export function ensureEnvInGitignore() {
   }
 
   // Add .env to .gitignore
-  const newContent = content.trimEnd() + '\n\n# Environment files\n.env\n.env.local\n.env*.local\n';
+  const newContent = `${content.trimEnd()  }\n\n# Environment files\n.env\n.env.local\n.env*.local\n`;
   writeFileSync(gitignorePath, newContent, 'utf8');
 
   return true;
@@ -288,7 +288,7 @@ ${passwordVar}=your_test_password
       return false; // Already has credential placeholders
     }
     // Append to existing
-    writeFileSync(ENV_EXAMPLE_PATH, existing + '\n' + content, 'utf8');
+    writeFileSync(ENV_EXAMPLE_PATH, `${existing  }\n${  content}`, 'utf8');
   } else {
     writeFileSync(ENV_EXAMPLE_PATH, content, 'utf8');
   }

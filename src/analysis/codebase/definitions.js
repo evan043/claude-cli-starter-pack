@@ -101,7 +101,7 @@ function guessDefinitionType(line) {
   if (lower.includes('enum ')) return 'enum';
   if (lower.includes('trait ')) return 'trait';
   if (lower.includes('function ') || lower.includes('def ') || lower.includes('fn '))
-    return 'function';
+    {return 'function';}
   if (lower.includes('const ')) return 'constant';
 
   return 'unknown';

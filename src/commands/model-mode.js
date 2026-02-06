@@ -31,13 +31,13 @@ function displayCurrentMode() {
   console.log(chalk.cyan('╔══════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.cyan.bold('  Model Mode Configuration                              ') + chalk.cyan('║'));
   console.log(chalk.cyan('╠══════════════════════════════════════════════════════╣'));
-  console.log(chalk.cyan('║') + `  Current Mode: ${chalk.green.bold(summary.currentMode.padEnd(38))}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + '                                                        ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }  Current Mode: ${chalk.green.bold(summary.currentMode.padEnd(38))}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }                                                        ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('║') + chalk.dim('  Level Mappings:                                       ') + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `    L1 (Orchestrator): ${chalk.yellow(summary.levelMappings.L1.padEnd(30))}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `    L2 (Specialist):   ${chalk.yellow(summary.levelMappings.L2.padEnd(30))}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `    L3 (Worker):       ${chalk.yellow(summary.levelMappings.L3.padEnd(30))}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + '                                                        ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }    L1 (Orchestrator): ${chalk.yellow(summary.levelMappings.L1.padEnd(30))}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }    L2 (Specialist):   ${chalk.yellow(summary.levelMappings.L2.padEnd(30))}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }    L3 (Worker):       ${chalk.yellow(summary.levelMappings.L3.padEnd(30))}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }                                                        ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('║') + chalk.dim(`  Available: ${summary.availableModes.join(', ').padEnd(40)}`) + chalk.cyan('║'));
   console.log(chalk.cyan('╚══════════════════════════════════════════════════════╝'));
   console.log('');
@@ -138,11 +138,11 @@ function switchMode(mode) {
     console.log(`    L3: ${modeConfig.L3}`);
     console.log('');
     return { success: true, mode, previousMode, changed: true };
-  } else {
+  } 
     console.log(chalk.red.bold('\n✗ Failed to Change Mode'));
     console.log(chalk.red('  Could not save configuration.'));
     return { success: false, error: 'Save failed' };
-  }
+  
 }
 
 /**

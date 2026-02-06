@@ -18,6 +18,7 @@ import {
 } from '../../../utils/version-check.js';
 
 import { showRestartReminder } from '../helpers.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,8 +27,8 @@ const __dirname = dirname(__filename);
  * Show menu to add available features
  */
 export async function showAddFeaturesMenu() {
-  const claudeDir = join(process.cwd(), '.claude');
-  const commandsDir = join(claudeDir, 'commands');
+  const claudeDir = claudeAbsolutePath(process.cwd());
+  const commandsDir = claudeAbsolutePath(process.cwd(), 'commands');
 
   if (!existsSync(claudeDir)) {
     console.log(chalk.yellow('\nNo .claude folder found. Run Quick Start (1) or Full Setup (2) first.\n'));
@@ -143,8 +144,8 @@ export async function showAddFeaturesMenu() {
  * @param {Object} release - Release object
  */
 export async function addFeaturesFromRelease(release) {
-  const claudeDir = join(process.cwd(), '.claude');
-  const commandsDir = join(claudeDir, 'commands');
+  const claudeDir = claudeAbsolutePath(process.cwd());
+  const commandsDir = claudeAbsolutePath(process.cwd(), 'commands');
 
   if (!existsSync(claudeDir)) {
     console.log(chalk.yellow('\nNo .claude folder found. Run Quick Start (1) or Full Setup (2) first.\n'));
@@ -237,9 +238,9 @@ export async function addFeaturesFromRelease(release) {
  */
 export async function installHappyEngineering() {
   const cwd = process.cwd();
-  const claudeDir = join(cwd, '.claude');
-  const commandsDir = join(claudeDir, 'commands');
-  const hooksDir = join(claudeDir, 'hooks');
+  const claudeDir = claudeAbsolutePath(cwd);
+  const commandsDir = claudeAbsolutePath(cwd, 'commands');
+  const hooksDir = claudeAbsolutePath(cwd, 'hooks');
 
   console.log(boxen(
     chalk.magenta.bold('Happy.engineering Integration\n\n') +

@@ -10,7 +10,8 @@ import { showHeader, showSuccess, showWarning } from '../../../cli/menu.js';
 import { loadGitHubSettings, saveGitHubSettings } from './persistence.js';
 import { generateGitHubSettingsUpdater } from './templates.js';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Configure GitHub settings submenu
@@ -473,7 +474,7 @@ async function applyGitHubSettings(returnToMain) {
   }
 
   // Generate and run the updater script
-  const updaterPath = join(process.cwd(), '.claude', 'hooks', 'tools', 'github-settings-updater.js');
+  const updaterPath = claudeAbsolutePath(process.cwd(), 'hooks', 'tools', 'github-settings-updater.js');
   const updaterDir = dirname(updaterPath);
 
   if (!existsSync(updaterDir)) {

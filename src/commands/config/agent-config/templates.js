@@ -11,6 +11,7 @@ import { join } from 'path';
 import { showHeader, showSuccess } from '../../../cli/menu.js';
 import { generateAgentOnlyPolicy, generateAgentsJson } from './policy.js';
 import { generateWindowsBatch, generatePowerShellLauncher, generateBashLauncher } from './launchers.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Create Agent-Only mode launcher scripts
@@ -55,7 +56,7 @@ export async function createAgentOnlyLauncher() {
   const files = [];
 
   // Create .claude directory if needed
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   if (!existsSync(claudeDir)) {
     mkdirSync(claudeDir, { recursive: true });
   }
@@ -63,7 +64,7 @@ export async function createAgentOnlyLauncher() {
   // 1. Create AGENT_ONLY_POLICY.md
   if (createPolicy) {
     const policyContent = generateAgentOnlyPolicy();
-    const policyPath = join(claudeDir, 'AGENT_ONLY_POLICY.md');
+    const policyPath = claudeAbsolutePath(process.cwd(), 'AGENT_ONLY_POLICY.md');
     writeFileSync(policyPath, policyContent, 'utf8');
     files.push(policyPath);
   }
@@ -71,7 +72,7 @@ export async function createAgentOnlyLauncher() {
   // 2. Create agents.json
   if (createAgents) {
     const agentsContent = generateAgentsJson();
-    const agentsPath = join(claudeDir, 'agents.json');
+    const agentsPath = claudeAbsolutePath(process.cwd(), 'agents.json');
     writeFileSync(agentsPath, agentsContent, 'utf8');
     files.push(agentsPath);
   }

@@ -332,6 +332,63 @@ New commands available:
 RESTART REQUIRED: Exit and restart Claude Code to use new commands.
 ```
 
+### Step 9: Optional Dependency Check
+
+Check for site-intel optional enhancement packages that unlock advanced features:
+
+```bash
+# Check for each optional package in node_modules
+for pkg in lighthouse @axe-core/playwright ts-morph; do
+  if [ -d "node_modules/$pkg" ]; then
+    echo "INSTALLED: $pkg"
+  else
+    echo "MISSING: $pkg"
+  fi
+done
+```
+
+Display status:
+
+```
+Optional Dependencies (Site Intelligence)
+==========================================
+These packages unlock advanced site-intel features.
+Base site-intel works without them.
+
+  lighthouse              — Lighthouse performance auditing
+  @axe-core/playwright    — Accessibility auditing (axe-core)
+  ts-morph                — Codebase route tracing
+
+Status:
+  ● lighthouse              INSTALLED
+  ○ @axe-core/playwright    NOT INSTALLED
+  ○ ts-morph                NOT INSTALLED
+
+Missing 2 optional packages.
+Install with: npm install -D @axe-core/playwright ts-morph
+```
+
+If all 3 are installed, show:
+```
+Optional Dependencies: All 3 site-intel enhancements installed ✓
+```
+
+If any are missing, use AskUserQuestion:
+```
+Would you like to install the missing optional dependencies?
+
+Options:
+- Install all missing (npm install -D <packages>)
+- Skip for now
+```
+
+If user chooses to install, run:
+```bash
+npm install -D <missing-packages>
+```
+
+Use a 5-minute timeout since lighthouse is a large package.
+
 ---
 
 ## Customization Detection Logic

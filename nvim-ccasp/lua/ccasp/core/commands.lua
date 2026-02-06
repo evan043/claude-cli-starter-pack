@@ -135,51 +135,52 @@ local function get_commands_dir()
   return cwd .. "/" .. ccasp.config.ccasp_root .. "/commands"
 end
 
--- Parse command frontmatter
-local function parse_frontmatter(content)
-  local frontmatter = {}
-
-  -- Check for YAML frontmatter
+-- Extract frontmatter bounds from content
+local function extract_frontmatter_content(content)
   local fm_start = content:find("^%-%-%-\n")
-  if not fm_start then
-    return frontmatter
-  end
+  if not fm_start then return nil end
 
   local fm_end = content:find("\n%-%-%-\n", 4)
-  if not fm_end then
-    return frontmatter
-  end
+  if not fm_end then return nil end
 
-  local fm_content = content:sub(4, fm_end - 1)
+  return content:sub(4, fm_end - 1)
+end
 
-  -- Parse description
+-- Parse description from frontmatter
+local function parse_description(fm_content)
   local desc = fm_content:match("description:%s*([^\n]+)")
-  if desc then
-    frontmatter.description = desc:gsub("^%s+", ""):gsub("%s+$", "")
-  end
+  return desc and desc:gsub("^%s+", ""):gsub("%s+$", "") or nil
+end
 
-  -- Parse options
-  frontmatter.options = {}
-  local options_start = fm_content:find("options:")
-  if options_start then
-    local in_options = false
-    for line in fm_content:gmatch("[^\n]+") do
-      if line:match("^options:") then
-        in_options = true
-      elseif in_options then
-        local label = line:match('label:%s*"([^"]+)"')
+-- Parse options from frontmatter
+local function parse_options(fm_content)
+  local options = {}
+  if not fm_content:find("options:") then return options end
+
+  local in_options = false
+  for line in fm_content:gmatch("[^\n]+") do
+    if line:match("^options:") then
+      in_options = true
+    elseif in_options then
+      local label = line:match('label:%s*"([^"]+)"')
+      if label then
         local option_desc = line:match('description:%s*"([^"]+)"')
-        if label then
-          table.insert(frontmatter.options, {
-            label = label,
-            description = option_desc or "",
-          })
-        end
+        table.insert(options, { label = label, description = option_desc or "" })
       end
     end
   end
+  return options
+end
 
-  return frontmatter
+-- Parse command frontmatter
+local function parse_frontmatter(content)
+  local fm_content = extract_frontmatter_content(content)
+  if not fm_content then return {} end
+
+  return {
+    description = parse_description(fm_content),
+    options = parse_options(fm_content),
+  }
 end
 
 -- Get section for a command
@@ -192,80 +193,66 @@ local function get_section(cmd_name)
   return "📦 OTHER", 99
 end
 
+-- Initialize empty sections
+local function init_sections()
+  local sections = {}
+  for _, section in ipairs(SECTION_PATTERNS) do
+    if not sections[section.name] then
+      sections[section.name] = { order = section.order, commands = {} }
+    end
+  end
+  return sections
+end
+
+-- Read command file and create entry
+local function load_command_file(file)
+  local filename = vim.fn.fnamemodify(file, ":t:r")
+  if filename:sub(1, 2) == "__" then return nil end
+
+  local f = io.open(file, "r")
+  if not f then return nil end
+
+  local content = f:read("*all")
+  f:close()
+
+  local frontmatter = parse_frontmatter(content)
+  return {
+    name = filename,
+    path = file,
+    description = frontmatter.description or "",
+    options = frontmatter.options or {},
+    section = get_section(filename),
+  }
+end
+
 -- Scan commands directory
 function M.load_all()
   local dir = get_commands_dir()
 
-  -- Check if directory exists
   if vim.fn.isdirectory(dir) ~= 1 then
-    commands_cache = {}
-    sections_cache = {}
+    commands_cache, sections_cache = {}, {}
     return commands_cache
   end
 
   commands_cache = {}
-  sections_cache = {}
+  sections_cache = init_sections()
 
-  -- Initialize sections (handle duplicate section names by only creating once)
-  for _, section in ipairs(SECTION_PATTERNS) do
-    if not sections_cache[section.name] then
-      sections_cache[section.name] = {
-        order = section.order,
-        commands = {},
-      }
-    end
-  end
-
-  -- Scan for .md files
   local files = vim.fn.glob(dir .. "/*.md", false, true)
-
   for _, file in ipairs(files) do
-    local filename = vim.fn.fnamemodify(file, ":t:r")
-
-    -- Skip internal commands
-    if filename:sub(1, 2) == "__" then
-      goto continue
+    local cmd = load_command_file(file)
+    if cmd then
+      commands_cache[cmd.name] = cmd
+      if sections_cache[cmd.section] then
+        table.insert(sections_cache[cmd.section].commands, cmd.name)
+      end
     end
-
-    -- Read file content
-    local f = io.open(file, "r")
-    if not f then
-      goto continue
-    end
-
-    local content = f:read("*all")
-    f:close()
-
-    -- Parse frontmatter
-    local frontmatter = parse_frontmatter(content)
-
-    -- Create command entry
-    local cmd = {
-      name = filename,
-      path = file,
-      description = frontmatter.description or "",
-      options = frontmatter.options or {},
-      section = get_section(filename),
-    }
-
-    commands_cache[filename] = cmd
-
-    -- Add to section
-    local section_name = cmd.section
-    if sections_cache[section_name] then
-      table.insert(sections_cache[section_name].commands, filename)
-    end
-
-    ::continue::
   end
 
-  -- Sort commands within sections
   for _, section in pairs(sections_cache) do
     table.sort(section.commands)
   end
 
   last_scan_time = os.time()
-
   return commands_cache
 end
 

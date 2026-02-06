@@ -12,12 +12,13 @@ import { isDevMode, getDevModeInfo, hasPendingRestore, loadDevState, clearPendin
 import { restoreProject, getLatestBackup } from '../../utils/project-backup.js';
 import { loadRegistry } from '../../utils/global-registry.js';
 import { DEV_MODE_BANNER } from './constants.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 /**
  * Get bypass permissions status from settings.json
  */
 export function getBypassPermissionsStatus() {
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   if (!existsSync(settingsPath)) {
     return false;
   }
@@ -58,7 +59,7 @@ export function toggleVisionEpics() {
  * Toggle bypass permissions in settings.json
  */
 export function toggleBypassPermissions() {
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   let settings = {};
 
   if (existsSync(settingsPath)) {

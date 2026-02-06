@@ -155,7 +155,7 @@ export async function runDevMode(options = {}) {
   }
 
   // Generate menu command from scratch (uses COMMAND_TEMPLATES)
-  const menuTemplate = COMMAND_TEMPLATES['menu'];
+  const menuTemplate = COMMAND_TEMPLATES.menu;
   if (menuTemplate) {
     const agentsDir = join(claudeDir, 'agents');
     const skillsDir = join(claudeDir, 'skills');

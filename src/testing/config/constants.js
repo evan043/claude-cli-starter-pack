@@ -5,13 +5,14 @@
  */
 
 import { join } from 'path';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 // Default paths - now uses tech-stack.json
 export const TECH_STACK_PATHS = [
-  join(process.cwd(), '.claude', 'tech-stack.json'),
+  claudeAbsolutePath(process.cwd(), 'tech-stack.json'),
   join(process.cwd(), 'tech-stack.json'),
 ];
-export const RULES_DIR = join(process.cwd(), '.claude', 'task-lists');
+export const RULES_DIR = claudeAbsolutePath(process.cwd(), 'task-lists');
 export const TESTING_RULES_FILE = 'TESTING_RULES.md';
 export const ENV_PATH = join(process.cwd(), '.env');
 export const ENV_EXAMPLE_PATH = join(process.cwd(), '.env.example');

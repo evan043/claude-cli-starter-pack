@@ -145,7 +145,7 @@ export async function runDecompose(options) {
     if (task.metadata?.fileRefs?.length > 0) {
       const refs = task.metadata.fileRefs
         .slice(0, 2)
-        .map((r) => `${r.file}${r.line ? ':' + r.line : ''}`)
+        .map((r) => `${r.file}${r.line ? `:${  r.line}` : ''}`)
         .join(', ');
       console.log(chalk.dim(`      Files: ${refs}`));
     }

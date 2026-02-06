@@ -4,6 +4,9 @@
 
 local M = {}
 
+-- Debounce timer for autocmd updates
+local _update_timer = nil
+
 -- Available colors for title bars
 M.colors = {
   { name = "Blue", fg = "#61afef", bg = "#1e3a5f" },
@@ -26,45 +29,22 @@ local minimized = {} -- { session_id = { name, color_idx, bufnr } }
 local ACTIVE_BORDER_COLOR = "#00ff88"
 local INACTIVE_BORDER_COLOR = "#3e4452"
 
+-- Create single highlight group set
+local function create_highlight_group(name, fg, bg, bold)
+  vim.api.nvim_set_hl(0, name, { fg = fg, bg = bg, bold = bold or false })
+end
+
 -- Create highlight groups for each color
 local function setup_highlights()
   for i, color in ipairs(M.colors) do
-    vim.api.nvim_set_hl(0, "CcaspWinbar" .. i, {
-      fg = color.fg,
-      bg = color.bg,
-      bold = true,
-    })
-    vim.api.nvim_set_hl(0, "CcaspWinbarBtn" .. i, {
-      fg = "#ffff00",
-      bg = color.bg,
-      bold = true,
-    })
-    -- Active version (brighter, with indicator)
-    vim.api.nvim_set_hl(0, "CcaspWinbarActive" .. i, {
-      fg = "#ffffff",
-      bg = color.bg,
-      bold = true,
-    })
+    create_highlight_group("CcaspWinbar" .. i, color.fg, color.bg, true)
+    create_highlight_group("CcaspWinbarBtn" .. i, "#ffff00", color.bg, true)
+    create_highlight_group("CcaspWinbarActive" .. i, "#ffffff", color.bg, true)
   end
-  -- Default
-  vim.api.nvim_set_hl(0, "CcaspWinbarDefault", {
-    fg = "#abb2bf",
-    bg = "#3e4452",
-    bold = true,
-  })
 
-  -- Active window border highlight
-  vim.api.nvim_set_hl(0, "CcaspActiveBorder", {
-    fg = ACTIVE_BORDER_COLOR,
-    bg = nil,
-    bold = true,
-  })
-
-  -- Inactive window border
-  vim.api.nvim_set_hl(0, "CcaspInactiveBorder", {
-    fg = INACTIVE_BORDER_COLOR,
-    bg = nil,
-  })
+  create_highlight_group("CcaspWinbarDefault", "#abb2bf", "#3e4452", true)
+  create_highlight_group("CcaspActiveBorder", ACTIVE_BORDER_COLOR, nil, true)
+  create_highlight_group("CcaspInactiveBorder", INACTIVE_BORDER_COLOR, nil)
 end
 
 -- Get or assign color for session
@@ -151,13 +131,13 @@ function M.update(session_id)
   )
 
   -- Set winbar for this window
-  vim.api.nvim_win_set_option(session.winid, "winbar", winbar)
+  vim.wo[session.winid].winbar = winbar
 
   -- Set window border highlight based on active state
   if is_active then
-    vim.api.nvim_win_set_option(session.winid, "winhighlight", "Normal:Normal,WinBar:CcaspWinbarActive" .. (session_colors[session_id] or 1) .. ",WinBarNC:CcaspWinbar" .. (session_colors[session_id] or 1))
+    vim.wo[session.winid].winhighlight = "Normal:Normal,WinBar:CcaspWinbarActive" .. (session_colors[session_id] or 1) .. ",WinBarNC:CcaspWinbar" .. (session_colors[session_id] or 1)
   else
-    vim.api.nvim_win_set_option(session.winid, "winhighlight", "Normal:Normal")
+    vim.wo[session.winid].winhighlight = "Normal:Normal"
   end
 
   -- Setup keymaps for this buffer
@@ -328,6 +308,11 @@ function M.close_session(session_id)
   end)
 end
 
+-- Create keymap with extended options
+local function set_keymap(mode, key, fn, base_opts, desc)
+  vim.keymap.set(mode, key, fn, vim.tbl_extend("force", base_opts, { desc = desc }))
+end
+
 -- Setup keymaps for terminal buffer
 function M.setup_keymaps(bufnr, session_id)
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then return end
@@ -335,42 +320,25 @@ function M.setup_keymaps(bufnr, session_id)
   local sessions = require("ccasp.sessions")
   local opts = { buffer = bufnr, noremap = true, silent = true }
 
-  -- Tab to cycle to next session (works in both normal and terminal mode)
-  vim.keymap.set("n", "<Tab>", function()
-    sessions.focus_next()
-  end, vim.tbl_extend("force", opts, { desc = "Next Claude session" }))
+  -- Tab navigation
+  set_keymap("n", "<Tab>", sessions.focus_next, opts, "Next Claude session")
+  set_keymap("n", "<S-Tab>", sessions.focus_prev, opts, "Previous Claude session")
 
-  vim.keymap.set("n", "<S-Tab>", function()
-    sessions.focus_prev()
-  end, vim.tbl_extend("force", opts, { desc = "Previous Claude session" }))
-
-  -- Terminal mode: Ctrl+Tab to cycle (since Tab is used for completion)
-  vim.keymap.set("t", "<C-Tab>", function()
+  set_keymap("t", "<C-Tab>", function()
     vim.cmd([[<C-\><C-n>]])
     sessions.focus_next()
-  end, vim.tbl_extend("force", opts, { desc = "Next Claude session" }))
+  end, opts, "Next Claude session")
 
-  vim.keymap.set("t", "<C-S-Tab>", function()
+  set_keymap("t", "<C-S-Tab>", function()
     vim.cmd([[<C-\><C-n>]])
     sessions.focus_prev()
-  end, vim.tbl_extend("force", opts, { desc = "Previous Claude session" }))
+  end, opts, "Previous Claude session")
 
-  -- Normal mode keymaps (when escaped from terminal)
-  vim.keymap.set("n", "r", function()
-    M.rename(session_id)
-  end, vim.tbl_extend("force", opts, { desc = "Rename session" }))
-
-  vim.keymap.set("n", "c", function()
-    M.change_color(session_id)
-  end, vim.tbl_extend("force", opts, { desc = "Change session color" }))
-
-  vim.keymap.set("n", "_", function()
-    M.minimize(session_id)
-  end, vim.tbl_extend("force", opts, { desc = "Minimize session" }))
-
-  vim.keymap.set("n", "x", function()
-    M.close_session(session_id)
-  end, vim.tbl_extend("force", opts, { desc = "Close session" }))
+  -- Normal mode session controls
+  set_keymap("n", "r", function() M.rename(session_id) end, opts, "Rename session")
+  set_keymap("n", "c", function() M.change_color(session_id) end, opts, "Change session color")
+  set_keymap("n", "_", function() M.minimize(session_id) end, opts, "Minimize session")
+  set_keymap("n", "x", function() M.close_session(session_id) end, opts, "Close session")
 end
 
 -- Show context menu
@@ -400,45 +368,60 @@ function M.show_context_menu(session_id)
   end)
 end
 
+-- Handle auto-enter insert mode for session terminals
+local _last_focus_win = nil
+local function handle_session_terminal_focus()
+  local sessions = require("ccasp.sessions")
+  local current_win = vim.api.nvim_get_current_win()
+
+  -- Skip if we already focused this window (prevents repeated startinsert)
+  if current_win == _last_focus_win then return end
+  _last_focus_win = current_win
+
+  local session = sessions.get_by_window(current_win)
+
+  if session then
+    local bufnr = vim.api.nvim_win_get_buf(current_win)
+    if vim.bo[bufnr].buftype == "terminal" then
+      vim.cmd("startinsert")
+    end
+  end
+end
+
+-- Debounced update to prevent rapid-fire redraws from WinEnter+BufEnter
+local function debounced_update(include_focus)
+  if _update_timer then
+    vim.fn.timer_stop(_update_timer)
+  end
+  _update_timer = vim.fn.timer_start(50, function()
+    _update_timer = nil
+    vim.schedule(function()
+      M.update_all()
+      if include_focus then
+        handle_session_terminal_focus()
+      end
+    end)
+  end)
+end
+
 -- Initialize
 function M.setup()
   setup_highlights()
 
-  -- Create autocommand group for active window tracking
   local group = vim.api.nvim_create_augroup("CcaspSessionActive", { clear = true })
 
-  -- Update all titlebars when window focus changes AND auto-enter insert mode
   vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter" }, {
     group = group,
     callback = function()
-      -- Defer to let the window change complete
-      vim.defer_fn(function()
-        M.update_all()
-
-        -- Auto-enter insert mode if we're now in a session terminal
-        local sessions = require("ccasp.sessions")
-        local current_win = vim.api.nvim_get_current_win()
-        local session = sessions.get_by_window(current_win)
-
-        if session then
-          -- This is a Claude session terminal - auto-enter insert mode
-          local bufnr = vim.api.nvim_win_get_buf(current_win)
-          local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
-          if buftype == "terminal" then
-            vim.cmd("startinsert")
-          end
-        end
-      end, 10)
+      debounced_update(true)
     end,
   })
 
-  -- Also update on WinLeave to clear the active state
   vim.api.nvim_create_autocmd("WinLeave", {
     group = group,
     callback = function()
-      vim.defer_fn(function()
-        M.update_all()
-      end, 10)
+      _last_focus_win = nil
+      debounced_update(false)
     end,
   })
 end

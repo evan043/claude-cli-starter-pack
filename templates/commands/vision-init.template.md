@@ -111,6 +111,40 @@ console.log(`✅ Vision created: ${initResult.vision.slug}`);
 Continue with this analysis? (yes/no/adjust)
 ```
 
+### Step 2b: Generate PRD (Product Requirements Document)
+
+After parsing the prompt, generate a structured PRD for alignment tracking:
+
+```javascript
+import { generatePRD, formatPRDAsMarkdown } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/requirements/prd-template.js';
+
+// Generate PRD from parsed prompt
+const prd = generatePRD(initResult.parsedPrompt);
+const prdMarkdown = formatPRDAsMarkdown(prd);
+
+// Store PRD in VISION.json
+initResult.vision.requirements_document = prd;
+
+console.log('📋 PRD Generated:');
+console.log(`  Must-have features: ${prd.sections.functional_requirements.must_have.length}`);
+console.log(`  Acceptance criteria: ${prd.sections.acceptance_criteria.criteria.length}`);
+console.log(`  Quality attributes: ${prd.sections.non_functional.quality_attributes.join(', ') || 'none'}`);
+```
+
+**PRD sections generated:**
+- Overview & Objectives
+- User Stories / Use Cases
+- Functional Requirements (MoSCoW prioritization)
+- Non-Functional Requirements
+- Technical Constraints
+- Acceptance Criteria (Given/When/Then format)
+- Out of Scope
+
+The PRD is stored in `VISION.json` under `requirements_document` and used by:
+- Vision observer for drift detection (checks against PRD acceptance criteria)
+- Phase planning to link tasks to requirements
+- Alignment validation during autonomous execution
+
 ### Step 3: Run Analysis Phase
 
 ```javascript

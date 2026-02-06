@@ -153,6 +153,57 @@ export const VISION_SCHEMA = {
     }
   },
 
+  // Requirements Document (PRD)
+  requirements_document: {
+    title: 'string',
+    generated_at: 'ISO8601',
+    confidence: 'number (0-1)',
+    sections: {
+      overview: {
+        title: 'string',
+        objective: 'string',
+        intent: 'VisionIntent enum',
+        scope: 'string'
+      },
+      user_stories: {
+        title: 'string',
+        stories: ['string']
+      },
+      functional_requirements: {
+        title: 'string',
+        must_have: ['string'],
+        should_have: ['string'],
+        could_have: ['string'],
+        wont_have: ['string']
+      },
+      non_functional: {
+        title: 'string',
+        quality_attributes: ['string'],
+        performance: 'string | null',
+        security: 'string | null',
+        accessibility: 'string | null'
+      },
+      technical_constraints: {
+        title: 'string',
+        technologies: ['string'],
+        constraints: ['string']
+      },
+      acceptance_criteria: {
+        title: 'string',
+        criteria: [{
+          feature: 'string',
+          given: 'string',
+          when: 'string',
+          then: 'string'
+        }]
+      },
+      out_of_scope: {
+        title: 'string',
+        items: ['string']
+      }
+    }
+  },
+
   // Execution Plan
   execution_plan: {
     epic_id: 'string (uuid) | null',

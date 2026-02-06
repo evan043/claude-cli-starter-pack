@@ -47,7 +47,7 @@ export const CORE_FEATURES = [
   {
     name: 'advancedHooks',
     label: 'Advanced Hook Suite',
-    description: 'Extended hook system with session management, git commit tracking, branch validation, issue detection, token monitoring, autonomous logging, and phase validation gates.',
+    description: 'Extended hook system with session management, git commit tracking, branch validation, issue detection, token monitoring, autonomous logging, phase validation gates, and multi-agent file collision detection.',
     commands: [],
     hooks: [
       'session-id-generator',
@@ -57,6 +57,7 @@ export const CORE_FEATURES = [
       'token-usage-monitor',
       'autonomous-decision-logger',
       'phase-validation-gates',
+      'file-collision-detector',
     ],
     default: false,
     requiresPostConfig: false,
@@ -83,9 +84,9 @@ export const CORE_FEATURES = [
   {
     name: 'testing',
     label: 'Advanced Testing',
-    description: 'Extended testing capabilities including smoke test generation and test coverage analysis.',
+    description: 'Extended testing capabilities including smoke test generation, test coverage analysis, and TDD enforcement.',
     commands: ['create-smoke-test'],
-    hooks: [],
+    hooks: ['tdd-enforcer'],
     default: false,
     requiresPostConfig: false,
   },
@@ -101,9 +102,9 @@ export const CORE_FEATURES = [
   {
     name: 'refactorAudit',
     label: 'Refactor Audit System',
-    description: 'Monitors task/phase completions and flags files over 500 lines for refactoring. Offers guided workflow: new branch, task list, GitHub issue, specialist agent deployment.',
+    description: 'Monitors task/phase completions and flags files over 500 lines for refactoring. Offers guided workflow: new branch, task list, GitHub issue, specialist agent deployment. Includes post-edit quality checks (lint/type-check).',
     commands: ['refactor-workflow', 'refactor-analyze', 'golden-master'],
-    hooks: ['refactor-audit', 'refactor-verify', 'refactor-transaction'],
+    hooks: ['refactor-audit', 'refactor-verify', 'refactor-transaction', 'quality-check'],
     skills: ['refactor-react', 'refactor-fastapi'],
     default: true,
     requiresPostConfig: false,
@@ -155,6 +156,17 @@ export const CORE_FEATURES = [
     ],
     default: true,
     requiresPostConfig: false,
+  },
+  {
+    name: 'siteIntelAdvanced',
+    label: 'Site Intelligence Enhancements',
+    description: 'Optional deps for advanced site analysis: Lighthouse performance auditing, axe-core accessibility auditing, ts-morph codebase route tracing. Base site-intel works without these.',
+    commands: [],
+    hooks: [],
+    default: false,
+    requiresPostConfig: false,
+    npmDevPackages: ['lighthouse', '@axe-core/playwright', 'ts-morph'],
+    npmDevInstallPrompt: 'Install site-intel enhancement deps? (lighthouse, @axe-core/playwright, ts-morph)',
   },
   {
     name: 'aiConstitution',

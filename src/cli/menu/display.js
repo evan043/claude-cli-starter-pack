@@ -36,14 +36,14 @@ export function showSuccess(title, details = []) {
   console.log(chalk.green(`╔${line}╗`));
   console.log(
     chalk.green('║  ') +
-      chalk.green.bold('✅ ' + title.padEnd(width - 5)) +
+      chalk.green.bold(`✅ ${  title.padEnd(width - 5)}`) +
       chalk.green('║')
   );
 
   if (details.length > 0) {
-    console.log(chalk.green('║' + ' '.repeat(width) + '║'));
+    console.log(chalk.green(`║${  ' '.repeat(width)  }║`));
     for (const detail of details) {
-      const paddedDetail = ('  ' + detail).padEnd(width);
+      const paddedDetail = (`  ${  detail}`).padEnd(width);
       console.log(chalk.green('║') + paddedDetail + chalk.green('║'));
     }
   }

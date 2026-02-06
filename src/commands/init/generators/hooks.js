@@ -56,7 +56,7 @@ const SESSION_MARKER = '.claude/config/.ccasp-session-checked';
 function loadState() {
   const statePath = path.join(process.cwd(), STATE_FILE);
   if (fs.existsSync(statePath)) {
-    try { return JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch {}
+    try { return JSON.parse(fs.readFileSync(statePath, 'utf8')); } catch { /* invalid JSON, use defaults */ }
   }
   return { lastCheckTimestamp: 0, updateAvailable: false, projectImplCompleted: false };
 }
@@ -74,7 +74,7 @@ function hasCheckedThisSession() {
     try {
       const timestamp = parseInt(fs.readFileSync(markerPath, 'utf8'), 10);
       if (Date.now() - timestamp < 4 * 60 * 60 * 1000) return true;
-    } catch {}
+    } catch { /* corrupted marker, re-check */ }
   }
   return false;
 }
@@ -118,7 +118,7 @@ module.exports = async function ccaspUpdateCheck(context) {
     state.latestVersion = latest;
     state.updateAvailable = compareVersions(latest, currentVersion) > 0;
     saveState(state);
-  } catch {}
+  } catch { /* network failure or npm not available, skip silently */ }
 
   return { continue: true };
 };

@@ -38,16 +38,6 @@ function M.register(winid, name, icon)
   return true
 end
 
--- Unregister a window
-function M.unregister(winid)
-  M.windows[winid] = nil
-end
-
--- Check if window is managed
-function M.is_managed(winid)
-  return M.windows[winid] ~= nil
-end
-
 -- Get editor bounds
 local function get_editor_bounds()
   return {
@@ -213,59 +203,6 @@ function M.center(winid)
   return M.move_to(winid, row, col)
 end
 
--- Snap window to edge
-function M.snap_to(winid, position)
-  local config = get_win_config(winid)
-  if not config then
-    return false
-  end
-
-  local bounds = get_editor_bounds()
-  local row, col
-
-  if position == "top-left" then
-    row, col = 0, 0
-  elseif position == "top-right" then
-    row, col = 0, bounds.width - config.width - 1
-  elseif position == "bottom-left" then
-    row, col = bounds.height - config.height - 1, 0
-  elseif position == "bottom-right" then
-    row, col = bounds.height - config.height - 1, bounds.width - config.width - 1
-  elseif position == "top" then
-    row, col = 0, math.floor((bounds.width - config.width) / 2)
-  elseif position == "bottom" then
-    row, col = bounds.height - config.height - 1, math.floor((bounds.width - config.width) / 2)
-  elseif position == "left" then
-    row, col = math.floor((bounds.height - config.height) / 2), 0
-  elseif position == "right" then
-    row, col = math.floor((bounds.height - config.height) / 2), bounds.width - config.width - 1
-  else
-    return false
-  end
-
-  return M.move_to(winid, row, col)
-end
-
--- Get window info
-function M.get_info(winid)
-  local config = get_win_config(winid)
-  if not config then
-    return nil
-  end
-
-  local meta = M.windows[winid] or {}
-
-  return {
-    winid = winid,
-    name = meta.name,
-    icon = meta.icon,
-    row = config.row,
-    col = config.col,
-    width = config.width,
-    height = config.height,
-  }
-end
-
 -- Setup keymaps for a floating window
 function M.setup_keymaps(bufnr, winid)
   local opts = { buffer = bufnr, nowait = true, silent = true }
@@ -344,15 +281,6 @@ function M.setup_keymaps(bufnr, winid)
   vim.keymap.set("n", "<M-L>", function()
     M.resize_window(winid, resize_step, 0)
   end, vim.tbl_extend("force", opts, { desc = "Grow window width" }))
-end
-
--- Cleanup invalid windows from tracking
-function M.cleanup()
-  for winid, _ in pairs(M.windows) do
-    if not vim.api.nvim_win_is_valid(winid) then
-      M.windows[winid] = nil
-    end
-  end
 end
 
 return M

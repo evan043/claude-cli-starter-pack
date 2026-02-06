@@ -86,7 +86,7 @@ function constitutionExists(cwd = process.cwd()) {
 function createBackup(cwd = process.cwd()) {
   const outputPath = getOutputPath(cwd);
   if (existsSync(outputPath)) {
-    const backupPath = outputPath + '.backup.' + Date.now();
+    const backupPath = `${outputPath  }.backup.${  Date.now()}`;
     copyFileSync(outputPath, backupPath);
     return backupPath;
   }

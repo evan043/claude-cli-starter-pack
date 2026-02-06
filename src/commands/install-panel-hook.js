@@ -9,6 +9,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
+import { claudeAbsolutePath } from '../utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,13 +22,13 @@ export async function runInstallPanelHook(options = {}) {
 
   // Determine target directory
   const targetDir = options.global
-    ? join(homedir(), '.claude', 'hooks')
-    : join(process.cwd(), '.claude', 'hooks');
+    ? claudeAbsolutePath(homedir(), 'hooks')
+    : claudeAbsolutePath(process.cwd(), 'hooks');
 
   const hookPath = join(targetDir, 'panel-queue-reader.js');
   const settingsPath = options.global
-    ? join(homedir(), '.claude', 'settings.json')
-    : join(process.cwd(), '.claude', 'settings.json');
+    ? claudeAbsolutePath(homedir(), 'settings.json')
+    : claudeAbsolutePath(process.cwd(), 'settings.json');
 
   // Check if hook already exists
   if (existsSync(hookPath) && !options.force) {

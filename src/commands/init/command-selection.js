@@ -26,7 +26,7 @@ export async function selectCommands(AVAILABLE_COMMANDS, commandsDir, options, f
 
   if (existingCmdNames.length > 0 && !options.skipPrompts) {
     console.log(chalk.blue(`  ℹ Found ${existingCmdNames.length} existing command(s) in your project:`));
-    console.log(chalk.dim(`    ${existingCmdNames.map(c => '/' + c).join(', ')}`));
+    console.log(chalk.dim(`    ${existingCmdNames.map(c => `/${  c}`).join(', ')}`));
     console.log(chalk.dim('    These will be preserved unless you choose to overwrite.\n'));
   }
 
@@ -73,7 +73,7 @@ export async function selectCommands(AVAILABLE_COMMANDS, commandsDir, options, f
   // Show what feature commands were auto-added
   const autoAddedCommands = featureCommands.filter(c => !selectedCommands.includes(c) && !requiredCommands.includes(c));
   if (autoAddedCommands.length > 0) {
-    console.log(chalk.cyan(`  ℹ Auto-including ${autoAddedCommands.length} feature command(s): ${autoAddedCommands.map(c => '/' + c).join(', ')}`));
+    console.log(chalk.cyan(`  ℹ Auto-including ${autoAddedCommands.length} feature command(s): ${autoAddedCommands.map(c => `/${  c}`).join(', ')}`));
   }
 
   console.log('');

@@ -60,7 +60,7 @@ export function generateProgressJson(config) {
 
     if (!agentRegistry || !agentRegistry.agents) return null;
 
-    const phaseLower = (phase.name + ' ' + phase.description).toLowerCase();
+    const phaseLower = (`${phase.name  } ${  phase.description}`).toLowerCase();
 
     // Match phase to domain
     if (phaseLower.match(/frontend|ui|component|react|vue|style|css/)) {

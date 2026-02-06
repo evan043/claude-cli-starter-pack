@@ -8,10 +8,10 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import { existsSync } from 'fs';
-import { join } from 'path';
 import { showHeader, showSuccess, showWarning, showError } from '../../../cli/menu.js';
 import { processDirectory } from '../../../utils/template-engine.js';
 import { loadTechStack } from './persistence.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Apply tech stack templates
@@ -37,7 +37,7 @@ export async function applyTechStackTemplates(returnToMain) {
     },
   ]);
 
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   if (!existsSync(claudeDir)) {
     showWarning('No .claude directory found.');
     return returnToMain ? await returnToMain() : null;

@@ -2,6 +2,7 @@
 -- Floating window for editing and enhancing prompts before sending to Claude
 
 local M = {}
+local helpers = require("ccasp.panels.helpers")
 
 -- State
 M.bufnr = nil
@@ -47,29 +48,23 @@ function M.open(opts)
   -- Calculate dimensions
   local width = math.max(UI.min_width, math.floor(vim.o.columns * UI.width_ratio))
   local height = math.max(UI.min_height, math.floor(vim.o.lines * UI.height_ratio))
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
 
   -- Create buffer
-  M.bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(M.bufnr, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(M.bufnr, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(M.bufnr, "swapfile", false)
-  vim.api.nvim_buf_set_option(M.bufnr, "filetype", "markdown")
-  vim.api.nvim_buf_set_name(M.bufnr, "ccasp://prompt-editor")
+  M.bufnr = helpers.create_buffer("ccasp://prompt-editor")
+  vim.bo[M.bufnr].filetype = "markdown"
+
+  -- Calculate position
+  local pos = helpers.calculate_position({ width = width, height = height })
 
   -- Create window
   local title = is_enhanced and " CCASP Prompt Editor (Enhanced) " or " CCASP Prompt Editor "
-  M.winid = vim.api.nvim_open_win(M.bufnr, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = row,
-    col = col,
-    style = "minimal",
+  M.winid = helpers.create_window(M.bufnr, {
+    width = pos.width,
+    height = pos.height,
+    row = pos.row,
+    col = pos.col,
     border = UI.border,
     title = title,
-    title_pos = "center",
     footer = M.render_footer(is_enhanced),
     footer_pos = "center",
   })
@@ -85,7 +80,7 @@ function M.open(opts)
   M.set_content(prompt, original, is_enhanced)
 
   -- Make buffer modifiable for editing
-  vim.api.nvim_buf_set_option(M.bufnr, "modifiable", true)
+  vim.bo[M.bufnr].modifiable = true
 
   -- Setup keymaps
   M.setup_keymaps(opts)
@@ -137,8 +132,9 @@ function M.set_content(prompt, original, is_enhanced)
     table.insert(lines, "")
   end
 
-  vim.api.nvim_buf_set_option(M.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, lines)
+  helpers.set_buffer_content(M.bufnr, lines)
+  -- Re-enable modifiable for editing
+  vim.bo[M.bufnr].modifiable = true
 
   -- Apply highlights
   M.apply_highlights()
@@ -150,9 +146,7 @@ function M.apply_highlights()
     return
   end
 
-  local ns = vim.api.nvim_create_namespace("ccasp_prompt_editor")
-  vim.api.nvim_buf_clear_namespace(M.bufnr, ns, 0, -1)
-
+  local ns = helpers.prepare_highlights("ccasp_prompt_editor", M.bufnr)
   local lines = vim.api.nvim_buf_get_lines(M.bufnr, 0, -1, false)
 
   for i, line in ipairs(lines) do
@@ -201,25 +195,11 @@ end
 
 -- Setup keymaps
 function M.setup_keymaps(opts)
+  -- Standard panel keymaps (window manager, minimize)
+  helpers.setup_window_manager(M.bufnr, M.winid, "Prompt Editor")
+  helpers.setup_minimize(M.bufnr, M.winid, "Prompt Editor", M)
+
   local buf_opts = { buffer = M.bufnr, nowait = true }
-
-  -- Window manager keymaps (move/resize)
-  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
-  if wm_ok and M.winid then
-    window_manager.register(M.winid, "Prompt Editor", "")
-    window_manager.setup_keymaps(M.bufnr, M.winid)
-  end
-
-  -- Minimize keymap
-  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
-  if tb_ok then
-    vim.keymap.set("n", "_", function()
-      taskbar.minimize(M.winid, "Prompt Editor", "")
-      M.winid = nil
-      M.bufnr = nil
-      M.is_open = false
-    end, buf_opts)
-  end
 
   -- Send prompt (Enter in normal mode, Ctrl+Enter in insert)
   vim.keymap.set("n", "<CR>", function()
@@ -390,7 +370,7 @@ function M.show_help()
   -- Create help popup
   local help_buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_lines(help_buf, 0, -1, false, help_lines)
-  vim.api.nvim_buf_set_option(help_buf, "modifiable", false)
+  vim.bo[help_buf].modifiable = false
 
   local help_width = 45
   local help_height = #help_lines
@@ -430,12 +410,7 @@ end
 
 -- Close the editor
 function M.close()
-  if M.winid and vim.api.nvim_win_is_valid(M.winid) then
-    vim.api.nvim_win_close(M.winid, true)
-  end
-  M.winid = nil
-  M.bufnr = nil
-  M.is_open = false
+  helpers.close_panel(M)
   M.current_opts = nil
 end
 

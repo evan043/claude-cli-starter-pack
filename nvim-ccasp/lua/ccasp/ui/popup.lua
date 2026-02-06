@@ -17,6 +17,68 @@ local function has_nui()
   return ok
 end
 
+-- Create standardized popup with common config
+-- Config: { width, height, title, bottom_text, position, buf_options, win_options }
+function M._create_popup(config)
+  local Popup = require("nui.popup")
+
+  local size = {
+    width = config.width or 60,
+    height = config.height or 20,
+  }
+
+  local border_text = {
+    top = config.title and (" " .. config.title .. " ") or nil,
+    top_align = "center",
+  }
+
+  if config.bottom_text then
+    border_text.bottom = " " .. config.bottom_text .. " "
+    border_text.bottom_align = "center"
+  end
+
+  return Popup({
+    position = config.position or "50%",
+    size = size,
+    border = {
+      style = "rounded",
+      text = border_text,
+    },
+    buf_options = config.buf_options or {
+      modifiable = false,
+    },
+    win_options = config.win_options or {},
+  })
+end
+
+-- Set popup buffer content (handles modifiable flag)
+function M._set_popup_content(bufnr, lines)
+  vim.bo[bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  vim.bo[bufnr].modifiable = false
+end
+
+-- Setup standard close keybindings (Esc and q)
+function M._setup_close_keybindings(bufnr, on_close)
+  local opts = { buffer = bufnr, noremap = true, silent = true }
+
+  vim.keymap.set("n", "<Esc>", function()
+    if on_close then
+      on_close()
+    else
+      M.close()
+    end
+  end, opts)
+
+  vim.keymap.set("n", "q", function()
+    if on_close then
+      on_close()
+    else
+      M.close()
+    end
+  end, opts)
+end
+
 -- Show full options popup for a command
 function M.show_options(cmd_name)
   if not has_nui() then
@@ -26,7 +88,6 @@ function M.show_options(cmd_name)
 
   local commands = require("ccasp.core.commands")
   local parser = require("ccasp.core.parser")
-  local Popup = require("nui.popup")
 
   local cmd = commands.get(cmd_name)
   if not cmd then
@@ -52,25 +113,12 @@ function M.show_options(cmd_name)
   state.option_lines = {}
   state.selected_line = 7
 
-  -- Create popup
-  state.popup = Popup({
-    position = "50%",
-    size = {
-      width = 70,
-      height = math.min(30, 10 + #options * 3),
-    },
-    border = {
-      style = "rounded",
-      text = {
-        top = " /" .. cmd_name .. " - Options ",
-        top_align = "center",
-        bottom = " [Space] Toggle  [Enter] Run  [Esc] Cancel  [r] Reset ",
-        bottom_align = "center",
-      },
-    },
-    buf_options = {
-      modifiable = false,
-    },
+  -- Create popup using helper
+  state.popup = M._create_popup({
+    width = 70,
+    height = math.min(30, 10 + #options * 3),
+    title = "/" .. cmd_name .. " - Options",
+    bottom_text = "[Space] Toggle  [Enter] Run  [Esc] Cancel  [r] Reset",
     win_options = {
       winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
       cursorline = true,
@@ -80,6 +128,38 @@ function M.show_options(cmd_name)
   state.popup:mount()
   M._render_options()
   M._setup_popup_keybindings()
+end
+
+-- Helper: Render checkbox option
+local function render_checkbox_option(opt, checked, lines, opt_idx)
+  local mark = checked and "x" or " "
+  table.insert(lines, "    [" .. mark .. "] " .. opt.label)
+  state.option_lines[#lines] = opt_idx
+
+  if opt.description and opt.description ~= "" then
+    table.insert(lines, "        " .. opt.description)
+  end
+end
+
+-- Helper: Render radio option
+local function render_radio_option(opt, checked, lines, opt_idx)
+  local mark = checked and "•" or " "
+  table.insert(lines, "    (" .. mark .. ") " .. opt.label)
+  state.option_lines[#lines] = opt_idx
+
+  if opt.description and opt.description ~= "" then
+    table.insert(lines, "        " .. opt.description)
+  end
+end
+
+-- Helper: Render text input option
+local function render_text_option(opt, value, lines, opt_idx)
+  table.insert(lines, "    " .. opt.label .. ": " .. value)
+  state.option_lines[#lines] = opt_idx
+
+  if opt.description and opt.description ~= "" then
+    table.insert(lines, "        " .. opt.description)
+  end
 end
 
 -- Render options content
@@ -109,32 +189,14 @@ function M._render_options()
   for i, opt in ipairs(state.options) do
     local checked = ccasp.state.command_options[state.cmd_name][opt.label]
 
-    if opt.type == "checkbox" or opt.type == "radio" then
-      local mark_open, mark_close = "[", "]"
-      if opt.type == "radio" then
-        mark_open, mark_close = "(", ")"
-      end
-
-      local mark = checked and "x" or " "
-      if opt.type == "radio" then
-        mark = checked and "•" or " "
-      end
-
-      table.insert(lines, "    " .. mark_open .. mark .. mark_close .. " " .. opt.label)
-      state.option_lines[#lines] = i
-
-      if opt.description and opt.description ~= "" then
-        table.insert(lines, "        " .. opt.description)
-      end
+    if opt.type == "checkbox" then
+      render_checkbox_option(opt, checked, lines, i)
+    elseif opt.type == "radio" then
+      render_radio_option(opt, checked, lines, i)
     else
       -- Text input option
       local value = ccasp.state.command_options[state.cmd_name][opt.label] or ""
-      table.insert(lines, "    " .. opt.label .. ": " .. value)
-      state.option_lines[#lines] = i
-
-      if opt.description and opt.description ~= "" then
-        table.insert(lines, "        " .. opt.description)
-      end
+      render_text_option(opt, value, lines, i)
     end
 
     table.insert(lines, "")
@@ -146,9 +208,7 @@ function M._render_options()
     table.insert(lines, "    Run command with default settings.")
   end
 
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(state.popup.bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", false)
+  M._set_popup_content(state.popup.bufnr, lines)
 
   -- Position cursor on first option
   if state.selected_line and vim.api.nvim_win_is_valid(state.popup.winid) then
@@ -298,24 +358,10 @@ function M.show_help()
     return
   end
 
-  local Popup = require("nui.popup")
-
-  state.popup = Popup({
-    position = "50%",
-    size = {
-      width = 60,
-      height = 40,
-    },
-    border = {
-      style = "rounded",
-      text = {
-        top = " CCASP Keybindings ",
-        top_align = "center",
-      },
-    },
-    buf_options = {
-      modifiable = false,
-    },
+  state.popup = M._create_popup({
+    width = 60,
+    height = 40,
+    title = "CCASP Keybindings",
   })
 
   state.popup:mount()
@@ -365,14 +411,11 @@ function M.show_help()
     "",
   }
 
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(state.popup.bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", false)
+  M._set_popup_content(state.popup.bufnr, lines)
+  M._setup_close_keybindings(state.popup.bufnr)
 
-  -- Close on any key
+  -- Additional close on '?'
   local opts = { buffer = state.popup.bufnr, noremap = true, silent = true }
-  vim.keymap.set("n", "<Esc>", function() M.close() end, opts)
-  vim.keymap.set("n", "q", function() M.close() end, opts)
   vim.keymap.set("n", "?", function() M.close() end, opts)
 end
 
@@ -395,46 +438,30 @@ function M.show_diff(cmd_name)
   end
 
   local protected = require("ccasp.core.protected")
-  local Popup = require("nui.popup")
 
   local diff, err = protected.get_diff(cmd_name)
 
   if not diff then
     vim.notify("Cannot generate diff: " .. (err or "unknown error"), vim.log.levels.WARN)
     -- Show info popup instead
-    state.popup = Popup({
-      position = "50%",
-      size = { width = 50, height = 5 },
-      border = {
-        style = "rounded",
-        text = { top = " No Diff Available ", top_align = "center" },
-      },
+    state.popup = M._create_popup({
+      width = 50,
+      height = 5,
+      title = "No Diff Available",
     })
     state.popup:mount()
     local lines = { "", "  " .. (err or "Template not found"), "" }
-    vim.api.nvim_buf_set_lines(state.popup.bufnr, 0, -1, false, lines)
-    local opts = { buffer = state.popup.bufnr, noremap = true, silent = true }
-    vim.keymap.set("n", "<Esc>", function() M.close() end, opts)
-    vim.keymap.set("n", "q", function() M.close() end, opts)
+    M._set_popup_content(state.popup.bufnr, lines)
+    M._setup_close_keybindings(state.popup.bufnr)
     return
   end
 
   -- Create popup
-  state.popup = Popup({
-    position = "50%",
-    size = {
-      width = 80,
-      height = 40,
-    },
-    border = {
-      style = "rounded",
-      text = {
-        top = " /" .. cmd_name .. " - Diff vs Template ",
-        top_align = "center",
-        bottom = " [Esc] Close ",
-        bottom_align = "center",
-      },
-    },
+  state.popup = M._create_popup({
+    width = 80,
+    height = 40,
+    title = "/" .. cmd_name .. " - Diff vs Template",
+    bottom_text = "[Esc] Close",
     buf_options = {
       modifiable = false,
       filetype = "diff",
@@ -448,15 +475,8 @@ function M.show_diff(cmd_name)
 
   -- Set content
   local lines = vim.split(diff, "\n")
-
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(state.popup.bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", false)
-
-  -- Keybindings
-  local opts = { buffer = state.popup.bufnr, noremap = true, silent = true }
-  vim.keymap.set("n", "<Esc>", function() M.close() end, opts)
-  vim.keymap.set("n", "q", function() M.close() end, opts)
+  M._set_popup_content(state.popup.bufnr, lines)
+  M._setup_close_keybindings(state.popup.bufnr)
 end
 
 -- Show confirmation dialog
@@ -473,24 +493,10 @@ function M.confirm(title, message, on_confirm)
     return
   end
 
-  local Popup = require("nui.popup")
-
-  state.popup = Popup({
-    position = "50%",
-    size = {
-      width = 50,
-      height = 7,
-    },
-    border = {
-      style = "rounded",
-      text = {
-        top = " " .. title .. " ",
-        top_align = "center",
-      },
-    },
-    buf_options = {
-      modifiable = false,
-    },
+  state.popup = M._create_popup({
+    width = 50,
+    height = 7,
+    title = title,
   })
 
   state.popup:mount()
@@ -503,10 +509,10 @@ function M.confirm(title, message, on_confirm)
     "",
   }
 
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(state.popup.bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(state.popup.bufnr, "modifiable", false)
+  M._set_popup_content(state.popup.bufnr, lines)
+  M._setup_close_keybindings(state.popup.bufnr)
 
+  -- Additional keybindings for yes/no
   local opts = { buffer = state.popup.bufnr, noremap = true, silent = true }
 
   vim.keymap.set("n", "y", function()
@@ -524,14 +530,6 @@ function M.confirm(title, message, on_confirm)
   end, opts)
 
   vim.keymap.set("n", "n", function()
-    M.close()
-  end, opts)
-
-  vim.keymap.set("n", "<Esc>", function()
-    M.close()
-  end, opts)
-
-  vim.keymap.set("n", "q", function()
     M.close()
   end, opts)
 end

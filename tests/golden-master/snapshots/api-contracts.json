@@ -1,7 +1,7 @@
 {
   "claude-settings": {
     "name": "claude-settings",
-    "capturedAt": "2026-02-06T00:26:01.834Z",
+    "capturedAt": "2026-02-06T06:53:22.108Z",
     "exports": {
       "DEFAULT_GITHUB_SETTINGS": {
         "name": "DEFAULT_GITHUB_SETTINGS",
@@ -165,7 +165,7 @@
   },
   "init": {
     "name": "init",
-    "capturedAt": "2026-02-06T00:26:02.390Z",
+    "capturedAt": "2026-02-06T06:53:22.873Z",
     "exports": {
       "runInit": {
         "name": "runInit",
@@ -189,7 +189,7 @@
   },
   "claude-audit": {
     "name": "claude-audit",
-    "capturedAt": "2026-02-06T00:26:02.444Z",
+    "capturedAt": "2026-02-06T06:53:22.931Z",
     "exports": {
       "ENHANCEMENT_TEMPLATES": {
         "name": "ENHANCEMENT_TEMPLATES",
@@ -236,7 +236,7 @@
   },
   "menu": {
     "name": "menu",
-    "capturedAt": "2026-02-06T00:26:02.444Z",
+    "capturedAt": "2026-02-06T06:53:22.931Z",
     "exports": {
       "showError": {
         "name": "showError",
@@ -303,7 +303,7 @@
   },
   "setup-wizard": {
     "name": "setup-wizard",
-    "capturedAt": "2026-02-06T00:26:02.445Z",
+    "capturedAt": "2026-02-06T06:53:22.932Z",
     "exports": {
       "createBackup": {
         "name": "createBackup",
@@ -343,7 +343,7 @@
   },
   "explore-mcp": {
     "name": "explore-mcp",
-    "capturedAt": "2026-02-06T00:26:02.445Z",
+    "capturedAt": "2026-02-06T06:53:22.932Z",
     "exports": {
       "runExploreMcp": {
         "name": "runExploreMcp",
@@ -372,7 +372,7 @@
   },
   "detect-tech-stack": {
     "name": "detect-tech-stack",
-    "capturedAt": "2026-02-06T00:26:02.445Z",
+    "capturedAt": "2026-02-06T06:53:22.932Z",
     "exports": {
       "default": {
         "name": "default",
@@ -405,7 +405,7 @@
   },
   "cli-flows-settings": {
     "name": "cli-flows-settings",
-    "capturedAt": "2026-02-06T00:26:02.445Z",
+    "capturedAt": "2026-02-06T06:53:22.932Z",
     "exports": {
       "configureDeployment": {
         "name": "configureDeployment",
@@ -463,7 +463,7 @@
   },
   "roadmap-github-integration": {
     "name": "roadmap-github-integration",
-    "capturedAt": "2026-02-06T00:26:02.445Z",
+    "capturedAt": "2026-02-06T06:53:22.932Z",
     "exports": {
       "addProgressComment": {
         "name": "addProgressComment",
@@ -684,7 +684,7 @@
   },
   "vdb-decision-engine": {
     "name": "vdb-decision-engine",
-    "capturedAt": "2026-02-06T00:26:02.446Z",
+    "capturedAt": "2026-02-06T06:53:22.933Z",
     "exports": {
       "DecisionEngine": {
         "name": "DecisionEngine",
@@ -710,7 +710,7 @@
   },
   "create-phase-dev-wizard": {
     "name": "create-phase-dev-wizard",
-    "capturedAt": "2026-02-06T00:26:02.447Z",
+    "capturedAt": "2026-02-06T06:53:22.936Z",
     "exports": {
       "promptEnhancements": {
         "name": "promptEnhancements",
@@ -757,7 +757,7 @@
   },
   "testing-config": {
     "name": "testing-config",
-    "capturedAt": "2026-02-06T00:26:02.447Z",
+    "capturedAt": "2026-02-06T06:53:22.936Z",
     "exports": {
       "CREDENTIAL_SOURCES": {
         "name": "CREDENTIAL_SOURCES",
@@ -969,7 +969,7 @@
   },
   "init-command-templates": {
     "name": "init-command-templates",
-    "capturedAt": "2026-02-06T00:26:02.447Z",
+    "capturedAt": "2026-02-06T06:53:22.937Z",
     "exports": {
       "COMMAND_TEMPLATES": {
         "name": "COMMAND_TEMPLATES",
@@ -1020,7 +1020,7 @@
   },
   "roadmap": {
     "name": "roadmap",
-    "capturedAt": "2026-02-06T00:26:02.447Z",
+    "capturedAt": "2026-02-06T06:53:22.937Z",
     "exports": {
       "runRoadmap": {
         "name": "runRoadmap",
@@ -1042,7 +1042,7 @@
   },
   "create-phase-dev-codebase-analyzer": {
     "name": "create-phase-dev-codebase-analyzer",
-    "capturedAt": "2026-02-06T00:26:02.448Z",
+    "capturedAt": "2026-02-06T06:53:22.937Z",
     "exports": {
       "analyzeCodebase": {
         "name": "analyzeCodebase",
@@ -1075,7 +1075,7 @@
   },
   "agents-spawner": {
     "name": "agents-spawner",
-    "capturedAt": "2026-02-06T00:26:02.448Z",
+    "capturedAt": "2026-02-06T06:53:22.937Z",
     "exports": {
       "AGENT_CONFIGS": {
         "name": "AGENT_CONFIGS",
@@ -1245,7 +1245,7 @@
   },
   "cli-flows-main": {
     "name": "cli-flows-main",
-    "capturedAt": "2026-02-06T00:26:02.452Z",
+    "capturedAt": "2026-02-06T06:53:22.941Z",
     "exports": {
       "showMainMenu": {
         "name": "showMainMenu",
@@ -1258,7 +1258,7 @@
   },
   "vision-agent-factory": {
     "name": "vision-agent-factory",
-    "capturedAt": "2026-02-06T00:26:02.452Z",
+    "capturedAt": "2026-02-06T06:53:22.941Z",
     "exports": {
       "DOMAIN_PATTERNS": {
         "name": "DOMAIN_PATTERNS",
@@ -1384,7 +1384,7 @@
   },
   "create-phase-dev-l2-orchestrator": {
     "name": "create-phase-dev-l2-orchestrator",
-    "capturedAt": "2026-02-06T00:26:02.452Z",
+    "capturedAt": "2026-02-06T06:53:22.941Z",
     "exports": {
       "aggregateExplorationResults": {
         "name": "aggregateExplorationResults",
@@ -1454,7 +1454,7 @@
   },
   "explore-mcp-registry": {
     "name": "explore-mcp-registry",
-    "capturedAt": "2026-02-06T00:26:02.452Z",
+    "capturedAt": "2026-02-06T06:53:22.942Z",
     "exports": {
       "CORE_TESTING_MCPS": {
         "name": "CORE_TESTING_MCPS",
@@ -1478,16 +1478,117 @@
           "automation",
           "communication",
           "ai",
+          "development",
           "debugging",
           "tunnel",
           "utilities"
         ]
+      },
+      "POSTGRESQL_MCP": {
+        "name": "POSTGRESQL_MCP",
+        "type": "object",
+        "keys": [
+          "id",
+          "name",
+          "description",
+          "npmPackage",
+          "category",
+          "requiredEnv",
+          "optionalEnv",
+          "relevantFor",
+          "recommended",
+          "tools",
+          "note",
+          "apiKeyRequired",
+          "apiKeyName",
+          "apiKeyUrl",
+          "apiKeyFree",
+          "apiKeyNote"
+        ]
+      },
+      "POSTGRES_DETECTION_PATTERNS": {
+        "name": "POSTGRES_DETECTION_PATTERNS",
+        "type": "object",
+        "keys": [
+          "techStack",
+          "orm",
+          "npm",
+          "pip"
+        ]
+      },
+      "SENTRY_DETECTION_PATTERNS": {
+        "name": "SENTRY_DETECTION_PATTERNS",
+        "type": "object",
+        "keys": [
+          "npm",
+          "pip",
+          "cargo"
+        ]
+      },
+      "SENTRY_MCP": {
+        "name": "SENTRY_MCP",
+        "type": "object",
+        "keys": [
+          "id",
+          "name",
+          "description",
+          "npmPackage",
+          "category",
+          "requiredEnv",
+          "optionalEnv",
+          "relevantFor",
+          "recommended",
+          "tools",
+          "note",
+          "apiKeyRequired",
+          "apiKeyName",
+          "apiKeyUrl",
+          "apiKeyFree",
+          "apiKeyNote"
+        ]
+      },
+      "SERENA_MCP": {
+        "name": "SERENA_MCP",
+        "type": "object",
+        "keys": [
+          "id",
+          "name",
+          "description",
+          "command",
+          "npmPackage",
+          "args",
+          "category",
+          "requiredEnv",
+          "optionalEnv",
+          "relevantFor",
+          "recommended",
+          "tools",
+          "note"
+        ]
+      },
+      "fetchAnthropicRegistry": {
+        "name": "fetchAnthropicRegistry",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
+        "length": 0
       },
       "getAllMcps": {
         "name": "getAllMcps",
         "type": "function",
         "isAsync": false,
         "params": [],
+        "length": 0
+      },
+      "getAnthropicRegistryMcps": {
+        "name": "getAnthropicRegistryMcps",
+        "type": "function",
+        "isAsync": true,
+        "params": [
+          "options"
+        ],
         "length": 0
       },
       "getCategories": {
@@ -1591,12 +1692,30 @@
           "query"
         ],
         "length": 1
+      },
+      "transformApiServer": {
+        "name": "transformApiServer",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "entry"
+        ],
+        "length": 1
+      },
+      "validatePostgresUrl": {
+        "name": "validatePostgresUrl",
+        "type": "function",
+        "isAsync": false,
+        "params": [
+          "url"
+        ],
+        "length": 1
       }
     }
   },
   "roadmap-multi-project-builder": {
     "name": "roadmap-multi-project-builder",
-    "capturedAt": "2026-02-06T00:26:02.453Z",
+    "capturedAt": "2026-02-06T06:53:22.942Z",
     "exports": {
       "default": {
         "name": "default",
@@ -1649,7 +1768,7 @@
   },
   "github-epic-menu": {
     "name": "github-epic-menu",
-    "capturedAt": "2026-02-06T00:26:02.465Z",
+    "capturedAt": "2026-02-06T06:53:22.957Z",
     "exports": {
       "listEpics": {
         "name": "listEpics",
@@ -1691,7 +1810,7 @@
   },
   "vision-state-manager": {
     "name": "vision-state-manager",
-    "capturedAt": "2026-02-06T00:26:02.466Z",
+    "capturedAt": "2026-02-06T06:53:22.957Z",
     "exports": {
       "completeTaskAndSync": {
         "name": "completeTaskAndSync",
@@ -1883,7 +2002,7 @@
   },
   "dev-deploy": {
     "name": "dev-deploy",
-    "capturedAt": "2026-02-06T00:26:02.466Z",
+    "capturedAt": "2026-02-06T06:53:22.958Z",
     "exports": {
       "runDevDeploy": {
         "name": "runDevDeploy",
@@ -1898,7 +2017,7 @@
   },
   "create-roadmap": {
     "name": "create-roadmap",
-    "capturedAt": "2026-02-06T00:26:02.470Z",
+    "capturedAt": "2026-02-06T06:53:22.965Z",
     "exports": {
       "runCreateRoadmap": {
         "name": "runCreateRoadmap",
@@ -1913,7 +2032,7 @@
   },
   "pm-hierarchy-schema": {
     "name": "pm-hierarchy-schema",
-    "capturedAt": "2026-02-06T00:26:02.477Z",
+    "capturedAt": "2026-02-06T06:53:22.976Z",
     "exports": {
       "COMPLETION_TRACKING_SCHEMA": {
         "name": "COMPLETION_TRACKING_SCHEMA",
@@ -2111,7 +2230,7 @@
   },
   "config-github-config": {
     "name": "config-github-config",
-    "capturedAt": "2026-02-06T00:26:02.477Z",
+    "capturedAt": "2026-02-06T06:53:22.976Z",
     "exports": {
       "DEFAULT_GITHUB_SETTINGS": {
         "name": "DEFAULT_GITHUB_SETTINGS",
@@ -2160,7 +2279,7 @@
   },
   "config-tech-stack-config": {
     "name": "config-tech-stack-config",
-    "capturedAt": "2026-02-06T00:26:02.477Z",
+    "capturedAt": "2026-02-06T06:53:22.976Z",
     "exports": {
       "applyTechStackTemplates": {
         "name": "applyTechStackTemplates",
@@ -2200,7 +2319,7 @@
   },
   "orchestration-progress-aggregator": {
     "name": "orchestration-progress-aggregator",
-    "capturedAt": "2026-02-06T00:26:02.478Z",
+    "capturedAt": "2026-02-06T06:53:22.977Z",
     "exports": {
       "HierarchyStatus": {
         "name": "HierarchyStatus",
@@ -2311,7 +2430,7 @@
   },
   "vdb-board-sync": {
     "name": "vdb-board-sync",
-    "capturedAt": "2026-02-06T00:26:02.479Z",
+    "capturedAt": "2026-02-06T06:53:22.980Z",
     "exports": {
       "BoardSync": {
         "name": "BoardSync",
@@ -2367,7 +2486,7 @@
   },
   "github-client": {
     "name": "github-client",
-    "capturedAt": "2026-02-06T00:26:02.480Z",
+    "capturedAt": "2026-02-06T06:53:22.985Z",
     "exports": {
       "addIssueComment": {
         "name": "addIssueComment",
@@ -2601,7 +2720,7 @@
   },
   "phase-dev-completion-reporter": {
     "name": "phase-dev-completion-reporter",
-    "capturedAt": "2026-02-06T00:26:02.481Z",
+    "capturedAt": "2026-02-06T06:53:22.985Z",
     "exports": {
       "calculateCompletionMetrics": {
         "name": "calculateCompletionMetrics",
@@ -2658,7 +2777,7 @@
   },
   "agents-templates": {
     "name": "agents-templates",
-    "capturedAt": "2026-02-06T00:26:02.484Z",
+    "capturedAt": "2026-02-06T06:53:22.989Z",
     "exports": {
       "AGENT_LEVELS": {
         "name": "AGENT_LEVELS",
@@ -2772,7 +2891,7 @@
   },
   "panel": {
     "name": "panel",
-    "capturedAt": "2026-02-06T00:26:02.485Z",
+    "capturedAt": "2026-02-06T06:53:22.989Z",
     "exports": {
       "launchPanel": {
         "name": "launchPanel",
@@ -2801,7 +2920,7 @@
   },
   "audit-helpers": {
     "name": "audit-helpers",
-    "capturedAt": "2026-02-06T00:26:02.485Z",
+    "capturedAt": "2026-02-06T06:53:22.989Z",
     "exports": {
       "auditClaudeFolder": {
         "name": "auditClaudeFolder",
@@ -2927,7 +3046,7 @@
   },
   "create-agent": {
     "name": "create-agent",
-    "capturedAt": "2026-02-06T00:26:02.485Z",
+    "capturedAt": "2026-02-06T06:53:22.990Z",
     "exports": {
       "runCreateAgent": {
         "name": "runCreateAgent",
@@ -2942,7 +3061,7 @@
   },
   "analysis-competitor-analysis": {
     "name": "analysis-competitor-analysis",
-    "capturedAt": "2026-02-06T00:26:02.485Z",
+    "capturedAt": "2026-02-06T06:53:22.990Z",
     "exports": {
       "ANALYSIS_PHASES": {
         "name": "ANALYSIS_PHASES",
@@ -3120,7 +3239,7 @@
   },
   "create-phase-dev-documentation-generator": {
     "name": "create-phase-dev-documentation-generator",
-    "capturedAt": "2026-02-06T00:26:02.487Z",
+    "capturedAt": "2026-02-06T06:53:22.992Z",
     "exports": {
       "createGitCheckpoint": {
         "name": "createGitCheckpoint",
@@ -3194,7 +3313,7 @@
   },
   "vision": {
     "name": "vision",
-    "capturedAt": "2026-02-06T00:26:02.487Z",
+    "capturedAt": "2026-02-06T06:53:22.993Z",
     "exports": {
       "default": {
         "name": "default",
@@ -3217,7 +3336,7 @@
   },
   "agents-generator-content-generators": {
     "name": "agents-generator-content-generators",
-    "capturedAt": "2026-02-06T00:26:02.487Z",
+    "capturedAt": "2026-02-06T06:53:22.993Z",
     "exports": {
       "getAgentContent": {
         "name": "getAgentContent",
@@ -3233,7 +3352,7 @@
   },
   "gtask-init": {
     "name": "gtask-init",
-    "capturedAt": "2026-02-06T00:26:02.489Z",
+    "capturedAt": "2026-02-06T06:53:22.995Z",
     "exports": {
       "default": {
         "name": "default",
@@ -3255,7 +3374,7 @@
   },
   "epic-state-manager": {
     "name": "epic-state-manager",
-    "capturedAt": "2026-02-06T00:26:02.491Z",
+    "capturedAt": "2026-02-06T06:53:23.000Z",
     "exports": {
       "addActiveRoadmap": {
         "name": "addActiveRoadmap",
@@ -3461,7 +3580,7 @@
   },
   "vision-ui-ascii-generator": {
     "name": "vision-ui-ascii-generator",
-    "capturedAt": "2026-02-06T00:26:02.493Z",
+    "capturedAt": "2026-02-06T06:53:23.004Z",
     "exports": {
       "extractComponentList": {
         "name": "extractComponentList",
@@ -3574,7 +3693,7 @@
   },
   "explore-mcp-flows": {
     "name": "explore-mcp-flows",
-    "capturedAt": "2026-02-06T00:26:02.493Z",
+    "capturedAt": "2026-02-06T06:53:23.004Z",
     "exports": {
       "runBrowseFlow": {
         "name": "runBrowseFlow",
@@ -3642,7 +3761,7 @@
   },
   "vision-observer": {
     "name": "vision-observer",
-    "capturedAt": "2026-02-06T00:26:02.494Z",
+    "capturedAt": "2026-02-06T06:53:23.004Z",
     "exports": {
       "calculateAlignment": {
         "name": "calculateAlignment",
@@ -3733,7 +3852,7 @@
   },
   "roadmap-phase-generator": {
     "name": "roadmap-phase-generator",
-    "capturedAt": "2026-02-06T00:26:02.494Z",
+    "capturedAt": "2026-02-06T06:53:23.004Z",
     "exports": {
       "completeTask": {
         "name": "completeTask",
@@ -3827,7 +3946,7 @@
   },
   "templates-issue-body": {
     "name": "templates-issue-body",
-    "capturedAt": "2026-02-06T00:26:02.494Z",
+    "capturedAt": "2026-02-06T06:53:23.005Z",
     "exports": {
       "createFileObject": {
         "name": "createFileObject",
@@ -4125,7 +4244,7 @@
   },
   "utils-smart-merge": {
     "name": "utils-smart-merge",
-    "capturedAt": "2026-02-06T00:26:02.494Z",
+    "capturedAt": "2026-02-06T06:53:23.005Z",
     "exports": {
       "ASSET_PATHS": {
         "name": "ASSET_PATHS",
@@ -4292,7 +4411,7 @@
   },
   "vision-schema": {
     "name": "vision-schema",
-    "capturedAt": "2026-02-06T00:26:02.495Z",
+    "capturedAt": "2026-02-06T06:53:23.005Z",
     "exports": {
       "DriftSeverity": {
         "name": "DriftSeverity",
@@ -4317,6 +4436,7 @@
           "analysis",
           "wireframes",
           "architecture",
+          "requirements_document",
           "execution_plan",
           "observer",
           "security",
@@ -4470,7 +4590,7 @@
   },
   "github-issue-hierarchy-manager": {
     "name": "github-issue-hierarchy-manager",
-    "capturedAt": "2026-02-06T00:26:02.495Z",
+    "capturedAt": "2026-02-06T06:53:23.005Z",
     "exports": {
       "createGitHubIssue": {
         "name": "createGitHubIssue",
@@ -4586,7 +4706,7 @@
   },
   "pm-hierarchy-integrations-linear-adapter": {
     "name": "pm-hierarchy-integrations-linear-adapter",
-    "capturedAt": "2026-02-06T00:26:02.495Z",
+    "capturedAt": "2026-02-06T06:53:23.006Z",
     "exports": {
       "LinearAdapter": {
         "name": "LinearAdapter",
@@ -4610,7 +4730,7 @@
   },
   "utils-template-engine": {
     "name": "utils-template-engine",
-    "capturedAt": "2026-02-06T00:26:02.495Z",
+    "capturedAt": "2026-02-06T06:53:23.006Z",
     "exports": {
       "default": {
         "name": "default",
@@ -4787,7 +4907,7 @@
   },
   "init-features": {
     "name": "init-features",
-    "capturedAt": "2026-02-06T00:26:02.495Z",
+    "capturedAt": "2026-02-06T06:53:23.006Z",
     "exports": {
       "AVAILABLE_COMMANDS": {
         "name": "AVAILABLE_COMMANDS",
@@ -4814,7 +4934,7 @@
           "18",
           "19"
         ],
-        "length": 49
+        "length": 50
       },
       "OPTIONAL_FEATURES": {
         "name": "OPTIONAL_FEATURES",
@@ -4837,9 +4957,11 @@
           "14",
           "15",
           "16",
-          "17"
+          "17",
+          "18",
+          "19"
         ],
-        "length": 18
+        "length": 20
       },
       "getCommandsForFeature": {
         "name": "getCommandsForFeature",
@@ -4870,7 +4992,7 @@
   },
   "vision-analysis-account-detector": {
     "name": "vision-analysis-account-detector",
-    "capturedAt": "2026-02-06T00:26:02.496Z",
+    "capturedAt": "2026-02-06T06:53:23.006Z",
     "exports": {
       "detectAccountRequirements": {
         "name": "detectAccountRequirements",
@@ -4904,7 +5026,7 @@
   },
   "utils-exploration-docs": {
     "name": "utils-exploration-docs",
-    "capturedAt": "2026-02-06T00:26:02.496Z",
+    "capturedAt": "2026-02-06T06:53:23.006Z",
     "exports": {
       "createExplorationDir": {
         "name": "createExplorationDir",
@@ -5055,7 +5177,7 @@
   },
   "init-generators": {
     "name": "init-generators",
-    "capturedAt": "2026-02-06T00:26:02.496Z",
+    "capturedAt": "2026-02-06T06:53:23.007Z",
     "exports": {
       "generateIndexFile": {
         "name": "generateIndexFile",
@@ -5145,7 +5267,7 @@
   },
   "agents-testing-scout": {
     "name": "agents-testing-scout",
-    "capturedAt": "2026-02-06T00:26:02.496Z",
+    "capturedAt": "2026-02-06T06:53:23.007Z",
     "exports": {
       "CONFIG_TEMPLATES": {
         "name": "CONFIG_TEMPLATES",
@@ -5276,7 +5398,7 @@
   },
   "sync": {
     "name": "sync",
-    "capturedAt": "2026-02-06T00:26:02.499Z",
+    "capturedAt": "2026-02-06T06:53:23.009Z",
     "exports": {
       "loadAllTaskStates": {
         "name": "loadAllTaskStates",
@@ -5327,7 +5449,7 @@
   },
   "nvim-setup": {
     "name": "nvim-setup",
-    "capturedAt": "2026-02-06T00:26:02.499Z",
+    "capturedAt": "2026-02-06T06:53:23.009Z",
     "exports": {
       "default": {
         "name": "default",
@@ -5351,7 +5473,7 @@
   },
   "vision-orchestrators-planning": {
     "name": "vision-orchestrators-planning",
-    "capturedAt": "2026-02-06T00:26:02.502Z",
+    "capturedAt": "2026-02-06T06:53:23.011Z",
     "exports": {
       "analyzeRoadmapBreakdown": {
         "name": "analyzeRoadmapBreakdown",
@@ -5378,7 +5500,7 @@
   },
   "pm-hierarchy-integration-wizard": {
     "name": "pm-hierarchy-integration-wizard",
-    "capturedAt": "2026-02-06T00:26:02.503Z",
+    "capturedAt": "2026-02-06T06:53:23.012Z",
     "exports": {
       "promptForIntegrations": {
         "name": "promptForIntegrations",
@@ -5402,7 +5524,7 @@
   },
   "vision-architecture-api-contracts": {
     "name": "vision-architecture-api-contracts",
-    "capturedAt": "2026-02-06T00:26:02.503Z",
+    "capturedAt": "2026-02-06T06:53:23.012Z",
     "exports": {
       "formatOpenAPISpec": {
         "name": "formatOpenAPISpec",
@@ -5445,7 +5567,7 @@
   },
   "config-agent-config": {
     "name": "config-agent-config",
-    "capturedAt": "2026-02-06T00:26:02.503Z",
+    "capturedAt": "2026-02-06T06:53:23.012Z",
     "exports": {
       "createAgentOnlyLauncher": {
         "name": "createAgentOnlyLauncher",
@@ -5493,7 +5615,7 @@
   },
   "create-phase-dev": {
     "name": "create-phase-dev",
-    "capturedAt": "2026-02-06T00:26:02.503Z",
+    "capturedAt": "2026-02-06T06:53:23.012Z",
     "exports": {
       "runCreatePhaseDev": {
         "name": "runCreatePhaseDev",

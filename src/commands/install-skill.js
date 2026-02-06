@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, cpSync
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { showHeader, showSuccess, showError, showWarning, showInfo } from '../cli/menu.js';
+import { importFromRepo } from './install-skill/importers/claude-skills-format.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,10 +106,52 @@ function installSkill(skillName, projectPath) {
 }
 
 /**
+ * Import a skill from an external GitHub repository
+ * @param {string} repoUrl - GitHub repo URL or owner/repo format
+ * @param {string} skillPath - Path within the repo to the skill directory
+ * @param {Object} options - Command options
+ */
+async function importExternalSkill(repoUrl, skillPath, options = {}) {
+  const projectPath = options.project || process.cwd();
+  const skillsDir = join(projectPath, '.claude', 'skills');
+
+  if (!existsSync(join(projectPath, '.claude'))) {
+    showError('No .claude directory found. Run `ccasp init` first.');
+    return;
+  }
+
+  const spinner = ora(`Importing skill from ${repoUrl}...`).start();
+
+  try {
+    const result = await importFromRepo(repoUrl, skillPath, skillsDir);
+
+    if (result.success) {
+      spinner.succeed(`Imported skill: ${result.skillName}`);
+      console.log(chalk.green(`\n  ✓ Skill installed to .claude/skills/${result.skillName}/`));
+      console.log(chalk.yellow('  Restart Claude Code CLI to use the new skill.'));
+    } else {
+      spinner.fail('Import failed');
+      for (const err of result.errors) {
+        showError(err);
+      }
+    }
+  } catch (error) {
+    spinner.fail(`Import failed: ${error.message}`);
+  }
+}
+
+/**
  * Main install-skill command
  */
 export async function installSkillCommand(options = {}) {
   const projectPath = options.project || process.cwd();
+
+  // Handle --from-repo flag for external skill import
+  if (options.fromRepo) {
+    const skillPath = options.skillPath || options.args?.[0] || '.';
+    await importExternalSkill(options.fromRepo, skillPath, options);
+    return;
+  }
 
   showHeader();
 
@@ -210,7 +253,7 @@ export function listSkills() {
   for (const skill of skills) {
     console.log(`  ${chalk.white(skill.name)}`);
     console.log(`    ${chalk.gray(skill.description)}`);
-    console.log(`    Category: ${chalk.yellow(skill.category)} | Portability: ${chalk.green(skill.portability + '%')}`);
+    console.log(`    Category: ${chalk.yellow(skill.category)} | Portability: ${chalk.green(`${skill.portability  }%`)}`);
     console.log();
   }
 

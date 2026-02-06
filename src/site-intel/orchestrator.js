@@ -6,9 +6,10 @@
  */
 
 import { crawlSite } from './discovery/index.js';
+import { parseRoutes } from './discovery/route-parser.js';
 import { summarizeAllPages } from './summarizer/index.js';
-import { buildSiteGraph, toMermaid } from './graph/index.js';
-import { saveScan, loadLatestScan, listDomains, toChromaDocuments } from './memory/index.js';
+import { buildSiteGraph, addRouteEdges, toMermaid } from './graph/index.js';
+import { saveScan, loadLatestScan, listDomains, toChromaDocuments, storeToChroma } from './memory/index.js';
 import { generateRecommendations, calculateHealthScore, generateJudgmentPrompt } from './judgment/index.js';
 
 /**
@@ -50,6 +51,29 @@ export async function runFullScan(url, options = {}) {
   };
   console.log(`[L1] Discovered ${crawlResult.stats.pagesCrawled} pages, ${crawlResult.routes.length} routes`);
 
+  // L1.5: Code Analysis (route parsing via ts-morph)
+  let routeData = null;
+  try {
+    console.log('[L1.5] Parsing codebase routes...');
+    routeData = await parseRoutes(projectRoot);
+    if (routeData.success) {
+      results.layers.codeAnalysis = {
+        status: 'complete',
+        totalRoutes: routeData.summary.totalRoutes,
+        totalComponents: routeData.summary.totalComponents,
+        totalHooks: routeData.summary.totalHooks,
+        totalApiCalls: routeData.summary.totalApiCalls
+      };
+      console.log(`[L1.5] Parsed ${routeData.summary.totalRoutes} routes, ${routeData.summary.totalComponents} components`);
+    } else {
+      results.layers.codeAnalysis = { status: 'skipped', reason: routeData.error || 'No routes found' };
+      console.log(`[L1.5] Skipped: ${routeData.error || 'No routes found'}`);
+    }
+  } catch (err) {
+    results.layers.codeAnalysis = { status: 'skipped', reason: err.message };
+    console.log(`[L1.5] Skipped: ${err.message}`);
+  }
+
   // Layer 2: Summarization
   console.log('[L2] Generating semantic summaries...');
   const summaryResult = summarizeAllPages(crawlResult);
@@ -75,13 +99,22 @@ export async function runFullScan(url, options = {}) {
     return { success: false, error: `Graph build failed: ${graphResult.error}`, layer: 'graph' };
   }
 
+  // Merge route edges from code analysis
+  if (routeData?.success && routeData.routes.length > 0) {
+    addRouteEdges(graphResult, routeData);
+    console.log(`[L3] Added route edges: ${graphResult.metrics.routeEdgeCount} route, ${graphResult.metrics.componentEdgeCount} component, ${graphResult.metrics.apiClientEdgeCount} api-client`);
+  }
+
   results.layers.graph = {
     status: 'complete',
     nodes: graphResult.nodes.length,
     edges: graphResult.edges.length,
     userFlows: graphResult.userFlows.length,
     sharedAPIs: graphResult.sharedAPIs.length,
-    orphans: graphResult.metrics.orphanCount
+    orphans: graphResult.metrics.orphanCount,
+    routeEdges: graphResult.metrics.routeEdgeCount || 0,
+    componentEdges: graphResult.metrics.componentEdgeCount || 0,
+    apiClientEdges: graphResult.metrics.apiClientEdgeCount || 0
   };
   console.log(`[L3] Graph: ${graphResult.nodes.length} nodes, ${graphResult.edges.length} edges, ${graphResult.userFlows.length} flows`);
 
@@ -101,6 +134,15 @@ export async function runFullScan(url, options = {}) {
   // Generate ChromaDB documents (ready for vector storage)
   const chromaDocs = toChromaDocuments(summaryResult, crawlResult.scanId);
   results.layers.memory.chromaDocuments = chromaDocs.documents.length;
+
+  // Store ChromaDB documents for vector search
+  if (chromaDocs.documents.length > 0) {
+    const chromaResult = storeToChroma(chromaDocs, crawlResult.domain, { projectRoot });
+    results.layers.memory.chromaStored = chromaResult.stored;
+    if (chromaResult.stored) {
+      console.log(`[L4] ChromaDB: ${chromaResult.count} documents stored to ${chromaResult.collection}`);
+    }
+  }
   console.log(`[L4] Stored scan, prepared ${chromaDocs.documents.length} vector documents`);
 
   // Layer 5: Judgment

@@ -7,8 +7,9 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { showHeader, showSuccess, showWarning } from '../../cli/menu.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 /**
  * Permission modes for Claude CLI
@@ -71,7 +72,7 @@ export async function configurePermissionMode() {
   }
 
   // Load or create settings
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   let settings = {};
 
   if (existsSync(settingsPath)) {
@@ -113,7 +114,7 @@ export async function configurePermissions() {
   console.log(chalk.dim('Configure which tools and patterns are allowed or denied.\n'));
 
   // Load existing settings
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   let settings = { permissions: { allow: [], deny: [] } };
 
   if (existsSync(settingsPath)) {
@@ -235,7 +236,7 @@ export async function configurePermissions() {
 export async function viewCurrentSettings() {
   showHeader('Current Settings');
 
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
 
   if (!existsSync(settingsPath)) {
     showWarning('No .claude/settings.json found.');

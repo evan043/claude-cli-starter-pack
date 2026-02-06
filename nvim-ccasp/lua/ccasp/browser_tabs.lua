@@ -1,8 +1,9 @@
 -- ccasp/browser_tabs.lua - Browser-like tab bar for Claude CLI sessions
 -- Provides a fixed tab bar above the terminal with right-click context menus
--- v1.3.0 - Full browser-style tab management
+-- v1.4.0 - Refactored with unified popup factory and improved organization
 
 local M = {}
+local picker_popup = require("ccasp.ui.picker_popup")
 
 -- Configuration
 M.config = {
@@ -198,9 +199,9 @@ function M.refresh()
   end
 
   local lines = M.render()
-  vim.api.nvim_buf_set_option(M.state.bar_bufnr, "modifiable", true)
+  vim.bo[M.state.bar_bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(M.state.bar_bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(M.state.bar_bufnr, "modifiable", false)
+  vim.bo[M.state.bar_bufnr].modifiable = false
 
   M.apply_highlights()
 
@@ -288,131 +289,43 @@ function M.show_context_menu(menu_type, context)
   M.show_menu_popup(items)
 end
 
--- Show menu popup window
+-- Show menu popup window (context menu at mouse position)
 function M.show_menu_popup(items)
-  local lines = {}
-  local max_width = 0
-
-  for _, item in ipairs(items) do
-    table.insert(lines, "  " .. item.label .. "  ")
-    max_width = math.max(max_width, #item.label + 4)
-  end
-
-  -- Create buffer
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
-  vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
-
-  -- Get mouse position for popup placement
-  local mouse = vim.fn.getmousepos()
-  local row = mouse.screenrow or 5
-  local col = mouse.screencol or 10
-
-  -- Adjust to stay on screen
-  local height = #lines
-  if row + height > vim.o.lines - 2 then
-    row = vim.o.lines - height - 3
-  end
-  if col + max_width > vim.o.columns - 2 then
-    col = vim.o.columns - max_width - 2
-  end
-
-  -- Create floating window
-  local winid = vim.api.nvim_open_win(bufnr, true, {
-    relative = "editor",
-    row = row,
-    col = col,
-    width = max_width,
-    height = height,
-    style = "minimal",
-    border = "rounded",
-  })
-
-  vim.wo[winid].cursorline = true
-
-  -- Setup keymaps
-  local opts = { buffer = bufnr, nowait = true, silent = true }
-
-  -- Close on escape or q
-  vim.keymap.set("n", "q", function()
-    vim.api.nvim_win_close(winid, true)
-  end, opts)
-
-  vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_win_close(winid, true)
-  end, opts)
-
-  -- Handle Enter to select
-  vim.keymap.set("n", "<CR>", function()
-    local cursor = vim.api.nvim_win_get_cursor(winid)
-    local line_num = cursor[1]
-    local item = items[line_num]
-
-    vim.api.nvim_win_close(winid, true)
-
-    if item and item.action then
-      M.execute_action(item.action, item.context)
-    end
-  end, opts)
-
-  -- Handle click to select
-  vim.keymap.set("n", "<LeftMouse>", function()
-    local mouse_pos = vim.fn.getmousepos()
-    if mouse_pos.winid == winid and mouse_pos.line > 0 then
-      local item = items[mouse_pos.line]
-      vim.api.nvim_win_close(winid, true)
+  picker_popup.show({
+    items = items,
+    centered = false, -- Use mouse position
+    on_select = function(item)
       if item and item.action then
         M.execute_action(item.action, item.context)
       end
-    else
-      vim.api.nvim_win_close(winid, true)
-    end
-  end, opts)
-
-  -- Highlight separators
-  local ns = vim.api.nvim_create_namespace("ccasp_context_menu")
-  for i, item in ipairs(items) do
-    if item.label:match("^─") then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, "Comment", i - 1, 0, -1)
-    end
-  end
+    end,
+  })
 end
 
--- Execute menu action
+-- Execute menu action (dispatch table pattern)
 function M.execute_action(action, context)
-  if action == "new_main" then
-    M.new_session("main")
-  elseif action == "new_worktree" then
-    M.show_worktree_picker()
-  elseif action == "new_branch" then
-    M.show_branch_picker()
-  elseif action == "show_recent" then
-    M.show_recent_sessions()
-  elseif action == "close" and context then
-    M.close_tab(context.tab_id)
-  elseif action == "close_all" then
-    M.close_all_tabs()
-  elseif action == "close_unpinned" then
-    M.close_unpinned_tabs()
-  elseif action == "close_others" and context then
-    M.close_other_tabs(context.tab_id)
-  elseif action == "close_right" and context then
-    M.close_tabs_to_right(context.tab_id)
-  elseif action == "rename" and context then
-    M.rename_tab(context.tab_id)
-  elseif action == "duplicate" and context then
-    M.duplicate_tab(context.tab_id)
-  elseif action == "toggle_pin" and context then
-    M.toggle_pin(context.tab_id)
-  elseif action == "move_left" and context then
-    M.move_tab_left(context.tab_id)
-  elseif action == "move_right" and context then
-    M.move_tab_right(context.tab_id)
-  elseif action == "add_to_group" and context then
-    M.show_group_picker(context.tab_id)
-  elseif action == "remove_from_group" and context then
-    M.remove_from_group(context.tab_id)
+  local actions = {
+    new_main = function() M.new_session("main") end,
+    new_worktree = function() M.show_worktree_picker() end,
+    new_branch = function() M.show_branch_picker() end,
+    show_recent = function() M.show_recent_sessions() end,
+    close = function() if context then M.close_tab(context.tab_id) end end,
+    close_all = function() M.close_all_tabs() end,
+    close_unpinned = function() M.close_unpinned_tabs() end,
+    close_others = function() if context then M.close_other_tabs(context.tab_id) end end,
+    close_right = function() if context then M.close_tabs_to_right(context.tab_id) end end,
+    rename = function() if context then M.rename_tab(context.tab_id) end end,
+    duplicate = function() if context then M.duplicate_tab(context.tab_id) end end,
+    toggle_pin = function() if context then M.toggle_pin(context.tab_id) end end,
+    move_left = function() if context then M.move_tab_left(context.tab_id) end end,
+    move_right = function() if context then M.move_tab_right(context.tab_id) end end,
+    add_to_group = function() if context then M.show_group_picker(context.tab_id) end end,
+    remove_from_group = function() if context then M.remove_from_group(context.tab_id) end end,
+  }
+
+  local handler = actions[action]
+  if handler then
+    handler()
   end
 end
 
@@ -614,88 +527,18 @@ function M.get_group(group_id)
   return nil
 end
 
--- Show generic picker window
+-- Show generic picker window (centered on screen)
 function M.show_picker_window(title, items, on_select)
-  local lines = {}
-  local max_width = #title + 6
-
-  for _, item in ipairs(items) do
-    local line = "  " .. item.label .. "  "
-    table.insert(lines, line)
-    max_width = math.max(max_width, #line)
-  end
-
-  -- Create buffer
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(bufnr, "modifiable", false)
-  vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
-
-  -- Center window
-  local height = math.min(#lines, 20)
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - max_width) / 2)
-
-  -- Create floating window
-  local winid = vim.api.nvim_open_win(bufnr, true, {
-    relative = "editor",
-    row = row,
-    col = col,
-    width = max_width,
-    height = height,
-    style = "minimal",
-    border = "rounded",
-    title = " " .. title .. " ",
-    title_pos = "center",
-  })
-
-  vim.wo[winid].cursorline = true
-
-  -- Setup keymaps
-  local opts = { buffer = bufnr, nowait = true, silent = true }
-
-  vim.keymap.set("n", "q", function()
-    vim.api.nvim_win_close(winid, true)
-  end, opts)
-
-  vim.keymap.set("n", "<Esc>", function()
-    vim.api.nvim_win_close(winid, true)
-  end, opts)
-
-  vim.keymap.set("n", "<CR>", function()
-    local cursor = vim.api.nvim_win_get_cursor(winid)
-    local item = items[cursor[1]]
-    vim.api.nvim_win_close(winid, true)
-    if item and item.action and on_select then
-      on_select(item)
-    end
-  end, opts)
-
-  vim.keymap.set("n", "<LeftMouse>", function()
-    local mouse_pos = vim.fn.getmousepos()
-    if mouse_pos.winid == winid and mouse_pos.line > 0 then
-      vim.api.nvim_win_set_cursor(winid, { mouse_pos.line, 0 })
-    end
-  end, opts)
-
-  vim.keymap.set("n", "<2-LeftMouse>", function()
-    local mouse_pos = vim.fn.getmousepos()
-    if mouse_pos.winid == winid and mouse_pos.line > 0 then
-      local item = items[mouse_pos.line]
-      vim.api.nvim_win_close(winid, true)
+  picker_popup.show({
+    items = items,
+    title = title,
+    centered = true, -- Center on screen
+    on_select = function(item)
       if item and item.action and on_select then
         on_select(item)
       end
-    end
-  end, opts)
-
-  -- Highlight separators
-  local ns = vim.api.nvim_create_namespace("ccasp_picker")
-  for i, item in ipairs(items) do
-    if item.label:match("^─") then
-      vim.api.nvim_buf_add_highlight(bufnr, ns, "Comment", i - 1, 0, -1)
-    end
-  end
+    end,
+  })
 end
 
 -- Create new session
@@ -762,7 +605,7 @@ function M.create_terminal_for_tab(tab_id, cwd)
 
   -- Create a new terminal buffer
   local term_buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(term_buf, "bufhidden", "hide")
+  vim.bo[term_buf].bufhidden = "hide"
 
   -- Start terminal job
   vim.api.nvim_buf_call(term_buf, function()
@@ -879,6 +722,21 @@ function M.move_tab_right(tab_id)
   M.refresh()
 end
 
+-- Close tabs matching a filter function
+-- @param filter_fn function(tab, index) -> boolean - return true to close the tab
+local function close_tabs_filtered(filter_fn)
+  local ids = {}
+  for i, tab in ipairs(M.state.tabs) do
+    if filter_fn(tab, i) then
+      table.insert(ids, tab.id)
+    end
+  end
+
+  for _, id in ipairs(ids) do
+    M.close_tab(id)
+  end
+end
+
 -- Close a tab
 function M.close_tab(tab_id)
   local tab = M.get_tab(tab_id)
@@ -936,59 +794,24 @@ end
 
 -- Close all tabs
 function M.close_all_tabs()
-  local ids = {}
-  for _, tab in ipairs(M.state.tabs) do
-    table.insert(ids, tab.id)
-  end
-
-  for _, id in ipairs(ids) do
-    M.close_tab(id)
-  end
+  close_tabs_filtered(function() return true end)
 end
 
 -- Close all unpinned tabs
 function M.close_unpinned_tabs()
-  local ids = {}
-  for _, tab in ipairs(M.state.tabs) do
-    if not tab.pinned then
-      table.insert(ids, tab.id)
-    end
-  end
-
-  for _, id in ipairs(ids) do
-    M.close_tab(id)
-  end
+  close_tabs_filtered(function(tab) return not tab.pinned end)
 end
 
 -- Close other tabs (keep one)
 function M.close_other_tabs(keep_tab_id)
-  local ids = {}
-  for _, tab in ipairs(M.state.tabs) do
-    if tab.id ~= keep_tab_id and not tab.pinned then
-      table.insert(ids, tab.id)
-    end
-  end
-
-  for _, id in ipairs(ids) do
-    M.close_tab(id)
-  end
+  close_tabs_filtered(function(tab) return tab.id ~= keep_tab_id and not tab.pinned end)
 end
 
 -- Close tabs to the right
 function M.close_tabs_to_right(tab_id)
-  local index = M.get_tab_index(tab_id)
-  if not index then return end
-
-  local ids = {}
-  for i = index + 1, #M.state.tabs do
-    if not M.state.tabs[i].pinned then
-      table.insert(ids, M.state.tabs[i].id)
-    end
-  end
-
-  for _, id in ipairs(ids) do
-    M.close_tab(id)
-  end
+  local ref_index = M.get_tab_index(tab_id)
+  if not ref_index then return end
+  close_tabs_filtered(function(tab, i) return i > ref_index and not tab.pinned end)
 end
 
 -- Rename tab dialog
@@ -1070,9 +893,9 @@ function M.create_bar(terminal_winid)
 
   -- Create buffer
   M.state.bar_bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(M.state.bar_bufnr, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(M.state.bar_bufnr, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(M.state.bar_bufnr, "swapfile", false)
+  vim.bo[M.state.bar_bufnr].buftype = "nofile"
+  vim.bo[M.state.bar_bufnr].bufhidden = "wipe"
+  vim.bo[M.state.bar_bufnr].swapfile = false
 
   -- Get terminal window position
   local term_config = vim.api.nvim_win_get_config(terminal_winid)
@@ -1107,20 +930,11 @@ function M.create_bar(terminal_winid)
   M.refresh()
 end
 
--- Setup keymaps for tab bar
-function M.setup_bar_keymaps()
-  if not M.state.bar_bufnr then
-    return
-  end
-
-  local opts = { buffer = M.state.bar_bufnr, nowait = true, silent = true }
-
+-- Setup mouse handlers for tab bar
+local function setup_mouse_handlers(opts)
   -- Right-click shows context menu
   vim.keymap.set("n", "<RightMouse>", function()
     local mouse_pos = vim.fn.getmousepos()
-
-    -- Check if click is on a tab or the + button
-    local line = vim.api.nvim_buf_get_lines(M.state.bar_bufnr, 0, 1, false)[1] or ""
     local col = mouse_pos.column
 
     -- Check if click is near the + button (beginning of line)
@@ -1137,7 +951,7 @@ function M.setup_bar_keymaps()
     end
   end, opts)
 
-  -- Left-click on tab activates it
+  -- Left-click on tab activates it or closes it
   vim.keymap.set("n", "<LeftMouse>", function()
     local mouse_pos = vim.fn.getmousepos()
     local col = mouse_pos.column
@@ -1214,8 +1028,11 @@ function M.setup_bar_keymaps()
     M.state.drag_tab_id = nil
     M.state.drag_start_col = nil
   end, opts)
+end
 
-  -- Keyboard navigation (when bar is focused)
+-- Setup keyboard navigation for tab bar
+local function setup_keyboard_nav(opts)
+  -- Arrow keys and h/l for navigation
   vim.keymap.set("n", "h", function() M.navigate_tabs(-1) end, opts)
   vim.keymap.set("n", "l", function() M.navigate_tabs(1) end, opts)
   vim.keymap.set("n", "<Left>", function() M.navigate_tabs(-1) end, opts)
@@ -1223,16 +1040,7 @@ function M.setup_bar_keymaps()
   vim.keymap.set("n", "<Tab>", function() M.navigate_tabs(1) end, opts)
   vim.keymap.set("n", "<S-Tab>", function() M.navigate_tabs(-1) end, opts)
 
-  -- Number keys to switch tabs
-  for i = 1, 9 do
-    vim.keymap.set("n", tostring(i), function()
-      if M.state.tabs[i] then
-        M.activate_tab(M.state.tabs[i].id)
-      end
-    end, opts)
-  end
-
-  -- Close current tab
+  -- Close and pin current tab
   vim.keymap.set("n", "x", function()
     if M.state.active_tab then
       local tab = M.get_tab(M.state.active_tab)
@@ -1242,12 +1050,35 @@ function M.setup_bar_keymaps()
     end
   end, opts)
 
-  -- Pin current tab
   vim.keymap.set("n", "p", function()
     if M.state.active_tab then
       M.toggle_pin(M.state.active_tab)
     end
   end, opts)
+end
+
+-- Setup tab number keys (1-9 to switch to tab)
+local function setup_tab_number_keys(opts)
+  for i = 1, 9 do
+    vim.keymap.set("n", tostring(i), function()
+      if M.state.tabs[i] then
+        M.activate_tab(M.state.tabs[i].id)
+      end
+    end, opts)
+  end
+end
+
+-- Setup keymaps for tab bar
+function M.setup_bar_keymaps()
+  if not M.state.bar_bufnr then
+    return
+  end
+
+  local opts = { buffer = M.state.bar_bufnr, nowait = true, silent = true }
+
+  setup_mouse_handlers(opts)
+  setup_keyboard_nav(opts)
+  setup_tab_number_keys(opts)
 end
 
 -- Navigate tabs with keyboard

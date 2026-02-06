@@ -110,12 +110,12 @@ export async function postPhaseDevCompletionSummary(projectRoot, planSlug, metri
         issueNumber,
         message: `Posted completion summary to issue #${issueNumber}`,
       };
-    } else {
+    } 
       return {
         success: false,
         error: `Failed to post comment to issue #${issueNumber}`,
       };
-    }
+    
   } catch (error) {
     return {
       success: false,
@@ -224,12 +224,12 @@ export async function postRoadmapCompletionSummary(projectRoot, roadmapSlug, met
         issueNumber,
         message: `Posted completion summary to issue #${issueNumber}`,
       };
-    } else {
+    } 
       return {
         success: false,
         error: `Failed to post comment to issue #${issueNumber}`,
       };
-    }
+    
   } catch (error) {
     return {
       success: false,
@@ -331,12 +331,12 @@ export async function postEpicCompletionSummary(projectRoot, epicSlug, metrics =
         issueNumber,
         message: `Posted completion summary to issue #${issueNumber}`,
       };
-    } else {
+    } 
       return {
         success: false,
         error: `Failed to post comment to issue #${issueNumber}`,
       };
-    }
+    
   } catch (error) {
     return {
       success: false,
@@ -364,9 +364,9 @@ function formatDuration(duration) {
     return `${hours}h ${minutes % 60}m`;
   } else if (minutes > 0) {
     return `${minutes}m ${seconds % 60}s`;
-  } else {
+  } 
     return `${seconds}s`;
-  }
+  
 }
 
 export default {

@@ -109,8 +109,8 @@ function formatDate(isoDate) {
   } else if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7);
     return `${weeks}w ago`;
-  } else {
+  } 
     const months = Math.floor(diffDays / 30);
     return `${months}mo ago`;
-  }
+  
 }

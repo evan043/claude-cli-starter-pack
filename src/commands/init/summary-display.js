@@ -86,16 +86,16 @@ export function displayFailures(failed) {
 export function displayNextSteps(featuresRequiringConfig) {
   console.log(chalk.bold('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
   console.log(chalk.bold('Next Steps:\n'));
-  console.log(chalk.cyan('  1.') + ' Launch Claude Code CLI in this project');
-  console.log(chalk.cyan('  2.') + ` Type ${chalk.bold('/menu')} to see the interactive project menu`);
+  console.log(`${chalk.cyan('  1.')  } Launch Claude Code CLI in this project`);
+  console.log(`${chalk.cyan('  2.')  } Type ${chalk.bold('/menu')} to see the interactive project menu`);
 
   // Show post-config reminder if features need it
   if (featuresRequiringConfig.length > 0) {
     console.log(chalk.cyan('  3.') + chalk.yellow(' Configure enabled features via /menu → Project Settings'));
     console.log(chalk.dim(`       Features pending configuration: ${featuresRequiringConfig.map((f) => f.label).join(', ')}`));
-    console.log(chalk.cyan('  4.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+    console.log(`${chalk.cyan('  4.')  } Use any installed command by typing its name (e.g., /e2e-test)`);
   } else {
-    console.log(chalk.cyan('  3.') + ' Use any installed command by typing its name (e.g., /e2e-test)');
+    console.log(`${chalk.cyan('  3.')  } Use any installed command by typing its name (e.g., /e2e-test)`);
   }
 
   console.log('');

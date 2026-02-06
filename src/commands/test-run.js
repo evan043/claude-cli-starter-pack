@@ -225,9 +225,9 @@ async function runRalphLoop(config, credentials, options) {
           console.log(chalk.yellow('Ralph loop stopped by user.'));
           break;
         } else if (action === 'show') {
-          console.log('\n' + chalk.dim('─'.repeat(60)));
+          console.log(`\n${  chalk.dim('─'.repeat(60))}`);
           console.log(result.output?.slice(-3000) || 'No output captured');
-          console.log(chalk.dim('─'.repeat(60)) + '\n');
+          console.log(`${chalk.dim('─'.repeat(60))  }\n`);
 
           const { continueAfterShow } = await inquirer.prompt([
             {

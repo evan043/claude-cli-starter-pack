@@ -123,6 +123,7 @@ export const FEATURE_CATEGORIES = [
       { name: 'Token Management', value: 'tokenManagement', checked: true, short: 'Token budget tracking' },
       { name: 'Tunnel Services', value: 'tunnelServices', checked: true, short: 'Dev tunnels' },
       { name: 'Happy Mode', value: 'happyMode', checked: true, short: 'Mobile app integration' },
+      { name: 'Site-Intel Enhancements (perf, a11y, routes)', value: 'siteIntelAdvanced', checked: false, short: 'Advanced site analysis' },
     ],
   },
   {
@@ -184,6 +185,7 @@ export function mapFeaturesToInit(selectedFeatures) {
     tokenManagement: 'tokenManagement',
     tunnelServices: 'tunnelServices',
     happyMode: 'happyMode',
+    siteIntelAdvanced: 'siteIntelAdvanced',
     // Documentation
     indexMd: null, // Always included
     readmeMd: null, // Always included
@@ -226,6 +228,7 @@ export function getAllInitFeatures() {
     'tokenManagement',
     'tunnelServices',
     'happyMode',
+    'siteIntelAdvanced',
   ];
 }
 

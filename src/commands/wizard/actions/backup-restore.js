@@ -15,6 +15,7 @@ import {
   copyDirRecursive,
   findExistingBackups,
 } from '../helpers.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Restore from a backup
@@ -62,7 +63,7 @@ export async function runRestore(backups) {
   }
 
   // Confirm restore
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
   const willOverwrite = [];
 
@@ -115,12 +116,12 @@ export async function runRestore(backups) {
 
     console.log(
       boxen(
-        chalk.green('Restored from backup\n\n') +
-          `Backup date: ${chalk.cyan(selectedBackup.date)}\n` +
-          (selectedBackup.hasClaudeDir ? `  - ${chalk.cyan('.claude/')} restored\n` : '') +
-          (selectedBackup.hasClaudeMd ? `  - ${chalk.cyan('CLAUDE.md')} restored\n` : '') +
-          '\n' +
-          chalk.dim('Restart Claude Code CLI to use restored configuration.'),
+        `${chalk.green('Restored from backup\n\n') 
+          }Backup date: ${chalk.cyan(selectedBackup.date)}\n${ 
+          selectedBackup.hasClaudeDir ? `  - ${chalk.cyan('.claude/')} restored\n` : '' 
+          }${selectedBackup.hasClaudeMd ? `  - ${chalk.cyan('CLAUDE.md')} restored\n` : '' 
+          }\n${ 
+          chalk.dim('Restart Claude Code CLI to use restored configuration.')}`,
         {
           padding: 1,
           borderStyle: 'round',
@@ -142,7 +143,7 @@ export async function runRestore(backups) {
  * @returns {boolean} True if removal succeeded
  */
 export async function runRemove() {
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
   const existingBackups = findExistingBackups();
 
@@ -163,7 +164,7 @@ export async function runRemove() {
   const itemsToRemove = [];
 
   // Check for commands
-  const commandsDir = join(claudeDir, 'commands');
+  const commandsDir = claudeAbsolutePath(process.cwd(), 'commands');
   if (existsSync(commandsDir)) {
     const commands = readdirSync(commandsDir).filter(f => f.endsWith('.md'));
     if (commands.length > 0) {
@@ -173,7 +174,7 @@ export async function runRemove() {
   }
 
   // Check for agents
-  const agentsDir = join(claudeDir, 'agents');
+  const agentsDir = claudeAbsolutePath(process.cwd(), 'agents');
   if (existsSync(agentsDir)) {
     const agents = readdirSync(agentsDir).filter(f => f.endsWith('.md'));
     if (agents.length > 0) {
@@ -183,7 +184,7 @@ export async function runRemove() {
   }
 
   // Check for skills
-  const skillsDir = join(claudeDir, 'skills');
+  const skillsDir = claudeAbsolutePath(process.cwd(), 'skills');
   if (existsSync(skillsDir)) {
     const skills = readdirSync(skillsDir).filter(f => !f.startsWith('.'));
     if (skills.length > 0) {
@@ -193,7 +194,7 @@ export async function runRemove() {
   }
 
   // Check for hooks
-  const hooksDir = join(claudeDir, 'hooks');
+  const hooksDir = claudeAbsolutePath(process.cwd(), 'hooks');
   if (existsSync(hooksDir)) {
     const hooks = readdirSync(hooksDir).filter(f => f.endsWith('.js'));
     if (hooks.length > 0) {
@@ -203,7 +204,7 @@ export async function runRemove() {
   }
 
   // Check for docs
-  const docsDir = join(claudeDir, 'docs');
+  const docsDir = claudeAbsolutePath(process.cwd(), 'docs');
   if (existsSync(docsDir)) {
     console.log(`  ${chalk.cyan('docs/')} - documentation`);
     itemsToRemove.push({ type: 'dir', path: docsDir, label: 'docs/' });
@@ -212,7 +213,7 @@ export async function runRemove() {
   // Check for config files
   const configFiles = ['settings.json', 'settings.local.json', 'tech-stack.json'];
   for (const file of configFiles) {
-    const filePath = join(claudeDir, file);
+    const filePath = claudeAbsolutePath(process.cwd(), file);
     if (existsSync(filePath)) {
       console.log(`  ${chalk.cyan(file)}`);
       itemsToRemove.push({ type: 'file', path: filePath, label: file });
@@ -350,13 +351,13 @@ export async function runRemove() {
 
       console.log(
         boxen(
-          chalk.green('CCASP removed with full backup\n\n') +
-            `Backup location:\n${chalk.cyan(backupDir)}\n\n` +
-            chalk.bold('Contents backed up:\n') +
-            (hasClaudeDir ? `  - ${chalk.cyan('.claude/')} folder\n` : '') +
-            (hasClaudeMd ? `  - ${chalk.cyan('CLAUDE.md')} file\n` : '') +
-            '\n' +
-            chalk.dim('To restore: run ') + chalk.cyan('ccasp wizard') + chalk.dim(' -> Remove CCASP -> Restore'),
+          `${chalk.green('CCASP removed with full backup\n\n') 
+            }Backup location:\n${chalk.cyan(backupDir)}\n\n${ 
+            chalk.bold('Contents backed up:\n') 
+            }${hasClaudeDir ? `  - ${chalk.cyan('.claude/')} folder\n` : '' 
+            }${hasClaudeMd ? `  - ${chalk.cyan('CLAUDE.md')} file\n` : '' 
+            }\n${ 
+            chalk.dim('To restore: run ')  }${chalk.cyan('ccasp wizard')  }${chalk.dim(' -> Remove CCASP -> Restore')}`,
           {
             padding: 1,
             borderStyle: 'round',
@@ -440,9 +441,9 @@ export async function runRemove() {
 
       console.log(
         boxen(
-          chalk.green('Selected items removed\n\n') +
-            `Backup location:\n${chalk.cyan(backupDir)}\n\n` +
-            chalk.dim('To restore: run ') + chalk.cyan('ccasp wizard') + chalk.dim(' -> Remove CCASP -> Restore'),
+          `${chalk.green('Selected items removed\n\n') 
+            }Backup location:\n${chalk.cyan(backupDir)}\n\n${ 
+            chalk.dim('To restore: run ')  }${chalk.cyan('ccasp wizard')  }${chalk.dim(' -> Remove CCASP -> Restore')}`,
           {
             padding: 1,
             borderStyle: 'round',

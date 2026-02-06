@@ -292,7 +292,7 @@ export async function runCreateCommand(options) {
         if (tableMatch) {
           const updatedIndex = indexContent.replace(
             tableMatch[0],
-            tableMatch[0] + newEntry + '\n'
+            `${tableMatch[0] + newEntry  }\n`
           );
           writeFileSync(indexPath, updatedIndex, 'utf8');
           indexUpdated = true;

@@ -91,12 +91,57 @@ function M.rearrange()
   get_titlebar().update_all()
 end
 
+-- Focus window by session if valid
+local function focus_session_window(session)
+  if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    vim.api.nvim_set_current_win(session.winid)
+  end
+end
+
+-- Create split window based on session count
+local function create_split_window(count, sessions)
+  if count == 0 then
+    vim.cmd("vsplit")
+  elseif count == 1 then
+    focus_session_window(sessions[#sessions])
+    vim.cmd("vsplit")
+  elseif count == 2 then
+    focus_session_window(sessions[1])
+    vim.cmd("split")
+  elseif count == 3 then
+    focus_session_window(sessions[2])
+    vim.cmd("split")
+  else
+    focus_session_window(sessions[#sessions])
+    vim.cmd(count % 2 == 0 and "vsplit" or "split")
+  end
+end
+
+-- Launch Claude CLI in terminal buffer
+local function launch_claude_cli(id, bufnr, name)
+  vim.defer_fn(function()
+    if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+    local job_id = vim.b[bufnr].terminal_job_id
+    if job_id and job_id > 0 then
+      vim.fn.chansend(job_id, "claude\r")
+      state.sessions[id].claude_running = true
+
+      if id == state.primary_session then
+        require("ccasp.terminal")._set_claude_running(true)
+      end
+
+      vim.notify(name .. " starting...", vim.log.levels.INFO)
+      vim.cmd("startinsert")
+    end
+  end, 500)
+end
+
 -- Create a new Claude CLI session
 function M.spawn()
   cleanup_invalid()
 
   local count = M.count()
-
   if count >= state.max_sessions then
     vim.notify("Maximum sessions reached (" .. state.max_sessions .. ")", vim.log.levels.WARN)
     return nil
@@ -104,101 +149,55 @@ function M.spawn()
 
   local id = generate_id()
   local name = "Claude " .. (count + 1)
-  local project_root = vim.fn.getcwd()
 
-  -- Find the last session window to split from
-  local sessions = M.list()
+  create_split_window(count, M.list())
 
-  if count == 0 then
-    -- No sessions yet - this shouldn't happen if called from sidebar
-    -- but handle it anyway: create vertical split
-    vim.cmd("vsplit")
-  elseif count == 1 then
-    -- Have 1 session, add second one to the right (1x2 layout)
-    local last = sessions[#sessions]
-    if last and last.winid and vim.api.nvim_win_is_valid(last.winid) then
-      vim.api.nvim_set_current_win(last.winid)
-    end
-    vim.cmd("vsplit")
-  elseif count == 2 then
-    -- Have 2 sessions (1x2), need to create 2x2
-    -- Split the first session horizontally, then add to bottom right
-    local first = sessions[1]
-    if first and first.winid and vim.api.nvim_win_is_valid(first.winid) then
-      vim.api.nvim_set_current_win(first.winid)
-    end
-    vim.cmd("split") -- Creates bottom-left
-  elseif count == 3 then
-    -- Have 3 sessions (2x2 with one missing), fill in bottom-right
-    local second = sessions[2]
-    if second and second.winid and vim.api.nvim_win_is_valid(second.winid) then
-      vim.api.nvim_set_current_win(second.winid)
-    end
-    vim.cmd("split") -- Creates bottom-right
-  else
-    -- For 5+, just split the last window
-    local last = sessions[#sessions]
-    if last and last.winid and vim.api.nvim_win_is_valid(last.winid) then
-      vim.api.nvim_set_current_win(last.winid)
-    end
-    -- Alternate between horizontal and vertical splits
-    if count % 2 == 0 then
-      vim.cmd("vsplit")
-    else
-      vim.cmd("split")
-    end
-  end
-
-  -- Set directory and create terminal
-  vim.cmd("lcd " .. vim.fn.fnameescape(project_root))
+  vim.cmd("lcd " .. vim.fn.fnameescape(vim.fn.getcwd()))
   vim.cmd("terminal")
 
-  local bufnr = vim.api.nvim_get_current_buf()
-  local winid = vim.api.nvim_get_current_win()
+  local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
 
-  -- Store session
-  state.sessions[id] = {
-    id = id,
-    name = name,
-    bufnr = bufnr,
-    winid = winid,
-    claude_running = false,
-  }
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
 
-  -- Mark first session as primary
   if count == 0 then
     state.primary_session = id
-    local terminal = require("ccasp.terminal")
-    terminal._set_state(bufnr, winid)
+    require("ccasp.terminal")._set_state(bufnr, winid)
   end
 
-  -- Launch Claude CLI
-  vim.defer_fn(function()
-    if vim.api.nvim_buf_is_valid(bufnr) then
-      local job_id = vim.b[bufnr].terminal_job_id
-      if job_id and job_id > 0 then
-        vim.fn.chansend(job_id, "claude\r")
-        state.sessions[id].claude_running = true
+  launch_claude_cli(id, bufnr, name)
 
-        if id == state.primary_session then
-          local terminal = require("ccasp.terminal")
-          terminal._set_claude_running(true)
-        end
-
-        vim.notify(name .. " starting...", vim.log.levels.INFO)
-        vim.cmd("startinsert")
-      end
-    end
-  end, 500)
-
-  -- Create titlebar and equalize windows
   vim.defer_fn(function()
     get_titlebar().create(id)
     M.rearrange()
   end, 800)
 
   return id
+end
+
+-- Remove session from order list
+local function remove_from_order(id)
+  for i, sid in ipairs(state.session_order) do
+    if sid == id then
+      table.remove(state.session_order, i)
+      return
+    end
+  end
+end
+
+-- Reassign primary session if current primary is closed
+local function reassign_primary_if_needed(closed_id)
+  if closed_id ~= state.primary_session then return end
+
+  local sessions = M.list()
+  if #sessions > 0 then
+    state.primary_session = sessions[1].id
+    local terminal = require("ccasp.terminal")
+    terminal._set_state(sessions[1].bufnr, sessions[1].winid)
+    terminal._set_claude_running(sessions[1].claude_running)
+  else
+    state.primary_session = nil
+  end
 end
 
 -- Close a specific session
@@ -213,31 +212,10 @@ function M.close(id)
   end
 
   state.sessions[id] = nil
+  remove_from_order(id)
+  reassign_primary_if_needed(id)
 
-  -- Remove from order
-  for i, sid in ipairs(state.session_order) do
-    if sid == id then
-      table.remove(state.session_order, i)
-      break
-    end
-  end
-
-  -- Reassign primary if needed
-  if id == state.primary_session then
-    local sessions = M.list()
-    if #sessions > 0 then
-      state.primary_session = sessions[1].id
-      local terminal = require("ccasp.terminal")
-      terminal._set_state(sessions[1].bufnr, sessions[1].winid)
-      terminal._set_claude_running(sessions[1].claude_running)
-    else
-      state.primary_session = nil
-    end
-  end
-
-  vim.defer_fn(function()
-    M.rearrange()
-  end, 100)
+  vim.defer_fn(M.rearrange, 100)
 end
 
 -- Close all sessions

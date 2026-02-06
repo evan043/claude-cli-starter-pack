@@ -142,10 +142,10 @@ async function launchNativeFolderPicker() {
       const validation = validateDirectory(selectedPath);
       if (validation === true) {
         return selectedPath;
-      } else {
+      } 
         console.log(chalk.red(`\n${validation}\n`));
         return null;
-      }
+      
     }
 
     return null;

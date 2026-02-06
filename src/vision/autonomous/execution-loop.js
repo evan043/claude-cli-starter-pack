@@ -135,10 +135,10 @@ export async function runAutonomousLoop(vision, projectRoot) {
             iterations,
             vision: await loadVision(projectRoot, vision.slug)
           };
-        } else {
+        } 
           console.log('MVP not fully complete, continuing...');
           console.log('Missing:', verification.missing);
-        }
+        
       }
 
       // Small delay between iterations

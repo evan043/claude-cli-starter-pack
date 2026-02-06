@@ -112,7 +112,7 @@ export async function runSetup(options) {
     } else {
       const repoChoices = repos.map((r) => ({
         name: `${r.name}${r.isPrivate ? chalk.dim(' (private)') : ''} ${
-          r.description ? chalk.dim('- ' + r.description.slice(0, 40)) : ''
+          r.description ? chalk.dim(`- ${  r.description.slice(0, 40)}`) : ''
         }`,
         value: r.name,
       }));
@@ -169,7 +169,7 @@ export async function runSetup(options) {
     if (projects.length === 0) {
       showWarning(`No projects found for ${owner}`);
       console.log(
-        chalk.dim('Create a project at: https://github.com/users/' + owner + '/projects')
+        chalk.dim(`Create a project at: https://github.com/users/${  owner  }/projects`)
       );
 
       const { customProject } = await inquirer.prompt([

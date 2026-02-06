@@ -26,7 +26,7 @@ export function observe(orchestrator, update) {
 
     // Format and log drift report
     const report = formatDriftReport(result.observation);
-    console.log('\n' + report);
+    console.log(`\n${  report}`);
 
     // Check if replan needed
     if (result.observation.requires_replan) {

@@ -6,6 +6,7 @@
  */
 
 import { VisionIntent } from './schema.js';
+import { generatePRD, formatPRDAsMarkdown } from './requirements/prd-template.js';
 
 // Intent detection patterns
 const INTENT_PATTERNS = {
@@ -311,12 +312,12 @@ export function estimateComplexity(parsedPrompt) {
       scale: 'M',
       reason: `Medium scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`
     };
-  } else {
+  } 
     return {
       scale: 'L',
       reason: `Large scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`
     };
-  }
+  
 }
 
 /**
@@ -363,13 +364,15 @@ export function getDomainDistribution(featureDetails) {
   };
 
   for (const feature of featureDetails || []) {
-    if (distribution.hasOwnProperty(feature.domain)) {
+    if (Object.prototype.hasOwnProperty.call(distribution, feature.domain)) {
       distribution[feature.domain]++;
     }
   }
 
   return distribution;
 }
+
+export { generatePRD, formatPRDAsMarkdown };
 
 export default {
   detectIntent,
@@ -380,5 +383,7 @@ export default {
   parseVisionPrompt,
   estimateComplexity,
   generatePromptSummary,
-  getDomainDistribution
+  getDomainDistribution,
+  generatePRD,
+  formatPRDAsMarkdown
 };

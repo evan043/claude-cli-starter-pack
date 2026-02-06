@@ -5,6 +5,10 @@
  * Each entry includes npm package, required env vars, and tech stack relevance.
  */
 
+import { SERENA_MCP } from './serena.js';
+import { SENTRY_MCP } from './sentry.js';
+import { POSTGRESQL_MCP } from './postgresql.js';
+
 /**
  * API Key metadata structure:
  * - apiKeyRequired: boolean - Whether an API key is needed
@@ -207,10 +211,11 @@ export const MCP_REGISTRY = {
 
   // Database & Backend Services
   database: [
+    POSTGRESQL_MCP,
     {
       id: 'postgres',
-      name: 'PostgreSQL MCP',
-      description: 'Query PostgreSQL databases directly',
+      name: 'PostgreSQL MCP (Bytebase)',
+      description: 'Query PostgreSQL databases directly via Bytebase DBHub',
       npmPackage: '@bytebase/dbhub',
       category: 'database',
       requiredEnv: {},
@@ -345,8 +350,14 @@ export const MCP_REGISTRY = {
     },
   ],
 
+  // Development Tools
+  development: [
+    SERENA_MCP,
+  ],
+
   // Debugging & Monitoring
   debugging: [
+    SENTRY_MCP,
     {
       id: 'log-monitor',
       name: 'Log Monitor MCP',

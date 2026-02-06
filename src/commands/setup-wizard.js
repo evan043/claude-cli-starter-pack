@@ -10,6 +10,7 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { claudeAbsolutePath } from '../utils/paths.js';
 
 import { runSetup as runGitHubSetup } from './setup.js';
 import { promptForIntegrations } from '../pm-hierarchy/integration-wizard.js';
@@ -129,7 +130,7 @@ export async function runSetupWizard(options = {}) {
   await checkAndShowUpdateBanner();
 
   // Check if .claude already exists
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   const claudeMd = join(process.cwd(), 'CLAUDE.md');
 
   if (existsSync(claudeDir)) {

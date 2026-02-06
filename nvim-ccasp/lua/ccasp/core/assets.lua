@@ -42,6 +42,53 @@ local function get_base_dir()
   return cwd .. "/" .. ccasp.config.ccasp_root
 end
 
+-- Helper: Read and parse file content
+local function read_and_parse(filepath, parser_fn)
+  local f = io.open(filepath, "r")
+  if not f then
+    return nil
+  end
+  local content = f:read("*all")
+  f:close()
+  return parser_fn and parser_fn(content) or content, content
+end
+
+-- Helper: Get cache by asset type
+local function get_cache_by_type(asset_type)
+  if asset_type == "agent" or asset_type == "agents" then
+    return agents_cache, "agents"
+  elseif asset_type == "hook" or asset_type == "hooks" then
+    return hooks_cache, "hooks"
+  elseif asset_type == "skill" or asset_type == "skills" then
+    return skills_cache, "skills"
+  end
+  return nil, nil
+end
+
+-- Helper: Search cache for pattern
+local function search_cache(cache, type_name, pattern)
+  local results = {}
+  for name, asset in pairs(cache or {}) do
+    local name_lower = name:lower()
+    local desc_lower = (asset.description or ""):lower()
+    if name_lower:find(pattern, 1, true) or desc_lower:find(pattern, 1, true) then
+      results[name] = asset
+    end
+  end
+  return results
+end
+
+-- Helper: Ensure cache is loaded for type
+local function ensure_cache_loaded(type_key)
+  if type_key == "agents" and not agents_cache then
+    M.load_agents()
+  elseif type_key == "hooks" and not hooks_cache then
+    M.load_hooks()
+  elseif type_key == "skills" and not skills_cache then
+    M.load_skills()
+  end
+end
+
 -- Parse YAML frontmatter from markdown content
 local function parse_yaml_frontmatter(content)
   local frontmatter = {}
@@ -164,18 +211,10 @@ function M.load_agents()
 
   for _, file in ipairs(files) do
     local filename = vim.fn.fnamemodify(file, ":t:r")
+    local frontmatter, content = read_and_parse(file, parse_yaml_frontmatter)
 
-    -- Read file content
-    local f = io.open(file, "r")
-    if f then
-      local content = f:read("*all")
-      f:close()
-
-      -- Parse frontmatter
-      local frontmatter = parse_yaml_frontmatter(content)
-
-      -- Create agent entry
-      local agent = {
+    if content then
+      agents_cache[filename] = {
         name = filename,
         path = file,
         type = "agent",
@@ -184,8 +223,6 @@ function M.load_agents()
         tools = frontmatter.tools or {},
         content = content,
       }
-
-      agents_cache[filename] = agent
     end
   end
 
@@ -218,18 +255,10 @@ function M.load_hooks()
 
   for _, file in ipairs(files) do
     local filename = vim.fn.fnamemodify(file, ":t:r")
+    local jsdoc, content = read_and_parse(file, parse_jsdoc_header)
 
-    -- Read file content
-    local f = io.open(file, "r")
-    if f then
-      local content = f:read("*all")
-      f:close()
-
-      -- Parse JSDoc header
-      local jsdoc = parse_jsdoc_header(content)
-
-      -- Create hook entry
-      local hook = {
+    if content then
+      hooks_cache[filename] = {
         name = filename,
         path = file,
         type = "hook",
@@ -237,8 +266,6 @@ function M.load_hooks()
         event = jsdoc.event or "PreToolUse",
         content = content,
       }
-
-      hooks_cache[filename] = hook
     end
   end
 
@@ -280,12 +307,8 @@ function M.load_skills()
 
       -- Try to read skill.json
       if vim.fn.filereadable(skill_json_path) == 1 then
-        local f = io.open(skill_json_path, "r")
-        if f then
-          local json_content = f:read("*all")
-          f:close()
-
-          -- Parse JSON
+        local json_content = read_and_parse(skill_json_path)
+        if json_content then
           local ok, data = pcall(vim.fn.json_decode, json_content)
           if ok and data then
             skill.description = data.description or ""
@@ -300,16 +323,10 @@ function M.load_skills()
 
       -- Try to read skill.md for content
       if vim.fn.filereadable(skill_md_path) == 1 then
-        local f = io.open(skill_md_path, "r")
-        if f then
-          skill.content = f:read("*all")
-          f:close()
-
-          -- If no description from JSON, try frontmatter
-          if skill.description == "" then
-            local frontmatter = parse_yaml_frontmatter(skill.content)
-            skill.description = frontmatter.description or ""
-          end
+        skill.content = read_and_parse(skill_md_path)
+        if skill.content and skill.description == "" then
+          local frontmatter = parse_yaml_frontmatter(skill.content)
+          skill.description = frontmatter.description or ""
         end
       end
 
@@ -330,14 +347,7 @@ function M.load_all()
   sections_cache = {}
 
   for type_key, type_config in pairs(ASSET_TYPES) do
-    local cache = nil
-    if type_key == "agents" then
-      cache = agents_cache
-    elseif type_key == "hooks" then
-      cache = hooks_cache
-    elseif type_key == "skills" then
-      cache = skills_cache
-    end
+    local cache = get_cache_by_type(type_key)
 
     -- Get sorted asset names
     local asset_names = {}
@@ -367,47 +377,31 @@ end
 
 -- Get all agents
 function M.get_agents()
-  if not agents_cache then
-    M.load_agents()
-  end
+  ensure_cache_loaded("agents")
   return agents_cache
 end
 
 -- Get all hooks
 function M.get_hooks()
-  if not hooks_cache then
-    M.load_hooks()
-  end
+  ensure_cache_loaded("hooks")
   return hooks_cache
 end
 
 -- Get all skills
 function M.get_skills()
-  if not skills_cache then
-    M.load_skills()
-  end
+  ensure_cache_loaded("skills")
   return skills_cache
 end
 
 -- Get a specific asset by type and name
 function M.get(asset_type, name)
-  if asset_type == "agent" or asset_type == "agents" then
-    if not agents_cache then
-      M.load_agents()
-    end
-    return agents_cache[name]
-  elseif asset_type == "hook" or asset_type == "hooks" then
-    if not hooks_cache then
-      M.load_hooks()
-    end
-    return hooks_cache[name]
-  elseif asset_type == "skill" or asset_type == "skills" then
-    if not skills_cache then
-      M.load_skills()
-    end
-    return skills_cache[name]
+  local cache, normalized_type = get_cache_by_type(asset_type)
+  if not cache then
+    return nil
   end
-  return nil
+  ensure_cache_loaded(normalized_type)
+  cache = get_cache_by_type(asset_type) -- Re-fetch after ensuring loaded
+  return cache and cache[name] or nil
 end
 
 -- Get all sections with their assets (for sidebar display)
@@ -437,15 +431,9 @@ end
 
 -- Get asset counts
 function M.get_counts()
-  if not agents_cache then
-    M.load_agents()
-  end
-  if not hooks_cache then
-    M.load_hooks()
-  end
-  if not skills_cache then
-    M.load_skills()
-  end
+  ensure_cache_loaded("agents")
+  ensure_cache_loaded("hooks")
+  ensure_cache_loaded("skills")
 
   local agent_count = 0
   local hook_count = 0
@@ -469,6 +457,130 @@ function M.get_counts()
   }
 end
 
+-- Private: Save agent to file
+local function save_agent(asset, data)
+  local lines = {
+    "---",
+    "description: " .. (data.description or asset.description or ""),
+  }
+
+  -- Add tools if present
+  local tools = data.tools or asset.tools
+  if tools and #tools > 0 then
+    table.insert(lines, "tools:")
+    for _, tool in ipairs(tools) do
+      table.insert(lines, "  - " .. tool)
+    end
+  end
+
+  -- Add model if present
+  local model = data.model or asset.model
+  if model then
+    table.insert(lines, "model: " .. model)
+  end
+
+  table.insert(lines, "---")
+  table.insert(lines, "")
+
+  -- Add body content (preserve existing or use new)
+  local body = data.body or ""
+  if body == "" and asset.content then
+    local _, fm_end = asset.content:find("\n%-%-%-\n")
+    if fm_end then
+      body = asset.content:sub(fm_end + 1)
+    end
+  end
+  table.insert(lines, body)
+
+  local content = table.concat(lines, "\n")
+  local f = io.open(asset.path, "w")
+  if not f then
+    return false, "Failed to write file"
+  end
+
+  f:write(content)
+  f:close()
+
+  -- Update cache
+  asset.description = data.description or asset.description
+  asset.tools = data.tools or asset.tools
+  asset.model = data.model or asset.model
+  asset.content = content
+  return true
+end
+
+-- Private: Save hook to file
+local function save_hook(asset, data)
+  local content = asset.content or ""
+
+  if data.description then
+    local new_jsdoc = string.format(
+      "/**\n * %s\n *\n * Event: %s\n */",
+      data.description,
+      data.event or asset.event or "PreToolUse"
+    )
+
+    local jsdoc_pattern = "^%s*/%*%*.-*%*/"
+    if content:match(jsdoc_pattern) then
+      content = content:gsub(jsdoc_pattern, new_jsdoc)
+    else
+      content = new_jsdoc .. "\n\n" .. content
+    end
+  end
+
+  local f = io.open(asset.path, "w")
+  if not f then
+    return false, "Failed to write file"
+  end
+
+  f:write(content)
+  f:close()
+
+  -- Update cache
+  asset.description = data.description or asset.description
+  asset.event = data.event or asset.event
+  asset.content = content
+  return true
+end
+
+-- Private: Save skill to file
+local function save_skill(asset, data, name)
+  local skill_json_path = asset.path .. "/skill.json"
+
+  local json_data = {
+    name = name,
+    description = data.description or asset.description or "",
+    category = data.category or asset.category or "general",
+    features = data.features or asset.features or {},
+    version = data.version or asset.version or "1.0.0",
+    requiredTools = data.required_tools or asset.required_tools or {},
+    suggestedModel = data.suggested_model or asset.suggested_model or "sonnet",
+  }
+
+  local ok, json_content = pcall(vim.fn.json_encode, json_data)
+  if not ok then
+    return false, "Failed to encode JSON"
+  end
+
+  -- Pretty print JSON
+  json_content = json_content:gsub(",", ",\n  ")
+  json_content = "{\n  " .. json_content:sub(2, -2) .. "\n}"
+
+  local f = io.open(skill_json_path, "w")
+  if not f then
+    return false, "Failed to write file"
+  end
+
+  f:write(json_content)
+  f:close()
+
+  -- Update cache
+  asset.description = data.description or asset.description
+  asset.category = data.category or asset.category
+  asset.features = data.features or asset.features
+  return true
+end
+
 -- Save an asset (update file)
 function M.save(asset_type, name, data)
   local asset = M.get(asset_type, name)
@@ -477,136 +589,54 @@ function M.save(asset_type, name, data)
   end
 
   if asset_type == "agent" or asset_type == "agents" then
-    -- Rebuild agent markdown with frontmatter
-    local lines = {
-      "---",
-      "description: " .. (data.description or asset.description or ""),
-    }
-
-    -- Add tools if present
-    if data.tools and #data.tools > 0 then
-      table.insert(lines, "tools:")
-      for _, tool in ipairs(data.tools) do
-        table.insert(lines, "  - " .. tool)
-      end
-    elseif asset.tools and #asset.tools > 0 then
-      table.insert(lines, "tools:")
-      for _, tool in ipairs(asset.tools) do
-        table.insert(lines, "  - " .. tool)
-      end
-    end
-
-    -- Add model if present
-    local model = data.model or asset.model
-    if model then
-      table.insert(lines, "model: " .. model)
-    end
-
-    table.insert(lines, "---")
-    table.insert(lines, "")
-
-    -- Add body content (preserve existing or use new)
-    local body = data.body or ""
-    if body == "" and asset.content then
-      -- Extract body from existing content (after frontmatter)
-      local _, fm_end = asset.content:find("\n%-%-%-\n")
-      if fm_end then
-        body = asset.content:sub(fm_end + 1)
-      end
-    end
-    table.insert(lines, body)
-
-    local content = table.concat(lines, "\n")
-
-    -- Write to file
-    local f = io.open(asset.path, "w")
-    if f then
-      f:write(content)
-      f:close()
-      -- Update cache
-      asset.description = data.description or asset.description
-      asset.tools = data.tools or asset.tools
-      asset.model = data.model or asset.model
-      asset.content = content
-      return true
-    else
-      return false, "Failed to write file"
-    end
-
+    return save_agent(asset, data)
   elseif asset_type == "hook" or asset_type == "hooks" then
-    -- For hooks, we update the JSDoc header
-    local content = asset.content or ""
-
-    -- Update description in JSDoc
-    if data.description then
-      -- Try to update existing JSDoc
-      local new_jsdoc = string.format(
-        "/**\n * %s\n *\n * Event: %s\n */",
-        data.description,
-        data.event or asset.event or "PreToolUse"
-      )
-
-      -- Replace existing JSDoc or prepend
-      local jsdoc_pattern = "^%s*/%*%*.-*%*/"
-      if content:match(jsdoc_pattern) then
-        content = content:gsub(jsdoc_pattern, new_jsdoc)
-      else
-        content = new_jsdoc .. "\n\n" .. content
-      end
-    end
-
-    -- Write to file
-    local f = io.open(asset.path, "w")
-    if f then
-      f:write(content)
-      f:close()
-      -- Update cache
-      asset.description = data.description or asset.description
-      asset.event = data.event or asset.event
-      asset.content = content
-      return true
-    else
-      return false, "Failed to write file"
-    end
-
+    return save_hook(asset, data)
   elseif asset_type == "skill" or asset_type == "skills" then
-    -- For skills, update skill.json
-    local skill_json_path = asset.path .. "/skill.json"
-
-    local json_data = {
-      name = name,
-      description = data.description or asset.description or "",
-      category = data.category or asset.category or "general",
-      features = data.features or asset.features or {},
-      version = data.version or asset.version or "1.0.0",
-      requiredTools = data.required_tools or asset.required_tools or {},
-      suggestedModel = data.suggested_model or asset.suggested_model or "sonnet",
-    }
-
-    local ok, json_content = pcall(vim.fn.json_encode, json_data)
-    if not ok then
-      return false, "Failed to encode JSON"
-    end
-
-    -- Pretty print JSON
-    json_content = json_content:gsub(",", ",\n  ")
-    json_content = "{\n  " .. json_content:sub(2, -2) .. "\n}"
-
-    local f = io.open(skill_json_path, "w")
-    if f then
-      f:write(json_content)
-      f:close()
-      -- Update cache
-      asset.description = data.description or asset.description
-      asset.category = data.category or asset.category
-      asset.features = data.features or asset.features
-      return true
-    else
-      return false, "Failed to write file"
-    end
+    return save_skill(asset, data, name)
   end
 
   return false, "Unknown asset type"
+end
+
+-- Private: Delete file asset
+local function delete_file_asset(asset, mode, asset_type, name)
+  if mode == "permanent" then
+    local backup_dir = get_base_dir() .. "/backups/deleted"
+    vim.fn.mkdir(backup_dir, "p")
+
+    local timestamp = os.date("%Y-%m-%d-%H%M%S")
+    local ext = asset_type == "agent" and ".md" or ".js"
+    local backup_path = backup_dir .. "/" .. name .. ext .. "." .. timestamp .. ".bak"
+
+    local content = read_and_parse(asset.path)
+    if content then
+      local f_out = io.open(backup_path, "w")
+      if f_out then
+        f_out:write(content)
+        f_out:close()
+      end
+    end
+  end
+
+  os.remove(asset.path)
+end
+
+-- Private: Delete directory asset
+local function delete_directory_asset(asset, mode, name)
+  if mode == "permanent" then
+    local backup_dir = get_base_dir() .. "/backups/deleted"
+    vim.fn.mkdir(backup_dir, "p")
+    -- Directory backup simplified - just noted in protected
+  end
+
+  local base = vim.fn.resolve(get_base_dir())
+  local resolved_path = vim.fn.resolve(asset.path)
+  if vim.startswith(resolved_path, base) then
+    vim.fn.delete(asset.path, "rf")
+  else
+    vim.notify("ccasp: refusing to delete path outside .claude/: " .. asset.path, vim.log.levels.ERROR)
+  end
 end
 
 -- Delete an asset
@@ -617,56 +647,12 @@ function M.delete(asset_type, name, mode)
   end
 
   mode = mode or "temporary"
-
   local protected = require("ccasp.core.protected")
 
   if asset_type == "skill" or asset_type == "skills" then
-    -- Skills are directories - need to delete recursively
-    -- For safety, just mark as deleted in protected.json
-    if mode == "permanent" then
-      -- Create backup before deleting
-      local backup_dir = get_base_dir() .. "/backups/deleted"
-      vim.fn.mkdir(backup_dir, "p")
-
-      local timestamp = os.date("%Y-%m-%d-%H%M%S")
-      local backup_path = backup_dir .. "/" .. name .. "." .. timestamp .. ".backup"
-
-      -- Copy directory (simplified - just note in protected)
-      -- Full directory copy would require more complex logic
-    end
-
-    -- Remove directory
-    local rm_cmd = vim.fn.has("win32") == 1
-        and string.format('rmdir /s /q "%s"', asset.path)
-        or string.format('rm -rf "%s"', asset.path)
-    vim.fn.system(rm_cmd)
+    delete_directory_asset(asset, mode, name)
   else
-    -- Regular file deletion
-    if mode == "permanent" then
-      -- Create backup
-      local backup_dir = get_base_dir() .. "/backups/deleted"
-      vim.fn.mkdir(backup_dir, "p")
-
-      local timestamp = os.date("%Y-%m-%d-%H%M%S")
-      local ext = asset_type == "agent" and ".md" or ".js"
-      local backup_path = backup_dir .. "/" .. name .. ext .. "." .. timestamp .. ".bak"
-
-      -- Copy file to backup
-      local f_in = io.open(asset.path, "r")
-      if f_in then
-        local content = f_in:read("*all")
-        f_in:close()
-
-        local f_out = io.open(backup_path, "w")
-        if f_out then
-          f_out:write(content)
-          f_out:close()
-        end
-      end
-    end
-
-    -- Delete file
-    os.remove(asset.path)
+    delete_file_asset(asset, mode, asset_type, name)
   end
 
   -- Add to protected list with appropriate mode
@@ -674,12 +660,9 @@ function M.delete(asset_type, name, mode)
   protected.add_asset(asset_type, name, protected_mode)
 
   -- Clear cache
-  if asset_type == "agent" or asset_type == "agents" then
-    agents_cache[name] = nil
-  elseif asset_type == "hook" or asset_type == "hooks" then
-    hooks_cache[name] = nil
-  elseif asset_type == "skill" or asset_type == "skills" then
-    skills_cache[name] = nil
+  local cache = get_cache_by_type(asset_type)
+  if cache then
+    cache[name] = nil
   end
 
   -- Rebuild sections cache
@@ -690,9 +673,7 @@ end
 
 -- Search assets
 function M.search(query)
-  if not agents_cache then
-    M.load_all()
-  end
+  ensure_cache_loaded("agents")
 
   if not query or query == "" then
     return {
@@ -702,45 +683,13 @@ function M.search(query)
     }
   end
 
-  local results = {
-    agents = {},
-    hooks = {},
-    skills = {},
-  }
-
   local pattern = query:lower()
 
-  -- Search agents
-  for name, asset in pairs(agents_cache or {}) do
-    local name_lower = name:lower()
-    local desc_lower = (asset.description or ""):lower()
-
-    if name_lower:find(pattern, 1, true) or desc_lower:find(pattern, 1, true) then
-      results.agents[name] = asset
-    end
-  end
-
-  -- Search hooks
-  for name, asset in pairs(hooks_cache or {}) do
-    local name_lower = name:lower()
-    local desc_lower = (asset.description or ""):lower()
-
-    if name_lower:find(pattern, 1, true) or desc_lower:find(pattern, 1, true) then
-      results.hooks[name] = asset
-    end
-  end
-
-  -- Search skills
-  for name, asset in pairs(skills_cache or {}) do
-    local name_lower = name:lower()
-    local desc_lower = (asset.description or ""):lower()
-
-    if name_lower:find(pattern, 1, true) or desc_lower:find(pattern, 1, true) then
-      results.skills[name] = asset
-    end
-  end
-
-  return results
+  return {
+    agents = search_cache(agents_cache, "agents", pattern),
+    hooks = search_cache(hooks_cache, "hooks", pattern),
+    skills = search_cache(skills_cache, "skills", pattern),
+  }
 end
 
 -- Force reload

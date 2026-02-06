@@ -202,7 +202,7 @@ async function exploreCustomizedCommands(customizedCommands, assetsNeedingMerge,
     );
 
     // Display condensed explanation
-    console.log(chalk.dim('\n  ' + explanation.split('\n').slice(0, 15).join('\n  ')));
+    console.log(chalk.dim(`\n  ${  explanation.split('\n').slice(0, 15).join('\n  ')}`));
 
     const { decision } = await inquirer.prompt([
       {

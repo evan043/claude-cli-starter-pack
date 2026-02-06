@@ -17,8 +17,28 @@ Run tests continuously, fixing failures automatically until all tests pass or ma
 /ralph npm test           # Use specific test command
 /ralph --max 5            # Limit to 5 iterations
 /ralph --playwright       # Run Playwright E2E tests
+/ralph --bdd              # Enable BDD mode (requirement-first workflow)
 /ralph --stop             # Stop current Ralph loop
 ```
+
+## BDD Mode (`--bdd`)
+
+When `--bdd` flag is used, Ralph enforces a Behavior-Driven Development workflow:
+
+1. **Check for requirements**: Scans for `REQUIREMENTS.md` or `*.feature` files
+2. **Parse scenarios**: Extracts Gherkin-style `Given/When/Then` from requirements
+3. **Verify test coverage**: Ensures BDD scenarios have corresponding test stubs
+4. **Block implementation**: Prevents code changes if scenarios lack tests
+5. **Standard Ralph loop**: Once tests exist, runs the normal test-fix cycle
+
+**Supported BDD frameworks**: jest-cucumber, Cucumber, pytest-bdd, Behave
+
+The BDD hook (`ralph-bdd-mode`) runs before the standard Ralph enforcer, creating a
+two-layer workflow: BDD scenarios → test stubs → implementation → Ralph test-fix loop.
+
+{{#if testing.bdd.enabled}}
+**BDD is enabled** for this project via tech-stack.json.
+{{/if}}
 
 ## How It Works
 

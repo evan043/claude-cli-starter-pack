@@ -79,7 +79,7 @@ export async function scanSecurity(orchestrator) {
     // Warn if blocked packages found
     if (blocked.length > 0) {
       log(orchestrator, 'warn', `${blocked.length} package(s) blocked due to security vulnerabilities`);
-      console.log('\n' + report);
+      console.log(`\n${  report}`);
     }
 
     return {

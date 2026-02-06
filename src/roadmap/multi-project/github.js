@@ -67,10 +67,10 @@ export function displayRoadmapSummary(roadmap) {
   console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.green.bold('  ✓ Multi-Project Roadmap Created Successfully!                        ') + chalk.cyan('║'));
   console.log(chalk.cyan('╠═══════════════════════════════════════════════════════════════════════╣'));
-  console.log(chalk.cyan('║') + `  Roadmap: ${(roadmap.title || '').substring(0, 50).padEnd(58)}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `  Projects: ${String(roadmap.projects.length).padEnd(57)}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `  Total Tasks: ${String(totalTasks).padEnd(54)}` + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + `  Status: ${(roadmap.status || 'planning').padEnd(59)}` + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }  Roadmap: ${(roadmap.title || '').substring(0, 50).padEnd(58)}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }  Projects: ${String(roadmap.projects.length).padEnd(57)}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }  Total Tasks: ${String(totalTasks).padEnd(54)}${  chalk.cyan('║')}`);
+  console.log(`${chalk.cyan('║')  }  Status: ${(roadmap.status || 'planning').padEnd(59)}${  chalk.cyan('║')}`);
 
   if (roadmap.metadata?.github_epic_number) {
     console.log(chalk.cyan('║') + chalk.dim(`  GitHub Epic: #${roadmap.metadata.github_epic_number}`.padEnd(69)) + chalk.cyan('║'));

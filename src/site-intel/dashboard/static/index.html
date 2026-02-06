@@ -421,6 +421,92 @@
       border-radius: 4px;
       margin-bottom: 1rem;
     }
+
+    /* Performance gauges */
+    .perf-gauges {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .perf-gauge {
+      text-align: center;
+      padding: 1.5rem;
+      background: #0f3460;
+      border-radius: 8px;
+    }
+
+    .gauge-score {
+      font-size: 2.5rem;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .gauge-score.good { color: #4caf50; }
+    .gauge-score.needs-work { color: #ff9800; }
+    .gauge-score.poor { color: #f44336; }
+    .gauge-score.na { color: #555; }
+
+    .gauge-label {
+      font-size: 0.85rem;
+      color: #a0a0a0;
+      text-transform: uppercase;
+    }
+
+    .violations-list {
+      list-style: none;
+    }
+
+    .violations-list li {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: #0f3460;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .violation-impact {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .impact-critical { background: #f44336; color: #fff; }
+    .impact-serious { background: #ff5722; color: #fff; }
+    .impact-moderate { background: #ff9800; color: #fff; }
+    .impact-minor { background: #2196f3; color: #fff; }
+
+    .cwv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    .cwv-table th, .cwv-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #0f3460;
+    }
+
+    .cwv-table th {
+      background: #0f3460;
+      font-size: 0.85rem;
+      color: #a0a0a0;
+      text-transform: uppercase;
+    }
+
+    .no-perf-data {
+      text-align: center;
+      padding: 3rem;
+      color: #a0a0a0;
+    }
   </style>
 </head>
 <body>
@@ -453,6 +539,7 @@
         <div class="tabs">
           <button class="tab active" data-tab="overview">Overview</button>
           <button class="tab" data-tab="graph">Graph</button>
+          <button class="tab" data-tab="performance">Performance</button>
           <button class="tab" data-tab="recommendations">Recommendations</button>
           <button class="tab" data-tab="pages">Pages</button>
         </div>
@@ -497,6 +584,13 @@
             <div class="graph-controls">
               <button class="btn btn-secondary" id="fit-graph">Fit to Screen</button>
               <button class="btn btn-secondary" id="center-graph">Center</button>
+              <span style="margin-left: 1rem; font-size: 0.8rem; color: #a0a0a0;">
+                <span style="color: #0f3460;">&#9644;</span> Navigation
+                <span style="margin-left: 0.5rem; color: #e94560;">&#9644;</span> Shared API
+                <span style="margin-left: 0.5rem; color: #4caf50;">&#9644;</span> Route
+                <span style="margin-left: 0.5rem; color: #9c27b0;">&#183;&#183;&#183;</span> Component
+                <span style="margin-left: 0.5rem; color: #ff9800;">&#9644;</span> API Client
+              </span>
             </div>
             <div id="cy"></div>
           </div>
@@ -520,6 +614,41 @@
                 <tr><td colspan="6" class="loading">Loading...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="tab-content" id="performance-tab">
+          <div class="card">
+            <h3>Lighthouse Scores (Averages)</h3>
+            <div class="perf-gauges" id="perf-gauges">
+              <div class="loading">Loading performance data...</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Core Web Vitals (Per Page)</h3>
+            <table class="cwv-table">
+              <thead>
+                <tr>
+                  <th>Page</th>
+                  <th>Perf</th>
+                  <th>FCP</th>
+                  <th>LCP</th>
+                  <th>CLS</th>
+                  <th>TBT</th>
+                </tr>
+              </thead>
+              <tbody id="cwv-body">
+                <tr><td colspan="6" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>Accessibility Violations</h3>
+            <ul class="violations-list" id="violations-list">
+              <li class="loading">Loading...</li>
+            </ul>
           </div>
         </div>
 
@@ -791,10 +920,21 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
       document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-      document.getElementById(tabName === 'graph' ? 'graph-tab' : tabName === 'recommendations' ? 'recommendations-tab' : tabName === 'pages' ? 'pages-tab' : tabName).classList.add('active');
+
+      const tabIdMap = {
+        'overview': 'overview',
+        'graph': 'graph-tab',
+        'performance': 'performance-tab',
+        'recommendations': 'recommendations-tab',
+        'pages': 'pages-tab'
+      };
+      document.getElementById(tabIdMap[tabName] || tabName).classList.add('active');
 
       if (tabName === 'graph' && currentDomain && !cytoscape) {
         loadGraph(currentDomain);
+      }
+      if (tabName === 'performance' && currentDomain) {
+        loadPerformance(currentDomain);
       }
     }
 
@@ -887,6 +1027,50 @@
                 'line-color': '#e94560',
                 'target-arrow-color': '#e94560'
               }
+            },
+            {
+              selector: 'edge[type="route"]',
+              style: {
+                'width': 4,
+                'line-color': '#4caf50',
+                'target-arrow-color': '#4caf50',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier'
+              }
+            },
+            {
+              selector: 'edge[type="component-uses"]',
+              style: {
+                'width': 1,
+                'line-style': 'dotted',
+                'line-color': '#9c27b0',
+                'target-arrow-color': '#9c27b0',
+                'target-arrow-shape': 'vee',
+                'curve-style': 'bezier'
+              }
+            },
+            {
+              selector: 'edge[type="api-client"]',
+              style: {
+                'width': 2,
+                'line-style': 'dashed',
+                'line-color': '#ff9800',
+                'target-arrow-color': '#ff9800',
+                'target-arrow-shape': 'triangle',
+                'label': 'data(label)',
+                'font-size': '8px',
+                'color': '#ff9800',
+                'curve-style': 'bezier'
+              }
+            },
+            {
+              selector: 'node[type="component"]',
+              style: {
+                'background-color': '#9c27b0',
+                'shape': 'round-rectangle',
+                'width': '35px',
+                'height': '25px'
+              }
             }
           ],
           layout: {
@@ -903,6 +1087,102 @@
       } catch (error) {
         console.error('Error loading graph:', error);
         document.getElementById('cy').innerHTML = '<p class="error" style="padding: 2rem;">Error loading graph</p>';
+      }
+    }
+
+    // Load performance data
+    async function loadPerformance(domain) {
+      try {
+        const response = await fetch(`/api/sites/${encodeURIComponent(domain)}/performance`);
+        const data = await response.json();
+
+        // Gauge scores
+        const gauges = document.getElementById('perf-gauges');
+        if (!data.summary || data.summary.pagesWithPerformanceData === 0) {
+          gauges.innerHTML = `
+            <div class="no-perf-data">
+              <p>No performance data available.</p>
+              <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+                Re-scan with <code>--audit-performance</code> flag or install
+                <code>lighthouse</code> and <code>@axe-core/playwright</code>.
+              </p>
+            </div>`;
+
+          document.getElementById('cwv-body').innerHTML = '<tr><td colspan="6" class="no-perf-data">No data</td></tr>';
+          document.getElementById('violations-list').innerHTML = '<li class="no-perf-data">No data</li>';
+          return;
+        }
+
+        function scoreClass(score) {
+          if (score === null) return 'na';
+          if (score >= 90) return 'good';
+          if (score >= 50) return 'needs-work';
+          return 'poor';
+        }
+
+        const s = data.summary;
+        gauges.innerHTML = `
+          <div class="perf-gauge">
+            <span class="gauge-score ${scoreClass(s.averagePerformanceScore)}">${s.averagePerformanceScore ?? '-'}</span>
+            <span class="gauge-label">Performance</span>
+          </div>
+          <div class="perf-gauge">
+            <span class="gauge-score ${scoreClass(s.averageAccessibilityScore)}">${s.averageAccessibilityScore ?? '-'}</span>
+            <span class="gauge-label">Accessibility</span>
+          </div>
+          <div class="perf-gauge">
+            <span class="gauge-score na">${s.totalAccessibilityViolations}</span>
+            <span class="gauge-label">A11y Violations</span>
+          </div>
+          <div class="perf-gauge">
+            <span class="gauge-score na">${s.pagesWithPerformanceData}</span>
+            <span class="gauge-label">Pages Audited</span>
+          </div>
+        `;
+
+        // Core Web Vitals table
+        const cwvBody = document.getElementById('cwv-body');
+        const pagesWithData = data.pages.filter(p => p.hasPerformanceData);
+        if (pagesWithData.length === 0) {
+          cwvBody.innerHTML = '<tr><td colspan="6" class="no-perf-data">No Lighthouse data</td></tr>';
+        } else {
+          cwvBody.innerHTML = pagesWithData.map(p => {
+            const lh = p.lighthouse;
+            const fmtMs = (v) => v !== null ? `${Math.round(v)}ms` : '-';
+            return `<tr>
+              <td style="font-size: 0.85rem;">${p.path}</td>
+              <td><span class="gauge-score ${scoreClass(lh.scores.performance)}" style="font-size: 1rem;">${lh.scores.performance ?? '-'}</span></td>
+              <td>${fmtMs(lh.metrics.fcp)}</td>
+              <td>${fmtMs(lh.metrics.lcp)}</td>
+              <td>${lh.metrics.cls !== null ? lh.metrics.cls.toFixed(3) : '-'}</td>
+              <td>${fmtMs(lh.metrics.tbt)}</td>
+            </tr>`;
+          }).join('');
+        }
+
+        // Violations list
+        const violationsList = document.getElementById('violations-list');
+        const allViolations = data.pages
+          .filter(p => p.hasAccessibilityData)
+          .flatMap(p => (p.accessibility.violations || []).map(v => ({ ...v, page: p.path })));
+
+        if (allViolations.length === 0) {
+          violationsList.innerHTML = '<li style="padding: 1rem; color: #4caf50; text-align: center;">No accessibility violations found!</li>';
+        } else {
+          violationsList.innerHTML = allViolations.slice(0, 20).map(v => `
+            <li>
+              <div>
+                <strong>${v.id}</strong>
+                <span style="color: #a0a0a0; font-size: 0.85rem;"> on ${v.page}</span>
+                <br><span style="font-size: 0.85rem; color: #a0a0a0;">${v.description || v.help || ''}</span>
+              </div>
+              <span class="violation-impact impact-${v.impact}">${v.impact}</span>
+            </li>
+          `).join('');
+        }
+      } catch (error) {
+        console.error('Error loading performance data:', error);
+        document.getElementById('perf-gauges').innerHTML = '<div class="error">Error loading performance data</div>';
       }
     }
 

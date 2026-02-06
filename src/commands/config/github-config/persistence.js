@@ -5,14 +5,15 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { DEFAULT_GITHUB_SETTINGS } from './data.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Load existing GitHub settings or return defaults
  */
 export function loadGitHubSettings() {
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   let settings = { github: { ...DEFAULT_GITHUB_SETTINGS } };
 
   if (existsSync(settingsPath)) {
@@ -34,7 +35,7 @@ export function loadGitHubSettings() {
  * Save GitHub settings
  */
 export function saveGitHubSettings(settings) {
-  const settingsPath = join(process.cwd(), '.claude', 'settings.json');
+  const settingsPath = claudeAbsolutePath(process.cwd(), 'settings.json');
   const dir = dirname(settingsPath);
 
   if (!existsSync(dir)) {

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "target": "ESNext",
+    "baseUrl": ".",
+    "paths": {
+      "@commands/*": ["src/commands/*"],
+      "@utils/*": ["src/utils/*"],
+      "@cli/*": ["src/cli/*"],
+      "@agents/*": ["src/agents/*"]
+    }
+  },
+  "include": ["src/**/*.js"],
+  "exclude": ["node_modules", "templates"]
+}

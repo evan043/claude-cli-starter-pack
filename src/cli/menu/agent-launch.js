@@ -18,10 +18,10 @@ export async function launchAgentOnlySession() {
   console.log(chalk.cyan('╔════════════════════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.bold.yellow('          ⚡ LAUNCHING AGENT-ONLY MODE + BYPASS ALL PERMISSIONS ⚡         ') + chalk.cyan('║'));
   console.log(chalk.cyan('╠════════════════════════════════════════════════════════════════════════════╣'));
-  console.log(chalk.cyan('║') + '                                                                            ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }                                                                            ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('║') + chalk.dim('   Direct tools: Read/Glob/Grep (2 max) | FORBIDDEN: Bash/Write/Edit       ') + chalk.cyan('║'));
   console.log(chalk.cyan('║') + chalk.dim('   All tool calls will be auto-approved (bypassPermissions)                ') + chalk.cyan('║'));
-  console.log(chalk.cyan('║') + '                                                                            ' + chalk.cyan('║'));
+  console.log(`${chalk.cyan('║')  }                                                                            ${  chalk.cyan('║')}`);
   console.log(chalk.cyan('╚════════════════════════════════════════════════════════════════════════════╝'));
   console.log('');
 

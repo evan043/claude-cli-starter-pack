@@ -192,21 +192,20 @@ end
 -- Asset Protection (Agents, Hooks, Skills)
 -- ============================================
 
+-- Find asset by name in deletion tracking
+local function find_deleted_asset(asset_type, name)
+  if not protected_assets[asset_type] then M.load() end
+  for _, asset in ipairs(protected_assets[asset_type] or {}) do
+    if asset.name == name then return asset end
+  end
+  return nil
+end
+
 -- Check if an asset is marked for deletion
 -- Returns: nil (not deleted), "skip" (temporary), "exclude" (permanent)
 function M.get_asset_deletion_mode(asset_type, name)
-  if not protected_assets[asset_type] then
-    M.load()
-  end
-
-  local assets = protected_assets[asset_type] or {}
-  for _, asset in ipairs(assets) do
-    if asset.name == name then
-      return asset.mode
-    end
-  end
-
-  return nil
+  local asset = find_deleted_asset(asset_type, name)
+  return asset and asset.mode or nil
 end
 
 -- Check if asset is temporarily deleted (skip mode)
@@ -219,33 +218,25 @@ function M.is_asset_excluded(asset_type, name)
   return M.get_asset_deletion_mode(asset_type, name) == "exclude"
 end
 
+-- Create deletion tracking entry
+local function create_deletion_entry(name, mode)
+  return { name = name, mode = mode, deleted_at = os.date("!%Y-%m-%dT%H:%M:%SZ") }
+end
+
 -- Add asset to deletion tracking
 -- mode: "skip" (temporary) or "exclude" (permanent)
 function M.add_deleted_asset(asset_type, name, mode)
-  if not protected_assets[asset_type] then
-    M.load()
-  end
+  if not protected_assets[asset_type] then M.load() end
 
-  -- Check if already tracked
+  -- Update existing or add new entry
   for i, asset in ipairs(protected_assets[asset_type]) do
     if asset.name == name then
-      -- Update existing entry
-      protected_assets[asset_type][i] = {
-        name = name,
-        mode = mode,
-        deleted_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-      }
+      protected_assets[asset_type][i] = create_deletion_entry(name, mode)
       return M.save()
     end
   end
 
-  -- Add new entry
-  table.insert(protected_assets[asset_type], {
-    name = name,
-    mode = mode,
-    deleted_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
-  })
-
+  table.insert(protected_assets[asset_type], create_deletion_entry(name, mode))
   return M.save()
 end
 
@@ -274,32 +265,23 @@ function M.list_deleted_assets(asset_type)
   return protected_assets[asset_type] or {}
 end
 
+-- Filter deleted assets by mode
+local function filter_by_mode(assets, mode)
+  local filtered = {}
+  for _, asset in ipairs(assets) do
+    if asset.mode == mode then table.insert(filtered, asset) end
+  end
+  return filtered
+end
+
 -- List all excluded assets (permanent deletions)
 function M.list_excluded_assets(asset_type)
-  local deleted = M.list_deleted_assets(asset_type)
-  local excluded = {}
-
-  for _, asset in ipairs(deleted) do
-    if asset.mode == "exclude" then
-      table.insert(excluded, asset)
-    end
-  end
-
-  return excluded
+  return filter_by_mode(M.list_deleted_assets(asset_type), "exclude")
 end
 
 -- List all skipped assets (temporary deletions)
 function M.list_skipped_assets(asset_type)
-  local deleted = M.list_deleted_assets(asset_type)
-  local skipped = {}
-
-  for _, asset in ipairs(deleted) do
-    if asset.mode == "skip" then
-      table.insert(skipped, asset)
-    end
-  end
-
-  return skipped
+  return filter_by_mode(M.list_deleted_assets(asset_type), "skip")
 end
 
 -- Get diff between protected command and template

@@ -7,6 +7,47 @@ local M = {}
 -- Plugin version
 M.version = "1.4.0"
 
+-- Helper: Check if classic layout is active
+function M.is_classic()
+  return M.config.layout == "classic"
+end
+
+-- Helper: Conditionally setup module with config
+local function setup_module(name, module_ref, config)
+  if module_ref then
+    module_ref.setup(config)
+  end
+end
+
+-- Health check helpers
+local function check_executable(health, name, cmd)
+  if vim.fn.executable(cmd) == 1 then
+    health.ok(name .. " found")
+    return true
+  else
+    return false
+  end
+end
+
+local function check_directory(health, name, path)
+  if vim.fn.isdirectory(path) == 1 then
+    health.ok(name .. " exists")
+    return true
+  else
+    return false
+  end
+end
+
+local function check_module(health, name, mod_name)
+  local ok, _ = pcall(require, mod_name)
+  if ok then
+    health.ok(name .. " found")
+    return true
+  else
+    return false
+  end
+end
+
 -- Default configuration
 M.config = {
   -- Layout mode: "classic" (sidebar+terminal) or "modern" (floating panels)
@@ -149,81 +190,96 @@ M.state = {
 function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
 
+  -- Protected module loader: logs warning on failure instead of crashing
+  local function safe_require(mod)
+    local ok, result = pcall(require, mod)
+    if not ok then
+      vim.notify("ccasp: failed to load " .. mod .. ": " .. tostring(result), vim.log.levels.WARN)
+      return nil
+    end
+    return result
+  end
+
   -- Load shared modules
-  M.utils = require("ccasp.config")
-  M.telescope = require("ccasp.telescope")
-  M.statusline = require("ccasp.statusline")
+  M.utils = safe_require("ccasp.config")
+  M.telescope = safe_require("ccasp.telescope")
+  M.statusline = safe_require("ccasp.statusline")
 
   -- Load ALL modules (both layouts available)
   -- Classic layout modules: sidebar + terminal
-  M.core = require("ccasp.core")
-  M.ui = require("ccasp.ui")
-  M.terminal = require("ccasp.terminal")
+  M.core = safe_require("ccasp.core")
+  M.ui = safe_require("ccasp.ui")
+  M.terminal = safe_require("ccasp.terminal")
 
   -- Initialize state from saved settings
-  M.core.settings.load()
+  if M.core and M.core.settings then
+    M.core.settings.load()
+  end
 
   -- Modern layout modules: floating panels
   M.panels = {
-    control = require("ccasp.panels.control"),
-    features = require("ccasp.panels.features"),
-    hooks = require("ccasp.panels.hooks"),
-    dashboard = require("ccasp.panels.dashboard"),
-    prompt_editor = require("ccasp.panels.prompt_editor"),
+    control = safe_require("ccasp.panels.control"),
+    features = safe_require("ccasp.panels.features"),
+    hooks = safe_require("ccasp.panels.hooks"),
+    dashboard = safe_require("ccasp.panels.dashboard"),
+    prompt_editor = safe_require("ccasp.panels.prompt_editor"),
   }
-  M.agents = require("ccasp.agents")
+  M.agents = safe_require("ccasp.agents")
 
   -- Load Prompt Injector modules (available in both layouts)
-  M.openai = require("ccasp.openai")
-  M.prompt_injector = require("ccasp.prompt_injector")
+  M.openai = safe_require("ccasp.openai")
+  M.prompt_injector = safe_require("ccasp.prompt_injector")
 
   -- Initialize Prompt Injector with config
-  M.prompt_injector.setup({
+  setup_module("prompt_injector", M.prompt_injector, {
     enabled = M.config.prompt_injector.enabled,
     auto_enhance = M.config.prompt_injector.auto_enhance,
     openai = M.config.prompt_injector.openai,
   })
 
   -- Load Window Manager modules (available in both layouts)
-  M.window_manager = require("ccasp.window_manager")
-  M.taskbar = require("ccasp.taskbar")
-  M.drag = require("ccasp.drag")
+  M.window_manager = safe_require("ccasp.window_manager")
+  M.taskbar = safe_require("ccasp.taskbar")
+  M.drag = safe_require("ccasp.drag")
 
   -- Initialize Window Manager with config
-  M.window_manager.setup({
+  setup_module("window_manager", M.window_manager, {
     enabled = M.config.window_manager.enabled,
     move_step = M.config.window_manager.move_step,
     resize_step = M.config.window_manager.resize_step,
   })
 
   -- Initialize Taskbar with config
-  M.taskbar.setup({
-    enabled = M.config.window_manager.taskbar.enabled,
-    max_items = M.config.window_manager.taskbar.max_items,
-    show_icons = M.config.window_manager.taskbar.show_icons,
-  })
+  local taskbar_cfg = M.config.window_manager and M.config.window_manager.taskbar
+  if taskbar_cfg then
+    setup_module("taskbar", M.taskbar, {
+      enabled = taskbar_cfg.enabled,
+      max_items = taskbar_cfg.max_items,
+      show_icons = taskbar_cfg.show_icons,
+    })
+  end
 
   -- Initialize Drag with config
-  M.drag.setup({
-    enabled = M.config.window_manager.drag_enabled,
+  setup_module("drag", M.drag, {
+    enabled = M.config.window_manager and M.config.window_manager.drag_enabled,
   })
 
   -- Load Browser Tabs module
-  M.browser_tabs = require("ccasp.browser_tabs")
+  M.browser_tabs = safe_require("ccasp.browser_tabs")
 
   -- Initialize Browser Tabs with config
-  M.browser_tabs.setup({
+  setup_module("browser_tabs", M.browser_tabs, {
     enabled = M.config.browser_tabs.enabled,
     height = M.config.browser_tabs.height,
     icons = M.config.browser_tabs.icons,
   })
 
   -- Load Multi-Session Terminal Manager
-  M.sessions = require("ccasp.sessions")
+  M.sessions = safe_require("ccasp.sessions")
 
   -- Load Session Titlebar module
-  M.session_titlebar = require("ccasp.session_titlebar")
-  M.session_titlebar.setup()
+  M.session_titlebar = safe_require("ccasp.session_titlebar")
+  setup_module("session_titlebar", M.session_titlebar, {})
 
   -- Setup keymaps
   M.setup_keymaps()
@@ -238,7 +294,7 @@ end
 
 -- Open CCASP (classic layout: sidebar + terminal)
 function M.open()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.ui.sidebar.open()
     M.state.sidebar_open = true
   else
@@ -248,7 +304,7 @@ end
 
 -- Close CCASP
 function M.close()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.ui.sidebar.close()
     M.terminal.close()
     M.state.sidebar_open = false
@@ -262,7 +318,7 @@ end
 
 -- Toggle sidebar (classic) or control panel (modern)
 function M.toggle_sidebar()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     if M.state.sidebar_open then
       M.ui.sidebar.close()
       M.state.sidebar_open = false
@@ -277,7 +333,7 @@ end
 
 -- Toggle focus between sidebar and terminal (classic layout)
 function M.toggle_focus()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     if M.ui.sidebar.is_focused() then
       M.terminal.focus()
     else
@@ -297,7 +353,7 @@ function M.run_command(cmd_name)
     return
   end
 
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     -- Get command options
     local options = M.state.command_options and M.state.command_options[cmd_name] or {}
 
@@ -330,7 +386,7 @@ end
 
 -- Quick search commands
 function M.quick_search()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.ui.search.open()
   else
     M.telescope.commands()
@@ -339,14 +395,14 @@ end
 
 -- Check for updates
 function M.check_updates()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.terminal.send("/update-check")
   end
 end
 
 -- Toggle permissions mode
 function M.toggle_permissions()
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     local settings = M.core.settings.get()
     local modes = { "auto", "plan", "ask" }
     local current_idx = 1
@@ -370,7 +426,7 @@ end
 -- Reload commands cache
 function M.reload_commands()
   M.state.commands_cache = nil
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.core.commands.load_all()
     M.ui.sidebar.refresh()
   end
@@ -379,7 +435,7 @@ end
 -- Reload assets cache
 function M.reload_assets()
   M.state.assets_cache = nil
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.core.assets.reload()
     M.ui.sidebar.refresh()
   end
@@ -388,7 +444,7 @@ end
 -- Search commands
 function M.search_commands(query)
   M.state.search_query = query or ""
-  if M.config.layout == "classic" then
+  if M.is_classic() then
     M.ui.sidebar.filter(M.state.search_query)
   end
 end
@@ -403,7 +459,7 @@ function M.get_status()
     sync_status = "unknown",
   }
 
-  if M.config.layout == "classic" and M.core then
+  if M.is_classic() and M.core then
     local settings = M.core.settings.get()
     local protected = M.core.protected.list()
 
@@ -416,11 +472,9 @@ function M.get_status()
   return status
 end
 
--- Setup keybindings
-function M.setup_keymaps()
+-- Setup classic layout keymaps
+local function setup_classic_keymaps()
   local opts = { noremap = true, silent = true }
-
-  -- Classic layout keybindings (sidebar + terminal)
   local keybindings = M.config.keybindings or {
     toggle_sidebar = "<C-b>",
     toggle_focus = "<C-\\>",
@@ -431,35 +485,24 @@ function M.setup_keymaps()
     toggle_perms = "<leader>cp",
   }
 
-  vim.keymap.set("n", keybindings.toggle_sidebar, function()
-    M.toggle_sidebar()
-  end, vim.tbl_extend("force", opts, { desc = "Toggle CCASP sidebar" }))
+  vim.keymap.set("n", keybindings.toggle_sidebar, M.toggle_sidebar,
+    vim.tbl_extend("force", opts, { desc = "Toggle CCASP sidebar" }))
+  vim.keymap.set("n", keybindings.toggle_focus, M.toggle_focus,
+    vim.tbl_extend("force", opts, { desc = "Toggle focus sidebar/terminal" }))
+  vim.keymap.set("n", keybindings.open_ccasp, M.open,
+    vim.tbl_extend("force", opts, { desc = "Open CCASP Control Center" }))
+  vim.keymap.set("n", keybindings.run_last, M.run_last_command,
+    vim.tbl_extend("force", opts, { desc = "Run last CCASP command" }))
+  vim.keymap.set("n", keybindings.quick_search, M.quick_search,
+    vim.tbl_extend("force", opts, { desc = "Quick search commands" }))
+  vim.keymap.set("n", keybindings.check_updates, M.check_updates,
+    vim.tbl_extend("force", opts, { desc = "Check for CCASP updates" }))
+  vim.keymap.set("n", keybindings.toggle_perms, M.toggle_permissions,
+    vim.tbl_extend("force", opts, { desc = "Toggle permissions mode" }))
+end
 
-  vim.keymap.set("n", keybindings.toggle_focus, function()
-    M.toggle_focus()
-  end, vim.tbl_extend("force", opts, { desc = "Toggle focus sidebar/terminal" }))
-
-  vim.keymap.set("n", keybindings.open_ccasp, function()
-    M.open()
-  end, vim.tbl_extend("force", opts, { desc = "Open CCASP Control Center" }))
-
-  vim.keymap.set("n", keybindings.run_last, function()
-    M.run_last_command()
-  end, vim.tbl_extend("force", opts, { desc = "Run last CCASP command" }))
-
-  vim.keymap.set("n", keybindings.quick_search, function()
-    M.quick_search()
-  end, vim.tbl_extend("force", opts, { desc = "Quick search commands" }))
-
-  vim.keymap.set("n", keybindings.check_updates, function()
-    M.check_updates()
-  end, vim.tbl_extend("force", opts, { desc = "Check for CCASP updates" }))
-
-  vim.keymap.set("n", keybindings.toggle_perms, function()
-    M.toggle_permissions()
-  end, vim.tbl_extend("force", opts, { desc = "Toggle permissions mode" }))
-
-  -- Modern layout keybindings (floating panels - available alongside classic)
+-- Setup modern layout keymaps
+local function setup_modern_keymaps()
   local prefix = M.config.keys and M.config.keys.prefix or "<leader>c"
   local keys = M.config.keys or {
     grid = "g",
@@ -558,6 +601,12 @@ function M.setup_keymaps()
   end
 end
 
+-- Setup keybindings
+function M.setup_keymaps()
+  setup_classic_keymaps()
+  setup_modern_keymaps()
+end
+
 -- Setup autocommands
 function M.setup_autocmds()
   local group = vim.api.nvim_create_augroup("CCASP", { clear = true })
@@ -592,47 +641,33 @@ end
 -- Health check
 function M.health()
   local health = vim.health or require("health")
-
   health.start("CCASP.nvim")
 
-  -- Check Claude CLI
-  if vim.fn.executable("claude") == 1 then
-    health.ok("Claude CLI found")
-  else
+  -- Check executables
+  if not check_executable(health, "Claude CLI", "claude") then
     health.error("Claude CLI not found", { "Install Claude CLI: npm install -g @anthropic-ai/claude-code" })
   end
 
-  -- Check ccasp
-  if vim.fn.executable("ccasp") == 1 then
-    health.ok("CCASP CLI found")
-  else
+  if not check_executable(health, "CCASP CLI", "ccasp") then
     health.warn("CCASP CLI not found", { "Install: npm install -g claude-cli-advanced-starter-pack" })
   end
 
-  -- Check for .claude directory
+  -- Check directories
   local claude_dir = vim.fn.getcwd() .. "/.claude"
-  if vim.fn.isdirectory(claude_dir) == 1 then
-    health.ok(".claude directory exists")
-  else
+  if not check_directory(health, ".claude directory", claude_dir) then
     health.warn(".claude directory not found", { "Run: ccasp init" })
   end
 
-  -- Check dependencies
-  local has_plenary, _ = pcall(require, "plenary")
-  if has_plenary then
-    health.ok("plenary.nvim found")
-  else
+  -- Check required dependencies
+  if not check_module(health, "plenary.nvim", "plenary") then
     health.error("plenary.nvim not found", { "Required for async operations" })
   end
 
-  local has_telescope, _ = pcall(require, "telescope")
-  if has_telescope then
-    health.ok("telescope.nvim found")
-  else
+  if not check_module(health, "telescope.nvim", "telescope") then
     health.warn("telescope.nvim not found", { "Optional: enables command/skill browsing" })
   end
 
-  -- Check Neovim version for mouse drag support
+  -- Check Neovim version
   local version = vim.version()
   if version.major > 0 or (version.major == 0 and version.minor >= 10) then
     health.ok("Neovim version supports mouse drag (" .. tostring(version.major) .. "." .. tostring(version.minor) .. ")")
@@ -640,26 +675,16 @@ function M.health()
     health.warn("Neovim < 0.10 - mouse drag disabled", { "Upgrade Neovim for drag support" })
   end
 
-  -- Check window manager modules
-  local has_wm, _ = pcall(require, "ccasp.window_manager")
-  if has_wm then
-    health.ok("Window manager module loaded")
-  else
+  -- Check optional modules
+  if not check_module(health, "Window manager module", "ccasp.window_manager") then
     health.error("Window manager module failed to load")
   end
 
-  local has_taskbar, _ = pcall(require, "ccasp.taskbar")
-  if has_taskbar then
-    health.ok("Taskbar module loaded")
-  else
+  if not check_module(health, "Taskbar module", "ccasp.taskbar") then
     health.error("Taskbar module failed to load")
   end
 
-  -- Check browser tabs module
-  local has_browser_tabs, _ = pcall(require, "ccasp.browser_tabs")
-  if has_browser_tabs then
-    health.ok("Browser tabs module loaded")
-  else
+  if not check_module(health, "Browser tabs module", "ccasp.browser_tabs") then
     health.error("Browser tabs module failed to load")
   end
 end

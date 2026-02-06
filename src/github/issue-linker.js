@@ -119,9 +119,9 @@ function updateCcaspMeta(body, newMeta) {
   // Replace existing CCASP-META or add at beginning
   if (body.includes('<!-- CCASP-META')) {
     return body.replace(/<!-- CCASP-META\n[\s\S]*?\n-->/, metaBlock);
-  } else {
+  } 
     return `${metaBlock}\n\n${body}`;
-  }
+  
 }
 
 /**
@@ -167,9 +167,9 @@ export function linkParentToChild(parentIssue, childIssue, config) {
     // Create new section before first --- separator
     const separatorIndex = body.indexOf('\n---\n');
     if (separatorIndex !== -1) {
-      updatedBody = body.slice(0, separatorIndex) +
-        `\n\n${sectionHeader}\n\n- [ ] [${childIssue.title}](#${childIssue.number})\n` +
-        body.slice(separatorIndex);
+      updatedBody = `${body.slice(0, separatorIndex) 
+        }\n\n${sectionHeader}\n\n- [ ] [${childIssue.title}](#${childIssue.number})\n${ 
+        body.slice(separatorIndex)}`;
     } else {
       // Add at end
       updatedBody = `${body}\n\n${sectionHeader}\n\n- [ ] [${childIssue.title}](#${childIssue.number})\n`;
@@ -213,9 +213,9 @@ export function linkChildToParent(childIssue, parentIssue, config) {
     const beforeMeta = finalBody.slice(0, metaEndIndex);
     const afterMeta = finalBody.slice(metaEndIndex);
 
-    finalBody = beforeMeta +
-      `\n\n**Part of ${parentLabel}:** [${parentIssue.title}](https://github.com/${config.owner}/${config.repo}/issues/${parentIssue.number})` +
-      afterMeta;
+    finalBody = `${beforeMeta 
+      }\n\n**Part of ${parentLabel}:** [${parentIssue.title}](https://github.com/${config.owner}/${config.repo}/issues/${parentIssue.number})${ 
+      afterMeta}`;
   }
 
   return updateIssueBody(config.owner, config.repo, childIssue.number, finalBody);

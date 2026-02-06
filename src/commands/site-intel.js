@@ -18,6 +18,8 @@ import {
   toMermaid,
   listScans,
   startDashboard,
+  loadChromaPending,
+  listDomains,
 } from '../site-intel/index.js';
 
 /**
@@ -575,6 +577,101 @@ export async function handleDashboard(options) {
 }
 
 /**
+ * Search command handler
+ */
+export async function handleSearch(query, options) {
+  showHeader('Site Intelligence - Search');
+
+  const spinner = ora('Searching...').start();
+
+  try {
+    const domain = options.domain;
+    const limit = options.limit ? parseInt(options.limit, 10) : 10;
+    const domains = domain
+      ? [domain]
+      : listDomains(process.cwd()).map(d => d.domain);
+
+    if (domains.length === 0) {
+      spinner.stop();
+      console.log(chalk.yellow('No scanned sites found.'));
+      console.log(chalk.dim('Run: ccasp site-intel scan <url>'));
+      return;
+    }
+
+    const queryLower = query.toLowerCase();
+    const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 2);
+    const results = [];
+
+    for (const d of domains) {
+      const pending = loadChromaPending(process.cwd(), d);
+      if (pending?.documents) {
+        for (let i = 0; i < pending.documents.length; i++) {
+          const docLower = pending.documents[i].toLowerCase();
+          const matchCount = queryTerms.filter(term => docLower.includes(term)).length;
+          if (matchCount > 0) {
+            results.push({
+              domain: d,
+              relevance: matchCount / queryTerms.length,
+              metadata: pending.metadatas[i]
+            });
+          }
+        }
+      } else {
+        const scan = loadLatestScan(d);
+        if (scan?.summaries?.summaries) {
+          for (const summary of scan.summaries.summaries) {
+            const searchText = [
+              summary.url, summary.purpose, summary.classification?.type,
+              ...(summary.features || [])
+            ].join(' ').toLowerCase();
+            const matchCount = queryTerms.filter(term => searchText.includes(term)).length;
+            if (matchCount > 0) {
+              results.push({
+                domain: d,
+                relevance: matchCount / queryTerms.length,
+                url: summary.url,
+                type: summary.classification?.type,
+                purpose: summary.purpose
+              });
+            }
+          }
+        }
+      }
+    }
+
+    spinner.stop();
+
+    results.sort((a, b) => b.relevance - a.relevance);
+    const limited = results.slice(0, limit);
+
+    console.log('');
+    console.log(chalk.bold.cyan(`Search results for: "${query}"`));
+    console.log(chalk.dim('─'.repeat(80)));
+    console.log('');
+
+    if (limited.length === 0) {
+      console.log(chalk.yellow('No matching pages found.'));
+    } else {
+      limited.forEach((r, i) => {
+        const url = r.metadata?.url || r.url || 'unknown';
+        const type = r.metadata?.type || r.type || 'unknown';
+        const purpose = r.metadata?.purpose || r.purpose || '';
+        const relevance = Math.round(r.relevance * 100);
+        console.log(`  ${chalk.bold(`${i + 1}.`)} ${chalk.cyan(url)}`);
+        console.log(`     Type: ${chalk.dim(type)} | Relevance: ${chalk.green(`${relevance}%`)} | Domain: ${chalk.dim(r.domain)}`);
+        if (purpose) console.log(`     ${chalk.dim(purpose)}`);
+        console.log('');
+      });
+      console.log(chalk.dim(`Showing ${limited.length} of ${results.length} results across ${domains.length} site(s)`));
+    }
+    console.log('');
+  } catch (error) {
+    spinner.stop();
+    console.log(chalk.red(`✗ Error: ${error.message}`));
+  }
+}
+
+/**
  * Register site-intel commands with Commander
  */
 export function registerSiteIntelCommands(program) {
@@ -652,6 +749,16 @@ export function registerSiteIntelCommands(program) {
     .action(async (options) => {
       await handleDashboard(options);
     });
+
+  // Search command
+  siteIntel
+    .command('search <query>')
+    .description('Search page summaries using keyword matching')
+    .option('--domain <domain>', 'Limit search to a specific domain')
+    .option('--limit <n>', 'Maximum results to show', '10')
+    .action(async (query, options) => {
+      await handleSearch(query, options);
+    });
 }
 
 /**
@@ -675,7 +782,9 @@ export async function runSiteIntel(subcommand, args, options = {}) {
       return await handleList(options);
     case 'dashboard':
       return await handleDashboard(options);
+    case 'search':
+      return await handleSearch(args[0], options);
     default:
-      console.log(chalk.yellow('Unknown subcommand. Available: scan, recommend, status, page, graph, drift, list, dashboard'));
+      console.log(chalk.yellow('Unknown subcommand. Available: scan, recommend, status, page, graph, drift, list, dashboard, search'));
   }
 }

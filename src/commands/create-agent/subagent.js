@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { showHeader, showSuccess } from '../../cli/menu.js';
 import { generateAgentTemplate } from '../../agents/templates.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 /**
  * Create a sub-agent (L2/L3)
@@ -112,7 +113,7 @@ export async function createSubAgent(options) {
   });
 
   // Determine path
-  const basePath = join(process.cwd(), '.claude', 'skills', parentSkill, 'workflows');
+  const basePath = claudeAbsolutePath(process.cwd(), 'skills', parentSkill, 'workflows');
   if (!existsSync(basePath)) {
     mkdirSync(basePath, { recursive: true });
   }

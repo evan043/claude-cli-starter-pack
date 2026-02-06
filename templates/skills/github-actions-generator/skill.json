@@ -1,0 +1,13 @@
+{
+  "name": "github-actions-generator",
+  "description": "Generate GitHub Actions CI/CD workflows with best practices, security hardening, and common action patterns",
+  "category": "devops",
+  "portability": 95,
+  "source": "cherry-picked from akin-ozer/cc-devops-skills",
+  "tags": ["ci-cd", "github-actions", "deployment", "automation", "workflows"],
+  "references": [
+    "best-practices.md",
+    "common-actions.md",
+    "security.md"
+  ]
+}

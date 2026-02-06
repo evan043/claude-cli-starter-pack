@@ -32,96 +32,67 @@ local function reset_terminal()
   state.pending_slash_cmd = nil
 end
 
+-- Get validated terminal direction
+local function get_terminal_direction(ccasp)
+  local direction = ccasp.config and ccasp.config.terminal and ccasp.config.terminal.direction or "vertical"
+  local valid = { horizontal = true, vertical = true, float = true, tab = true }
+  return valid[direction] and direction or "vertical"
+end
+
+-- Calculate terminal size based on direction
+local function calculate_terminal_size(direction, ccasp)
+  local size = ccasp.config and ccasp.config.terminal and ccasp.config.terminal.size or 80
+  if direction == "vertical" then
+    return math.floor(vim.o.columns * (size / 100))
+  elseif direction == "horizontal" then
+    return 15
+  end
+  return size
+end
+
+-- Setup terminal mode keybindings
+local function setup_terminal_keybindings(bufnr)
+  local opts = { buffer = bufnr, noremap = true, silent = true }
+  vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], opts)
+  vim.keymap.set("t", "<C-l>", M.clear, opts)
+  vim.keymap.set("t", "<C-c>", M.interrupt, opts)
+  vim.keymap.set("t", "<C-u>", [[<C-\><C-n><C-u>]], opts)
+  vim.keymap.set("t", "<C-d>", [[<C-\><C-n><C-d>]], opts)
+end
+
+-- Setup normal mode keybindings in terminal buffer
+local function setup_normal_keybindings(bufnr)
+  local opts = { buffer = bufnr, noremap = true, silent = true }
+  vim.keymap.set("n", "i", function() vim.cmd("startinsert") end, opts)
+  vim.keymap.set("n", "a", function() vim.cmd("startinsert!") end, opts)
+  vim.keymap.set("n", "<C-y>", M.yank_output, opts)
+end
+
 -- Create/get terminal instance
 local function get_terminal()
-  if state.terminal then
-    return state.terminal
-  end
-
-  if not has_toggleterm() then
-    return nil
-  end
+  if state.terminal then return state.terminal end
+  if not has_toggleterm() then return nil end
 
   local Terminal = require("toggleterm.terminal").Terminal
   local ccasp = require("ccasp")
 
-  -- Use system shell, not claude directly
-  -- Claude will be launched via send() after terminal opens
-  local shell_cmd = vim.o.shell
+  local direction = get_terminal_direction(ccasp)
+  local term_size = calculate_terminal_size(direction, ccasp)
 
-  -- Get direction with safe default
-  local direction = "vertical"
-  if ccasp.config and ccasp.config.terminal and ccasp.config.terminal.direction then
-    direction = ccasp.config.terminal.direction
-  end
-
-  -- Validate direction (toggleterm only accepts: horizontal, vertical, float, tab)
-  if direction ~= "horizontal" and direction ~= "vertical" and direction ~= "float" and direction ~= "tab" then
-    direction = "vertical"
-  end
-
-  -- Calculate size based on direction
-  local term_size = 80
-  if ccasp.config and ccasp.config.terminal and ccasp.config.terminal.size then
-    term_size = ccasp.config.terminal.size
-  end
-
-  if direction == "vertical" then
-    -- For vertical, use percentage of columns
-    term_size = math.floor(vim.o.columns * (term_size / 100))
-  elseif direction == "horizontal" then
-    -- For horizontal, use fixed rows
-    term_size = 15
-  end
-
-  -- Debug output
-  vim.notify("Creating terminal: direction=" .. tostring(direction) .. " size=" .. tostring(term_size), vim.log.levels.INFO)
+  vim.notify("Creating terminal: direction=" .. direction .. " size=" .. term_size, vim.log.levels.INFO)
 
   state.terminal = Terminal:new({
-    cmd = shell_cmd,
+    cmd = vim.o.shell,
     dir = vim.fn.getcwd(),
     direction = direction,
     size = term_size,
     close_on_exit = false,
     on_open = function(term)
-      state.win = term.window
-      state.bufnr = term.bufnr
-
-      -- Set up terminal keybindings
-      local opts = { buffer = term.bufnr, noremap = true, silent = true }
-
-      -- Exit terminal mode with double escape
-      vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], opts)
-
-      -- Clear terminal
-      vim.keymap.set("t", "<C-l>", function()
-        M.clear()
-      end, opts)
-
-      -- Interrupt process
-      vim.keymap.set("t", "<C-c>", function()
-        M.interrupt()
-      end, opts)
-
-      -- Scroll in terminal mode
-      vim.keymap.set("t", "<C-u>", [[<C-\><C-n><C-u>]], opts)
-      vim.keymap.set("t", "<C-d>", [[<C-\><C-n><C-d>]], opts)
-
-      -- Normal mode keybindings when in terminal buffer
-      local nopts = { buffer = term.bufnr, noremap = true, silent = true }
-      vim.keymap.set("n", "i", function()
-        vim.cmd("startinsert")
-      end, nopts)
-      vim.keymap.set("n", "a", function()
-        vim.cmd("startinsert!")
-      end, nopts)
-      vim.keymap.set("n", "<C-y>", function()
-        M.yank_output()
-      end, nopts)
+      state.win, state.bufnr = term.window, term.bufnr
+      setup_terminal_keybindings(term.bufnr)
+      setup_normal_keybindings(term.bufnr)
     end,
-    on_close = function()
-      state.win = nil
-    end,
+    on_close = function() state.win = nil end,
   })
 
   return state.terminal
@@ -180,32 +151,46 @@ function M.focus()
   end
 end
 
--- Send command to terminal
-function M.send(cmd)
-  if not cmd or cmd == "" then
-    return
+-- Open new terminal if needed
+local function ensure_terminal_open()
+  if state.bufnr and vim.api.nvim_buf_is_valid(state.bufnr) then return true end
+
+  vim.cmd("vsplit | terminal")
+  state.bufnr = vim.api.nvim_get_current_buf()
+  state.win = vim.api.nvim_get_current_win()
+  return false
+end
+
+-- Focus terminal window
+local function focus_terminal()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_set_current_win(state.win)
+    vim.cmd("startinsert")
   end
+end
 
-  -- Store the command to send
-  state.pending_cmd = cmd
+-- Send command to terminal job
+local function send_to_job(cmd)
+  if not (state.bufnr and vim.api.nvim_buf_is_valid(state.bufnr)) then return false end
 
-  -- Try simple approach: use vim's built-in terminal
-  if not state.bufnr or not vim.api.nvim_buf_is_valid(state.bufnr) then
-    -- Open a new terminal split
-    vim.cmd("vsplit | terminal")
-    state.bufnr = vim.api.nvim_get_current_buf()
-    state.win = vim.api.nvim_get_current_win()
+  local job_id = vim.b[state.bufnr].terminal_job_id
+  if job_id and job_id > 0 then
+    vim.fn.chansend(job_id, cmd .. "\n")
+    focus_terminal()
+    return true
+  end
+  return false
+end
 
-    -- Wait for terminal to initialize
-    vim.defer_fn(function()
-      M._send_pending()
-    end, 500)
+-- Internal: send to terminal
+function M._send_to_terminal(cmd)
+  if send_to_job(cmd) then return end
+
+  if not state.pending_cmd and cmd then
+    state.pending_cmd = cmd
+    vim.defer_fn(M._send_pending, 500)
   else
-    -- Terminal exists, switch to it and send
-    if state.win and vim.api.nvim_win_is_valid(state.win) then
-      vim.api.nvim_set_current_win(state.win)
-    end
-    M._send_to_terminal(cmd)
+    vim.notify("Terminal not ready. Try again.", vim.log.levels.WARN)
   end
 end
 
@@ -218,30 +203,19 @@ function M._send_pending()
   end
 end
 
--- Internal: send to terminal
-function M._send_to_terminal(cmd)
-  -- Use direct chansend to terminal buffer
-  if state.bufnr and vim.api.nvim_buf_is_valid(state.bufnr) then
-    local job_id = vim.b[state.bufnr].terminal_job_id
-    if job_id and job_id > 0 then
-      vim.fn.chansend(job_id, cmd .. "\n")
-      -- Focus the terminal window
-      if state.win and vim.api.nvim_win_is_valid(state.win) then
-        vim.api.nvim_set_current_win(state.win)
-        vim.cmd("startinsert")
-      end
-      return
-    end
-  end
+-- Send command to terminal
+function M.send(cmd)
+  if not cmd or cmd == "" then return end
 
-  -- Retry once more after a delay
-  if state.pending_cmd == nil and cmd then
-    state.pending_cmd = cmd
-    vim.defer_fn(function()
-      M._send_pending()
-    end, 500)
+  state.pending_cmd = cmd
+
+  if ensure_terminal_open() then
+    if state.win and vim.api.nvim_win_is_valid(state.win) then
+      vim.api.nvim_set_current_win(state.win)
+    end
+    M._send_to_terminal(cmd)
   else
-    vim.notify("Terminal not ready. Try again.", vim.log.levels.WARN)
+    vim.defer_fn(M._send_pending, 500)
   end
 end
 
@@ -432,6 +406,9 @@ end
 -- Scroll terminal up
 function M.scroll_up()
   if state.win and vim.api.nvim_win_is_valid(state.win) then
+    local bufnr = vim.api.nvim_win_get_buf(state.win)
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    if cursor[1] <= 1 then return end
     local current_win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_current_win(state.win)
     vim.cmd("normal! \\<C-u>")
@@ -442,6 +419,15 @@ end
 -- Scroll terminal down
 function M.scroll_down()
   if state.win and vim.api.nvim_win_is_valid(state.win) then
+    local bufnr = vim.api.nvim_win_get_buf(state.win)
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    local win_height = vim.api.nvim_win_get_height(state.win)
+    -- Already at or near the bottom — don't wrap around
+    if cursor[1] + win_height >= line_count then
+      vim.api.nvim_win_set_cursor(state.win, { line_count, 0 })
+      return
+    end
     local current_win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_current_win(state.win)
     vim.cmd("normal! \\<C-d>")

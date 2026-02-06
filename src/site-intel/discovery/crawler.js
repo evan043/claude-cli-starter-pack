@@ -9,6 +9,8 @@ import { chromium } from 'playwright';
 import { URL } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { runLighthouseAudit, isLighthouseAvailable } from './lighthouse.js';
+import { runAccessibilityAudit, isAxeAvailable } from './accessibility.js';
 
 /**
  * Default crawl options
@@ -22,6 +24,7 @@ const DEFAULT_OPTIONS = {
   screenshotDir: null,
   userAgent: 'CCASP-SiteIntel/1.0 (Website Intelligence Crawler)',
   viewport: { width: 1280, height: 720 },
+  auditPerformance: false,
   ignorePatterns: [
     /\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz)$/i,
     /^(mailto:|tel:|javascript:|data:)/i,
@@ -213,6 +216,19 @@ export async function crawlSite(startUrl, options = {}) {
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
+
+    // Get CDP port for Lighthouse (if audit enabled)
+    let cdpPort = null;
+    if (opts.auditPerformance && isLighthouseAvailable()) {
+      try {
+        const cdpUrl = browser.contexts()[0]?._browser?.wsEndpoint?.() || '';
+        const portMatch = cdpUrl.match(/:(\d+)\//);
+        cdpPort = portMatch ? parseInt(portMatch[1]) : null;
+      } catch {
+        // CDP port extraction failed, Lighthouse will be skipped
+      }
+    }
+
     const context = await browser.newContext({
       userAgent: opts.userAgent,
       viewport: opts.viewport
@@ -252,6 +268,19 @@ export async function crawlSite(startUrl, options = {}) {
           await page.screenshot({ path: screenshotPath, fullPage: false });
         }
 
+        // Performance & accessibility audits (optional)
+        let lighthouseResult = null;
+        let accessibilityResult = null;
+
+        if (opts.auditPerformance) {
+          if (cdpPort && isLighthouseAvailable()) {
+            lighthouseResult = await runLighthouseAudit(finalUrl, cdpPort);
+          }
+          if (isAxeAvailable()) {
+            accessibilityResult = await runAccessibilityAudit(page);
+          }
+        }
+
         const apiCalls = extractAPICalls(networkRequests, baseOrigin);
 
         const pageRecord = {
@@ -269,6 +298,8 @@ export async function crawlSite(startUrl, options = {}) {
           screenshotPath,
           htmlLength: html.length,
           elementCount: metadata.elementCount,
+          lighthouse: lighthouseResult,
+          accessibility: accessibilityResult,
           crawledAt: new Date().toISOString()
         };
 

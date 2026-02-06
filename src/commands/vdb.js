@@ -289,7 +289,7 @@ async function executeNext(projectRoot, options = {}) {
 
       const prompt = await vdb.executor.buildPrompt(task);
       console.log(chalk.gray('\n  Prompt preview (first 500 chars):\n'));
-      console.log(chalk.gray('  ' + prompt.substring(0, 500).replace(/\n/g, '\n  ') + '...\n'));
+      console.log(chalk.gray(`  ${  prompt.substring(0, 500).replace(/\n/g, '\n  ')  }...\n`));
 
       return;
     }

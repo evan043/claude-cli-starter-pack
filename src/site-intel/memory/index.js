@@ -1,4 +1,4 @@
 /**
  * Website Intelligence - Layer 4: Memory
  */
-export { saveScan, loadLatestScan, loadScan, listScans, listDomains, getDataDir, toChromaDocuments } from './store.js';
+export { saveScan, loadLatestScan, loadScan, listScans, listDomains, getDataDir, toChromaDocuments, storeToChroma, loadChromaPending } from './store.js';

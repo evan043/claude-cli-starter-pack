@@ -43,6 +43,25 @@ export default [
     },
   },
   {
+    files: ['src/vision/dashboard/static/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+  {
+    files: ['src/roadmap/**/*.js', 'src/github/**/*.js', 'src/orchestration/**/*.js'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/commands/**'],
+          message: 'Domain modules must not import from commands/. Use orchestration/ re-exports instead.',
+        }],
+      }],
+    },
+  },
+  {
     ignores: ['node_modules/', 'dist/', 'coverage/', '**/*.min.js', 'tests/', 'nvim-ccasp/'],
   },
 ];

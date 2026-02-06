@@ -29,7 +29,15 @@ const EFFORT_MAP = {
   'Excessive DOM size': 'L',
   'Oversized HTML': 'L',
   'Too many forms': 'M',
-  'Non-interactive app page': 'M'
+  'Non-interactive app page': 'M',
+  'Slow First Contentful Paint': 'L',
+  'Slow Largest Contentful Paint': 'L',
+  'Poor Cumulative Layout Shift': 'M',
+  'High Total Blocking Time': 'L',
+  'Low Performance Score': 'L',
+  'Low SEO Score': 'M',
+  'Critical Accessibility Violation': 'M',
+  'Moderate Accessibility Violation': 'S'
 };
 
 /**

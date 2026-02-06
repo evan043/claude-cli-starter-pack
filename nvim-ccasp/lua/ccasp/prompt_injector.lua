@@ -39,41 +39,23 @@ function M.setup(opts)
   return M.state.enabled
 end
 
--- Check if prompt injector is enabled
-function M.is_enabled()
-  return M.state.enabled
-end
-
--- Enable prompt injector
-function M.enable()
-  local openai = get_openai()
-
-  if not openai.is_available() then
-    vim.notify(
-      "CCASP: Cannot enable Prompt Injector - OpenAI API key not configured\n" ..
-      "Add OPENAI_API_KEY to your .env file",
-      vim.log.levels.WARN
-    )
-    return false
-  end
-
-  M.state.enabled = true
-  vim.notify("CCASP: Prompt Injector enabled", vim.log.levels.INFO)
-  return true
-end
-
--- Disable prompt injector
-function M.disable()
-  M.state.enabled = false
-  vim.notify("CCASP: Prompt Injector disabled", vim.log.levels.INFO)
-end
-
 -- Toggle prompt injector
 function M.toggle()
   if M.state.enabled then
-    M.disable()
+    M.state.enabled = false
+    vim.notify("CCASP: Prompt Injector disabled", vim.log.levels.INFO)
   else
-    M.enable()
+    local openai = get_openai()
+    if not openai.is_available() then
+      vim.notify(
+        "CCASP: Cannot enable Prompt Injector - OpenAI API key not configured\n" ..
+        "Add OPENAI_API_KEY to your .env file",
+        vim.log.levels.WARN
+      )
+      return false
+    end
+    M.state.enabled = true
+    vim.notify("CCASP: Prompt Injector enabled", vim.log.levels.INFO)
   end
   return M.state.enabled
 end
@@ -242,18 +224,6 @@ function M.get_statusline()
   end
 
   return " PI:ON"
-end
-
--- Create a command wrapper that intercepts input
--- This wraps the Claude terminal to intercept sends
-function M.wrap_terminal_send(original_send)
-  return function(prompt)
-    if M.state.enabled and prompt and prompt ~= "" then
-      M.intercept(prompt, original_send)
-    else
-      original_send(prompt)
-    end
-  end
 end
 
 -- Quick enhance (for direct use without full editor)

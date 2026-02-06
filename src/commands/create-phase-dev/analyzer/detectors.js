@@ -467,7 +467,7 @@ export function detectServices(cwd) {
         result.detected = true;
         result.supabase = true;
       }
-      if (deps['n8n'] || deps['n8n-workflow'] || deps['n8n-core']) {
+      if (deps.n8n || deps['n8n-workflow'] || deps['n8n-core']) {
         result.detected = true;
         result.n8n = true;
       }

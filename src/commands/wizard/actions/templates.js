@@ -31,7 +31,7 @@ export async function showTemplates() {
   ];
 
   templates.forEach((t, i) => {
-    console.log(`  ${chalk.yellow(i + 1 + '.')} ${chalk.cyan(t.name)}`);
+    console.log(`  ${chalk.yellow(`${i + 1  }.`)} ${chalk.cyan(t.name)}`);
     console.log(`     ${chalk.dim(t.desc)}`);
     console.log(`     ${chalk.dim('$')} ${t.cmd}\n`);
   });
@@ -72,7 +72,7 @@ export async function showPriorReleases() {
     const isCurrent = release.version === currentVersion;
     const marker = isCurrent ? chalk.green('[current]') : chalk.dim('o');
     const currentLabel = isCurrent ? chalk.green(' (current)') : '';
-    console.log(`  ${chalk.yellow(i + 1 + '.')} ${marker} v${release.version}${currentLabel} ${chalk.dim(`(${release.date})`)}`);
+    console.log(`  ${chalk.yellow(`${i + 1  }.`)} ${marker} v${release.version}${currentLabel} ${chalk.dim(`(${release.date})`)}`);
     console.log(`     ${chalk.dim(release.summary)}`);
   });
 

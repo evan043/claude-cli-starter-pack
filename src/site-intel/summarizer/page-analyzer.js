@@ -246,6 +246,46 @@ export function detectSmells(pageData) {
     }
   }
 
+  // Performance smells (from Lighthouse data)
+  if (pageData.lighthouse?.success) {
+    const lh = pageData.lighthouse;
+    if (lh.metrics.fcp > 3000) {
+      smells.push({ smell: 'Slow First Contentful Paint', severity: 'high', detail: `FCP: ${Math.round(lh.metrics.fcp)}ms (target < 3000ms)` });
+    }
+    if (lh.metrics.lcp > 4000) {
+      smells.push({ smell: 'Slow Largest Contentful Paint', severity: 'high', detail: `LCP: ${Math.round(lh.metrics.lcp)}ms (target < 4000ms)` });
+    }
+    if (lh.metrics.cls > 0.25) {
+      smells.push({ smell: 'Poor Cumulative Layout Shift', severity: 'medium', detail: `CLS: ${lh.metrics.cls.toFixed(3)} (target < 0.25)` });
+    }
+    if (lh.metrics.tbt > 600) {
+      smells.push({ smell: 'High Total Blocking Time', severity: 'medium', detail: `TBT: ${Math.round(lh.metrics.tbt)}ms (target < 600ms)` });
+    }
+    if (lh.scores.performance !== null && lh.scores.performance < 50) {
+      smells.push({ smell: 'Low Performance Score', severity: 'high', detail: `Lighthouse performance: ${lh.scores.performance}/100` });
+    }
+    if (lh.scores.seo !== null && lh.scores.seo < 50) {
+      smells.push({ smell: 'Low SEO Score', severity: 'medium', detail: `Lighthouse SEO: ${lh.scores.seo}/100` });
+    }
+  }
+
+  // Accessibility smells (from axe-core data)
+  if (pageData.accessibility?.success) {
+    const a11y = pageData.accessibility;
+    if (a11y.criticalCount > 0 || a11y.seriousCount > 0) {
+      const count = a11y.criticalCount + a11y.seriousCount;
+      const details = a11y.violations
+        .filter(v => v.impact === 'critical' || v.impact === 'serious')
+        .slice(0, 3)
+        .map(v => v.id)
+        .join(', ');
+      smells.push({ smell: 'Critical Accessibility Violation', severity: 'high', detail: `${count} critical/serious: ${details}` });
+    }
+    if (a11y.moderateCount > 0) {
+      smells.push({ smell: 'Moderate Accessibility Violation', severity: 'medium', detail: `${a11y.moderateCount} moderate violation(s)` });
+    }
+  }
+
   return smells;
 }
 

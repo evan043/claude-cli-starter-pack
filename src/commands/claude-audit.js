@@ -316,7 +316,7 @@ async function appendToClaudeMd(cwd, content) {
     existingContent = readFileSync(claudeMdPath, 'utf8');
   }
 
-  const newContent = existingContent.trim() + '\n\n' + content;
+  const newContent = `${existingContent.trim()  }\n\n${  content}`;
   writeFileSync(claudeMdPath, newContent, 'utf8');
 
   console.log(chalk.green.bold('✓ Section appended to CLAUDE.md'));
@@ -390,7 +390,7 @@ async function addMissingSections(cwd, techStack, _projectName) {
   for (const key of sectionsToAdd) {
     const sectionContent = ENHANCEMENT_TEMPLATES[key](techStack);
     if (sectionContent.trim()) {
-      newContent += '\n\n' + sectionContent;
+      newContent += `\n\n${  sectionContent}`;
     }
   }
 

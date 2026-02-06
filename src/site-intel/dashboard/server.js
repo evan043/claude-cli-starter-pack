@@ -236,6 +236,61 @@ export class SiteIntelDashboardServer {
         return;
       }
 
+      // GET /api/sites/:domain/performance - get performance & accessibility data
+      const perfMatch = pathname.match(/^\/api\/sites\/([^/]+)\/performance$/);
+      if (perfMatch) {
+        const domain = decodeURIComponent(perfMatch[1]);
+        const scan = loadLatestScan(this.projectRoot, domain);
+
+        if (!scan || !scan.crawl) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No scan data found' }));
+          return;
+        }
+
+        const pages = scan.crawl.pages
+          .filter(p => !p.error)
+          .map(p => {
+            let pathname;
+            try { pathname = new URL(p.url).pathname; } catch { pathname = p.url; }
+
+            return {
+              path: pathname,
+              url: p.url,
+              lighthouse: p.lighthouse || null,
+              accessibility: p.accessibility || null,
+              hasPerformanceData: !!(p.lighthouse?.success),
+              hasAccessibilityData: !!(p.accessibility?.success)
+            };
+          });
+
+        const withPerf = pages.filter(p => p.hasPerformanceData);
+        const withA11y = pages.filter(p => p.hasAccessibilityData);
+
+        const avgPerformance = withPerf.length > 0
+          ? Math.round(withPerf.reduce((sum, p) => sum + (p.lighthouse.scores.performance || 0), 0) / withPerf.length)
+          : null;
+        const avgAccessibility = withPerf.length > 0
+          ? Math.round(withPerf.reduce((sum, p) => sum + (p.lighthouse.scores.accessibility || 0), 0) / withPerf.length)
+          : null;
+        const totalViolations = withA11y.reduce((sum, p) => sum + (p.accessibility.violationCount || 0), 0);
+
+        res.writeHead(200);
+        res.end(JSON.stringify({
+          domain,
+          scanId: scan.scanId,
+          summary: {
+            pagesWithPerformanceData: withPerf.length,
+            pagesWithAccessibilityData: withA11y.length,
+            averagePerformanceScore: avgPerformance,
+            averageAccessibilityScore: avgAccessibility,
+            totalAccessibilityViolations: totalViolations
+          },
+          pages
+        }));
+        return;
+      }
+
       // Not found
       res.writeHead(404);
       res.end(JSON.stringify({ error: 'Not found' }));

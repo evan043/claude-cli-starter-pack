@@ -25,7 +25,7 @@ function M.build_command(agent)
 
   -- Add agent-specific prompt/context
   if agent.prompt then
-    cmd = cmd .. " --print '" .. agent.prompt .. "'"
+    cmd = cmd .. " --print " .. vim.fn.shellescape(agent.prompt)
   end
 
   return cmd
@@ -37,7 +37,7 @@ function M.spawn_agent(slot, agent)
 
   -- Create terminal buffer
   local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+  vim.bo[bufnr].bufhidden = "wipe"
 
   -- Set buffer name
   local buf_name = string.format("claude://%s [%d]", agent.name, slot)
@@ -155,13 +155,6 @@ function M.open_grid()
   vim.notify(string.format("CCASP: Started %d agents", total), vim.log.levels.INFO)
 end
 
--- Close the grid
-function M.close_grid()
-  M.kill_all()
-  vim.cmd("only")
-  M.grid_open = false
-end
-
 -- Restart a specific agent
 function M.restart_agent(slot)
   local agent = M.agents[slot]
@@ -183,7 +176,7 @@ function M.restart_agent(slot)
 
   -- Create new buffer
   local bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(bufnr, "bufhidden", "wipe")
+  vim.bo[bufnr].bufhidden = "wipe"
 
   -- Switch to new buffer in agent's window
   vim.api.nvim_win_set_buf(agent.winid, bufnr)
@@ -239,26 +232,6 @@ function M.kill_all()
   vim.notify("CCASP: Killed all agents", vim.log.levels.INFO)
 end
 
--- Send command to specific agent
-function M.send_to_agent(slot, text)
-  local agent = M.agents[slot]
-  if not agent or not agent.job_id then
-    vim.notify("CCASP: Agent not running", vim.log.levels.WARN)
-    return
-  end
-
-  vim.fn.chansend(agent.job_id, text .. "\n")
-end
-
--- Send command to all agents
-function M.send_to_all(text)
-  for slot, agent in pairs(M.agents) do
-    if agent.job_id then
-      vim.fn.chansend(agent.job_id, text .. "\n")
-    end
-  end
-end
-
 -- Get agent status summary
 function M.get_status()
   local summary = {
@@ -280,64 +253,6 @@ function M.get_status()
   end
 
   return summary
-end
-
--- Focus specific agent window
-function M.focus_agent(slot)
-  local agent = M.agents[slot]
-  if agent and vim.api.nvim_win_is_valid(agent.winid) then
-    vim.api.nvim_set_current_win(agent.winid)
-    vim.cmd("startinsert")
-  end
-end
-
--- Cycle through agents
-function M.next_agent()
-  local current_win = vim.api.nvim_get_current_win()
-  local current_slot = nil
-  local slots = {}
-
-  for slot, agent in pairs(M.agents) do
-    table.insert(slots, slot)
-    if agent.winid == current_win then
-      current_slot = slot
-    end
-  end
-
-  table.sort(slots)
-
-  if #slots == 0 then
-    return
-  end
-
-  local next_slot
-  if current_slot then
-    for i, slot in ipairs(slots) do
-      if slot == current_slot then
-        next_slot = slots[(i % #slots) + 1]
-        break
-      end
-    end
-  else
-    next_slot = slots[1]
-  end
-
-  if next_slot then
-    M.focus_agent(next_slot)
-  end
-end
-
--- Change model for agent
-function M.set_agent_model(slot, model)
-  local agent = M.agents[slot]
-  if not agent then
-    return
-  end
-
-  agent.model = model
-  agent.command = M.build_command({ name = agent.name, model = model })
-
-  vim.notify(string.format("CCASP: Agent %s now using %s", agent.name, model), vim.log.levels.INFO)
 end
 
 -- Quick spawn single agent in current window

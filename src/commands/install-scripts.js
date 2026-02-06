@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readdirSync, copyFileSync, readFileSync } from '
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { showHeader } from '../cli/menu.js';
+import { claudeAbsolutePath } from '../utils/paths.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '../../templates/scripts');
@@ -78,7 +79,7 @@ export async function runInstallScripts(options = {}) {
 
   console.log(chalk.dim('Copy utility scripts to .claude/scripts/ for project use.\n'));
 
-  const targetDir = join(process.cwd(), '.claude/scripts');
+  const targetDir = claudeAbsolutePath(process.cwd(), 'scripts');
 
   // Show available scripts
   if (options.list) {
@@ -199,7 +200,7 @@ export async function runInstallScripts(options = {}) {
  * Show list of available scripts
  */
 function showScriptList() {
-  const targetDir = join(process.cwd(), '.claude/scripts');
+  const targetDir = claudeAbsolutePath(process.cwd(), 'scripts');
 
   console.log(chalk.cyan.bold('Available Scripts\n'));
 

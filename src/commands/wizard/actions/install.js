@@ -25,6 +25,7 @@ import {
   getDefaultFeatures,
   getAllInitFeatures,
 } from '../prompts.js';
+import { claudeAbsolutePath } from '../../../utils/paths.js';
 
 /**
  * Run reinstall - backup, remove, and fresh install
@@ -62,7 +63,7 @@ export async function runReinstall() {
     return false;
   }
 
-  const claudeDir = join(process.cwd(), '.claude');
+  const claudeDir = claudeAbsolutePath(process.cwd());
   const claudeMdPath = join(process.cwd(), 'CLAUDE.md');
   const hasClaudeDir = existsSync(claudeDir);
   const hasClaudeMd = existsSync(claudeMdPath);
@@ -181,15 +182,15 @@ export async function runAutoInstall() {
     // Show summary
     console.log(
       boxen(
-        chalk.bold.green('Auto-Install Complete\n\n') +
-          chalk.white('All features installed:\n\n') +
-          `Commands:  ${chalk.cyan(counts.commands)} ${chalk.dim('(GitHub, planning, testing, deploy, refactor...)')}\n` +
+        `${chalk.bold.green('Auto-Install Complete\n\n') +
+          chalk.white('All features installed:\n\n') 
+          }Commands:  ${chalk.cyan(counts.commands)} ${chalk.dim('(GitHub, planning, testing, deploy, refactor...)')}\n` +
           `Hooks:     ${chalk.cyan(counts.hooks)} ${chalk.dim('(token, happy, advanced suite, orchestration...)')}\n` +
           `Skills:    ${chalk.cyan(counts.skills)} ${chalk.dim('(agent-creator, hook-creator, rag-agent...)')}\n` +
-          `Docs:      ${chalk.cyan('4')} ${chalk.dim('(INDEX, README, gotchas, constitution)')}\n\n` +
-          chalk.bold('Next Steps:\n') +
-          chalk.dim('1. Launch Claude Code CLI\n') +
-          chalk.dim('2. Run ') + chalk.yellow('/project-implementation-for-ccasp') + chalk.dim(' for full setup'),
+          `Docs:      ${chalk.cyan('4')} ${chalk.dim('(INDEX, README, gotchas, constitution)')}\n\n${ 
+          chalk.bold('Next Steps:\n') 
+          }${chalk.dim('1. Launch Claude Code CLI\n') 
+          }${chalk.dim('2. Run ')  }${chalk.yellow('/project-implementation-for-ccasp')  }${chalk.dim(' for full setup')}`,
         {
           padding: 1,
           borderStyle: 'round',
@@ -357,16 +358,16 @@ export async function runCustomInstall() {
     // Show summary
     console.log(
       boxen(
-        chalk.bold.green('Installation Complete\n\n') +
-          `Commands:  ${chalk.cyan(summary.commands)}\n` +
+        `${chalk.bold.green('Installation Complete\n\n') 
+          }Commands:  ${chalk.cyan(summary.commands)}\n` +
           `Agents:    ${chalk.cyan(summary.agents)}\n` +
           `Hooks:     ${chalk.cyan(summary.hooks)}\n` +
           `Skills:    ${chalk.cyan(summary.skills)}\n` +
           `Extras:    ${chalk.cyan(summary.extras)}\n` +
-          `Docs:      ${chalk.cyan(summary.docs)}\n\n` +
-          chalk.bold('Next Steps:\n') +
-          chalk.dim('1. Restart Claude Code CLI\n') +
-          chalk.dim('2. Run ') + chalk.yellow('/project-implementation-for-ccasp') + chalk.dim(' for full setup'),
+          `Docs:      ${chalk.cyan(summary.docs)}\n\n${ 
+          chalk.bold('Next Steps:\n') 
+          }${chalk.dim('1. Restart Claude Code CLI\n') 
+          }${chalk.dim('2. Run ')  }${chalk.yellow('/project-implementation-for-ccasp')  }${chalk.dim(' for full setup')}`,
         {
           padding: 1,
           borderStyle: 'round',

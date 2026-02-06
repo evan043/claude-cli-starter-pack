@@ -69,3 +69,4 @@ npm-output.txt
 .claude-backup/
 test-output.txt
 *.backup
+NUL

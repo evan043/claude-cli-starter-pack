@@ -3,7 +3,7 @@
 /**
  * CCASP Website Intelligence System - MCP Server
  *
- * Exposes 7 MCP tools for Claude Code to perform intelligent site analysis:
+ * Exposes 9 MCP tools for Claude Code to perform intelligent site analysis:
  * - site_intel_scan: Full crawl + 5-layer analysis
  * - site_intel_summarize: Get semantic summaries
  * - site_intel_graph: Get cross-page dependency graph
@@ -11,6 +11,8 @@
  * - site_intel_page: Get detailed page intelligence
  * - site_intel_drift: Detect drift from original design
  * - site_intel_status: Get status of all 5 layers
+ * - site_intel_search: Search page summaries using semantic matching
+ * - site_intel_routes: Parse codebase route definitions via ts-morph
  *
  * Transport: JSON-RPC 2.0 over stdio (newline-delimited)
  * Zero external dependencies - pure Node.js ES modules
@@ -18,8 +20,9 @@
 
 import { createInterface } from 'readline';
 import { runFullScan, getRecommendations, getStatus, listSites } from './orchestrator.js';
-import { loadLatestScan, listScans, listDomains, toChromaDocuments } from './memory/index.js';
+import { loadLatestScan, listScans, listDomains, toChromaDocuments, loadChromaPending } from './memory/index.js';
 import { toMermaid } from './graph/index.js';
+import { parseRoutes } from './discovery/route-parser.js';
 
 // MCP Protocol Constants
 const PROTOCOL_VERSION = '2024-11-05';
@@ -157,6 +160,52 @@ const TOOLS = [
         domain: {
           type: 'string',
           description: 'Domain name (optional - if omitted, lists all scanned sites)'
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_search',
+    description: 'Search page summaries using semantic matching against stored ChromaDB documents. Returns pages relevant to a natural language query like "billing pages" or "user onboarding flow".',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Natural language search query (e.g., "pages that handle authentication")'
+        },
+        domain: {
+          type: 'string',
+          description: 'Domain name to search within (optional - searches all if omitted)'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum results to return (default: 5)',
+          default: 5
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'site_intel_routes',
+    description: 'Parse codebase route definitions using ts-morph AST analysis. Returns route→component→hook→API mappings from React Router v6 configurations. Requires ts-morph to be installed.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to project root (default: current working directory)'
+        },
+        path: {
+          type: 'string',
+          description: 'Filter to a specific route path (e.g., "/dashboard")'
+        },
+        framework: {
+          type: 'string',
+          enum: ['react-router-v6'],
+          description: 'Router framework (default: react-router-v6)',
+          default: 'react-router-v6'
         }
       }
     }
@@ -426,6 +475,122 @@ async function handleStatus(args) {
   return { success: true, ...status };
 }
 
+async function handleSearch(args) {
+  const { query, domain, limit = 5 } = args;
+
+  if (!query || typeof query !== 'string') {
+    throw new Error('Invalid query parameter - must be a non-empty string');
+  }
+
+  // If domain specified, search only that domain's pending docs
+  // Otherwise, search all domains
+  const domains = domain
+    ? [domain]
+    : listDomains(process.cwd()).map(d => d.domain);
+
+  if (domains.length === 0) {
+    throw new Error('No scanned sites found. Run site_intel_scan first.');
+  }
+
+  const results = [];
+  const queryLower = query.toLowerCase();
+  const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 2);
+
+  for (const d of domains) {
+    // Try ChromaDB pending docs first (richer text for matching)
+    const pending = loadChromaPending(process.cwd(), d);
+    if (pending?.documents) {
+      for (let i = 0; i < pending.documents.length; i++) {
+        const docLower = pending.documents[i].toLowerCase();
+        const matchCount = queryTerms.filter(term => docLower.includes(term)).length;
+        if (matchCount > 0) {
+          results.push({
+            domain: d,
+            relevance: matchCount / queryTerms.length,
+            document: pending.documents[i],
+            metadata: pending.metadatas[i],
+            id: pending.ids[i]
+          });
+        }
+      }
+    } else {
+      // Fallback: search from summaries JSON
+      const scan = loadLatestScan(process.cwd(), d);
+      if (scan?.summaries?.summaries) {
+        for (const summary of scan.summaries.summaries) {
+          const searchText = [
+            summary.url, summary.purpose, summary.classification?.type,
+            summary.primaryUser, ...(summary.features || []),
+            ...(summary.smells?.map(s => s.smell) || []),
+            ...(summary.dependencies?.apis || [])
+          ].join(' ').toLowerCase();
+
+          const matchCount = queryTerms.filter(term => searchText.includes(term)).length;
+          if (matchCount > 0) {
+            results.push({
+              domain: d,
+              relevance: matchCount / queryTerms.length,
+              url: summary.url,
+              type: summary.classification?.type,
+              purpose: summary.purpose,
+              businessValue: summary.businessValue?.score,
+              smellCount: summary.smells?.length || 0
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Sort by relevance, limit
+  results.sort((a, b) => b.relevance - a.relevance);
+  const limited = results.slice(0, limit);
+
+  return {
+    success: true,
+    query,
+    results: limited,
+    total: results.length,
+    shown: limited.length,
+    searchedDomains: domains.length
+  };
+}
+
+async function handleRoutes(args) {
+  const { projectRoot = process.cwd(), path: routePath, framework = 'react-router-v6' } = args;
+
+  const result = await parseRoutes(projectRoot, { framework });
+
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to parse routes');
+  }
+
+  // Filter by path if specified
+  let routes = result.routes;
+  if (routePath) {
+    const filterRecursive = (routeList) => {
+      const matches = [];
+      for (const route of routeList) {
+        if (route.path === routePath) {
+          matches.push(route);
+        }
+        if (route.children?.length) {
+          matches.push(...filterRecursive(route.children));
+        }
+      }
+      return matches;
+    };
+    routes = filterRecursive(routes);
+  }
+
+  return {
+    success: true,
+    framework: result.framework,
+    routes,
+    summary: routePath ? { matchedRoutes: routes.length } : result.summary
+  };
+}
+
 // Tool Dispatcher
 async function handleToolCall(name, args) {
   switch (name) {
@@ -443,6 +608,10 @@ async function handleToolCall(name, args) {
       return await handleDrift(args);
     case 'site_intel_status':
       return await handleStatus(args);
+    case 'site_intel_search':
+      return await handleSearch(args);
+    case 'site_intel_routes':
+      return await handleRoutes(args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

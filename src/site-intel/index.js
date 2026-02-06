@@ -17,15 +17,16 @@ export { runFullScan, getRecommendations, getStatus, listSites } from './orchest
 // Layer 1: Discovery
 export { crawlSite, normalizeUrl, isInternalUrl } from './discovery/index.js';
 export { extractComponents, detectSharedComponents } from './discovery/component-extractor.js';
+export { parseRoutes, isTsMorphAvailable } from './discovery/route-parser.js';
 
 // Layer 2: Summarization
 export { classifyPage, detectFeatures, mapDependencies, detectSmells, summarizePage, summarizeAllPages, generateDeepAnalysisPrompt } from './summarizer/index.js';
 
 // Layer 3: Graph
-export { buildSiteGraph, toMermaid } from './graph/index.js';
+export { buildSiteGraph, addRouteEdges, toMermaid } from './graph/index.js';
 
 // Layer 4: Memory
-export { saveScan, loadLatestScan, loadScan, listScans, listDomains, toChromaDocuments } from './memory/index.js';
+export { saveScan, loadLatestScan, loadScan, listScans, listDomains, toChromaDocuments, storeToChroma, loadChromaPending } from './memory/index.js';
 
 // Layer 5: Judgment
 export { generateRecommendations, generateJudgmentPrompt, calculateHealthScore } from './judgment/index.js';

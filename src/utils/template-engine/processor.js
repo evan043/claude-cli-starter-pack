@@ -9,8 +9,8 @@
  */
 
 import { homedir } from 'os';
-import { join } from 'path';
 import { getNestedValue } from './context.js';
+import { claudeAbsolutePath } from '../paths.js';
 
 // Maximum template processing iterations to prevent infinite loops
 const MAX_TEMPLATE_ITERATIONS = 100;
@@ -153,7 +153,7 @@ export function processPathVariables(content) {
   return content
     .replace(/\$\{CWD\}/g, process.cwd())
     .replace(/\$\{HOME\}/g, homedir())
-    .replace(/\$\{CLAUDE_DIR\}/g, join(process.cwd(), '.claude'));
+    .replace(/\$\{CLAUDE_DIR\}/g, claudeAbsolutePath(process.cwd()));
 }
 
 /**

@@ -24,7 +24,7 @@ export function displayProjectTable(projects) {
     const complexity = (project.complexity || 'M').padEnd(11);
     const items = String(project.itemCount || 0).padEnd(6);
 
-    console.log(chalk.dim('│') + ` ${num} ` + chalk.dim('│') + ` ${title} ` + chalk.dim('│') + ` ${domain} ` + chalk.dim('│') + ` ${complexity} ` + chalk.dim('│') + ` ${items} ` + chalk.dim('│'));
+    console.log(`${chalk.dim('│')  } ${num} ${  chalk.dim('│')  } ${title} ${  chalk.dim('│')  } ${domain} ${  chalk.dim('│')  } ${complexity} ${  chalk.dim('│')  } ${items} ${  chalk.dim('│')}`);
   }
 
   console.log(chalk.dim('└────┴────────────────────────────────────┴────────────┴─────────────┴────────┘'));

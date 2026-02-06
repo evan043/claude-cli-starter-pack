@@ -112,7 +112,7 @@ export async function runCreate(options) {
   console.log(chalk.cyan('─'.repeat(60)));
   console.log(chalk.bold('Preview:'));
   console.log(chalk.cyan('─'.repeat(60)));
-  console.log(chalk.dim(issueBody.slice(0, 500) + '...'));
+  console.log(chalk.dim(`${issueBody.slice(0, 500)  }...`));
   console.log(chalk.cyan('─'.repeat(60)));
   console.log('');
 

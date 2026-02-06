@@ -14,4 +14,13 @@ export const DEPLOYMENT_FEATURES = [
     default: false,
     requiresPostConfig: true,
   },
+  {
+    name: 'mcpServers',
+    label: 'MCP Server Discovery',
+    description: 'Discover and auto-install MCP servers based on your tech stack. Recommends Serena (code navigation), Sentry (error monitoring), PostgreSQL (database), and more. Batch install with API key prompts.',
+    commands: ['explore-mcp'],
+    hooks: [],
+    default: true,
+    requiresPostConfig: false,
+  },
 ];

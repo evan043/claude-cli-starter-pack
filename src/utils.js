@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import ora from 'ora';
 import { CcaspConfigError } from './utils/errors.js';
+import { claudeAbsolutePath } from './utils/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -191,10 +192,10 @@ export async function loadConfig() {
         const content = readFileSync(configPath, 'utf8');
         if (configPath.endsWith('.json')) {
           return { config: JSON.parse(content), path: configPath };
-        } else {
+        } 
           // YAML parsing
           return { config: yaml.parse(content), path: configPath };
-        }
+        
       } catch (error) {
         console.warn(
           chalk.yellow(`Warning: Could not parse config at ${configPath}`)
@@ -225,7 +226,7 @@ export function loadConfigSync() {
         const content = readFileSync(configPath, 'utf8');
         if (configPath.endsWith('.json')) {
           return { config: JSON.parse(content), path: configPath };
-        } else {
+        } 
           // Simple YAML-like parsing for basic configs
           const config = {};
           let currentSection = config;
@@ -250,7 +251,7 @@ export function loadConfigSync() {
           }
 
           return { config, path: configPath };
-        }
+        
       } catch (error) {
         // Skip invalid configs
       }
@@ -277,13 +278,13 @@ export function box(text, options = {}) {
   const maxWidth = Math.max(...lines.map((l) => l.length));
   const paddedWidth = maxWidth + padding * 2;
 
-  const top = '╔' + '═'.repeat(paddedWidth) + '╗';
-  const bottom = '╚' + '═'.repeat(paddedWidth) + '╝';
-  const empty = '║' + ' '.repeat(paddedWidth) + '║';
+  const top = `╔${  '═'.repeat(paddedWidth)  }╗`;
+  const bottom = `╚${  '═'.repeat(paddedWidth)  }╝`;
+  const empty = `║${  ' '.repeat(paddedWidth)  }║`;
 
   const content = lines.map((line) => {
     const padded = line.padEnd(maxWidth);
-    return '║' + ' '.repeat(padding) + padded + ' '.repeat(padding) + '║';
+    return `║${  ' '.repeat(padding)  }${padded  }${' '.repeat(padding)  }║`;
   });
 
   const result = [
@@ -302,7 +303,7 @@ export function box(text, options = {}) {
  */
 export function truncate(str, maxLength) {
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + '...';
+  return `${str.slice(0, maxLength - 3)  }...`;
 }
 
 /**
@@ -317,8 +318,8 @@ export function getCurrentProjectName() {
  */
 export function getTechStackPath() {
   const paths = [
-    join(process.cwd(), '.claude', 'config', 'tech-stack.json'),
-    join(process.cwd(), '.claude', 'tech-stack.json'),
+    claudeAbsolutePath(process.cwd(), 'config', 'tech-stack.json'),
+    claudeAbsolutePath(process.cwd(), 'tech-stack.json'),
   ];
 
   for (const p of paths) {

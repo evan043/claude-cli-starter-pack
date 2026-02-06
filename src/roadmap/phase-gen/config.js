@@ -4,8 +4,7 @@
  * Testing configuration utilities and constants for phase generation.
  */
 
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { loadTechStack as _loadTechStack } from '../../utils.js';
 
 /**
  * Default phase-plans directory
@@ -14,25 +13,12 @@ import { join } from 'path';
 export const PHASE_PLANS_DIR = '.claude/phase-plans';
 
 /**
- * Load tech-stack.json to get testing and tunnel configuration
+ * Load tech-stack.json to get testing and tunnel configuration.
+ * Delegates to canonical loadTechStack in src/utils.js.
+ * @param {string} _cwd - Unused (kept for API compatibility)
  */
-export function loadTechStack(cwd = process.cwd()) {
-  const paths = [
-    join(cwd, '.claude', 'config', 'tech-stack.json'),
-    join(cwd, '.claude', 'tech-stack.json'),
-    join(cwd, 'tech-stack.json'),
-  ];
-
-  for (const techStackPath of paths) {
-    if (existsSync(techStackPath)) {
-      try {
-        return JSON.parse(readFileSync(techStackPath, 'utf8'));
-      } catch {
-        continue;
-      }
-    }
-  }
-  return null;
+export function loadTechStack(_cwd) {
+  return _loadTechStack();
 }
 
 /**

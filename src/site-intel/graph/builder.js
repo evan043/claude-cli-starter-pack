@@ -6,6 +6,7 @@
  * - Shared components
  * - Shared APIs
  * - User flows (entry -> exit paths)
+ * - Route-based edges (route -> component, component -> hook, component -> API)
  */
 
 /**
@@ -225,16 +226,115 @@ function calculateGraphMetrics(nodes, edges) {
     (inDegree.get(n.id) || 0) === 0 && (outDegree.get(n.id) || 0) === 0
   );
 
+  // Count edge types
+  const routeEdgeCount = edges.filter(e => e.type === 'route').length;
+  const componentEdgeCount = edges.filter(e => e.type === 'component-uses').length;
+  const apiClientEdgeCount = edges.filter(e => e.type === 'api-client').length;
+
   return {
     nodeCount: nodes.length,
     edgeCount: edges.length,
     navEdgeCount: navEdges.length,
+    routeEdgeCount,
+    componentEdgeCount,
+    apiClientEdgeCount,
     avgInDegree: nodes.length > 0 ? Math.round(navEdges.length / nodes.length * 10) / 10 : 0,
     hubs: hubs.map(h => ({ id: h.id, outDegree: h.outDegree })),
     authorities: authorities.map(a => ({ id: a.id, inDegree: a.inDegree })),
     orphans: orphans.map(o => o.id),
     orphanCount: orphans.length
   };
+}
+
+/**
+ * Add route-based edges to an existing site graph
+ * @param {Object} siteGraph - Existing site graph from buildSiteGraph()
+ * @param {Object} routeData - Route data from parseRoutes()
+ * @returns {Object} Updated site graph with route edges
+ */
+export function addRouteEdges(siteGraph, routeData) {
+  if (!siteGraph?.nodes || !routeData?.routes) return siteGraph;
+
+  // Process each route
+  for (const route of routeData.routes) {
+    if (!route.component) continue;
+
+    const componentPath = route.component;
+    const routePath = route.path || route.url || 'unknown';
+
+    // Add component node if not already present
+    let componentNode = siteGraph.nodes.find(n => n.id === componentPath);
+    if (!componentNode) {
+      componentNode = {
+        id: componentPath,
+        url: componentPath,
+        label: componentPath.split('/').pop() || componentPath,
+        type: 'component',
+        businessValue: 0,
+        smellCount: 0,
+        featureCount: 0,
+        // Add component metadata
+        hooks: route.hooks || [],
+        apiCalls: route.apiCalls || []
+      };
+      siteGraph.nodes.push(componentNode);
+    }
+
+    // Add route edge (route path -> component)
+    const existingRouteEdge = siteGraph.edges.find(e =>
+      e.source === routePath && e.target === componentPath && e.type === 'route'
+    );
+    if (!existingRouteEdge) {
+      siteGraph.edges.push({
+        source: routePath,
+        target: componentPath,
+        type: 'route',
+        weight: 1
+      });
+    }
+
+    // Add component-uses edges (component -> hook/utility)
+    if (route.hooks) {
+      for (const hook of route.hooks) {
+        const hookId = hook.name || hook;
+        const existingHookEdge = siteGraph.edges.find(e =>
+          e.source === componentPath && e.target === hookId && e.type === 'component-uses'
+        );
+        if (!existingHookEdge) {
+          siteGraph.edges.push({
+            source: componentPath,
+            target: hookId,
+            type: 'component-uses',
+            label: 'uses',
+            weight: 1
+          });
+        }
+      }
+    }
+
+    // Add api-client edges (component -> API endpoint)
+    if (route.apiCalls) {
+      for (const apiCall of route.apiCalls) {
+        const apiEndpoint = apiCall.url || apiCall.endpoint || apiCall;
+        const existingApiEdge = siteGraph.edges.find(e =>
+          e.source === componentPath && e.target === apiEndpoint && e.type === 'api-client'
+        );
+        if (!existingApiEdge) {
+          siteGraph.edges.push({
+            source: componentPath,
+            target: apiEndpoint,
+            type: 'api-client',
+            weight: 1
+          });
+        }
+      }
+    }
+  }
+
+  // Recalculate metrics
+  siteGraph.metrics = calculateGraphMetrics(siteGraph.nodes, siteGraph.edges);
+
+  return siteGraph;
 }
 
 /**
@@ -253,6 +353,7 @@ export function toMermaid(siteGraph) {
     const shape = node.type === 'homepage' ? `((${label}))` :
                   node.type === 'authentication' ? `{${label}}` :
                   node.type === 'error' ? `>${label}]` :
+                  node.type === 'component' ? `[${label}]` :
                   `[${label}]`;
     const safeId = node.id.replace(/[^a-zA-Z0-9]/g, '_');
     lines.push(`    ${safeId}${shape}`);
@@ -280,7 +381,41 @@ export function toMermaid(siteGraph) {
     lines.push(`    ${sourceId} -.->|${edge.label || 'API'}| ${targetId}`);
   }
 
+  // Add route edges (thick arrows, limit to 20)
+  const routeEdges = siteGraph.edges
+    .filter(e => e.type === 'route')
+    .slice(0, 20);
+
+  for (const edge of routeEdges) {
+    const sourceId = edge.source.replace(/[^a-zA-Z0-9]/g, '_');
+    const targetId = edge.target.replace(/[^a-zA-Z0-9]/g, '_');
+    lines.push(`    ${sourceId} ==> ${targetId}`);
+  }
+
+  // Add component-uses edges (dotted arrows with labels)
+  const componentEdges = siteGraph.edges
+    .filter(e => e.type === 'component-uses')
+    .slice(0, 15);
+
+  for (const edge of componentEdges) {
+    const sourceId = edge.source.replace(/[^a-zA-Z0-9]/g, '_');
+    const targetId = edge.target.replace(/[^a-zA-Z0-9]/g, '_');
+    const label = edge.label ? edge.label.substring(0, 20) : 'uses';
+    lines.push(`    ${sourceId} -.->|${label}| ${targetId}`);
+  }
+
+  // Add api-client edges (labeled arrows)
+  const apiClientEdges = siteGraph.edges
+    .filter(e => e.type === 'api-client')
+    .slice(0, 15);
+
+  for (const edge of apiClientEdges) {
+    const sourceId = edge.source.replace(/[^a-zA-Z0-9]/g, '_');
+    const targetId = edge.target.replace(/[^a-zA-Z0-9]/g, '_');
+    lines.push(`    ${sourceId} -->|API| ${targetId}`);
+  }
+
   return lines.join('\n');
 }
 
-export default { buildSiteGraph, toMermaid };
+export default { buildSiteGraph, addRouteEdges, toMermaid };

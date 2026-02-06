@@ -10,6 +10,7 @@ import ora from 'ora';
 import fs from 'fs';
 import path from 'path';
 import { loadClaudeSettings, saveClaudeSettings } from './mcp-installer.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 /**
  * Check if the API key validation hook is enabled
@@ -157,7 +158,7 @@ async function main() {
         if (info.url) console.error(\`\\x1b[36m  Get key at: \${info.url}\\x1b[0m\`);
       }
     }
-  } catch {}
+  } catch { /* MCP settings not found or unreadable, skip validation */ }
 
   process.exit(0);
 }
@@ -171,7 +172,7 @@ main();
  * @returns {Promise<string>} Path to the deployed hook
  */
 export async function deployApiKeyHook() {
-  const hookDir = path.join(process.cwd(), '.claude', 'hooks');
+  const hookDir = claudeAbsolutePath(process.cwd(), 'hooks');
   const hookPath = path.join(hookDir, 'mcp-api-key-validator.js');
 
   // Create hooks directory if needed

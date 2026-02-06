@@ -314,7 +314,7 @@ export function formatBudgetSummary(budget) {
   const summary = getBudgetSummary(budget);
 
   let output = '\nToken Budget Summary\n';
-  output += '='.repeat(60) + '\n\n';
+  output += `${'='.repeat(60)  }\n\n`;
   output += `Total Budget:      ${summary.total.toLocaleString()} tokens\n`;
   output += `Allocated:         ${summary.allocated.toLocaleString()} tokens (${Math.round((summary.allocated / summary.total) * 100)}%)\n`;
   output += `Used:              ${summary.used.toLocaleString()} tokens (${summary.usage_percentage}%)\n`;
@@ -323,7 +323,7 @@ export function formatBudgetSummary(budget) {
 
   if (summary.children.length > 0) {
     output += 'Child Allocations:\n';
-    output += '-'.repeat(60) + '\n';
+    output += `${'-'.repeat(60)  }\n`;
 
     for (const child of summary.children) {
       const statusIcon = getStatusIcon(child.status);

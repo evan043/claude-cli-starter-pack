@@ -28,7 +28,7 @@ export async function logDecision(event, context, decision, projectRoot) {
     recommendations_count: decision.recommendations?.length || 0
   };
 
-  const line = JSON.stringify(entry) + '\n';
+  const line = `${JSON.stringify(entry)  }\n`;
   appendFileSync(logPath, line, 'utf8');
 
   // Also save current recommendations

@@ -234,7 +234,7 @@ export class Reporter {
       exit_code: result.exit_code
     };
 
-    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf8');
+    appendFileSync(logPath, `${JSON.stringify(entry)  }\n`, 'utf8');
 
     // Rotate log if needed
     await this.rotateLogIfNeeded(logPath);
@@ -440,7 +440,7 @@ export class Reporter {
       successful: successful.length,
       failed: failed.length,
       success_rate: executions.length > 0
-        ? ((successful.length / executions.length) * 100).toFixed(1) + '%'
+        ? `${((successful.length / executions.length) * 100).toFixed(1)  }%`
         : 'N/A',
       avg_duration_minutes: (avgDuration / 60000).toFixed(1),
       phases_completed: [...new Set(successful.map(e => e.phase_id))].length

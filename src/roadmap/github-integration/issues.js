@@ -128,9 +128,9 @@ export function formatIssueTable(issues) {
 
   // Header
   let table = '\n';
-  table += chalk.dim('┌' + '─'.repeat(4) + '┬' + '─'.repeat(maxNumberWidth + 2) + '┬' + '─'.repeat(maxTitleWidth + 2) + '┬' + '─'.repeat(12) + '┬' + '─'.repeat(10) + '┐\n');
+  table += chalk.dim(`┌${  '─'.repeat(4)  }┬${  '─'.repeat(maxNumberWidth + 2)  }┬${  '─'.repeat(maxTitleWidth + 2)  }┬${  '─'.repeat(12)  }┬${  '─'.repeat(10)  }┐\n`);
   table += chalk.dim('│') + chalk.bold(' #  ') + chalk.dim('│') + chalk.bold(` ${'Issue'.padEnd(maxNumberWidth)} `) + chalk.dim('│') + chalk.bold(` ${'Title'.padEnd(maxTitleWidth)} `) + chalk.dim('│') + chalk.bold(' Status     ') + chalk.dim('│') + chalk.bold(' Include  ') + chalk.dim('│\n');
-  table += chalk.dim('├' + '─'.repeat(4) + '┼' + '─'.repeat(maxNumberWidth + 2) + '┼' + '─'.repeat(maxTitleWidth + 2) + '┼' + '─'.repeat(12) + '┼' + '─'.repeat(10) + '┤\n');
+  table += chalk.dim(`├${  '─'.repeat(4)  }┼${  '─'.repeat(maxNumberWidth + 2)  }┼${  '─'.repeat(maxTitleWidth + 2)  }┼${  '─'.repeat(12)  }┼${  '─'.repeat(10)  }┤\n`);
 
   // Rows
   for (let i = 0; i < issues.length; i++) {
@@ -141,10 +141,10 @@ export function formatIssueTable(issues) {
     const status = (issue.state || 'open').padEnd(10);
     const statusColor = issue.state === 'open' ? chalk.green : chalk.dim;
 
-    table += chalk.dim('│') + ` ${rowNum} ` + chalk.dim('│') + ` ${issueNum} ` + chalk.dim('│') + ` ${title} ` + chalk.dim('│') + ` ${statusColor(status)} ` + chalk.dim('│') + '   [ ]    ' + chalk.dim('│\n');
+    table += `${chalk.dim('│')  } ${rowNum} ${  chalk.dim('│')  } ${issueNum} ${  chalk.dim('│')  } ${title} ${  chalk.dim('│')  } ${statusColor(status)} ${  chalk.dim('│')  }   [ ]    ${  chalk.dim('│\n')}`;
   }
 
-  table += chalk.dim('└' + '─'.repeat(4) + '┴' + '─'.repeat(maxNumberWidth + 2) + '┴' + '─'.repeat(maxTitleWidth + 2) + '┴' + '─'.repeat(12) + '┴' + '─'.repeat(10) + '┘\n');
+  table += chalk.dim(`└${  '─'.repeat(4)  }┴${  '─'.repeat(maxNumberWidth + 2)  }┴${  '─'.repeat(maxTitleWidth + 2)  }┴${  '─'.repeat(12)  }┴${  '─'.repeat(10)  }┘\n`);
 
   return table;
 }

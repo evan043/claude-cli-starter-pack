@@ -125,7 +125,7 @@ function M.get_token_usage()
     if usage then
       local used = usage.used or 0
       local budget = usage.budget or 200000
-      local pct = math.floor((used / budget) * 100)
+      local pct = budget > 0 and math.floor((used / budget) * 100) or 0
 
       local icon
       if pct > 90 then
@@ -176,7 +176,7 @@ function M.lualine_tokens()
 
   local used = usage.used or 0
   local budget = usage.budget or 200000
-  local pct = math.floor((used / budget) * 100)
+  local pct = budget > 0 and math.floor((used / budget) * 100) or 0
 
   return string.format("%d%%", pct)
 end
@@ -190,7 +190,8 @@ function M.lualine_tokens_color()
     return { fg = "#888888" }
   end
 
-  local pct = math.floor(((usage.used or 0) / (usage.budget or 200000)) * 100)
+  local budget = usage.budget or 200000
+  local pct = budget > 0 and math.floor(((usage.used or 0) / budget) * 100) or 0
 
   if pct > 90 then
     return { fg = "#ff6b6b" } -- Red

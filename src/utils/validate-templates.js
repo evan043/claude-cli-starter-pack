@@ -187,7 +187,7 @@ export function formatViolations(violations) {
     output += chalk.yellow(`  ${file}\n`);
 
     for (const v of fileViolations) {
-      output += chalk.dim(`    Line ${v.line}: `) + chalk.red(v.pattern) + '\n';
+      output += `${chalk.dim(`    Line ${v.line}: `) + chalk.red(v.pattern)  }\n`;
       output += chalk.dim(`      Match: "${v.match}"\n`);
       output += chalk.dim(`      Context: ...${v.context}...\n`);
       output += '\n';

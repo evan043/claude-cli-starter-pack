@@ -248,4 +248,66 @@ export function toChromaDocuments(summaryResult, scanId) {
   return { documents, ids, metadatas };
 }
 
-export default { saveScan, loadLatestScan, loadScan, listScans, listDomains, getDataDir, toChromaDocuments };
+/**
+ * Store page summaries to ChromaDB for vector search
+ * Writes pending documents that the MCP server can ingest,
+ * or stores directly if a ChromaDB adapter is provided.
+ * @param {Object} chromaDocs - Output from toChromaDocuments()
+ * @param {string} domain - Website domain
+ * @param {Object} options - Options
+ * @returns {Object} Storage result
+ */
+export function storeToChroma(chromaDocs, domain, options = {}) {
+  const { projectRoot = process.cwd() } = options;
+
+  if (!chromaDocs?.documents?.length) {
+    return { stored: false, error: 'No documents to store' };
+  }
+
+  try {
+    const dataDir = getDataDir(projectRoot, domain);
+    fs.mkdirSync(dataDir, { recursive: true });
+
+    const pendingFile = path.join(dataDir, 'chroma-pending.json');
+    const payload = {
+      collection: `site_intel_${domain.replace(/[^a-z0-9]/gi, '_')}`,
+      documents: chromaDocs.documents,
+      ids: chromaDocs.ids,
+      metadatas: chromaDocs.metadatas,
+      createdAt: new Date().toISOString()
+    };
+
+    fs.writeFileSync(pendingFile, JSON.stringify(payload, null, 2));
+
+    return {
+      stored: true,
+      count: chromaDocs.documents.length,
+      collection: payload.collection,
+      pendingFile
+    };
+  } catch (err) {
+    return { stored: false, error: err.message };
+  }
+}
+
+/**
+ * Load pending ChromaDB documents for a domain
+ * Used by the MCP server to ingest into vector storage
+ * @param {string} projectRoot - Project root
+ * @param {string} domain - Website domain
+ * @returns {Object|null} Pending documents or null
+ */
+export function loadChromaPending(projectRoot, domain) {
+  const dataDir = getDataDir(projectRoot, domain);
+  const pendingFile = path.join(dataDir, 'chroma-pending.json');
+
+  if (!fs.existsSync(pendingFile)) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(pendingFile, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export default { saveScan, loadLatestScan, loadScan, listScans, listDomains, getDataDir, toChromaDocuments, storeToChroma, loadChromaPending };

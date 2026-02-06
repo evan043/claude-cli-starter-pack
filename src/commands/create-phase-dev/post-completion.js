@@ -241,7 +241,7 @@ async function showPhaseStartInstructions(config, phaseNum) {
   console.log(chalk.white.bold('To begin:'));
   console.log(chalk.yellow(`\n  /phase-dev-${projectSlug} ${phaseNum}\n`));
   console.log(
-    chalk.dim('Or tell Claude: "Start Phase 1 of ' + config.projectName + '"')
+    chalk.dim(`Or tell Claude: "Start Phase 1 of ${  config.projectName  }"`)
   );
   console.log('');
 
@@ -289,8 +289,8 @@ async function viewProgressJson(config) {
         (t) => t.status === 'completed'
       ).length;
       console.log(
-        `  ${statusColor('●')} Phase ${phase.id}: ${phase.name} ` +
-          chalk.dim(`(${tasksDone}/${phase.tasks.length} tasks)`)
+        `  ${statusColor('●')} Phase ${phase.id}: ${phase.name} ${ 
+          chalk.dim(`(${tasksDone}/${phase.tasks.length} tasks)`)}`
       );
     });
     console.log('');

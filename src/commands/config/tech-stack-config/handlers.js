@@ -91,10 +91,11 @@ export async function configureTechStackSettings(returnToMain) {
       return await editDevEnvironment(returnToMain);
     case 'view':
       return await viewTechStack(returnToMain);
-    case 'apply':
+    case 'apply': {
       // Import dynamically to avoid circular dependency
       const { applyTechStackTemplates } = await import('./applicator.js');
       return await applyTechStackTemplates(returnToMain);
+    }
   }
 }
 

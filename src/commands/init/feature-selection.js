@@ -87,7 +87,7 @@ function displayFeatureDescriptions(OPTIONAL_FEATURES) {
     console.log(`  ${marker} ${chalk.bold(feature.label)}${postConfig}`);
     console.log(chalk.dim(`     ${feature.description}`));
     if (feature.commands.length > 0) {
-      console.log(chalk.dim(`     Adds: ${feature.commands.map(c => '/' + c).join(', ')}`));
+      console.log(chalk.dim(`     Adds: ${feature.commands.map(c => `/${  c}`).join(', ')}`));
     }
     console.log('');
   }
@@ -119,7 +119,7 @@ function displayFeatureAssets(featureCommands, featureHooks, featureSkills, feat
   if (featureCommands.length > 0) {
     console.log('');
     console.log(chalk.green(`  ✓ Selected features will add ${featureCommands.length} command(s):`));
-    console.log(chalk.dim(`    ${featureCommands.map(c => '/' + c).join(', ')}`));
+    console.log(chalk.dim(`    ${featureCommands.map(c => `/${  c}`).join(', ')}`));
   }
 
   if (featureHooks.length > 0) {
@@ -188,5 +188,52 @@ async function handleNpmPackages(enabledFeatures, options) {
     // In skipPrompts mode, just inform about optional packages
     console.log(chalk.dim(`  ℹ Optional packages available: ${featuresWithNpm.map(f => f.npmPackage).join(', ')}`));
     console.log(chalk.dim('    Install manually if needed.'));
+  }
+
+  // Handle local dev dependency packages (npmDevPackages)
+  const featuresWithDevDeps = enabledFeatures.filter((f) => f.npmDevPackages?.length);
+
+  if (featuresWithDevDeps.length === 0) {
+    return;
+  }
+
+  if (!options.skipPrompts) {
+    console.log('');
+    console.log(chalk.bold('  Optional Dev Dependencies\n'));
+
+    for (const feature of featuresWithDevDeps) {
+      const packages = feature.npmDevPackages.join(', ');
+      const { installDevPackages } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'installDevPackages',
+          message: feature.npmDevInstallPrompt || `Install dev deps for ${feature.label}? (${packages})`,
+          default: false,
+        },
+      ]);
+
+      if (installDevPackages) {
+        const npmSpinner = ora(`Installing ${packages} as dev dependencies...`).start();
+        try {
+          const { execSync } = await import('child_process');
+          execSync(`npm install -D ${feature.npmDevPackages.join(' ')}`, {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'pipe'],
+            timeout: 300000, // 5 minutes timeout (lighthouse is large)
+          });
+          npmSpinner.succeed(`Installed dev deps: ${packages}`);
+        } catch (error) {
+          npmSpinner.fail(`Failed to install dev deps: ${packages}`);
+          console.log(chalk.dim(`    Run manually: npm install -D ${feature.npmDevPackages.join(' ')}`));
+        }
+      } else {
+        console.log(chalk.dim(`  Skipped. Install later with: npm install -D ${feature.npmDevPackages.join(' ')}`));
+      }
+    }
+  } else {
+    // In skipPrompts mode, just inform about available dev packages
+    const allDevPkgs = featuresWithDevDeps.flatMap(f => f.npmDevPackages);
+    console.log(chalk.dim(`  ℹ Optional dev packages available: ${allDevPkgs.join(', ')}`));
+    console.log(chalk.dim('    Install manually with: npm install -D <package>'));
   }
 }

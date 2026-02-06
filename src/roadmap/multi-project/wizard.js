@@ -168,7 +168,7 @@ export function parseProjectScope(scope) {
     const trimmed = line.trim();
 
     // Project header
-    if (trimmed.startsWith('## Project') || trimmed.match(/^##\s+\d+[\.:]/)) {
+    if (trimmed.startsWith('## Project') || trimmed.match(/^##\s+\d+[.:]/)) {
       const titleMatch = trimmed.match(/^##\s+(?:Project\s+\d+:?\s*)?(.+)/);
       currentProject = {
         id: items.length + 1,

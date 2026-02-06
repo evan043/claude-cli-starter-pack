@@ -6,32 +6,19 @@
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
-import fs from 'fs';
-import path from 'path';
 import { analyzeCodebase, displayAnalysisResults } from '../create-phase-dev/codebase-analyzer.js';
+import { loadTechStack } from '../../utils.js';
 
 /**
- * Check for tech-stack.json and load it if available
+ * Check for tech-stack.json and load it if available.
+ * Delegates to canonical loadTechStack in src/utils.js.
  * @returns {Object|null} Tech stack config or null
  */
 export function loadTechStackJson() {
-  const possiblePaths = [
-    path.join(process.cwd(), '.claude', 'config', 'tech-stack.json'),
-    path.join(process.cwd(), '.claude', 'tech-stack.json'),
-    path.join(process.cwd(), 'tech-stack.json'),
-  ];
-
-  for (const techStackPath of possiblePaths) {
-    if (fs.existsSync(techStackPath)) {
-      try {
-        const content = fs.readFileSync(techStackPath, 'utf-8');
-        return JSON.parse(content);
-      } catch {
-        // Continue to next path
-      }
-    }
-  }
-  return null;
+  const result = loadTechStack();
+  // Return null if only default stub (no real detection data)
+  if (result && result._pendingConfiguration) return result;
+  return result || null;
 }
 
 /**

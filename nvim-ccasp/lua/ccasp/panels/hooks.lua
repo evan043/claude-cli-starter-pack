@@ -1,5 +1,6 @@
 -- ccasp/panels/hooks.lua - Hook management panel
 local M = {}
+local helpers = require("ccasp.panels.helpers")
 
 -- State
 M.bufnr = nil
@@ -100,34 +101,24 @@ end
 
 -- Open the hooks panel
 function M.open()
-  if M.winid and vim.api.nvim_win_is_valid(M.winid) then
-    vim.api.nvim_set_current_win(M.winid)
+  if helpers.focus_if_open(M.winid) then
     return
   end
 
   -- Create buffer
-  M.bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(M.bufnr, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(M.bufnr, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_name(M.bufnr, "ccasp://hooks")
+  M.bufnr = helpers.create_buffer("ccasp://hooks")
 
-  -- Calculate size
-  local width = 51
-  local height = 45
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
+  -- Calculate position
+  local pos = helpers.calculate_position({ width = 51, height = 45 })
 
   -- Create window
-  M.winid = vim.api.nvim_open_win(M.bufnr, true, {
-    relative = "editor",
-    width = width,
-    height = height,
-    row = row,
-    col = col,
-    style = "minimal",
+  M.winid = helpers.create_window(M.bufnr, {
+    width = pos.width,
+    height = pos.height,
+    row = pos.row,
+    col = pos.col,
     border = "rounded",
     title = " Hooks ",
-    title_pos = "center",
   })
 
   vim.wo[M.winid].cursorline = true
@@ -146,18 +137,13 @@ function M.refresh()
   end
 
   local lines = M.render()
-  vim.api.nvim_buf_set_option(M.bufnr, "modifiable", true)
-  vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(M.bufnr, "modifiable", false)
-
+  helpers.set_buffer_content(M.bufnr, lines)
   M.apply_highlights()
 end
 
 -- Apply highlights
 function M.apply_highlights()
-  local ns = vim.api.nvim_create_namespace("ccasp_hooks")
-  vim.api.nvim_buf_clear_namespace(M.bufnr, ns, 0, -1)
-
+  local ns = helpers.prepare_highlights("ccasp_hooks", M.bufnr)
   local lines = vim.api.nvim_buf_get_lines(M.bufnr, 0, -1, false)
 
   for i, line in ipairs(lines) do
@@ -189,28 +175,8 @@ end
 
 -- Setup keymaps
 function M.setup_keymaps()
-  local opts = { buffer = M.bufnr, nowait = true }
-
-  -- Window manager keymaps (move/resize)
-  local wm_ok, window_manager = pcall(require, "ccasp.window_manager")
-  if wm_ok and M.winid then
-    window_manager.register(M.winid, "Hooks", "")
-    window_manager.setup_keymaps(M.bufnr, M.winid)
-  end
-
-  -- Minimize keymap
-  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
-  if tb_ok then
-    vim.keymap.set("n", "_", function()
-      taskbar.minimize(M.winid, "Hooks", "")
-      M.winid = nil
-      M.bufnr = nil
-    end, opts)
-  end
-
-  -- Close
-  vim.keymap.set("n", "q", M.close, opts)
-  vim.keymap.set("n", "<Esc>", M.close, opts)
+  -- Standard panel keymaps (window manager, minimize, close)
+  local opts = helpers.setup_standard_keymaps(M.bufnr, M.winid, "Hooks", M, M.close)
 
   -- Toggle all hooks
   vim.keymap.set("n", "H", function()
@@ -300,11 +266,7 @@ end
 
 -- Close panel
 function M.close()
-  if M.winid and vim.api.nvim_win_is_valid(M.winid) then
-    vim.api.nvim_win_close(M.winid, true)
-  end
-  M.winid = nil
-  M.bufnr = nil
+  helpers.close_panel(M)
 end
 
 return M

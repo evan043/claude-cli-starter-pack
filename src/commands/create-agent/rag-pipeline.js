@@ -18,6 +18,7 @@ import {
   generateAgentTemplate,
   generateOrchestratorTemplate,
 } from '../../agents/templates.js';
+import { claudeAbsolutePath } from '../../utils/paths.js';
 
 /**
  * Create a RAG pipeline system
@@ -116,7 +117,7 @@ export async function createRagPipeline(options) {
   // Generate the pipeline
   const spinner = ora('Generating RAG pipeline...').start();
 
-  const basePath = join(process.cwd(), '.claude', 'skills', domain);
+  const basePath = claudeAbsolutePath(process.cwd(), 'skills', domain);
   const dirs = [basePath, join(basePath, 'context'), join(basePath, 'workflows')];
 
   for (const dir of dirs) {

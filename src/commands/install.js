@@ -12,6 +12,7 @@ import { join } from 'path';
 import { showHeader, showSuccess, showError, showWarning } from '../cli/menu.js';
 import { loadConfigSync } from '../utils.js';
 import { generateClaudeCommand, generateMinimalClaudeCommand } from '../templates/claude-command.js';
+import { claudeAbsolutePath } from '../utils/paths.js';
 
 /**
  * Run the install command
@@ -28,8 +29,8 @@ export async function runInstall(options) {
   if (!targetPath) {
     // Try to find .claude/commands/ directory
     const possiblePaths = [
-      join(process.cwd(), '.claude', 'commands'),
-      join(process.cwd(), '.claude'),
+      claudeAbsolutePath(process.cwd(), 'commands'),
+      claudeAbsolutePath(process.cwd()),
     ];
 
     for (const p of possiblePaths) {
@@ -52,7 +53,7 @@ export async function runInstall(options) {
       ]);
 
       if (createDir) {
-        targetPath = join(process.cwd(), '.claude', 'commands');
+        targetPath = claudeAbsolutePath(process.cwd(), 'commands');
         mkdirSync(targetPath, { recursive: true });
         console.log(chalk.green(`✓ Created ${targetPath}`));
       } else {

@@ -25,6 +25,11 @@
       "command": "cmd",
       "args": ["/c", "npx", "-y", "@upstash/context7-mcp"],
       "description": "Up-to-date library documentation for LLMs and AI code editors"
+    },
+    "site-intel": {
+      "command": "node",
+      "args": ["src/site-intel/mcp-server.js"],
+      "description": "Website Intelligence System - 5-layer site analysis: crawl, summarize, graph, memory, judgment"
     }
   }
 }
