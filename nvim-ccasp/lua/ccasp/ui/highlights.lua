@@ -84,6 +84,36 @@ M.groups = {
   CcaspMuted          = { fg = "#484e5b" },                     -- Very dim text
   CcaspAccent         = { fg = "#ff79c6" },                     -- Pink accent
   CcaspLink           = { fg = "#8be9fd", underline = true },   -- Clickable
+
+  -- ─── Appshell: Icon Rail ───────────────────────────────────
+  CcaspIconRailBg     = { bg = "#080810", fg = "#6272a4" },     -- Dark rail background
+  CcaspIconRailItem   = { fg = "#6272a4", bg = "#080810" },     -- Normal icon
+  CcaspIconRailActive = { fg = "#61afef", bg = "#0d1a2a", bold = true }, -- Active icon
+  CcaspIconRailHover  = { fg = "#abb2bf", bg = "#080810" },     -- Hovered icon
+
+  -- ─── Appshell: Header ─────────────────────────────────────
+  CcaspHeaderBg       = { bg = "#0d1117" },                     -- Header background
+  CcaspHeaderTitle    = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Project name
+  CcaspHeaderTab      = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive session tab
+  CcaspHeaderTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active tab
+
+  -- ─── Appshell: Footer ─────────────────────────────────────
+  CcaspFooterBg       = { bg = "#0d1117" },                     -- Footer background
+  CcaspFooterLabel    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Labels
+  CcaspFooterValue    = { fg = "#abb2bf", bg = "#0d1117" },     -- Values
+  CcaspFooterSep      = { fg = "#1e3a5f", bg = "#0d1117" },     -- Separators
+  CcaspFooterTaskbar  = { fg = "#c678dd", bg = "#0d1117" },     -- Minimized items
+
+  -- ─── Appshell: Flyout ─────────────────────────────────────
+  CcaspFlyoutBg       = { bg = "#0d1117", fg = "#c9d1d9" },     -- Flyout background
+  CcaspFlyoutBorder   = { fg = "#1e3a5f" },                     -- Flyout border
+  CcaspFlyoutTitle    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Section title
+  CcaspFlyoutItem     = { fg = "#abb2bf", bg = "#0d1117" },     -- List item
+  CcaspFlyoutItemActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Selected item
+
+  -- ─── Appshell: Right Panel ────────────────────────────────
+  CcaspRightPanelBg   = { bg = "#0d1117", fg = "#c9d1d9" },     -- Right panel background
+  CcaspRightPanelBorder = { fg = "#1e3a5f" },                   -- Right panel border
 }
 
 -- Apply all highlight groups

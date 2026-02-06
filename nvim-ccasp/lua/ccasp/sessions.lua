@@ -89,17 +89,34 @@ function M.rearrange()
   local count = #sessions
   if count == 0 then return end
 
-  -- Calculate available space (minus sidebar width)
-  local sidebar_ok, sidebar = pcall(require, "ccasp.ui.sidebar")
-  local sidebar_width = 0
-  if sidebar_ok and sidebar.get_win then
-    local sidebar_win = sidebar.get_win()
-    if sidebar_win and vim.api.nvim_win_is_valid(sidebar_win) then
-      sidebar_width = vim.api.nvim_win_get_width(sidebar_win) + 1
+  -- Calculate available space based on active layout
+  local total_width, total_height
+  local ccasp_ok, ccasp = pcall(require, "ccasp")
+  local is_appshell = ccasp_ok and ccasp.config.layout == "appshell"
+
+  if is_appshell then
+    -- Appshell mode: use content zone bounds from appshell manager
+    local content_ok, content = pcall(require, "ccasp.appshell.content")
+    if content_ok then
+      total_width = content.get_available_width()
+      total_height = content.get_available_height()
+    else
+      total_width = vim.o.columns - 4
+      total_height = vim.o.lines - 5
     end
+  else
+    -- Classic mode: subtract sidebar width
+    local sidebar_ok, sidebar = pcall(require, "ccasp.ui.sidebar")
+    local sidebar_width = 0
+    if sidebar_ok and sidebar.get_win then
+      local sidebar_win = sidebar.get_win()
+      if sidebar_win and vim.api.nvim_win_is_valid(sidebar_win) then
+        sidebar_width = vim.api.nvim_win_get_width(sidebar_win) + 1
+      end
+    end
+    total_width = vim.o.columns - sidebar_width - 1
+    total_height = vim.o.lines - 4 -- minus topbar, bottombar, cmdline
   end
-  local total_width = vim.o.columns - sidebar_width - 1
-  local total_height = vim.o.lines - 4 -- minus topbar, bottombar, cmdline
 
   -- Calculate grid dimensions
   local cols = count <= 2 and count or 2

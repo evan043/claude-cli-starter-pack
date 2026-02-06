@@ -12,6 +12,11 @@ function M.is_classic()
   return M.config.layout == "classic"
 end
 
+-- Helper: Check if appshell layout is active
+function M.is_appshell()
+  return M.config.layout == "appshell"
+end
+
 -- Helper: Conditionally setup module with config
 local function setup_module(name, module_ref, config)
   if module_ref then
@@ -50,8 +55,17 @@ end
 
 -- Default configuration
 M.config = {
-  -- Layout mode: "classic" (sidebar+terminal) or "modern" (floating panels)
+  -- Layout mode: "classic" (sidebar+terminal), "modern" (floating panels), or "appshell" (icon rail + flyout)
   layout = "classic",
+
+  -- Appshell layout settings (icon rail + flyout + header + content + footer)
+  appshell = {
+    icon_rail = { width = 3, visible = true },
+    flyout = { width = 35, visible = false },
+    header = { height = 1, visible = true },
+    footer = { height = 2, visible = true },
+    right_panel = { width = 40, visible = false },
+  },
 
   -- Classic layout settings (sidebar on left, terminal on right)
   sidebar = {
@@ -274,6 +288,14 @@ function M.setup(opts)
     icons = M.config.browser_tabs.icons,
   })
 
+  -- Load Appshell modules (if appshell layout)
+  if M.config.layout == "appshell" then
+    M.appshell = safe_require("ccasp.appshell")
+    if M.appshell then
+      M.appshell.setup(M.config.appshell or {})
+    end
+  end
+
   -- Load Multi-Session Terminal Manager
   M.sessions = safe_require("ccasp.sessions")
 
@@ -288,8 +310,8 @@ function M.setup(opts)
       M.ui.highlights.setup()
     end
 
-    -- Initialize topbar (horizontal command strip)
-    if M.ui.topbar then
+    -- Initialize topbar (horizontal command strip) - skip for appshell (uses its own header)
+    if M.ui.topbar and not M.is_appshell() then
       M.ui.topbar.setup()
       -- Enable tabline display
       vim.o.showtabline = 2
@@ -312,9 +334,13 @@ function M.setup(opts)
   vim.notify("CCASP.nvim v" .. M.version .. " loaded (" .. M.config.layout .. " layout)", vim.log.levels.INFO)
 end
 
--- Open CCASP (classic layout: sidebar + terminal)
+-- Open CCASP (classic layout: sidebar + terminal, appshell: full chrome)
 function M.open()
-  if M.is_classic() then
+  if M.is_appshell() then
+    if M.appshell then
+      M.appshell.open()
+    end
+  elseif M.is_classic() then
     M.ui.sidebar.open()
     M.state.sidebar_open = true
     -- Show animated logo
@@ -332,7 +358,11 @@ end
 
 -- Close CCASP
 function M.close()
-  if M.is_classic() then
+  if M.is_appshell() then
+    if M.appshell then
+      M.appshell.close()
+    end
+  elseif M.is_classic() then
     M.ui.sidebar.close()
     M.terminal.close()
     M.state.sidebar_open = false
@@ -348,9 +378,13 @@ function M.close()
   end
 end
 
--- Toggle sidebar (classic) or control panel (modern)
+-- Toggle sidebar (classic), control panel (modern), or icon rail (appshell)
 function M.toggle_sidebar()
-  if M.is_classic() then
+  if M.is_appshell() then
+    if M.appshell then
+      M.appshell.toggle_rail()
+    end
+  elseif M.is_classic() then
     if M.state.sidebar_open then
       M.ui.sidebar.close()
       M.state.sidebar_open = false
@@ -363,9 +397,22 @@ function M.toggle_sidebar()
   end
 end
 
--- Toggle focus between sidebar and terminal (classic layout)
+-- Toggle focus between sidebar and terminal (classic), or rail and content (appshell)
 function M.toggle_focus()
-  if M.is_classic() then
+  if M.is_appshell() then
+    -- Toggle between icon rail and terminal content
+    local icon_rail = require("ccasp.appshell.icon_rail")
+    local rail_win = icon_rail.get_win()
+    if rail_win and vim.api.nvim_get_current_win() == rail_win then
+      -- Focus terminal
+      if M.sessions then M.sessions.focus_next() end
+    else
+      -- Focus icon rail
+      if rail_win and vim.api.nvim_win_is_valid(rail_win) then
+        vim.api.nvim_set_current_win(rail_win)
+      end
+    end
+  elseif M.is_classic() then
     if M.ui.sidebar.is_focused() then
       M.terminal.focus()
     else
@@ -638,10 +685,60 @@ local function setup_modern_keymaps()
   end
 end
 
+-- Setup appshell-specific keymaps
+local function setup_appshell_keymaps()
+  local opts = { noremap = true, silent = true }
+
+  -- Ctrl+B toggles icon rail (matches VS Code sidebar toggle)
+  vim.keymap.set("n", "<C-b>", function()
+    if M.appshell then M.appshell.toggle_rail() end
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle icon rail" }))
+
+  -- Ctrl+Shift+B toggles flyout for last section
+  vim.keymap.set("n", "<C-S-b>", function()
+    if M.appshell then
+      local section = M.appshell.state.active_section or "terminal"
+      M.appshell.toggle_flyout(section)
+    end
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle flyout" }))
+
+  -- Ctrl+Shift+P toggles right panel
+  vim.keymap.set("n", "<C-S-p>", function()
+    if M.appshell then M.appshell.toggle_right_panel() end
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle right panel" }))
+
+  -- Alt+1 through Alt+5 for quick section access
+  for i = 1, 5 do
+    vim.keymap.set("n", "<M-" .. i .. ">", function()
+      if M.appshell then
+        local icon_rail = require("ccasp.appshell.icon_rail")
+        icon_rail.select(i)
+      end
+    end, vim.tbl_extend("force", opts, { desc = "CCASP: Section " .. i }))
+  end
+
+  -- Terminal-mode shortcuts (exit terminal mode first, then act)
+  vim.keymap.set("t", "<C-b>", function()
+    vim.cmd([[<C-\><C-n>]])
+    if M.appshell then M.appshell.toggle_rail() end
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle icon rail (terminal)" }))
+
+  vim.keymap.set("t", "<C-S-b>", function()
+    vim.cmd([[<C-\><C-n>]])
+    if M.appshell then
+      local section = M.appshell.state.active_section or "terminal"
+      M.appshell.toggle_flyout(section)
+    end
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle flyout (terminal)" }))
+end
+
 -- Setup keybindings
 function M.setup_keymaps()
   setup_classic_keymaps()
   setup_modern_keymaps()
+  if M.is_appshell() then
+    setup_appshell_keymaps()
+  end
 end
 
 -- Setup autocommands

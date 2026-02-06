@@ -38,11 +38,27 @@ function M.register(winid, name, icon)
   return true
 end
 
--- Get editor bounds
+-- Get editor bounds (accounts for appshell chrome if active)
 local function get_editor_bounds()
+  local ccasp_ok, ccasp = pcall(require, "ccasp")
+  local is_appshell = ccasp_ok and ccasp.is_appshell and ccasp.is_appshell()
+
+  if is_appshell then
+    local appshell_ok, appshell = pcall(require, "ccasp.appshell")
+    if appshell_ok then
+      local content = appshell.get_zone_bounds("content")
+      if content then
+        return {
+          width = content.width,
+          height = content.height,
+        }
+      end
+    end
+  end
+
   return {
     width = vim.o.columns,
-    height = vim.o.lines - vim.o.cmdheight - 1, -- Account for cmdline
+    height = vim.o.lines - vim.o.cmdheight - 1,
   }
 end
 

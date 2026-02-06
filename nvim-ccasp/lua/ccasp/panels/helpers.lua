@@ -21,18 +21,36 @@ end
 function M.calculate_position(config)
   local width = config.width
   local height = config.height
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
+
+  -- Get effective editor bounds, accounting for appshell chrome if active
+  local ccasp_ok, ccasp = pcall(require, "ccasp")
+  local is_appshell = ccasp_ok and ccasp.is_appshell and ccasp.is_appshell()
+  local content_zone = nil
+
+  if is_appshell then
+    local appshell_ok, appshell = pcall(require, "ccasp.appshell")
+    if appshell_ok then
+      content_zone = appshell.get_zone_bounds("content")
+    end
+  end
+
+  local avail_w = content_zone and content_zone.width or vim.o.columns
+  local avail_h = content_zone and content_zone.height or vim.o.lines
+  local offset_row = content_zone and content_zone.row or 0
+  local offset_col = content_zone and content_zone.col or 0
+
+  local row = offset_row + math.floor((avail_h - height) / 2)
+  local col = offset_col + math.floor((avail_w - width) / 2)
 
   -- Handle side positions
   if config.position == "right" then
-    col = vim.o.columns - width - 2
-    row = 2
-    height = vim.o.lines - 6
+    col = offset_col + avail_w - width - 2
+    row = offset_row + 2
+    height = avail_h - 4
   elseif config.position == "left" then
-    col = 2
-    row = 2
-    height = vim.o.lines - 6
+    col = offset_col + 2
+    row = offset_row + 2
+    height = avail_h - 4
   end
 
   return {

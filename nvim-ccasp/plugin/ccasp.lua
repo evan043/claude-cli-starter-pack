@@ -78,6 +78,42 @@ vim.api.nvim_create_user_command("CcaspCenterWindow", function()
   require("ccasp.window_manager").center(winid)
 end, { desc = "Center current floating window" })
 
+-- Appshell layout commands (NEW in v1.5.0)
+vim.api.nvim_create_user_command("CcaspAppshell", function()
+  local ccasp = require("ccasp")
+  if ccasp.appshell then
+    if ccasp.appshell.is_active() then
+      ccasp.appshell.close()
+    else
+      ccasp.appshell.open()
+    end
+  else
+    vim.notify("CCASP: Appshell not available (layout=" .. ccasp.config.layout .. ")", vim.log.levels.WARN)
+  end
+end, { desc = "Toggle CCASP Appshell layout" })
+
+vim.api.nvim_create_user_command("CcaspToggleRail", function()
+  local ccasp = require("ccasp")
+  if ccasp.appshell then
+    ccasp.appshell.toggle_rail()
+  end
+end, { desc = "Toggle CCASP icon rail" })
+
+vim.api.nvim_create_user_command("CcaspToggleFlyout", function(opts)
+  local ccasp = require("ccasp")
+  if ccasp.appshell then
+    local section = opts.args ~= "" and opts.args or "terminal"
+    ccasp.appshell.toggle_flyout(section)
+  end
+end, { desc = "Toggle CCASP flyout sidebar", nargs = "?" })
+
+vim.api.nvim_create_user_command("CcaspToggleRightPanel", function()
+  local ccasp = require("ccasp")
+  if ccasp.appshell then
+    ccasp.appshell.toggle_right_panel()
+  end
+end, { desc = "Toggle CCASP right panel" })
+
 -- Health check registration
 vim.api.nvim_create_autocmd("User", {
   pattern = "LazyHealth",
