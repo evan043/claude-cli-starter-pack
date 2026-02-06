@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.5.0  •  Production Ready                         ║
+║                           v2.6.0  •  Production Ready                         ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,82 +38,65 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## 🚀 v2.5.0 Feature Update — Neovim Plugin Refactoring + Site Intelligence + MCP Registry
+## 🚀 v2.6.0 Feature Update — Smart Site Intel Dev-Scan System
 
 </div>
 
-> **Feb 2026** — Major release: 7-phase Neovim plugin refactoring (health score 87/100), 5-layer Website Intelligence System with MCP server, Anthropic MCP Registry API integration, and JS module decomposition.
+> **Feb 2026** — New developer-focused application scanner: per-route health monitoring, data-testid coverage tracking, git-diff incremental scanning, regression detection, and interactive dashboard with 12 MCP tools.
 
-### 🆕 What's New in v2.5.0
+### 🆕 What's New in v2.6.0
 
 <table>
 <tr>
 <td width="50%">
 
-#### 🔧 Neovim Plugin Refactoring (7-Phase)
-**Complete modular rewrite of nvim-ccasp (39 files, 12,505 lines):**
-- **sidebar.lua** 1,718 → 831 lines (-52%) with 3 submodules
-- **browser_tabs.lua** 1,436 → 1,267 lines with picker factory
-- **5 panel modules** refactored with shared `helpers.lua`
-- **7 infrastructure modules** cleaned up (-141 lines)
-- Health score: **87/100**, 0 broken requires, 100% module compliance
+#### 🔬 Smart Site Intel Dev-Scan
+**Developer-focused per-route application scanning:**
+- **Route Catalog** — AST-based route discovery with reverse file→route mapping
+- **Config Reader** — Reads tech-stack.json, .env, playwright.config automatically
+- **Playwright Scanner** — Auth, live DOM testid check, axe a11y, optional Lighthouse
+- **Git Diff Integration** — Incremental scanning with 30% threshold for full scan
+- **State Persistence** — Per-route scores, history (20 entries FIFO), diff tracking
+- **Quick Check** — Static testid coverage in <10s (no Playwright needed)
 
 </td>
 <td width="50%">
 
-#### 🌐 Website Intelligence System (Site-Intel)
-**5-layer MCP server for site analysis:**
-- **Discovery** — Crawl pages, parse routes, accessibility audit
-- **Summarizer** — AI-powered page content analysis
-- **Graph** — Build site structure and link maps
-- **Memory** — ChromaDB-backed persistent knowledge
-- **Judgment** — Recommendations engine with scoring
-- Web dashboard at `http://localhost:3848`
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-#### 🔍 Anthropic MCP Registry Integration
-**Official MCP server discovery from Anthropic's registry API:**
-- Browse 50+ verified MCP servers
-- Auto-recommend servers for your tech stack
-- One-command install with API key hooks
-- PostgreSQL, Sentry, Serena adapters added
-
-</td>
-<td width="50%">
-
-#### 📦 JS Module Decomposition (Epic 3)
-**Codebase cleanup across 3 phases:**
-- Phase 1: phase-dev command family (5 files → 16 submodules)
-- Phase 2: standalone commands (6 files → 20 submodules)
-- Phase 3: CLI flows & remaining commands (9 files → 38 modules)
-- New shared utilities: `json-io.js`, `constants.js`, `index.js`
+#### 📊 Dev Scan Dashboard
+**Interactive web dashboard at `http://localhost:3847`:**
+- **Health Metrics** — Overall score, total routes, testid coverage, last scan
+- **Sortable Route Table** — Sort by path, testid, a11y, perf, health grade
+- **Color-Coded Grades** — A (green) through F (red) per-route health
+- **Diff Display** — Improvements (green) and regressions (red)
+- **Trend Sparklines** — Inline SVG health history per route
+- **Filter Controls** — All routes, failing (<70%), regressions only
+- **7 New API Endpoints** — state, summary, routes, diffs, history, testid-coverage
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### 🪝 New Hook Templates
-**5 new enforcement hooks:**
-- `agent-guardrails` — Prevent agent scope creep
-- `file-collision-detector` — Detect parallel edit conflicts
-- `quality-check` — Code quality gates
-- `ralph-bdd-mode` — BDD-style test enforcement
-- `tdd-enforcer` — Test-first development guard
+#### 🔌 3 New MCP Tools (12 Total)
+**Expanded site-intel MCP server:**
+- `site_intel_dev_scan` — Full/incremental per-route scan with diffs
+- `site_intel_quick_check` — Fast static testid coverage (no Playwright)
+- `site_intel_dev_state` — Read current state without scanning
+- Updated `/site-intel` slash command with dev-scan actions
+- New `/site-intel-dashboard` dedicated slash command
 
 </td>
 <td width="50%">
 
-#### 🎯 New Skills & Templates
-**Additions to the template library:**
-- `github-actions-generator` skill with best practices & security refs
-- `site-intel.template.md` slash command
-- `update-check.template.md` enhancements
-- 15+ new test files for coverage expansion
+#### 📦 Dev-Scan Module (8 Files, ~78KB)
+**Complete scanning subsystem:**
+- `config-reader.js` — Project config loading (226 lines)
+- `route-catalog.js` — Route discovery + reverse map (246 lines)
+- `state-manager.js` — Persistent state + history (305 lines)
+- `git-diff.js` — Changed file detection + route mapping (184 lines)
+- `testid-checker.js` — Static analysis, 11 patterns (326 lines)
+- `scanner.js` — Playwright-based scanning (361 lines)
+- `diff-reporter.js` — Categorized diff output (201 lines)
 
 </td>
 </tr>
@@ -122,7 +105,7 @@ npx claude-cli-advanced-starter-pack init
 ### Upgrade Now
 
 ```bash
-# Update to v2.5.0
+# Update to v2.6.0
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync all new features to your project
@@ -161,7 +144,7 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 | Component | Count | Examples |
 |-----------|-------|----------|
-| **Slash Commands** | 56 | `/deploy-full`, `/pr-merge`, `/ralph`, `/phase-dev-plan` |
+| **Slash Commands** | 57 | `/deploy-full`, `/pr-merge`, `/ralph`, `/site-intel-dashboard` |
 | **Enforcement Hooks** | 42 | Token tracking, agent orchestration, refactor safety |
 | **Tech Stack Detection** | 55+ | React, Vue, FastAPI, Express, Prisma, Playwright |
 | **Agent Templates** | L1/L2/L3 | Orchestrators → Specialists → Workers |
@@ -516,6 +499,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Status |
 |---------|--------|
+| **Smart Site Intel Dev-Scan** | ✅ Complete |
 | **Vision Mode Orchestration** | ✅ Complete |
 | **Website Intelligence (Site-Intel)** | ✅ Complete |
 | **Anthropic MCP Registry** | ✅ Complete |
@@ -530,6 +514,17 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.6.0
+**Smart Site Intel Dev-Scan System** — Feb 2026
+- **Dev-Scan Module**: 8-file scanning subsystem (~78KB) for developer-focused per-route analysis
+- **Dashboard Extensions**: 7 new API endpoints + Dev Scan tab with sortable route table, grade badges, sparklines, diffs
+- **3 New MCP Tools**: `site_intel_dev_scan`, `site_intel_quick_check`, `site_intel_dev_state` (12 total)
+- **Slash Commands**: Updated `/site-intel` with dev-scan actions, new `/site-intel-dashboard` command
+- **Git Diff Integration**: Incremental scanning based on changed files with 30% threshold for full scan promotion
+- **Static TestID Checker**: 11 interactive element patterns, recursive 2-level import resolution, <10s for 80+ routes
+- **State Persistence**: Per-route scores with 20-entry FIFO history, regression/improvement tracking across commits
+- **Barrel Exports**: Full dev-scan module exports in `src/site-intel/index.js`
 
 ### v2.5.0
 **Neovim Plugin Refactoring + Site Intelligence + MCP Registry** — Feb 2026
@@ -855,6 +850,8 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `/vision-init` | Autonomous MVP from prompt |
 | `/vision-status` | Vision progress dashboard |
 | `/vision-adjust` | Adjust Vision plan |
+| `/site-intel` | Website intelligence + dev scanning |
+| `/site-intel-dashboard` | Dev scan dashboard viewer |
 
 [Full Commands Reference →](./docs/WIKI.md)
 
