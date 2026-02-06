@@ -266,4 +266,256 @@ export function listSites(options = {}) {
   return listDomains(projectRoot);
 }
 
-export default { runFullScan, getRecommendations, getStatus, listSites };
+// ============================================================
+// Dev Scan Mode - Developer-focused application scanning
+// ============================================================
+
+import { readDevScanConfig, validateConfig } from './dev-scan/config-reader.js';
+import { buildRouteCatalog } from './dev-scan/route-catalog.js';
+import { loadState, saveState, initializeState, updateStateWithResults, computeScoreDiffs } from './dev-scan/state-manager.js';
+import { getCurrentCommitHash, getCurrentCommitMessage, mapChangedFilesToRoutes } from './dev-scan/git-diff.js';
+import { scanRoutes } from './dev-scan/scanner.js';
+import { checkTestIdCoverage } from './dev-scan/testid-checker.js';
+import { generateDiffReport, formatDiffForCli } from './dev-scan/diff-reporter.js';
+
+/**
+ * Run a developer-focused scan of the application
+ * Automatically determines full vs incremental based on state
+ *
+ * @param {Object} options - Scan options
+ * @param {string} options.projectRoot - Target project root (not CCASP root)
+ * @param {string} options.scanType - Force 'full' or 'incremental' (auto-detected if omitted)
+ * @param {Function} options.onProgress - Progress callback
+ * @returns {Promise<Object>} Complete dev scan result
+ */
+export async function runDevScan(options = {}) {
+  const { projectRoot = process.cwd(), scanType: forceScanType, onProgress } = options;
+  const startTime = Date.now();
+
+  console.log('[DevScan] Starting developer scan...');
+
+  // 1. Read config
+  console.log('[DevScan] Reading project configuration...');
+  const config = readDevScanConfig(projectRoot);
+  const validation = validateConfig(config);
+
+  if (!validation.valid) {
+    return { success: false, error: `Config validation failed: ${validation.issues.join('; ')}`, config };
+  }
+
+  if (validation.warnings.length > 0) {
+    for (const warning of validation.warnings) {
+      console.log(`[DevScan] Warning: ${warning}`);
+    }
+  }
+
+  // 2. Build route catalog
+  console.log('[DevScan] Building route catalog...');
+  const catalog = await buildRouteCatalog(projectRoot, {
+    srcDir: config.srcDir,
+    framework: config.routerFramework,
+  });
+
+  if (!catalog.success) {
+    return { success: false, error: `Route catalog failed: ${catalog.error}`, config };
+  }
+
+  console.log(`[DevScan] Found ${catalog.summary.totalRoutes} routes, ${catalog.summary.totalComponents} components`);
+
+  // 3. Load existing state
+  let state = loadState(projectRoot);
+  const isFirstRun = !state;
+
+  if (isFirstRun) {
+    console.log('[DevScan] First run detected - initializing state');
+    state = initializeState(projectRoot, config.techStack?.projectName);
+  }
+
+  // 4. Determine scan type
+  let determinedScanType = forceScanType || (isFirstRun ? 'full' : 'incremental');
+  let affectedRoutes = [];
+  let diffInfo = null;
+
+  if (determinedScanType === 'incremental' && state.lastCommitHash) {
+    console.log('[DevScan] Running incremental scan (git diff analysis)...');
+    diffInfo = mapChangedFilesToRoutes(projectRoot, state.lastCommitHash, catalog.reverseMap, {
+      routesFile: config.routesFile,
+      totalRoutes: catalog.summary.totalRoutes,
+      fullScanThreshold: config.fullScanThreshold,
+    });
+
+    if (diffInfo.isFullScanNeeded) {
+      console.log('[DevScan] Promoting to full scan (structural changes or threshold exceeded)');
+      determinedScanType = 'full';
+    } else if (diffInfo.noChanges) {
+      console.log('[DevScan] No changes detected since last scan');
+      return {
+        success: true,
+        noChanges: true,
+        state,
+        config,
+        catalog: catalog.summary,
+        duration: Date.now() - startTime,
+      };
+    } else {
+      affectedRoutes = diffInfo.affectedRoutes;
+      console.log(`[DevScan] ${affectedRoutes.length} routes affected by ${diffInfo.sourceChanged} changed files`);
+    }
+  }
+
+  // 5. Determine which routes to scan
+  const routesToScan = determinedScanType === 'full'
+    ? catalog.routes.map(r => r.fullPath)
+    : affectedRoutes;
+
+  console.log(`[DevScan] Scanning ${routesToScan.length} routes (${determinedScanType} scan)...`);
+
+  // Build route info map for the scanner
+  const routeInfoMap = {};
+  for (const route of catalog.routes) {
+    routeInfoMap[route.fullPath] = route;
+  }
+
+  // 6. Run Playwright scan
+  const scanResult = await scanRoutes(routesToScan, config, {
+    routeInfoMap,
+    onProgress,
+  });
+
+  if (!scanResult.success) {
+    return { success: false, error: scanResult.error, config, catalog: catalog.summary };
+  }
+
+  // 7. Compute diffs (before updating state)
+  const currentCommit = getCurrentCommitHash(projectRoot);
+  const currentMessage = getCurrentCommitMessage(projectRoot);
+
+  const scoreDiffs = computeScoreDiffs(state, scanResult.results);
+
+  // 8. Update state with new results
+  updateStateWithResults(state, scanResult.results, {
+    scanType: determinedScanType,
+    commitHash: currentCommit,
+    commitMessage: currentMessage,
+  });
+
+  // Update diff info in state
+  state.latestDiffs = {
+    scanId: `dev-scan-${Date.now()}`,
+    commitRange: diffInfo?.commitRange || `${(state.lastCommitHash || '').substring(0, 7)}..${(currentCommit || '').substring(0, 7)}`,
+    changedFiles: diffInfo?.changedFiles || [],
+    affectedRoutes: routesToScan,
+    improvements: scoreDiffs.improvements,
+    regressions: scoreDiffs.regressions,
+    unchanged: scoreDiffs.unchanged,
+  };
+
+  // 9. Save state
+  const saveResult = saveState(projectRoot, state);
+  if (!saveResult.success) {
+    console.error(`[DevScan] Warning: Failed to save state: ${saveResult.error}`);
+  }
+
+  // 10. Generate CLI diff report
+  let diffReport = null;
+  if (scoreDiffs.hasChanges) {
+    diffReport = formatDiffForCli(scoreDiffs, {
+      commitRange: state.latestDiffs.commitRange,
+      changedFiles: state.latestDiffs.changedFiles,
+      affectedRoutes: routesToScan,
+      scanType: determinedScanType,
+    });
+    console.log(diffReport);
+  }
+
+  const duration = Date.now() - startTime;
+
+  console.log(`[DevScan] Complete in ${duration}ms - Health: ${state.overallHealth.score}/100 (${state.overallHealth.grade})`);
+
+  return {
+    success: true,
+    scanType: determinedScanType,
+    state,
+    config: { baseUrl: config.baseUrl, framework: config.framework },
+    catalog: catalog.summary,
+    scanSummary: scanResult.summary,
+    diffs: scoreDiffs,
+    diffReport,
+    duration,
+  };
+}
+
+/**
+ * Run a quick data-testid coverage check (no Playwright needed)
+ *
+ * @param {Object} options - Options
+ * @param {string} options.projectRoot - Target project root
+ * @param {number} options.maxDepth - Import resolution depth (default: 2)
+ * @returns {Promise<Object>} Quick check result
+ */
+export async function runQuickCheck(options = {}) {
+  const { projectRoot = process.cwd(), maxDepth = 2 } = options;
+  const startTime = Date.now();
+
+  console.log('[QuickCheck] Running static data-testid coverage analysis...');
+
+  // 1. Read config
+  const config = readDevScanConfig(projectRoot);
+
+  // 2. Build route catalog
+  const catalog = await buildRouteCatalog(projectRoot, {
+    srcDir: config.srcDir,
+    framework: config.routerFramework,
+  });
+
+  if (!catalog.success) {
+    return { success: false, error: `Route catalog failed: ${catalog.error}` };
+  }
+
+  // 3. Run static testid coverage check
+  const coverageResult = checkTestIdCoverage(catalog.routes, { maxDepth });
+
+  // 4. Update state with quick check results
+  let state = loadState(projectRoot);
+  if (!state) {
+    state = initializeState(projectRoot);
+  }
+
+  state.quickCheck = {
+    lastRun: new Date().toISOString(),
+    overallCoverage: coverageResult.overallCoverage,
+    routeResults: coverageResult.routeResults,
+  };
+
+  // Also populate route catalog info in state
+  for (const route of catalog.routes) {
+    if (!state.routes[route.fullPath]) {
+      state.routes[route.fullPath] = {
+        component: route.component,
+        componentFile: route.componentFile,
+        hooks: route.hooks,
+        apiCalls: route.apiCalls,
+        scores: null,
+        lastScanned: null,
+        history: [],
+      };
+    }
+  }
+  state.totalRoutes = Object.keys(state.routes).length;
+
+  saveState(projectRoot, state);
+
+  const duration = Date.now() - startTime;
+
+  console.log(`[QuickCheck] Complete in ${duration}ms - Coverage: ${Math.round(coverageResult.overallCoverage * 100)}%`);
+  console.log(`[QuickCheck] Routes: ${coverageResult.routesGood} good, ${coverageResult.routesWarning} warning, ${coverageResult.routesCritical} critical, ${coverageResult.routesSkipped} skipped`);
+
+  return {
+    success: true,
+    ...coverageResult,
+    catalog: catalog.summary,
+    duration,
+  };
+}
+
+export default { runFullScan, getRecommendations, getStatus, listSites, runDevScan, runQuickCheck };
