@@ -3,12 +3,16 @@ description: Website Intelligence System - scan, analyze, and get recommendation
 options:
   - label: "Scan"
     description: "Crawl a website and run full 5-layer analysis"
+  - label: "Dev Scan"
+    description: "Scan your own app routes (Playwright-based, with diffs)"
+  - label: "Quick Check"
+    description: "Fast static data-testid coverage check (no Playwright)"
   - label: "Recommend"
     description: "Get prioritized 'what to work on next'"
   - label: "Status"
     description: "Show layer status for a scanned site"
   - label: "Dashboard"
-    description: "Launch visual dashboard"
+    description: "Launch visual dashboard (includes Dev Scan tab)"
 ---
 
 # Site Intelligence
@@ -19,6 +23,9 @@ options:
 
 - `/site-intel` — Show menu of actions
 - `/site-intel scan <url>` — Full scan of a website
+- `/site-intel dev-scan [full|incremental]` — Scan your own app routes (Playwright)
+- `/site-intel quick-check` — Fast static data-testid coverage check
+- `/site-intel dev-dashboard` — Open dashboard to Dev Scan tab
 - `/site-intel recommend <domain>` — Get prioritized recommendations
 - `/site-intel status <domain>` — Show 5-layer status
 - `/site-intel page <domain> <path>` — Detailed page intelligence
@@ -132,11 +139,46 @@ Call site_intel_drift with:
 
 3. Show: new pages, removed pages, changed pages, health score delta
 
+### Action: Dev Scan
+
+When the user requests a dev scan (or selects "Dev Scan"):
+
+1. Use the `site_intel_dev_scan` MCP tool:
+
+```
+Call site_intel_dev_scan with:
+  scanType: "auto"  (or "full" / "incremental" if specified in $ARGUMENTS)
+```
+
+2. Display results including: scan type (full/incremental), routes scanned, health score, diffs (improvements/regressions)
+3. If no changes detected, report that and show current health state
+
+### Action: Quick Check
+
+When the user requests a quick check (or selects "Quick Check"):
+
+1. Use the `site_intel_quick_check` MCP tool:
+
+```
+Call site_intel_quick_check with: {}
+```
+
+2. Display: overall coverage percentage, routes by status (good/warning/critical), worst 5 routes with missing testids
+3. This runs in <10s and requires no Playwright
+
+### Action: Dev Dashboard
+
+When the user requests the dev dashboard:
+
+1. First check current state with `site_intel_dev_state` MCP tool
+2. Run: `node -e "import('./src/site-intel/dashboard/server.js').then(m => m.startDashboard())"`
+3. Report the URL: `http://localhost:3847` and tell user to click the "Dev Scan" tab
+
 ### Action: Dashboard
 
 1. Run: `node src/site-intel/dashboard/server.js`
 2. Report the URL: `http://localhost:3847`
-3. The dashboard shows interactive Cytoscape.js graph visualization, recommendations table, and page cards
+3. The dashboard shows interactive Cytoscape.js graph visualization, recommendations table, page cards, and Dev Scan tab
 
 ## No Arguments Flow
 
@@ -148,7 +190,7 @@ If invoked as just `/site-intel` with no arguments:
 
 ## MCP Tools Reference
 
-All 7 tools are available via the `site-intel` MCP server:
+All 12 tools are available via the `site-intel` MCP server:
 
 | Tool | Input | Purpose |
 |------|-------|---------|
@@ -159,3 +201,8 @@ All 7 tools are available via the `site-intel` MCP server:
 | `site_intel_page` | `{ domain, path }` | Single page detail |
 | `site_intel_drift` | `{ domain }` | Change detection between scans |
 | `site_intel_status` | `{ domain? }` | Layer status or list sites |
+| `site_intel_routes` | `{ projectRoot?, path?, framework? }` | Parse codebase routes |
+| `site_intel_search` | `{ query, domain?, limit? }` | Semantic search |
+| `site_intel_dev_scan` | `{ projectRoot?, scanType? }` | Dev-focused per-route scan |
+| `site_intel_quick_check` | `{ projectRoot? }` | Static testid coverage check |
+| `site_intel_dev_state` | `{ projectRoot? }` | Get current dev scan state |

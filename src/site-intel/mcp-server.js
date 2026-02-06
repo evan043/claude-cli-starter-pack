@@ -3,7 +3,7 @@
 /**
  * CCASP Website Intelligence System - MCP Server
  *
- * Exposes 9 MCP tools for Claude Code to perform intelligent site analysis:
+ * Exposes 12 MCP tools for Claude Code to perform intelligent site analysis:
  * - site_intel_scan: Full crawl + 5-layer analysis
  * - site_intel_summarize: Get semantic summaries
  * - site_intel_graph: Get cross-page dependency graph
@@ -13,16 +13,20 @@
  * - site_intel_status: Get status of all 5 layers
  * - site_intel_search: Search page summaries using semantic matching
  * - site_intel_routes: Parse codebase route definitions via ts-morph
+ * - site_intel_dev_scan: Developer-focused per-route scan (Playwright)
+ * - site_intel_quick_check: Static data-testid coverage check (no Playwright)
+ * - site_intel_dev_state: Get current dev scan state
  *
  * Transport: JSON-RPC 2.0 over stdio (newline-delimited)
  * Zero external dependencies - pure Node.js ES modules
  */
 
 import { createInterface } from 'readline';
-import { runFullScan, getRecommendations, getStatus, listSites } from './orchestrator.js';
+import { runFullScan, getRecommendations, getStatus, listSites, runDevScan, runQuickCheck } from './orchestrator.js';
 import { loadLatestScan, listScans, listDomains, toChromaDocuments, loadChromaPending } from './memory/index.js';
 import { toMermaid } from './graph/index.js';
 import { parseRoutes } from './discovery/route-parser.js';
+import { loadState } from './dev-scan/state-manager.js';
 
 // MCP Protocol Constants
 const PROTOCOL_VERSION = '2024-11-05';
@@ -206,6 +210,51 @@ const TOOLS = [
           enum: ['react-router-v6'],
           description: 'Router framework (default: react-router-v6)',
           default: 'react-router-v6'
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_dev_scan',
+    description: 'Run a developer-focused scan of your own application. Navigates to each route via Playwright, checks data-testid coverage, accessibility violations, and performance. Supports full and incremental (git-diff-based) scans.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the target project root (default: current working directory)'
+        },
+        scanType: {
+          type: 'string',
+          enum: ['auto', 'full', 'incremental'],
+          description: 'Scan type: auto (detect from state), full (all routes), incremental (git-diff only). Default: auto',
+          default: 'auto'
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_quick_check',
+    description: 'Run a fast static data-testid coverage check across all routes. No Playwright needed - analyzes source files for interactive elements vs data-testid attributes. Suitable for pre-commit hooks (<10s).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the target project root (default: current working directory)'
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_dev_state',
+    description: 'Get the current dev scan state including overall health score, per-route scores, latest diffs, and quick-check coverage. Does not run a new scan - reads from the persisted state file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the target project root (default: current working directory)'
         }
       }
     }
@@ -591,6 +640,102 @@ async function handleRoutes(args) {
   };
 }
 
+async function handleDevScan(args) {
+  const { projectRoot = process.cwd(), scanType } = args;
+
+  const options = { projectRoot };
+  if (scanType && scanType !== 'auto') {
+    options.scanType = scanType;
+  }
+
+  const result = await runDevScan(options);
+
+  if (!result.success) {
+    throw new Error(result.error || 'Dev scan failed');
+  }
+
+  return {
+    success: true,
+    scanType: result.scanType,
+    noChanges: result.noChanges || false,
+    catalog: result.catalog,
+    scanSummary: result.scanSummary,
+    health: result.state?.overallHealth,
+    diffs: result.diffs ? {
+      improvements: result.diffs.improvements?.length || 0,
+      regressions: result.diffs.regressions?.length || 0,
+      unchanged: result.diffs.unchanged || 0,
+    } : null,
+    duration: result.duration,
+  };
+}
+
+async function handleQuickCheck(args) {
+  const { projectRoot = process.cwd() } = args;
+
+  const result = await runQuickCheck({ projectRoot });
+
+  if (!result.success) {
+    throw new Error(result.error || 'Quick check failed');
+  }
+
+  return {
+    success: true,
+    overallCoverage: result.overallCoverage,
+    totalInteractive: result.totalInteractive,
+    totalWithTestId: result.totalWithTestId,
+    routesChecked: result.routesChecked,
+    routesCritical: result.routesCritical,
+    routesWarning: result.routesWarning,
+    routesGood: result.routesGood,
+    catalog: result.catalog,
+    duration: result.duration,
+    // Top 10 worst routes
+    worstRoutes: result.results?.slice(0, 10).map(r => ({
+      route: r.route,
+      coverage: r.coverage,
+      totalInteractive: r.totalInteractive,
+      withTestId: r.withTestId,
+      status: r.status,
+    })),
+  };
+}
+
+async function handleDevState(args) {
+  const { projectRoot = process.cwd() } = args;
+
+  const state = loadState(projectRoot);
+
+  if (!state) {
+    return {
+      success: true,
+      hasState: false,
+      message: 'No dev scan state found. Run site_intel_dev_scan or site_intel_quick_check first.',
+    };
+  }
+
+  return {
+    success: true,
+    hasState: true,
+    projectName: state.projectName,
+    lastScanTime: state.lastScanTime,
+    lastScanType: state.lastScanType,
+    lastCommitHash: state.lastCommitHash,
+    totalRoutes: state.totalRoutes,
+    overallHealth: state.overallHealth,
+    quickCheck: state.quickCheck ? {
+      lastRun: state.quickCheck.lastRun,
+      overallCoverage: state.quickCheck.overallCoverage,
+    } : null,
+    latestDiffs: {
+      commitRange: state.latestDiffs?.commitRange,
+      improvements: (state.latestDiffs?.improvements || []).length,
+      regressions: (state.latestDiffs?.regressions || []).length,
+      unchanged: state.latestDiffs?.unchanged || 0,
+    },
+  };
+}
+
 // Tool Dispatcher
 async function handleToolCall(name, args) {
   switch (name) {
@@ -612,6 +757,12 @@ async function handleToolCall(name, args) {
       return await handleSearch(args);
     case 'site_intel_routes':
       return await handleRoutes(args);
+    case 'site_intel_dev_scan':
+      return await handleDevScan(args);
+    case 'site_intel_quick_check':
+      return await handleQuickCheck(args);
+    case 'site_intel_dev_state':
+      return await handleDevState(args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

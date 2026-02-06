@@ -12,7 +12,7 @@
  */
 
 // Orchestrator (main entry point)
-export { runFullScan, getRecommendations, getStatus, listSites } from './orchestrator.js';
+export { runFullScan, getRecommendations, getStatus, listSites, runDevScan, runQuickCheck } from './orchestrator.js';
 
 // Layer 1: Discovery
 export { crawlSite, normalizeUrl, isInternalUrl } from './discovery/index.js';
@@ -33,6 +33,15 @@ export { generateRecommendations, generateJudgmentPrompt, calculateHealthScore }
 
 // Dashboard
 export { startDashboard, SiteIntelDashboardServer } from './dashboard/index.js';
+
+// Dev Scan (developer-focused application scanning)
+export { readDevScanConfig, validateConfig } from './dev-scan/config-reader.js';
+export { buildRouteCatalog, getAffectedRoutes } from './dev-scan/route-catalog.js';
+export { loadState, saveState, initializeState, computeScoreDiffs, getRouteHistory } from './dev-scan/state-manager.js';
+export { getChangedFilesSinceLastScan, mapChangedFilesToRoutes, getCurrentCommitHash } from './dev-scan/git-diff.js';
+export { checkTestIdCoverage, checkTestIdCoverageForRoute } from './dev-scan/testid-checker.js';
+export { scanRoutes, loginToApp } from './dev-scan/scanner.js';
+export { generateDiffReport, formatDiffForDashboard, formatDiffForCli } from './dev-scan/diff-reporter.js';
 
 export const VERSION = '0.1.0';
 export const LAYERS = ['discovery', 'summarizer', 'graph', 'memory', 'judgment'];

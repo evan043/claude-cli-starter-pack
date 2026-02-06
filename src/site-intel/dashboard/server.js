@@ -9,9 +9,11 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getRecommendations, getStatus, listSites } from '../orchestrator.js';
+import { getRecommendations, getStatus, listSites, runQuickCheck } from '../orchestrator.js';
 import { loadLatestScan } from '../memory/index.js';
 import { toMermaid } from '../graph/index.js';
+import { loadState, getRouteHistory } from '../dev-scan/state-manager.js';
+import { formatDiffForDashboard } from '../dev-scan/diff-reporter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +28,19 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
+
+/**
+ * Convert component health score (0-1) to letter grade
+ */
+function getGrade(health) {
+  if (!health && health !== 0) return 'N/A';
+  const score = Math.round(health * 100);
+  if (score >= 90) return 'A';
+  if (score >= 80) return 'B';
+  if (score >= 70) return 'C';
+  if (score >= 60) return 'D';
+  return 'F';
+}
 
 /**
  * Site Intelligence Dashboard Server
@@ -288,6 +303,150 @@ export class SiteIntelDashboardServer {
           },
           pages
         }));
+        return;
+      }
+
+      // ============================================================
+      // Dev Scan API Endpoints
+      // ============================================================
+
+      // GET /api/dev-scan/state - full dev scan state JSON
+      if (pathname === '/api/dev-scan/state') {
+        const state = loadState(this.projectRoot);
+        if (!state) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No dev scan state found. Run a dev scan first.' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(state));
+        return;
+      }
+
+      // GET /api/dev-scan/summary - aggregate health metrics
+      if (pathname === '/api/dev-scan/summary') {
+        const state = loadState(this.projectRoot);
+        if (!state) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No dev scan state found' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify({
+          projectName: state.projectName,
+          lastScanTime: state.lastScanTime,
+          lastScanType: state.lastScanType,
+          totalRoutes: state.totalRoutes,
+          overallHealth: state.overallHealth,
+          quickCheck: state.quickCheck ? {
+            lastRun: state.quickCheck.lastRun,
+            overallCoverage: state.quickCheck.overallCoverage,
+          } : null,
+          latestDiffs: {
+            improvements: (state.latestDiffs?.improvements || []).length,
+            regressions: (state.latestDiffs?.regressions || []).length,
+            unchanged: state.latestDiffs?.unchanged || 0,
+          },
+        }));
+        return;
+      }
+
+      // GET /api/dev-scan/routes - all routes with scores (sortable)
+      if (pathname === '/api/dev-scan/routes') {
+        const state = loadState(this.projectRoot);
+        if (!state) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No dev scan state found' }));
+          return;
+        }
+        const routes = Object.entries(state.routes).map(([routePath, data]) => ({
+          path: routePath,
+          component: data.component,
+          componentFile: data.componentFile,
+          scores: data.scores,
+          lastScanned: data.lastScanned,
+          historyLength: (data.history || []).length,
+          grade: data.scores ? getGrade(data.scores.componentHealth) : 'N/A',
+        }));
+        res.writeHead(200);
+        res.end(JSON.stringify({ routes, total: routes.length }));
+        return;
+      }
+
+      // GET /api/dev-scan/routes/:path - single route detail + history
+      const devRouteMatch = pathname.match(/^\/api\/dev-scan\/routes\/(.+)$/);
+      if (devRouteMatch) {
+        const state = loadState(this.projectRoot);
+        if (!state) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No dev scan state found' }));
+          return;
+        }
+        const routePath = '/' + decodeURIComponent(devRouteMatch[1]);
+        const routeData = state.routes[routePath];
+        if (!routeData) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: `Route not found: ${routePath}` }));
+          return;
+        }
+        const history = getRouteHistory(state, routePath);
+        res.writeHead(200);
+        res.end(JSON.stringify({ route: routePath, ...routeData, history }));
+        return;
+      }
+
+      // GET /api/dev-scan/diffs - latest diff report
+      if (pathname === '/api/dev-scan/diffs') {
+        const state = loadState(this.projectRoot);
+        if (!state || !state.latestDiffs) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No diff data found' }));
+          return;
+        }
+        const dashboardDiffs = formatDiffForDashboard(state.latestDiffs, {
+          commitRange: state.latestDiffs.commitRange,
+          changedFiles: state.latestDiffs.changedFiles,
+          affectedRoutes: state.latestDiffs.affectedRoutes,
+        });
+        res.writeHead(200);
+        res.end(JSON.stringify(dashboardDiffs));
+        return;
+      }
+
+      // GET /api/dev-scan/history/:path - score trend data for sparklines
+      const devHistoryMatch = pathname.match(/^\/api\/dev-scan\/history\/(.+)$/);
+      if (devHistoryMatch) {
+        const state = loadState(this.projectRoot);
+        if (!state) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No dev scan state found' }));
+          return;
+        }
+        const routePath = '/' + decodeURIComponent(devHistoryMatch[1]);
+        const history = getRouteHistory(state, routePath);
+        res.writeHead(200);
+        res.end(JSON.stringify({
+          route: routePath,
+          history,
+          sparklineData: history.map(h => ({
+            timestamp: h.timestamp,
+            health: h.scores?.componentHealth || 0,
+            testId: h.scores?.testIdCoverage || 0,
+          })),
+        }));
+        return;
+      }
+
+      // GET /api/dev-scan/testid-coverage - quick-check results
+      if (pathname === '/api/dev-scan/testid-coverage') {
+        const state = loadState(this.projectRoot);
+        if (!state || !state.quickCheck) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No quick-check data found. Run /site-intel quick-check first.' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(state.quickCheck));
         return;
       }
 

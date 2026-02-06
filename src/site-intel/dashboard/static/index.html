@@ -507,6 +507,35 @@
       padding: 3rem;
       color: #a0a0a0;
     }
+
+    /* Dev Scan grades */
+    .grade-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      min-width: 28px;
+      text-align: center;
+    }
+    .grade-badge.grade-a { background: #4caf50; color: #fff; }
+    .grade-badge.grade-b { background: #8bc34a; color: #fff; }
+    .grade-badge.grade-c { background: #ffc107; color: #000; }
+    .grade-badge.grade-d { background: #ff9800; color: #fff; }
+    .grade-badge.grade-f { background: #f44336; color: #fff; }
+    .grade-badge.grade-na { background: #555; color: #aaa; }
+
+    .diff-improvement { color: #4caf50; }
+    .diff-regression { color: #f44336; }
+    .diff-item {
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.25rem;
+      background: #0f3460;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .sparkline-svg { vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -538,6 +567,7 @@
       <div id="site-content" style="display: none;">
         <div class="tabs">
           <button class="tab active" data-tab="overview">Overview</button>
+          <button class="tab" data-tab="dev-scan">Dev Scan</button>
           <button class="tab" data-tab="graph">Graph</button>
           <button class="tab" data-tab="performance">Performance</button>
           <button class="tab" data-tab="recommendations">Recommendations</button>
@@ -575,6 +605,63 @@
           <div class="card">
             <h3>Top Recommendations</h3>
             <div id="top-recommendations">Loading...</div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="dev-scan-tab">
+          <div class="card">
+            <h3>Dev Scan Health</h3>
+            <div class="metrics-grid" id="dev-scan-metrics">
+              <div class="metric-card">
+                <span class="metric-value" id="ds-health-score">-</span>
+                <span class="metric-label">Health Score</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ds-total-routes">-</span>
+                <span class="metric-label">Total Routes</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ds-testid-coverage">-</span>
+                <span class="metric-label">TestID Coverage</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ds-last-scan">-</span>
+                <span class="metric-label">Last Scan</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>
+              Route Scores
+              <span style="float:right;">
+                <select id="ds-filter" style="background:#0f3460;color:#e0e0e0;border:1px solid #1a3a5f;padding:0.3rem 0.6rem;border-radius:4px;font-size:0.8rem;">
+                  <option value="all">All Routes</option>
+                  <option value="failing">Failing (&lt;70%)</option>
+                  <option value="regressions">Regressions Only</option>
+                </select>
+              </span>
+            </h3>
+            <table class="recommendations-table" id="ds-routes-table">
+              <thead>
+                <tr>
+                  <th style="cursor:pointer;" data-sort="path">Route Path</th>
+                  <th style="cursor:pointer;" data-sort="testid">TestID</th>
+                  <th style="cursor:pointer;" data-sort="a11y">A11y</th>
+                  <th style="cursor:pointer;" data-sort="perf">Perf</th>
+                  <th style="cursor:pointer;" data-sort="health">Health</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody id="ds-routes-body">
+                <tr><td colspan="6" class="loading">Loading dev scan data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card" id="ds-diffs-card" style="display:none;">
+            <h3>Latest Changes</h3>
+            <div id="ds-diffs-content"></div>
           </div>
         </div>
 
@@ -923,6 +1010,7 @@
 
       const tabIdMap = {
         'overview': 'overview',
+        'dev-scan': 'dev-scan-tab',
         'graph': 'graph-tab',
         'performance': 'performance-tab',
         'recommendations': 'recommendations-tab',
@@ -935,6 +1023,9 @@
       }
       if (tabName === 'performance' && currentDomain) {
         loadPerformance(currentDomain);
+      }
+      if (tabName === 'dev-scan') {
+        loadDevScan();
       }
     }
 
@@ -1184,6 +1275,166 @@
         console.error('Error loading performance data:', error);
         document.getElementById('perf-gauges').innerHTML = '<div class="error">Error loading performance data</div>';
       }
+    }
+
+    // Dev Scan data
+    let devScanRoutes = [];
+    let devScanSortCol = 'path';
+    let devScanSortAsc = true;
+
+    async function loadDevScan() {
+      try {
+        const [summaryRes, routesRes, diffsRes] = await Promise.all([
+          fetch('/api/dev-scan/summary'),
+          fetch('/api/dev-scan/routes'),
+          fetch('/api/dev-scan/diffs'),
+        ]);
+
+        // Summary metrics
+        if (summaryRes.ok) {
+          const summary = await summaryRes.json();
+          document.getElementById('ds-health-score').textContent =
+            summary.overallHealth ? `${summary.overallHealth.score} (${summary.overallHealth.grade})` : '-';
+          document.getElementById('ds-total-routes').textContent = summary.totalRoutes || 0;
+          document.getElementById('ds-testid-coverage').textContent =
+            summary.quickCheck?.overallCoverage != null ? `${Math.round(summary.quickCheck.overallCoverage * 100)}%` :
+            summary.overallHealth?.testIdCoverage != null ? `${Math.round(summary.overallHealth.testIdCoverage * 100)}%` : '-';
+          document.getElementById('ds-last-scan').textContent =
+            summary.lastScanTime ? new Date(summary.lastScanTime).toLocaleDateString() : 'Never';
+        } else {
+          document.getElementById('ds-health-score').textContent = '-';
+          document.getElementById('ds-total-routes').textContent = '-';
+          document.getElementById('ds-testid-coverage').textContent = '-';
+          document.getElementById('ds-last-scan').textContent = 'No data';
+        }
+
+        // Route table
+        if (routesRes.ok) {
+          const data = await routesRes.json();
+          devScanRoutes = data.routes || [];
+          renderDevScanRoutes();
+        } else {
+          document.getElementById('ds-routes-body').innerHTML =
+            '<tr><td colspan="6" style="text-align:center;color:#a0a0a0;">No dev scan data. Run <code>/site-intel dev-scan</code> first.</td></tr>';
+        }
+
+        // Diffs
+        if (diffsRes.ok) {
+          const diffs = await diffsRes.json();
+          if (diffs.hasData) {
+            document.getElementById('ds-diffs-card').style.display = 'block';
+            renderDevScanDiffs(diffs);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading dev scan:', error);
+        document.getElementById('ds-routes-body').innerHTML =
+          '<tr><td colspan="6" class="error">Error loading dev scan data</td></tr>';
+      }
+
+      // Setup sort handlers
+      document.querySelectorAll('#ds-routes-table th[data-sort]').forEach(th => {
+        th.onclick = () => {
+          const col = th.dataset.sort;
+          if (devScanSortCol === col) devScanSortAsc = !devScanSortAsc;
+          else { devScanSortCol = col; devScanSortAsc = true; }
+          renderDevScanRoutes();
+        };
+      });
+
+      // Setup filter
+      document.getElementById('ds-filter').onchange = () => renderDevScanRoutes();
+    }
+
+    function renderDevScanRoutes() {
+      const filter = document.getElementById('ds-filter').value;
+      let routes = [...devScanRoutes];
+
+      if (filter === 'failing') {
+        routes = routes.filter(r => r.scores && r.scores.componentHealth < 0.7);
+      } else if (filter === 'regressions') {
+        // We'd need diff data - for now show routes with low health
+        routes = routes.filter(r => r.scores && r.scores.componentHealth < 0.5);
+      }
+
+      // Sort
+      routes.sort((a, b) => {
+        let va, vb;
+        switch (devScanSortCol) {
+          case 'path': va = a.path; vb = b.path; break;
+          case 'testid': va = a.scores?.testIdCoverage || 0; vb = b.scores?.testIdCoverage || 0; break;
+          case 'a11y': va = a.scores?.a11yViolations || 0; vb = b.scores?.a11yViolations || 0; break;
+          case 'perf': va = a.scores?.lighthousePerf || 0; vb = b.scores?.lighthousePerf || 0; break;
+          case 'health': va = a.scores?.componentHealth || 0; vb = b.scores?.componentHealth || 0; break;
+          default: va = a.path; vb = b.path;
+        }
+        if (typeof va === 'string') return devScanSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+        return devScanSortAsc ? va - vb : vb - va;
+      });
+
+      const tbody = document.getElementById('ds-routes-body');
+      if (routes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a0a0a0;">No routes match filter</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = routes.map(r => {
+        const s = r.scores || {};
+        const gradeClass = r.grade ? `grade-${r.grade.toLowerCase()}` : 'grade-na';
+        const testId = s.testIdCoverage != null ? `${Math.round(s.testIdCoverage * 100)}%` : '-';
+        const a11y = s.a11yViolations != null ? s.a11yViolations : '-';
+        const perf = s.lighthousePerf != null ? s.lighthousePerf : '-';
+        const health = s.componentHealth != null ? `${Math.round(s.componentHealth * 100)}%` : '-';
+        const shortPath = r.path.length > 35 ? '...' + r.path.slice(-32) : r.path;
+        return `<tr>
+          <td style="font-size:0.85rem;" title="${r.path}">${shortPath}</td>
+          <td>${testId}</td>
+          <td>${a11y}</td>
+          <td>${perf}</td>
+          <td><span class="grade-badge ${gradeClass}">${r.grade || 'N/A'}</span> ${health}</td>
+          <td>${renderSparkline(r)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderSparkline(route) {
+      if (!route.historyLength || route.historyLength === 0) return '<span style="color:#555;">-</span>';
+      // Simple inline SVG placeholder - actual data fetched on hover/click
+      const h = route.scores?.componentHealth || 0;
+      const color = h >= 0.7 ? '#4caf50' : h >= 0.5 ? '#ffc107' : '#f44336';
+      return `<svg class="sparkline-svg" width="40" height="16" viewBox="0 0 40 16">
+        <rect x="0" y="${16 - h * 16}" width="40" height="${h * 16}" fill="${color}" opacity="0.3" rx="2"/>
+        <line x1="0" y1="${16 - h * 16}" x2="40" y2="${16 - h * 16}" stroke="${color}" stroke-width="1.5"/>
+      </svg>`;
+    }
+
+    function renderDevScanDiffs(diffs) {
+      const container = document.getElementById('ds-diffs-content');
+      let html = '';
+
+      if (diffs.commitRange) {
+        html += `<p style="font-size:0.85rem;color:#a0a0a0;margin-bottom:1rem;">Commits: ${diffs.commitRange}</p>`;
+      }
+
+      if (diffs.improvements && diffs.improvements.length > 0) {
+        html += '<h4 style="color:#4caf50;margin-bottom:0.5rem;">Improvements</h4>';
+        for (const imp of diffs.improvements.slice(0, 10)) {
+          html += `<div class="diff-item diff-improvement">+ ${imp.route} - ${imp.metricName}: ${imp.fromFormatted} -> ${imp.toFormatted} (${imp.deltaFormatted})</div>`;
+        }
+      }
+
+      if (diffs.regressions && diffs.regressions.length > 0) {
+        html += '<h4 style="color:#f44336;margin:1rem 0 0.5rem;">Regressions</h4>';
+        for (const reg of diffs.regressions.slice(0, 10)) {
+          html += `<div class="diff-item diff-regression">- ${reg.route} - ${reg.metricName}: ${reg.fromFormatted} -> ${reg.toFormatted} (${reg.deltaFormatted})</div>`;
+        }
+      }
+
+      if (!diffs.improvements?.length && !diffs.regressions?.length) {
+        html += '<p style="color:#a0a0a0;">No changes detected in latest scan.</p>';
+      }
+
+      container.innerHTML = html;
     }
 
     // Make loadSite available globally
