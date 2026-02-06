@@ -383,6 +383,9 @@ local function handle_session_terminal_focus()
   if session then
     local bufnr = vim.api.nvim_win_get_buf(current_win)
     if vim.bo[bufnr].buftype == "terminal" then
+      -- Move cursor to last line (input prompt) before entering terminal mode
+      local line_count = vim.api.nvim_buf_line_count(bufnr)
+      vim.api.nvim_win_set_cursor(current_win, { line_count, 0 })
       vim.cmd("startinsert")
     end
   end

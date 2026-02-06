@@ -240,6 +240,10 @@ function M.focus(id)
   local session = state.sessions[id]
   if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
     vim.api.nvim_set_current_win(session.winid)
+    -- Move cursor to last line (input prompt) before entering terminal mode
+    local bufnr = vim.api.nvim_win_get_buf(session.winid)
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    vim.api.nvim_win_set_cursor(session.winid, { line_count, 0 })
     vim.cmd("startinsert")
   end
 end
