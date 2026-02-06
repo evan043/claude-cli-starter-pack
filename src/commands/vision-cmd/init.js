@@ -2,11 +2,12 @@
  * Vision Mode Init Command
  *
  * Handles vision initialization from natural language prompts.
+ * Includes multi-instance awareness and decision engine display.
  *
  * @module commands/vision-cmd/init
  */
 
-import { createOrchestrator } from '../../vision/index.js';
+import { createOrchestrator, getActiveVisions, describePlanType } from '../../vision/index.js';
 import readline from 'readline';
 
 /**
@@ -21,6 +22,17 @@ export async function visionInit(projectRoot, options) {
     console.log('\n┌─────────────────────────────────────────────────┐');
     console.log('│         VISION MODE - INITIALIZATION            │');
     console.log('└─────────────────────────────────────────────────┘\n');
+
+    // Show existing active visions if any
+    const activeVisions = getActiveVisions(projectRoot);
+    if (activeVisions.length > 0) {
+      console.log(`  Active visions (${activeVisions.length}):`);
+      for (const v of activeVisions) {
+        const pct = v.completion_percentage || 0;
+        console.log(`    - ${v.slug} [${v.status}] ${pct}% complete`);
+      }
+      console.log('');
+    }
 
     // Interactive prompt entry
     const rl = readline.createInterface({
@@ -49,6 +61,12 @@ export async function visionInit(projectRoot, options) {
 
   console.log(`Prompt: "${prompt.substring(0, 60)}${prompt.length > 60 ? '...' : ''}"\n`);
 
+  // Show active visions warning
+  const activeVisions = getActiveVisions(projectRoot);
+  if (activeVisions.length > 0) {
+    console.log(`  Note: ${activeVisions.length} active vision(s) exist. Use 'ccasp vision list' to see them.\n`);
+  }
+
   const orchestrator = createOrchestrator(projectRoot, {
     security: {
       enabled: !options.noSecurity,
@@ -56,7 +74,8 @@ export async function visionInit(projectRoot, options) {
     },
     autonomous: {
       enabled: !options.manual
-    }
+    },
+    planTypeOverride: options.planType || null
   });
 
   // Initialize vision
@@ -75,7 +94,7 @@ export async function visionInit(projectRoot, options) {
   console.log(`\n✓ Vision created: ${initResult.vision.slug}`);
   console.log(`  Title: ${initResult.vision.title}`);
   console.log(`  Intent: ${initResult.intent}`);
-  console.log(`  Complexity: ${initResult.complexity}`);
+  console.log(`  Complexity: ${initResult.complexity?.scale || initResult.complexity}`);
   console.log(`  Features: ${initResult.features.length}`);
 
   if (initResult.accountRequirements?.accounts?.length > 0) {
@@ -124,6 +143,21 @@ export async function visionInit(projectRoot, options) {
     }
   }
 
+  // Display decision engine result if planning was run
+  const vision = orchestrator.vision;
+  if (vision?.decision) {
+    const desc = describePlanType(vision.decision.planType);
+    console.log('\n┌─────────────────────────────────────────────────┐');
+    console.log('│         PLAN TYPE DECISION                      │');
+    console.log('└─────────────────────────────────────────────────┘');
+    console.log(`  Type: ${desc.label} (${vision.decision.planType})`);
+    console.log(`  Confidence: ${Math.round(vision.decision.confidence * 100)}%`);
+    console.log(`  Reasoning: ${vision.decision.reasoning}`);
+    if (!vision.decision.overridden) {
+      console.log(`  Override: use --plan-type=<type> to change`);
+    }
+  }
+
   console.log('\n┌─────────────────────────────────────────────────┐');
   console.log('│         VISION INITIALIZED SUCCESSFULLY         │');
   console.log('└─────────────────────────────────────────────────┘');
@@ -131,5 +165,6 @@ export async function visionInit(projectRoot, options) {
   console.log(`\nNext steps:`);
   console.log(`  ccasp vision status ${initResult.vision.slug}  # View status`);
   console.log(`  ccasp vision run ${initResult.vision.slug}     # Start execution`);
+  console.log(`  ccasp vision list                              # List all visions`);
   console.log(`  /vision-status                                 # Claude Code slash command`);
 }

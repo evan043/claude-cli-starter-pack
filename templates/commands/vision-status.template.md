@@ -25,29 +25,41 @@ VISION (L0+) → EPIC (L0) → ROADMAP (L1) → PHASE-DEV (L2) → TASKS (L3)
 ### Step 1: Load Vision Data
 
 ```javascript
-import { listVisions, loadVision, getVisionStatus } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/index.js';
+import { listVisions, loadVision, getVisionStatus, getRegisteredVisions, getVisionCount, describePlanType } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/index.js';
 
 const visionSlug = args[0];
 
 if (!visionSlug) {
-  // List all visions
-  const visions = listVisions(projectRoot);
+  // Use registry for fast listing (falls back to filesystem)
+  let visions;
+  try {
+    visions = getRegisteredVisions(projectRoot);
+  } catch {
+    visions = listVisions(projectRoot);
+  }
 
   if (visions.length === 0) {
     console.log('No Visions found. Create one with /vision-init');
     return;
   }
 
-  // Display summary for each
+  const { total, active } = getVisionCount(projectRoot);
+  console.log(`Total: ${total} vision(s), ${active} active\n`);
+
+  // Display summary for each, including plan type
   for (const v of visions) {
     const status = getVisionStatus(projectRoot, v.slug);
-    // Display...
+    const planType = v.plan_type || 'unknown';
+    const planLabel = planType !== 'unknown' ? describePlanType(planType).label : 'Unknown';
+    // Display with plan type indicator...
   }
 } else {
   // Load specific vision
   const vision = await loadVision(projectRoot, visionSlug);
   const status = getVisionStatus(projectRoot, visionSlug);
-  // Display detailed status...
+  const planType = vision.plan_type || vision.decision?.planType || 'unknown';
+  const planLabel = planType !== 'unknown' ? describePlanType(planType).label : 'Unknown';
+  // Display detailed status with plan type...
 }
 ```
 
@@ -58,7 +70,7 @@ if (!visionSlug) {
 ║                         VISION MODE DASHBOARD                              ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 ║                                                                             ║
-║  Active Visions: {{count}}                                                  ║
+║  Visions: {{total}} total, {{active}} active                                ║
 ║                                                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 {{#each visions}}
@@ -67,6 +79,7 @@ if (!visionSlug) {
 ║  ────────────────────────────────────────────────────────────────────────── ║
 ║                                                                             ║
 ║  Status: {{statusEmoji}} {{status}}                                         ║
+║  Plan Type: {{planLabel}} ({{planType}})                                    ║
 ║  Stage: {{orchestrator.stage}}                                              ║
 ║  Progress: [{{progressBar}}] {{completion_percentage}}%                     ║
 ║  Alignment: [{{alignmentBar}}] {{alignmentPct}}%                            ║
@@ -105,6 +118,7 @@ if (!visionSlug) {
 ║  {{title}}                                                                  ║
 ║  Slug: {{slug}}                                                             ║
 ║  Status: {{statusEmoji}} {{status}}                                         ║
+║  Plan Type: {{planLabel}} ({{planType}})                                    ║
 ║  Priority: {{priorityBadge}}                                                ║
 ║                                                                             ║
 ║  Progress: [{{progressBar}}] {{completion_percentage}}%                     ║
@@ -383,6 +397,8 @@ function calculateDuration(start, end = new Date()) {
 - `/vision-run` - Start execution
 - `/vision-adjust` - Adjust Vision plan
 - `/roadmap-track` - Track specific roadmap
+- `ccasp vision list` - List all visions with plan types
+- `ccasp vision cleanup` - Remove stale/failed visions
 
 ---
 

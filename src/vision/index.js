@@ -54,8 +54,20 @@ export {
   getVisionStatus,
   createVisionCheckpoint,
   restoreVisionCheckpoint,
-  listVisionCheckpoints
+  listVisionCheckpoints,
+  // Registry
+  loadRegistry,
+  rebuildRegistry,
+  registerVision,
+  deregisterVision,
+  isSlugTaken,
+  getRegisteredVisions,
+  getActiveVisions,
+  getVisionCount
 } from './state-manager.js';
+
+// Schema additions
+export { generateUniqueSlug } from './schema/factories.js';
 
 // Prompt Parsing
 export {
@@ -94,6 +106,14 @@ export {
   shouldTriggerReplan,
   formatDriftReport
 } from './observer.js';
+
+// Decision Engine
+export {
+  PlanType,
+  decidePlanType,
+  describePlanType,
+  getAllPlanTypes
+} from './decision-engine.js';
 
 // Orchestrator (Phase 7)
 export {

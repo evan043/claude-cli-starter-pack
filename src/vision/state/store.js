@@ -12,6 +12,8 @@ import {
   createVision,
   validateVision
 } from '../schema.js';
+import { generateUniqueSlug } from '../schema/factories.js';
+import { registerVision, deregisterVision, updateRegistryEntry, getRegisteredVisions } from './registry.js';
 
 /**
  * Get Vision storage directory
@@ -97,6 +99,12 @@ export async function saveVision(projectRoot, vision) {
     // Write to file
     fs.writeFileSync(visionPath, JSON.stringify(vision, null, 2), 'utf8');
 
+    // Update registry entry
+    await updateRegistryEntry(projectRoot, vision.slug, {
+      status: vision.status,
+      completion_percentage: vision.metadata?.completion_percentage || 0
+    }).catch(() => {}); // Non-fatal if registry update fails
+
     return { success: true };
   } catch (error) {
     return {
@@ -115,11 +123,19 @@ export async function saveVision(projectRoot, vision) {
  * @returns {Object} Result { success: boolean, vision?: Object, error?: string }
  */
 export async function createAndSaveVision(projectRoot, options) {
+  // Ensure slug uniqueness via registry
+  const existingSlugs = getRegisteredVisions(projectRoot).map(v => v.slug);
+  if (options.title && !options.slug) {
+    options.slug = generateUniqueSlug(options.title, existingSlugs);
+  }
+
   const vision = createVision(options);
 
   const result = await saveVision(projectRoot, vision);
 
   if (result.success) {
+    // Register in the centralized registry
+    await registerVision(projectRoot, vision);
     return { success: true, vision };
   }
 
@@ -132,6 +148,23 @@ export async function createAndSaveVision(projectRoot, options) {
  * @returns {Array} Array of vision summaries
  */
 export function listVisions(projectRoot) {
+  // Use registry for fast listing (auto-rebuilds from filesystem if needed)
+  const registryEntries = getRegisteredVisions(projectRoot);
+
+  if (registryEntries.length > 0) {
+    return registryEntries.map(entry => ({
+      vision_id: entry.vision_id,
+      slug: entry.slug,
+      title: entry.title,
+      status: entry.status,
+      plan_type: entry.plan_type,
+      completion_percentage: entry.completion_percentage || 0,
+      created: entry.created,
+      updated: entry.updated
+    }));
+  }
+
+  // Fallback: scan filesystem directly (registry was empty/missing)
   const visionDir = getVisionDir(projectRoot);
 
   if (!fs.existsSync(visionDir)) {
@@ -152,6 +185,7 @@ export function listVisions(projectRoot) {
             slug: vision.slug,
             title: vision.title,
             status: vision.status,
+            plan_type: vision.plan_type || 'vision-full',
             completion_percentage: vision.metadata?.completion_percentage || 0,
             created: vision.metadata?.created,
             updated: vision.metadata?.updated
@@ -226,6 +260,10 @@ export async function deleteVision(projectRoot, visionSlug) {
 
   try {
     fs.rmSync(visionDir, { recursive: true, force: true });
+
+    // Remove from registry
+    await deregisterVision(projectRoot, visionSlug).catch(() => {});
+
     return { success: true };
   } catch (error) {
     return {

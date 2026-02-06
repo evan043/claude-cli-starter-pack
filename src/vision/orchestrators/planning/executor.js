@@ -14,6 +14,7 @@ import {
 import { log, transitionStage, OrchestratorStage } from '../lifecycle.js';
 import { analyzeRoadmapBreakdown } from './breakdown.js';
 import { createExplorationDocs } from './docs.js';
+import { decidePlanType, PlanType } from '../../decision-engine.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -40,11 +41,155 @@ export async function plan(orchestrator) {
       }
     };
 
-    // Step 1: Analyze scope to determine roadmap breakdown
+    // Step 1: Run decision engine to determine plan type
     const features = orchestrator.vision.metadata?.features || [];
     const complexity = orchestrator.vision.metadata?.estimated_complexity || 'medium';
     const technologies = orchestrator.vision.prompt?.technologies || [];
+    const parsedPrompt = orchestrator.vision.prompt || {};
 
+    const decision = decidePlanType(parsedPrompt, complexity, {
+      override: orchestrator.config?.planTypeOverride || null
+    });
+
+    log(orchestrator, 'info', `Decision engine: ${decision.planType} (score: ${decision.score}, confidence: ${decision.confidence})`);
+    log(orchestrator, 'info', `Reasoning: ${decision.reasoning}`);
+
+    // Store decision in planning result
+    planningResult.decision = decision;
+
+    // Update vision with decision
+    await updateVision(orchestrator.projectRoot, orchestrator.vision.slug, (vision) => {
+      vision.plan_type = decision.planType;
+      vision.decision = {
+        planType: decision.planType,
+        score: decision.score,
+        confidence: decision.confidence,
+        reasoning: decision.reasoning,
+        decided_at: new Date().toISOString()
+      };
+      return vision;
+    });
+
+    // For task-list: create only a flat PROGRESS.json and return early
+    if (decision.planType === PlanType.TASK_LIST) {
+      log(orchestrator, 'info', 'Creating task-list (no epic/roadmap hierarchy)');
+      const planSlug = orchestrator.vision.slug;
+      const planDir = path.join(orchestrator.projectRoot, '.claude', 'phase-plans', planSlug);
+
+      if (!fs.existsSync(planDir)) {
+        fs.mkdirSync(planDir, { recursive: true });
+      }
+
+      const progressData = {
+        slug: planSlug,
+        project: { name: orchestrator.vision.title, slug: planSlug },
+        status: 'not_started',
+        completion_percentage: 0,
+        plan_type: PlanType.TASK_LIST,
+        phases: [{
+          id: 1,
+          name: orchestrator.vision.title,
+          status: 'not_started',
+          tasks: features.map((f, i) => ({
+            id: i + 1,
+            name: f.feature || f.name || f,
+            description: '',
+            status: 'pending',
+            completed: false
+          }))
+        }],
+        metadata: {
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          vision_slug: orchestrator.vision.slug
+        },
+        github_issue: null
+      };
+
+      // Ensure at least one task
+      if (progressData.phases[0].tasks.length === 0) {
+        progressData.phases[0].tasks.push({
+          id: 1, name: 'Implement core functionality', description: '', status: 'pending', completed: false
+        });
+      }
+
+      const progressPath = path.join(planDir, 'PROGRESS.json');
+      fs.writeFileSync(progressPath, JSON.stringify(progressData, null, 2), 'utf8');
+      planningResult.phaseDevPlans.push(progressData);
+
+      log(orchestrator, 'info', `Created task-list: ${planSlug} with ${progressData.phases[0].tasks.length} task(s)`);
+
+      await updateVision(orchestrator.projectRoot, orchestrator.vision.slug, (vision) => {
+        vision.orchestrator.stage = orchestrator.stage;
+        vision.planning = { plan_type: PlanType.TASK_LIST, plan_slug: planSlug };
+        return vision;
+      });
+
+      orchestrator.vision = await loadVision(orchestrator.projectRoot, orchestrator.vision.slug);
+      return { success: true, stage: orchestrator.stage, result: planningResult };
+    }
+
+    // For phase-dev-plan: create PROGRESS.json with phases but no epic/roadmap
+    if (decision.planType === PlanType.PHASE_DEV_PLAN) {
+      log(orchestrator, 'info', 'Creating phase-dev-plan (no epic/roadmap hierarchy)');
+      const roadmapBreakdown = analyzeRoadmapBreakdown(orchestrator, features, technologies, complexity);
+      const planSlug = orchestrator.vision.slug;
+      const planDir = path.join(orchestrator.projectRoot, '.claude', 'phase-plans', planSlug);
+
+      if (!fs.existsSync(planDir)) {
+        fs.mkdirSync(planDir, { recursive: true });
+      }
+
+      const allPhases = roadmapBreakdown.flatMap((rm, rmIdx) =>
+        rm.phases.map((phase, phaseIdx) => ({
+          id: rmIdx * 10 + phaseIdx + 1,
+          name: phase.title,
+          status: 'not_started',
+          tasks: phase.tasks.map((task, taskIdx) => ({
+            id: taskIdx + 1,
+            name: task.name || task,
+            description: task.description || '',
+            status: 'pending',
+            completed: false
+          }))
+        }))
+      );
+
+      const progressData = {
+        slug: planSlug,
+        project: { name: orchestrator.vision.title, slug: planSlug },
+        status: 'not_started',
+        completion_percentage: 0,
+        plan_type: PlanType.PHASE_DEV_PLAN,
+        phases: allPhases.length > 0 ? allPhases : [{
+          id: 1, name: 'Core Implementation', status: 'not_started',
+          tasks: [{ id: 1, name: 'Implement core functionality', description: '', status: 'pending', completed: false }]
+        }],
+        metadata: {
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
+          vision_slug: orchestrator.vision.slug
+        },
+        github_issue: null
+      };
+
+      const progressPath = path.join(planDir, 'PROGRESS.json');
+      fs.writeFileSync(progressPath, JSON.stringify(progressData, null, 2), 'utf8');
+      planningResult.phaseDevPlans.push(progressData);
+
+      log(orchestrator, 'info', `Created phase-dev-plan: ${planSlug} with ${allPhases.length} phase(s)`);
+
+      await updateVision(orchestrator.projectRoot, orchestrator.vision.slug, (vision) => {
+        vision.orchestrator.stage = orchestrator.stage;
+        vision.planning = { plan_type: PlanType.PHASE_DEV_PLAN, plan_slug: planSlug };
+        return vision;
+      });
+
+      orchestrator.vision = await loadVision(orchestrator.projectRoot, orchestrator.vision.slug);
+      return { success: true, stage: orchestrator.stage, result: planningResult };
+    }
+
+    // For roadmap/epic/vision-full: proceed with full hierarchy creation
     log(orchestrator, 'info', 'Analyzing scope for roadmap breakdown...');
     const roadmapBreakdown = analyzeRoadmapBreakdown(orchestrator, features, technologies, complexity);
 

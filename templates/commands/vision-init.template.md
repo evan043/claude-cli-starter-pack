@@ -46,6 +46,70 @@ Use AskUserQuestion to collect:
 4. **Tags** (optional, comma-separated)
    - Example: "mvp, saas, real-time"
 
+### Step 1b: Check Existing Visions (Multi-Instance Awareness)
+
+Before creating a new vision, check the registry for existing visions:
+
+```javascript
+import { getActiveVisions, getVisionCount, describePlanType } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/index.js';
+
+const activeVisions = getActiveVisions(projectRoot);
+const { total, active } = getVisionCount(projectRoot);
+
+if (activeVisions.length > 0) {
+  console.log(`\n  Existing Visions: ${total} total, ${active} active\n`);
+  for (const v of activeVisions) {
+    console.log(`    - ${v.slug} [${v.status}] ${v.completion_percentage || 0}%`);
+  }
+  console.log('');
+}
+```
+
+### Step 1c: Decision Engine - Determine Plan Type
+
+The decision engine analyzes the prompt and recommends the optimal planning hierarchy:
+
+```javascript
+import { parseVisionPrompt, estimateComplexity, decidePlanType, describePlanType } from '${CWD}/node_modules/claude-cli-advanced-starter-pack/src/vision/index.js';
+
+const parsedPrompt = parseVisionPrompt(userPrompt);
+const complexity = estimateComplexity(parsedPrompt);
+const decision = decidePlanType(parsedPrompt, complexity);
+
+const desc = describePlanType(decision.planType);
+```
+
+**Display decision result:**
+```
+╔════════════════════════════════════════════════════════════════════╗
+║                   PLAN TYPE DECISION                               ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Recommended: {{desc.label}} ({{decision.planType}})               ║
+║  Confidence: {{decision.confidence}}                               ║
+║  Score: {{decision.score}}                                         ║
+║                                                                    ║
+║  Reasoning: {{decision.reasoning}}                                 ║
+║                                                                    ║
+║  Artifacts: {{desc.artifacts.join(', ')}}                          ║
+║                                                                    ║
+║  Override: Use --plan-type=<type> to force a specific plan type    ║
+║  Types: task-list | phase-dev-plan | roadmap | epic | vision-full  ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+```
+
+**Plan type selection logic:**
+| Score Range | Plan Type | Artifacts |
+|-------------|-----------|-----------|
+| 0-6 | task-list | Flat PROGRESS.json |
+| 7-14 | phase-dev-plan | Phased PROGRESS.json |
+| 15-25 | roadmap | ROADMAP.json + PROGRESS files |
+| 26-40 | epic | EPIC.json + ROADMAPs + PROGRESS files |
+| 41+ | vision-full | Full hierarchy with agents |
+
+Scoring factors: feature count (2.0x), domain diversity (3.0x), technology count (1.5x), constraints (1.0x), intent modifier (1.0x), prompt length (0.3x).
+
 ### Step 2: Initialize Orchestrator
 
 **Use the Phase 7 VisionOrchestrator:**
@@ -377,11 +441,14 @@ if (sessionCheck.needsRestart) {
 ║  2. Start autonomous execution:                                    ║
 ║     /vision-run {{slug}}                                           ║
 ║                                                                    ║
-║  3. Or use CLI:                                                    ║
-║     ccasp vision run {{slug}}                                      ║
+║  3. List all visions:                                              ║
+║     ccasp vision list                                              ║
 ║                                                                    ║
 ║  4. Adjust if needed:                                              ║
 ║     /vision-adjust {{slug}}                                        ║
+║                                                                    ║
+║  5. Cleanup stale visions:                                         ║
+║     ccasp vision cleanup                                           ║
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ```
@@ -416,6 +483,10 @@ ccasp vision init "Build a todo app with React and FastAPI"
 
 # Initialize with options
 ccasp vision init "E-commerce site" --title "Shop MVP" --priority high
+
+# Override plan type (skip decision engine auto-detection)
+ccasp vision init "Fix the login bug" --plan-type task-list
+ccasp vision init "Add dark mode" --plan-type phase-dev-plan
 
 # Skip phases
 ccasp vision init "Quick app" --skip-analysis --skip-architecture

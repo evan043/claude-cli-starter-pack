@@ -44,6 +44,14 @@ export {
   analyzeRoadmapBreakdown
 } from './orchestrators/planning.js';
 
+// Decision Engine exports
+export {
+  PlanType,
+  decidePlanType,
+  describePlanType,
+  getAllPlanTypes
+} from './decision-engine.js';
+
 // Security exports
 export {
   scanSecurity,

@@ -299,25 +299,46 @@ export function estimateComplexity(parsedPrompt) {
   const featureCount = parsedPrompt.parsed?.features?.length || 0;
   const constraintCount = parsedPrompt.parsed?.constraints?.length || 0;
   const techCount = parsedPrompt.parsed?.technologies?.length || 0;
+  const featureDetails = parsedPrompt.parsed?.feature_details || [];
 
   const score = featureCount * 2 + constraintCount + techCount;
 
+  // Domain diversity
+  const domains = new Set(featureDetails.map(f => f.domain).filter(Boolean));
+  const domainDiversity = domains.size;
+  const isMultiStack = techCount > 1;
+
+  // Prompt complexity signals
+  const original = parsedPrompt.original || '';
+  const sentenceCount = (original.match(/[.!?]+/g) || []).length + 1;
+  const andChainCount = (original.match(/\band\b/gi) || []).length;
+
+  let scale;
+  let reason;
+
   if (score <= 5) {
-    return {
-      scale: 'S',
-      reason: `Small scope: ${featureCount} features, ${constraintCount} constraints`
-    };
+    scale = 'S';
+    reason = `Small scope: ${featureCount} features, ${constraintCount} constraints`;
   } else if (score <= 15) {
-    return {
-      scale: 'M',
-      reason: `Medium scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`
-    };
-  } 
-    return {
-      scale: 'L',
-      reason: `Large scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`
-    };
-  
+    scale = 'M';
+    reason = `Medium scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`;
+  } else {
+    scale = 'L';
+    reason = `Large scope: ${featureCount} features, ${constraintCount} constraints, ${techCount} technologies`;
+  }
+
+  return {
+    scale,
+    reason,
+    score,
+    domainDiversity,
+    isMultiStack,
+    promptComplexitySignals: {
+      sentenceCount,
+      andChainCount,
+      promptLength: original.length
+    }
+  };
 }
 
 /**

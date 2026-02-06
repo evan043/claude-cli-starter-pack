@@ -137,3 +137,31 @@ export function generateSlug(title) {
     .replace(/^-|-$/g, '')
     .substring(0, 50);
 }
+
+/**
+ * Generate a unique slug by checking against existing slugs
+ * Appends -2, -3, etc. if the base slug is taken
+ * @param {string} title - Vision title
+ * @param {Set|Array} existingSlugs - Set or array of existing slugs
+ * @returns {string} Unique slug
+ */
+export function generateUniqueSlug(title, existingSlugs = []) {
+  const slugSet = existingSlugs instanceof Set ? existingSlugs : new Set(existingSlugs);
+  const baseSlug = generateSlug(title);
+
+  if (!slugSet.has(baseSlug)) {
+    return baseSlug;
+  }
+
+  let suffix = 2;
+  while (suffix <= 100) {
+    const candidate = `${baseSlug}-${suffix}`.substring(0, 50);
+    if (!slugSet.has(candidate)) {
+      return candidate;
+    }
+    suffix++;
+  }
+
+  // Fallback: append timestamp fragment
+  return `${baseSlug.substring(0, 40)}-${Date.now() % 100000}`;
+}

@@ -24,7 +24,7 @@
 import { visionInit } from './vision-cmd/init.js';
 import { visionStatus } from './vision-cmd/status.js';
 import { visionRun, visionResume } from './vision-cmd/run.js';
-import { visionList, visionScan, visionAnalyze, visionArchitect } from './vision-cmd/operations.js';
+import { visionList, visionScan, visionAnalyze, visionArchitect, visionCleanup } from './vision-cmd/operations.js';
 import { showVisionHelp, visionDashboard } from './vision-cmd/help.js';
 
 /**
@@ -66,6 +66,10 @@ export async function runVision(subcommand, options = {}) {
 
     case 'architect':
       await visionArchitect(projectRoot, options);
+      break;
+
+    case 'cleanup':
+      await visionCleanup(projectRoot, options);
       break;
 
     case 'dashboard':

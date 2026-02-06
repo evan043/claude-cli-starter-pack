@@ -17,6 +17,7 @@ export const OrchestratorStage = {
   INITIALIZATION: 'initialization',
   ANALYSIS: 'analysis',
   ARCHITECTURE: 'architecture',
+  DECISION: 'decision',
   PLANNING: 'planning',
   SECURITY: 'security',
   EXECUTION: 'execution',
