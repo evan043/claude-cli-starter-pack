@@ -43,5 +43,21 @@ export { checkTestIdCoverage, checkTestIdCoverageForRoute } from './dev-scan/tes
 export { scanRoutes, loginToApp } from './dev-scan/scanner.js';
 export { generateDiffReport, formatDiffForDashboard, formatDiffForCli } from './dev-scan/diff-reporter.js';
 
-export const VERSION = '0.1.0';
-export const LAYERS = ['discovery', 'summarizer', 'graph', 'memory', 'judgment'];
+// Feature Audit (full-stack feature truth verification)
+export {
+  runFeatureAudit,
+  mapPlanningToFeatures,
+  verifyFeature,
+  verifyAllFeatures,
+  calculateConfidence,
+  scoreAllFeatures,
+  analyzeGaps,
+  getGapsSorted,
+  generateContractTest,
+  writeContractTest,
+  loadFeatureAuditState,
+  saveFeatureAuditState,
+} from './feature-audit/index.js';
+
+export const VERSION = '0.2.0';
+export const LAYERS = ['discovery', 'summarizer', 'graph', 'memory', 'judgment', 'feature-audit'];

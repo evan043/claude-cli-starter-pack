@@ -572,6 +572,7 @@
           <button class="tab" data-tab="performance">Performance</button>
           <button class="tab" data-tab="recommendations">Recommendations</button>
           <button class="tab" data-tab="pages">Pages</button>
+          <button class="tab" data-tab="feature-truth">Feature Truth</button>
         </div>
 
         <div class="tab-content active" id="overview">
@@ -745,6 +746,77 @@
             <div class="pages-grid" id="pages-grid">
               <div class="loading">Loading...</div>
             </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="feature-truth-tab">
+          <div class="card">
+            <h3>Feature Truth Audit</h3>
+            <div class="metrics-grid" id="ft-metrics">
+              <div class="metric-card">
+                <span class="metric-value" id="ft-total">-</span>
+                <span class="metric-label">Total Features</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ft-verified">-</span>
+                <span class="metric-label">Fully Verified</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ft-gaps">-</span>
+                <span class="metric-label">Gaps Found</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="ft-confidence">-</span>
+                <span class="metric-label">Avg Confidence</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+              <h3>Feature Truth Table</h3>
+              <div>
+                <select id="ft-sort" style="background:#0f3460;color:#e0e0e0;border:1px solid #1a3a5f;padding:0.35rem 0.7rem;border-radius:4px;font-size:0.85rem;">
+                  <option value="confidence-asc">Lowest Confidence First</option>
+                  <option value="recency">Most Recent First</option>
+                  <option value="gaps">Gaps First</option>
+                  <option value="name">Name A-Z</option>
+                </select>
+                <select id="ft-filter" style="background:#0f3460;color:#e0e0e0;border:1px solid #1a3a5f;padding:0.35rem 0.7rem;border-radius:4px;font-size:0.85rem;margin-left:0.5rem;">
+                  <option value="all">All Features</option>
+                  <option value="gaps-only">Gaps Only</option>
+                  <option value="high-confidence">High Confidence</option>
+                  <option value="low-confidence">Low Confidence</option>
+                  <option value="untested">Untested</option>
+                </select>
+              </div>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="recommendations-table" id="ft-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th title="UI component exists">UI</th>
+                    <th title="Backend endpoint exists">API</th>
+                    <th title="Frontend wired to backend">Wire</th>
+                    <th title="Database model exists">Data</th>
+                    <th title="Auth middleware present">Auth</th>
+                    <th title="Error handling present">Err</th>
+                    <th title="Confidence score">Score</th>
+                    <th title="Recency weight">Recency</th>
+                    <th title="Gap status">Gap</th>
+                  </tr>
+                </thead>
+                <tbody id="ft-table-body">
+                  <tr><td colspan="10" style="text-align:center;color:#a0a0a0;">Loading... Run <code>/feature-audit</code> first.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" id="ft-gaps-card" style="display:none;">
+            <h3 style="color:#f44336;">Gap Analysis</h3>
+            <div id="ft-gaps-content"></div>
           </div>
         </div>
       </div>
@@ -1014,7 +1086,8 @@
         'graph': 'graph-tab',
         'performance': 'performance-tab',
         'recommendations': 'recommendations-tab',
-        'pages': 'pages-tab'
+        'pages': 'pages-tab',
+        'feature-truth': 'feature-truth-tab'
       };
       document.getElementById(tabIdMap[tabName] || tabName).classList.add('active');
 
@@ -1026,6 +1099,9 @@
       }
       if (tabName === 'dev-scan') {
         loadDevScan();
+      }
+      if (tabName === 'feature-truth') {
+        loadFeatureTruth();
       }
     }
 
@@ -1435,6 +1511,179 @@
       }
 
       container.innerHTML = html;
+    }
+
+    // ============================================================
+    // Feature Truth Tab
+    // ============================================================
+
+    let featureTruthData = [];
+    let ftSortMode = 'confidence-asc';
+    let ftFilterMode = 'all';
+
+    async function loadFeatureTruth() {
+      try {
+        const [summaryRes, featuresRes, gapsRes] = await Promise.all([
+          fetch('/api/feature-audit/summary'),
+          fetch('/api/feature-audit/features'),
+          fetch('/api/feature-audit/gaps'),
+        ]);
+
+        // Summary metrics
+        if (summaryRes.ok) {
+          const summary = await summaryRes.json();
+          document.getElementById('ft-total').textContent = summary.total_features || 0;
+          document.getElementById('ft-verified').textContent = summary.fully_verified || 0;
+          document.getElementById('ft-gaps').textContent = summary.gaps_found || 0;
+          document.getElementById('ft-confidence').textContent =
+            summary.average_confidence != null ? summary.average_confidence : '-';
+        } else {
+          document.getElementById('ft-total').textContent = '-';
+          document.getElementById('ft-verified').textContent = '-';
+          document.getElementById('ft-gaps').textContent = '-';
+          document.getElementById('ft-confidence').textContent = '-';
+        }
+
+        // Feature table
+        if (featuresRes.ok) {
+          const data = await featuresRes.json();
+          featureTruthData = data.features || [];
+          renderFeatureTruthTable();
+        } else {
+          document.getElementById('ft-table-body').innerHTML =
+            '<tr><td colspan="10" style="text-align:center;color:#a0a0a0;">No feature audit data. Run <code>/feature-audit</code> first.</td></tr>';
+        }
+
+        // Gaps
+        if (gapsRes.ok) {
+          const gapsData = await gapsRes.json();
+          if (gapsData.gaps && gapsData.gaps.length > 0) {
+            document.getElementById('ft-gaps-card').style.display = 'block';
+            renderFeatureTruthGaps(gapsData.gaps);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading feature truth:', error);
+        document.getElementById('ft-table-body').innerHTML =
+          '<tr><td colspan="10" class="error">Error loading feature audit data</td></tr>';
+      }
+
+      // Setup sort/filter handlers
+      document.getElementById('ft-sort').onchange = (e) => {
+        ftSortMode = e.target.value;
+        renderFeatureTruthTable();
+      };
+      document.getElementById('ft-filter').onchange = (e) => {
+        ftFilterMode = e.target.value;
+        renderFeatureTruthTable();
+      };
+    }
+
+    function ftIcon(verified) {
+      if (verified === true) return '<span style="color:#4caf50;">&#10003;</span>';
+      if (verified === false) return '<span style="color:#f44336;">&#10007;</span>';
+      return '<span style="color:#ffc107;">?</span>';
+    }
+
+    function ftConfidenceBadge(score, level) {
+      const cls = level === 'High' ? 'grade-a' : level === 'Medium' ? 'grade-c' : 'grade-f';
+      return `<span class="grade-badge ${cls}">${score}</span>`;
+    }
+
+    function ftRecencyBadge(weight) {
+      const colors = { 'High': '#4caf50', 'Medium': '#ffc107', 'Low': '#a0a0a0' };
+      return `<span style="color:${colors[weight] || '#a0a0a0'};font-size:0.85rem;">${weight || '-'}</span>`;
+    }
+
+    function ftGapBadge(gapAnalysis) {
+      if (!gapAnalysis?.is_gap) return '<span style="color:#4caf50;font-size:0.8rem;">OK</span>';
+      const colors = { 'high': '#f44336', 'medium': '#ffc107', 'low': '#a0a0a0' };
+      return `<span style="color:${colors[gapAnalysis.priority] || '#a0a0a0'};font-size:0.8rem;" title="${gapAnalysis.reason || ''}">${gapAnalysis.gap_type || 'gap'}</span>`;
+    }
+
+    function renderFeatureTruthTable() {
+      let features = [...featureTruthData];
+
+      // Filter
+      switch (ftFilterMode) {
+        case 'gaps-only':
+          features = features.filter(f => f.gap_analysis?.is_gap);
+          break;
+        case 'high-confidence':
+          features = features.filter(f => f.confidence?.level === 'High');
+          break;
+        case 'low-confidence':
+          features = features.filter(f => f.confidence?.level === 'Low');
+          break;
+        case 'untested':
+          features = features.filter(f => !f.tests?.has_smoke_test && !f.tests?.has_contract_test);
+          break;
+      }
+
+      // Sort
+      switch (ftSortMode) {
+        case 'confidence-asc':
+          features.sort((a, b) => (a.confidence?.final_score || 0) - (b.confidence?.final_score || 0));
+          break;
+        case 'recency':
+          features.sort((a, b) => (a.recency?.days_since_completion ?? 9999) - (b.recency?.days_since_completion ?? 9999));
+          break;
+        case 'gaps':
+          const pri = { 'high': 0, 'medium': 1, 'low': 2, null: 3 };
+          features.sort((a, b) => {
+            const aGap = a.gap_analysis?.is_gap ? pri[a.gap_analysis.priority] : 3;
+            const bGap = b.gap_analysis?.is_gap ? pri[b.gap_analysis.priority] : 3;
+            return aGap - bGap;
+          });
+          break;
+        case 'name':
+          features.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          break;
+      }
+
+      const tbody = document.getElementById('ft-table-body');
+      if (features.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#a0a0a0;">No features match filter</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = features.map(f => {
+        const tt = f.truth_table || {};
+        const conf = f.confidence || {};
+        const shortName = f.name.length > 30 ? f.name.substring(0, 27) + '...' : f.name;
+        return `<tr title="${f.name}">
+          <td style="font-size:0.85rem;">${shortName}</td>
+          <td style="text-align:center;">${ftIcon(tt.ui_exists?.verified)}</td>
+          <td style="text-align:center;">${ftIcon(tt.backend_exists?.verified)}</td>
+          <td style="text-align:center;">${ftIcon(tt.api_wired?.verified)}</td>
+          <td style="text-align:center;">${ftIcon(tt.data_persists?.verified)}</td>
+          <td style="text-align:center;">${ftIcon(tt.permissions?.verified)}</td>
+          <td style="text-align:center;">${ftIcon(tt.error_handling?.verified)}</td>
+          <td style="text-align:center;">${ftConfidenceBadge(conf.final_score || 0, conf.level)}</td>
+          <td style="text-align:center;">${ftRecencyBadge(f.recency?.weight)}</td>
+          <td style="text-align:center;">${ftGapBadge(f.gap_analysis)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderFeatureTruthGaps(gaps) {
+      const container = document.getElementById('ft-gaps-content');
+      const priColors = { 'high': '#f44336', 'medium': '#ffc107', 'low': '#a0a0a0' };
+
+      container.innerHTML = gaps.map(gap => `
+        <div style="padding:0.75rem;margin-bottom:0.5rem;background:#0f3460;border-radius:4px;border-left:3px solid ${priColors[gap.priority] || '#a0a0a0'};">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:0.9rem;">${gap.feature_name}</strong>
+            <span style="color:${priColors[gap.priority]};font-size:0.8rem;text-transform:uppercase;">${gap.priority}</span>
+          </div>
+          <div style="font-size:0.85rem;color:#a0a0a0;margin-top:0.25rem;">${gap.gap_type}: ${gap.reason}</div>
+          ${gap.actions && gap.actions.length > 0 ? `
+            <div style="margin-top:0.5rem;">
+              ${gap.actions.map(a => `<div style="font-size:0.8rem;color:#64b5f6;padding:0.15rem 0;">→ ${a.description}</div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
     }
 
     // Make loadSite available globally

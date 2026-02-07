@@ -3,7 +3,7 @@
 /**
  * CCASP Website Intelligence System - MCP Server
  *
- * Exposes 12 MCP tools for Claude Code to perform intelligent site analysis:
+ * Exposes 14 MCP tools for Claude Code to perform intelligent site analysis:
  * - site_intel_scan: Full crawl + 5-layer analysis
  * - site_intel_summarize: Get semantic summaries
  * - site_intel_graph: Get cross-page dependency graph
@@ -16,6 +16,8 @@
  * - site_intel_dev_scan: Developer-focused per-route scan (Playwright)
  * - site_intel_quick_check: Static data-testid coverage check (no Playwright)
  * - site_intel_dev_state: Get current dev scan state
+ * - site_intel_feature_audit: Full-stack feature truth verification (6 dimensions)
+ * - site_intel_contract_tests: Generate backend API contract tests
  *
  * Transport: JSON-RPC 2.0 over stdio (newline-delimited)
  * Zero external dependencies - pure Node.js ES modules
@@ -255,6 +257,50 @@ const TOOLS = [
         projectRoot: {
           type: 'string',
           description: 'Absolute path to the target project root (default: current working directory)'
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_feature_audit',
+    description: 'Run full-stack feature truth verification. Maps CCASP planning hierarchy (Epic → Roadmap → Phase → Task) to verifiable features and checks 6 truth dimensions: UI exists, backend exists, API wired, data persists, permissions enforced, error handling. Returns confidence scores with recency multiplier and gap analysis.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the target project root (default: current working directory)'
+        },
+        featureName: {
+          type: 'string',
+          description: 'Optional: filter to a specific feature by name (partial match)'
+        },
+        generateTests: {
+          type: 'boolean',
+          description: 'Auto-generate missing backend contract tests (default: false)',
+          default: false
+        }
+      }
+    }
+  },
+  {
+    name: 'site_intel_contract_tests',
+    description: 'Generate backend API contract tests for features that have verified backend endpoints but no existing tests. Tests validate status codes, response schema, auth, and error responses.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Absolute path to the target project root (default: current working directory)'
+        },
+        featureName: {
+          type: 'string',
+          description: 'Optional: generate test for a specific feature only (partial match)'
+        },
+        writeToDisk: {
+          type: 'boolean',
+          description: 'Write generated test files to tests/contracts/ (default: false, preview only)',
+          default: false
         }
       }
     }
@@ -763,9 +809,123 @@ async function handleToolCall(name, args) {
       return await handleQuickCheck(args);
     case 'site_intel_dev_state':
       return await handleDevState(args);
+    case 'site_intel_feature_audit':
+      return await handleFeatureAudit(args);
+    case 'site_intel_contract_tests':
+      return await handleContractTests(args);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
+}
+
+// Feature Audit Handler
+async function handleFeatureAudit(args) {
+  const { projectRoot = process.cwd(), featureName, generateTests = false } = args;
+
+  const { runFeatureAudit } = await import('./feature-audit/index.js');
+  const result = await runFeatureAudit(projectRoot, { generateTests });
+
+  if (!result.success) {
+    return { success: false, error: result.message || 'Feature audit failed' };
+  }
+
+  let features = result.features;
+  if (featureName) {
+    const lower = featureName.toLowerCase();
+    features = features.filter(f => f.name.toLowerCase().includes(lower));
+  }
+
+  return {
+    success: true,
+    total_features: result.summary.total_features,
+    summary: result.summary,
+    features: features.map(f => ({
+      id: f.id,
+      name: f.name,
+      status: f.source_task?.status,
+      truth_table: {
+        ui_exists: f.truth_table.ui_exists?.verified ?? null,
+        backend_exists: f.truth_table.backend_exists?.verified ?? null,
+        api_wired: f.truth_table.api_wired?.verified ?? null,
+        data_persists: f.truth_table.data_persists?.verified ?? null,
+        permissions: f.truth_table.permissions?.verified ?? null,
+        error_handling: f.truth_table.error_handling?.verified ?? null,
+      },
+      confidence: f.confidence?.final_score ?? 0,
+      confidence_level: f.confidence?.level ?? 'Low',
+      recency_weight: f.recency?.weight ?? 'Low',
+      is_gap: f.gap_analysis?.is_gap ?? false,
+      gap_type: f.gap_analysis?.gap_type ?? null,
+      gap_priority: f.gap_analysis?.priority ?? null,
+    })),
+    gaps_count: result.gaps?.length || 0,
+    tests_generated: result.generatedTests?.length || 0,
+    state_path: result.statePath,
+  };
+}
+
+// Contract Tests Handler
+async function handleContractTests(args) {
+  const { projectRoot = process.cwd(), featureName, writeToDisk = false } = args;
+
+  const { runFeatureAudit } = await import('./feature-audit/index.js');
+  const { generateContractTest, writeContractTest } = await import('./feature-audit/contract-test-generator.js');
+
+  // Run audit first to get features
+  const auditResult = await runFeatureAudit(projectRoot);
+  if (!auditResult.success) {
+    return { success: false, error: 'Feature audit failed - needed to identify features first' };
+  }
+
+  let features = auditResult.features.filter(f =>
+    f.truth_table?.backend_exists?.verified && !f.tests?.has_contract_test
+  );
+
+  if (featureName) {
+    const lower = featureName.toLowerCase();
+    features = features.filter(f => f.name.toLowerCase().includes(lower));
+  }
+
+  // Load tech stack
+  let techStack = {};
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const tsPath = path.join(projectRoot, 'tech-stack.json');
+    if (fs.existsSync(tsPath)) {
+      techStack = JSON.parse(fs.readFileSync(tsPath, 'utf8'));
+    }
+  } catch { /* ignore */ }
+
+  const results = [];
+  for (const feature of features) {
+    const result = generateContractTest(feature, projectRoot, techStack);
+    if (result.success) {
+      if (writeToDisk) {
+        const written = writeContractTest(result, projectRoot);
+        results.push({
+          feature: feature.name,
+          testFile: result.testFileName,
+          written: written.written,
+          endpoint: result.endpoint,
+        });
+      } else {
+        results.push({
+          feature: feature.name,
+          testFile: result.testFileName,
+          endpoint: result.endpoint,
+          testCode: result.testCode,
+        });
+      }
+    }
+  }
+
+  return {
+    success: true,
+    tests_generated: results.length,
+    written_to_disk: writeToDisk,
+    tests: results,
+  };
 }
 
 // Message Handlers

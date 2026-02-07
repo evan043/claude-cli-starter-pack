@@ -457,6 +457,97 @@ For each phase, define:
 4. Testing - E2E, integration tests
 5. Deploy - Release, monitoring
 
+### Step 3.5: Generate Agent Mapping Per Phase
+
+**After defining phase structure, compute agent mapping for each phase.**
+
+For each phase in the roadmap:
+
+1. **Read agent registry** from `.claude/config/agents.json` (if available)
+2. **Match tasks to agents** by analyzing task keywords/type against agent triggers:
+
+```javascript
+// Agent matching algorithm
+function computeAgentMapping(phase, agentRegistry) {
+  if (!agentRegistry?.specialists?.length) return null;
+
+  const taskAgents = phase.tasks.map(task => {
+    const matched = agentRegistry.specialists.find(agent =>
+      agent.triggers?.some(trigger =>
+        task.description.toLowerCase().includes(trigger.toLowerCase()) ||
+        task.domain === agent.domain
+      )
+    );
+    return {
+      task_id: task.id,
+      agents: matched ? [matched.subagent_type] : ['l2-specialist']
+    };
+  });
+
+  // Build dependency graph and group into batches
+  const batches = buildDependencyBatches(phase.tasks, taskAgents);
+
+  return {
+    primary_agents: [...new Set(taskAgents.filter(ta => ta.agents[0] !== 'l2-specialist').map(ta => ta.agents[0]))],
+    secondary_agents: [],
+    total_batches: batches.length,
+    batches: batches
+  };
+}
+
+// Topological sort → group into dependency-ordered batches
+function buildDependencyBatches(tasks, taskAgents) {
+  const completed = new Set();
+  const batches = [];
+
+  while (completed.size < tasks.length) {
+    const batch = [];
+    for (const task of tasks) {
+      if (completed.has(task.id)) continue;
+      const deps = task.depends_on || task.blockedBy || [];
+      if (deps.every(dep => completed.has(dep))) {
+        const agentInfo = taskAgents.find(ta => ta.task_id === task.id);
+        batch.push({
+          task_id: task.id,
+          agents: agentInfo?.agents || ['l2-specialist']
+        });
+      }
+    }
+    if (batch.length === 0) break; // circular dependency guard
+    batch.forEach(bt => completed.add(bt.task_id));
+    batches.push({
+      batch: batches.length + 1,
+      parallel_tasks: batch
+    });
+  }
+  return batches;
+}
+```
+
+3. **Write `agent_mapping` into each phase** of the plan reference data
+4. **Generate `roadmapAgentMapping`** at the roadmap level:
+
+```json
+{
+  "roadmapAgentMapping": {
+    "auth-backend": {
+      "primary": ["backend-fastapi-specialist"],
+      "secondary": ["test-playwright-specialist"],
+      "description": "Backend requires API + DB work"
+    },
+    "auth-frontend": {
+      "primary": ["frontend-react-specialist"],
+      "secondary": ["state-zustand-specialist"],
+      "description": "Frontend UI components and state management"
+    }
+  }
+}
+```
+
+**If no agent registry exists**, skip this step (backwards compatible).
+
+---
+
 ### Step 3: Apply Intelligence Layer
 
 Analyze selected scope/issues using the intelligence layer:
@@ -551,6 +642,20 @@ Create the roadmap file at `.claude/roadmaps/{slug}/ROADMAP.json`:
       "reason": "Frontend needs backend API endpoints to be ready"
     }
   ],
+
+  // NEW: Agent mapping per plan (computed in Step 3.5)
+  "roadmapAgentMapping": {
+    "auth-backend": {
+      "primary": ["backend-fastapi-specialist"],
+      "secondary": ["test-playwright-specialist"],
+      "description": "Backend requires API + DB work"
+    },
+    "auth-frontend": {
+      "primary": ["frontend-react-specialist"],
+      "secondary": ["state-zustand-specialist"],
+      "description": "Frontend UI components and state management"
+    }
+  },
 
   "metadata": {
     "plan_count": 2,

@@ -44,6 +44,56 @@ When executing phases, you will encounter tasks with `task_type: "system"` or `t
 
 **NEVER skip system tasks.** They are as mandatory as implementation tasks. Mark them completed in PROGRESS.json just like any other task. System tasks execute inline (not as background agents).
 
+### Reading Agent Mapping from PROGRESS.json
+
+Phases may include an `agent_mapping` block that pre-computes which agents handle which tasks and groups them into dependency-ordered batches:
+
+```json
+{
+  "phases": [{
+    "id": 1,
+    "name": "Core Implementation",
+    "agent_mapping": {
+      "primary_agents": ["frontend-react-specialist"],
+      "secondary_agents": ["state-zustand-specialist"],
+      "total_batches": 3,
+      "batches": [
+        {
+          "batch": 1,
+          "parallel_tasks": [
+            {"task_id": "1.1", "agents": ["frontend-react-specialist"]},
+            {"task_id": "1.3", "agents": ["backend-fastapi-specialist"]}
+          ]
+        },
+        {
+          "batch": 2,
+          "parallel_tasks": [
+            {"task_id": "1.2", "agents": ["frontend-react-specialist"]},
+            {"task_id": "1.4", "agents": ["state-zustand-specialist"]}
+          ]
+        },
+        {
+          "batch": 3,
+          "parallel_tasks": [
+            {"task_id": "1.5", "agents": ["test-playwright-specialist"]}
+          ]
+        }
+      ]
+    },
+    "tasks": [...]
+  }]
+}
+```
+
+**When `agent_mapping` is present:**
+- `selectIndependentBatch()` uses pre-computed `batches[]` instead of file-overlap heuristic
+- Each task's `agents[0]` is used as the `subagent_type` for that task
+- Batch visualization shows groupings in the progress display
+
+**When `agent_mapping` is absent (legacy plans):**
+- Falls back to existing file-overlap-based batch selection (fully backwards compatible)
+- Tasks use `assignedAgent` or `l2-specialist` as the subagent_type
+
 ### Reading Orchestration Config
 
 All thresholds and limits are read from the `orchestration` block in PROGRESS.json:
@@ -268,11 +318,12 @@ async function runAllPhasesParallel(progressPath) {
     let pending = phase.tasks.filter(t => !t.completed);
 
     while (pending.length > 0) {
-      // Pick up to 2 independent tasks
-      const batch = selectIndependentBatch(pending, progress.orchestration?.max_parallel_agents || 2);
+      // Pick up to 2 independent tasks (uses agent_mapping batches if available)
+      const batch = selectIndependentBatch(pending, progress.orchestration?.max_parallel_agents || 2, phase);
 
       if (batch.length > 1) {
         // Launch both as background agents
+        // Agent selection priority: agent_mapping.agents[0] > task.assignedAgent > 'l2-specialist'
         const handles = [];
         for (const task of batch) {
           const h = await Task({
@@ -338,7 +389,43 @@ async function runAllPhasesParallel(progressPath) {
   return { status: 'completed' };
 }
 
-function selectIndependentBatch(pending, max) {
+function selectIndependentBatch(pending, max, phase) {
+  // PREFER pre-computed batches from agent_mapping (if present)
+  if (phase?.agent_mapping?.batches?.length > 0) {
+    return selectFromPrecomputedBatches(pending, max, phase.agent_mapping.batches);
+  }
+
+  // FALLBACK: file-overlap heuristic (legacy plans without agent_mapping)
+  return selectByFileOverlap(pending, max);
+}
+
+function selectFromPrecomputedBatches(pending, max, batches) {
+  const pendingIds = new Set(pending.filter(t => !t.completed).map(t => t.id));
+
+  // Find first batch with pending tasks
+  for (const batch of batches) {
+    const batchTasks = batch.parallel_tasks
+      .filter(bt => pendingIds.has(bt.task_id))
+      .slice(0, max)
+      .map(bt => {
+        const task = pending.find(t => t.id === bt.task_id);
+        // Inject agent from mapping if not already set
+        if (task && bt.agents?.length > 0 && !task.assignedAgent) {
+          task.assignedAgent = bt.agents[0];
+        }
+        return task;
+      })
+      .filter(Boolean);
+
+    if (batchTasks.length > 0) return batchTasks;
+  }
+
+  // No pre-computed batch matches — fall back to first pending task
+  const first = pending.find(t => !t.completed);
+  return first ? [first] : [];
+}
+
+function selectByFileOverlap(pending, max) {
   const batch = [];
   const usedFiles = new Set();
 
@@ -381,6 +468,36 @@ Overall: ████████░░░░░░░░░░░░  40% (4/10
 Current Task: 2.2 - Add validation
 Assigned Agent: frontend-react-specialist
 ```
+
+### Batch Visualization (when agent_mapping present)
+
+When a phase has `agent_mapping.batches`, display batch groupings:
+
+```
+Phase 2: Core Implementation (3 batches)
+════════════════════════════════════════
+
+  Batch 1 (parallel):
+    ✓ 2.1  Create component shell      🤖 frontend-react-specialist
+    ✓ 2.3  Add API endpoint            🤖 backend-fastapi-specialist
+
+  Batch 2 (parallel):  ◀ CURRENT
+    ▶ 2.2  Wire state management       🤖 state-zustand-specialist
+    ▶ 2.4  Add form validation         🤖 frontend-react-specialist
+
+  Batch 3 (sequential):
+    ○ 2.5  Integration tests           🤖 test-playwright-specialist
+
+  Primary Agents: frontend-react-specialist
+  Secondary Agents: backend-fastapi-specialist, state-zustand-specialist
+```
+
+**Batch display rules:**
+- Show `✓` for completed tasks, `▶` for in-progress, `○` for pending
+- Mark current batch with `◀ CURRENT`
+- Show agent name next to each task
+- Show primary/secondary agents summary below batches
+- If no `agent_mapping`, skip batch visualization (use standard progress bar)
 
 {{#if agents.available}}
 ## Agent Assignments

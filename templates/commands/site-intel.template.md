@@ -13,6 +13,8 @@ options:
     description: "Show layer status for a scanned site"
   - label: "Dashboard"
     description: "Launch visual dashboard (includes Dev Scan tab)"
+  - label: "Feature Audit"
+    description: "Verify what was built vs what was planned (6 truth dimensions)"
 ---
 
 # Site Intelligence
@@ -32,6 +34,8 @@ options:
 - `/site-intel graph <domain>` — Show dependency graph (Mermaid)
 - `/site-intel drift <domain>` — Compare latest scans for changes
 - `/site-intel dashboard` — Start web dashboard on port 3847
+- `/site-intel audit` — Run feature truth verification (same as /feature-audit)
+- `/site-intel audit --gaps-only` — Show only gaps in feature coverage
 
 ## Instructions
 
@@ -190,7 +194,7 @@ If invoked as just `/site-intel` with no arguments:
 
 ## MCP Tools Reference
 
-All 12 tools are available via the `site-intel` MCP server:
+All 14 tools are available via the `site-intel` MCP server:
 
 | Tool | Input | Purpose |
 |------|-------|---------|
@@ -206,3 +210,5 @@ All 12 tools are available via the `site-intel` MCP server:
 | `site_intel_dev_scan` | `{ projectRoot?, scanType? }` | Dev-focused per-route scan |
 | `site_intel_quick_check` | `{ projectRoot? }` | Static testid coverage check |
 | `site_intel_dev_state` | `{ projectRoot? }` | Get current dev scan state |
+| `site_intel_feature_audit` | `{ projectRoot?, featureName?, generateTests? }` | Feature truth verification |
+| `site_intel_contract_tests` | `{ projectRoot?, featureName?, writeToDisk? }` | Generate backend contract tests |

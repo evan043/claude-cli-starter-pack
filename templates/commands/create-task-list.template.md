@@ -622,6 +622,72 @@ The user should manually verify changes work before committing.
 - Include curl testing tasks BEFORE {{testing.e2e.framework}} tasks when debugging
 {{/if}}
 
+{{#if agents.available}}
+### Agent-Aware Task Metadata
+
+When agents are available, include `assignedAgent` on each task based on domain matching:
+
+```javascript
+// For each generated task, match to best agent
+function assignAgentToTask(task, agentRegistry) {
+  if (!agentRegistry?.specialists?.length) return null;
+  const descLower = task.description.toLowerCase();
+  const matched = agentRegistry.specialists.find(agent =>
+    agent.triggers?.some(t => descLower.includes(t.toLowerCase()))
+  );
+  return matched?.subagent_type || null;
+}
+
+// Example task with assignedAgent:
+TaskCreate({
+  subject: "Implement login form validation",
+  description: "Add client-side validation to login form fields",
+  activeForm: "Implementing login validation",
+  metadata: {
+    assignedAgent: "frontend-react-specialist",  // from agent matching
+    domain: "frontend"
+  }
+});
+```
+
+**Agent assignment display:**
+```
+| # | Task | Agent | Status |
+|---|------|-------|--------|
+| 1 | Login via Playwright | test-playwright-specialist | pending |
+| 2 | Add form validation | frontend-react-specialist | pending |
+| 3 | Create API endpoint | backend-fastapi-specialist | pending |
+```
+{{/if}}
+
+### Batch Grouping Suggestion (when tasks > 4)
+
+When the generated task list has more than 4 implementation tasks, suggest batch grouping for parallel execution:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📦 Batch Grouping Available                                  ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  [N] tasks detected. Consider batch grouping for faster       ║
+║  execution with /phase-track --parallel:                      ║
+║                                                               ║
+║  Batch 1 (no dependencies):                                   ║
+║    - Task 2: [description]  🤖 [agent]                       ║
+║    - Task 3: [description]  🤖 [agent]                       ║
+║                                                               ║
+║  Batch 2 (depends on batch 1):                                ║
+║    - Task 4: [description]  🤖 [agent]                       ║
+║    - Task 5: [description]  🤖 [agent]                       ║
+║                                                               ║
+║  Batch 3 (sequential):                                        ║
+║    - Task 6: Final verification                               ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Batch grouping is a suggestion only** — the user chooses execution strategy in Step 4b (Question 5). If they select "Grouped" execution, use the batch groupings above.
+
 ---
 
 ### Step 6: Execute Workflow Options (Based on Step 4b Selection)

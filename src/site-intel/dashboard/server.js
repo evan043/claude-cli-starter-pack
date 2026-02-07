@@ -14,6 +14,11 @@ import { loadLatestScan } from '../memory/index.js';
 import { toMermaid } from '../graph/index.js';
 import { loadState, getRouteHistory } from '../dev-scan/state-manager.js';
 import { formatDiffForDashboard } from '../dev-scan/diff-reporter.js';
+import {
+  loadFeatureAuditState,
+  saveFeatureAuditState,
+  runFeatureAudit,
+} from '../feature-audit/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -447,6 +452,104 @@ export class SiteIntelDashboardServer {
         }
         res.writeHead(200);
         res.end(JSON.stringify(state.quickCheck));
+        return;
+      }
+
+      // ============================================================
+      // Feature Audit API Endpoints
+      // ============================================================
+
+      // GET /api/feature-audit/state - full feature audit state
+      if (pathname === '/api/feature-audit/state') {
+        const auditState = loadFeatureAuditState(this.projectRoot);
+        if (!auditState) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No feature audit data. Run /feature-audit first.' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(auditState));
+        return;
+      }
+
+      // GET /api/feature-audit/summary - summary metrics
+      if (pathname === '/api/feature-audit/summary') {
+        const auditState = loadFeatureAuditState(this.projectRoot);
+        if (!auditState) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No feature audit data' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(auditState.summary || {}));
+        return;
+      }
+
+      // GET /api/feature-audit/features - all features with truth tables
+      if (pathname === '/api/feature-audit/features') {
+        const auditState = loadFeatureAuditState(this.projectRoot);
+        if (!auditState) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No feature audit data' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify({ features: auditState.features || [], total: (auditState.features || []).length }));
+        return;
+      }
+
+      // GET /api/feature-audit/features/:id - single feature detail
+      const ftFeatureMatch = pathname.match(/^\/api\/feature-audit\/features\/(.+)$/);
+      if (ftFeatureMatch) {
+        const auditState = loadFeatureAuditState(this.projectRoot);
+        if (!auditState) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No feature audit data' }));
+          return;
+        }
+        const featureId = decodeURIComponent(ftFeatureMatch[1]);
+        const feature = (auditState.features || []).find(f => f.id === featureId);
+        if (!feature) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: `Feature not found: ${featureId}` }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify({ feature }));
+        return;
+      }
+
+      // GET /api/feature-audit/gaps - gaps sorted by priority
+      if (pathname === '/api/feature-audit/gaps') {
+        const auditState = loadFeatureAuditState(this.projectRoot);
+        if (!auditState) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No feature audit data' }));
+          return;
+        }
+        const { getGapsSorted, generateRecommendations } = await import('../feature-audit/gap-analyzer.js');
+        const gaps = getGapsSorted(auditState.features || []);
+        const recommendations = generateRecommendations(gaps);
+        res.writeHead(200);
+        res.end(JSON.stringify({ gaps: recommendations, total: recommendations.length }));
+        return;
+      }
+
+      // POST /api/feature-audit/run - trigger a new feature audit
+      if (pathname === '/api/feature-audit/run' && req.method === 'POST') {
+        try {
+          const result = await runFeatureAudit(this.projectRoot);
+          res.writeHead(200);
+          res.end(JSON.stringify({
+            success: result.success,
+            summary: result.summary,
+            gaps_count: result.gaps?.length || 0,
+            message: result.message || 'Feature audit completed',
+          }));
+        } catch (error) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: error.message }));
+        }
         return;
       }
 

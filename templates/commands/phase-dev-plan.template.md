@@ -95,6 +95,101 @@ Use AskUserQuestion to collect:
 ### Step 3: Generate Phase Breakdown
 Based on exploration findings, create phases with clear objectives, success criteria, and agent assignments.
 
+### Step 3.5: Compute Agent Mapping Per Phase
+
+**After generating the phase breakdown, compute `agent_mapping` for each phase.**
+
+For each phase:
+
+1. **Read agent registry** from `.claude/config/agents.json` (if available)
+2. **Analyze each task's type/keywords** and match against agent triggers
+3. **Build dependency graph** from `task.depends_on` / `task.blockedBy`
+4. **Topological sort into batches:**
+   - Batch 1: all tasks with no dependencies
+   - Batch 2: tasks depending only on batch 1 tasks
+   - Batch N: tasks depending only on batches 1..N-1
+5. **Cap each batch** at `orchestration.max_parallel_agents` (default 2)
+6. **Write `agent_mapping` into each phase** of PROGRESS.json
+
+```javascript
+function computePhaseAgentMapping(phase, agentRegistry, maxParallel) {
+  if (!agentRegistry?.specialists?.length) return null;
+
+  // Match tasks to agents
+  const taskAgents = phase.tasks
+    .filter(t => t.task_type !== 'system' && t.task_type !== 'orchestration')
+    .map(task => {
+      const matched = agentRegistry.specialists.find(agent =>
+        agent.triggers?.some(trigger =>
+          task.description.toLowerCase().includes(trigger.toLowerCase())
+        )
+      );
+      return {
+        task_id: task.id,
+        agents: matched ? [matched.subagent_type] : ['l2-specialist']
+      };
+    });
+
+  // Build dependency-ordered batches
+  const completed = new Set();
+  const batches = [];
+  const taskMap = new Map(phase.tasks.map(t => [t.id, t]));
+
+  while (completed.size < taskAgents.length) {
+    const batch = [];
+    for (const ta of taskAgents) {
+      if (completed.has(ta.task_id)) continue;
+      const task = taskMap.get(ta.task_id);
+      const deps = task?.depends_on || task?.blockedBy || [];
+      if (deps.every(dep => completed.has(dep))) {
+        batch.push(ta);
+      }
+    }
+    if (batch.length === 0) break;
+
+    // Cap at max_parallel_agents
+    const capped = batch.slice(0, maxParallel || 2);
+    capped.forEach(bt => completed.add(bt.task_id));
+    // Add remaining from this batch level in next iteration
+    batch.slice(maxParallel || 2).forEach(() => {}); // handled next loop
+
+    batches.push({
+      batch: batches.length + 1,
+      parallel_tasks: capped
+    });
+
+    // Mark all from this dependency level as completed for next batch
+    batch.forEach(bt => completed.add(bt.task_id));
+  }
+
+  const allAgents = taskAgents.map(ta => ta.agents[0]).filter(a => a !== 'l2-specialist');
+  return {
+    primary_agents: [...new Set(allAgents)],
+    secondary_agents: [],
+    total_batches: batches.length,
+    batches
+  };
+}
+```
+
+**Include batch visualization in executive summary:**
+
+```markdown
+## Agent Mapping
+
+| Phase | Primary Agents | Batches | Tasks |
+|-------|---------------|---------|-------|
+| Phase 1 | frontend-react-specialist | 2 | 4 |
+| Phase 2 | backend-fastapi-specialist | 3 | 6 |
+| Phase 3 | test-playwright-specialist | 1 | 2 |
+
+### Phase 1 Batches
+- **Batch 1** (parallel): 1.1 [frontend], 1.3 [backend]
+- **Batch 2** (parallel): 1.2 [frontend], 1.4 [state]
+```
+
+**If no agent registry exists**, skip agent_mapping (backwards compatible — `agent_mapping` will be absent from PROGRESS.json).
+
 ### Step 4: Create Plan Artifacts
 
 Create `.claude/phase-plans/{slug}/PROGRESS.json` with parent context:
@@ -131,7 +226,22 @@ Create `.claude/phase-plans/{slug}/PROGRESS.json` with parent context:
           "completed": false
         }
       ],
-      "success_criteria": ["{criterion}"]
+      "success_criteria": ["{criterion}"],
+
+      // NEW: Agent mapping (computed in Step 3.5, optional)
+      "agent_mapping": {
+        "primary_agents": ["frontend-react-specialist"],
+        "secondary_agents": [],
+        "total_batches": 2,
+        "batches": [
+          {
+            "batch": 1,
+            "parallel_tasks": [
+              {"task_id": "1.1", "agents": ["frontend-react-specialist"]}
+            ]
+          }
+        ]
+      }
     }
   ]
 }

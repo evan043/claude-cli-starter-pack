@@ -18,6 +18,7 @@ VISION (L0+) → EPIC (L0) → ROADMAP (L1) → PHASE-DEV (L2) → TASKS (L3)
 
 **Key Capabilities:**
 - Natural language prompt parsing
+- **Deep competitive feature extraction** (mandatory web search for comparable apps)
 - Web search for inspiration and tools
 - ASCII UI wireframe generation
 - Mermaid architecture diagrams
@@ -209,11 +210,203 @@ The PRD is stored in `VISION.json` under `requirements_document` and used by:
 - Phase planning to link tasks to requirements
 - Alignment validation during autonomous execution
 
+### Step 2c: Deep Web Search - Competitive Feature Extraction (MANDATORY)
+
+**ALWAYS run this step when the vision involves building an application.** This is NOT optional — skipping it results in incomplete feature discovery and missed patterns from established apps.
+
+**Purpose:** Search for comparable/competitor apps, extract their full feature sets, and use those to enrich the vision's feature list before architecture planning.
+
+**Step 2c.1: Identify Comparable Apps**
+
+Run multiple targeted web searches to find the top comparable apps:
+
+```javascript
+// Search queries are derived from the parsed prompt
+const appCategory = initResult.parsedPrompt.intent; // e.g., "kanban board", "e-commerce", "CRM"
+const features = initResult.parsedPrompt.features.map(f => f.name || f).join(', ');
+
+// MANDATORY: Run at least 3 search queries in parallel
+const searchQueries = [
+  `best ${appCategory} apps 2026 features comparison`,
+  `${appCategory} open source alternatives feature list`,
+  `top ${appCategory} software features pricing comparison`,
+  `${appCategory} MVP features checklist what to build`,
+  `${features} app examples competitors`
+];
+
+// Execute searches in parallel using WebSearch tool
+// Deploy 3 parallel search agents for speed
+const searchResults = await Promise.all([
+  WebSearch({ query: searchQueries[0] }),
+  WebSearch({ query: searchQueries[1] }),
+  WebSearch({ query: searchQueries[2] })
+]);
+
+// Extract unique app names and URLs from search results
+const comparableApps = deduplicateApps(searchResults);
+console.log(`🔍 Found ${comparableApps.length} comparable apps`);
+```
+
+**Step 2c.2: Extract Features from Top Competitors**
+
+For the top 5 comparable apps, fetch their feature/pricing pages and extract feature lists:
+
+```javascript
+// For each comparable app, fetch their features page
+const featureExtractions = [];
+
+for (const app of comparableApps.slice(0, 5)) {
+  // Use WebFetch to extract feature information
+  const extraction = await WebFetch({
+    url: app.featurePageUrl || app.url,
+    prompt: `Extract a COMPLETE feature list from this app/product page.
+For each feature, provide:
+1. Feature name (short)
+2. Category (core, advanced, integration, admin, UX)
+3. One-line description
+4. Whether it seems like a must-have vs nice-to-have for an MVP
+
+Return as structured list. Be thorough — extract EVERY feature mentioned on the page.`
+  });
+
+  featureExtractions.push({
+    appName: app.name,
+    url: app.url,
+    features: extraction.features || [],
+    extractedAt: new Date().toISOString()
+  });
+
+  console.log(`  ✓ ${app.name}: ${extraction.features?.length || 0} features extracted`);
+}
+```
+
+**Step 2c.3: Build Competitive Feature Matrix**
+
+Synthesize all extracted features into a unified matrix:
+
+```javascript
+// Merge features across all competitors
+const featureMatrix = buildFeatureMatrix(featureExtractions);
+
+// featureMatrix structure:
+// {
+//   categories: {
+//     core: [
+//       { name: "Drag-and-drop", foundIn: ["Trello", "Asana", "Monday"], frequency: 3, priority: "must-have" },
+//       { name: "Board view", foundIn: ["Trello", "Notion"], frequency: 2, priority: "must-have" }
+//     ],
+//     advanced: [...],
+//     integration: [...],
+//     admin: [...],
+//     ux: [...]
+//   },
+//   totalUniqueFeatures: 47,
+//   highFrequencyFeatures: [...],  // Found in 3+ apps
+//   mvpRecommendations: [...]      // Must-haves for MVP
+// }
+```
+
+**Step 2c.4: Display Competitive Analysis**
+
+```
+╔════════════════════════════════════════════════════════════════════╗
+║          COMPETITIVE FEATURE ANALYSIS 🔍                            ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Comparable Apps Analyzed: {{comparableApps.length}}               ║
+║                                                                    ║
+{{#each comparableApps}}
+║    {{@index}}. {{name}} ({{features.length}} features)             ║
+{{/each}}
+║                                                                    ║
+╠════════════════════════════════════════════════════════════════════╣
+║  FEATURE FREQUENCY (found in 3+ apps = industry standard)         ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+{{#each featureMatrix.highFrequencyFeatures}}
+║    ★ {{name}} ({{frequency}}/{{totalApps}} apps) — {{priority}}    ║
+{{/each}}
+║                                                                    ║
+╠════════════════════════════════════════════════════════════════════╣
+║  MVP RECOMMENDATIONS                                               ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Must-Have (industry standard):                                    ║
+{{#each featureMatrix.mvpRecommendations}}
+║    ✓ {{name}}                                                      ║
+{{/each}}
+║                                                                    ║
+║  Nice-to-Have (differentiators):                                   ║
+{{#each featureMatrix.niceToHave}}
+║    ○ {{name}}                                                      ║
+{{/each}}
+║                                                                    ║
+║  Total Unique Features Discovered: {{featureMatrix.totalUnique}}   ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+```
+
+**Step 2c.5: Enrich Vision Feature List**
+
+Ask user which discovered features to add:
+
+```
+header: "Feature Enrichment"
+question: "Competitive analysis found {{newFeatureCount}} features not in your original prompt. Add them?"
+options:
+  - label: "Add all must-haves (Recommended)"
+    description: "Add {{mustHaveCount}} industry-standard features to your vision"
+  - label: "Let me pick"
+    description: "Review and select individual features to add"
+  - label: "Skip - use only my original features"
+    description: "Don't add any discovered features"
+```
+
+**Store competitive analysis** in the vision directory:
+
+```javascript
+// Save competitive analysis for reference during planning
+const analysisPath = `.claude/visions/${visionSlug}/competitive-analysis.json`;
+writeFileSync(analysisPath, JSON.stringify({
+  analyzedAt: new Date().toISOString(),
+  comparableApps: featureExtractions,
+  featureMatrix: featureMatrix,
+  enrichedFeatures: enrichedFeatures, // features added to vision
+  searchQueries: searchQueries
+}, null, 2));
+
+// Update VISION.json with enriched features
+await updateVision(projectRoot, visionSlug, (v) => {
+  v.metadata.competitive_analysis = {
+    apps_analyzed: comparableApps.length,
+    features_discovered: featureMatrix.totalUniqueFeatures,
+    features_added: enrichedFeatures.length,
+    analysis_file: analysisPath
+  };
+  // Merge enriched features into vision's feature list
+  v.metadata.features = [...(v.metadata.features || []), ...enrichedFeatures];
+  return v;
+});
+
+console.log(`✅ Competitive analysis complete. ${enrichedFeatures.length} features added to vision.`);
+```
+
+**If web search is unavailable** (offline mode), log a warning and continue:
+```
+⚠️ Web search unavailable — competitive feature extraction skipped.
+   Vision will proceed with features from your prompt only.
+   Re-run /vision-init online for full feature discovery.
+```
+
+---
+
 ### Step 3: Run Analysis Phase
 
 ```javascript
 // Run analysis (web search, tool discovery, MCP matching)
-console.log('📊 Running analysis...');
+// NOTE: Step 2c already performed deep competitive analysis.
+// This step focuses on TOOL discovery (packages, MCP servers).
+console.log('📊 Running tool & dependency analysis...');
 const analysisResult = await orchestrator.analyze();
 
 if (analysisResult.success) {
@@ -225,7 +418,7 @@ if (analysisResult.success) {
 ```
 
 **Analysis results include:**
-- Similar apps from web search
+- Similar apps from web search (supplements Step 2c findings)
 - UI patterns and inspiration
 - NPM/pip package recommendations
 - MCP server matches
@@ -565,7 +758,16 @@ if (sessionCheck.needsRestart) {
 ║  📁 Location: .claude/visions/{{slug}}/VISION.json                 ║
 ║                                                                    ║
 ╠════════════════════════════════════════════════════════════════════╣
-║  🔍 Analysis Complete                                              ║
+║  🔍 Competitive Analysis                                           ║
+╠════════════════════════════════════════════════════════════════════╣
+║                                                                    ║
+║  Comparable Apps Analyzed: {{competitive_apps_count}}               ║
+║  Features Discovered: {{competitive_features_count}}               ║
+║  Features Added to Vision: {{features_enriched_count}}             ║
+║  Analysis File: .claude/visions/{{slug}}/competitive-analysis.json ║
+║                                                                    ║
+╠════════════════════════════════════════════════════════════════════╣
+║  🔧 Tool & Dependency Analysis                                     ║
 ╠════════════════════════════════════════════════════════════════════╣
 ║                                                                    ║
 ║  Similar Apps Found: {{similar_apps_count}}                        ║
@@ -605,6 +807,10 @@ if (sessionCheck.needsRestart) {
 ║                                                                    ║
 ║  5. Cleanup stale visions:                                         ║
 ║     ccasp vision cleanup                                           ║
+║                                                                    ║
+║  6. After first roadmap phase completes:                           ║
+║     /feature-audit   (verify what was built vs planned)            ║
+║     /feature-audit --generate-tests   (auto-generate tests)       ║
 ║                                                                    ║
 ╚════════════════════════════════════════════════════════════════════╝
 ```
@@ -666,7 +872,13 @@ Before marking complete, verify:
 ```
 [ ] VISION.json created in .claude/visions/{slug}/
 [ ] Prompt parsed successfully
-[ ] Analysis completed (web search, tools)
+[ ] Deep competitive feature extraction completed (Step 2c)
+    [ ] 3+ web searches executed for comparable apps
+    [ ] Top 5 competitor feature pages fetched and extracted
+    [ ] Feature matrix built with frequency analysis
+    [ ] competitive-analysis.json saved to vision directory
+    [ ] User asked about feature enrichment
+[ ] Tool & dependency analysis completed (Step 3)
 [ ] Architecture generated (diagrams, components)
 [ ] Mockup preview offered (if frontend work detected)
 [ ] Security scan completed

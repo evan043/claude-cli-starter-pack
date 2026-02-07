@@ -107,9 +107,42 @@ Based on domain analysis, determine HOW MANY roadmaps are needed:
 - Roadmap 2: Feature Set B (can run parallel)
 - Roadmap 3: Integration
 
-### Step 4: Create EPIC.json with Roadmap Placeholders
+### Step 4: Create EPIC.json with Roadmap Placeholders and Agent Mapping
 
-Use `src/epic/schema.js` to create epic structure:
+Use `src/epic/schema.js` to create epic structure.
+
+**Step 4a: Compute Roadmap-to-Agent Affinity**
+
+Before creating EPIC.json, analyze each roadmap's description against the agent registry to determine which agents are best suited:
+
+```javascript
+// Compute roadmap-to-agent affinity based on roadmap descriptions vs agent triggers
+function computeRoadmapAgentMapping(roadmaps, agentRegistry) {
+  if (!agentRegistry?.specialists?.length) return {};
+
+  const mapping = {};
+  for (const roadmap of roadmaps) {
+    const descLower = (roadmap.description + ' ' + roadmap.title).toLowerCase();
+    const primary = [];
+    const secondary = [];
+
+    for (const agent of agentRegistry.specialists) {
+      const matchCount = (agent.triggers || []).filter(t => descLower.includes(t.toLowerCase())).length;
+      if (matchCount >= 2) primary.push(agent.subagent_type);
+      else if (matchCount >= 1) secondary.push(agent.subagent_type);
+    }
+
+    mapping[roadmap.slug] = {
+      primary: primary.length > 0 ? primary : ['l2-specialist'],
+      secondary: secondary,
+      description: `${roadmap.title} - ${primary.length} primary, ${secondary.length} secondary agents`
+    };
+  }
+  return mapping;
+}
+```
+
+**Step 4b: Create EPIC.json**
 
 ```javascript
 import { createEpic, createRoadmapPlaceholder } from './src/epic/schema.js';
@@ -140,6 +173,29 @@ const epic = createEpic({
     agent_model: 'sonnet',
   }
 });
+
+// NEW: Add agent configuration snapshot
+const agentRegistry = loadAgentRegistry(projectRoot);
+if (agentRegistry?.specialists?.length) {
+  epic.agents = {
+    configured: true,
+    configFile: '.claude/config/agents.json',
+    totalAgents: agentRegistry.specialists.length,
+    specialists: agentRegistry.specialists.map(a => ({
+      name: a.name,
+      subagent_type: a.subagent_type,
+      domain: a.domain,
+      triggers: a.triggers
+    }))
+  };
+
+  epic.roadmapAgentMapping = computeRoadmapAgentMapping(
+    epic.roadmaps, agentRegistry
+  );
+} else {
+  epic.agents = { configured: false, configFile: null, totalAgents: 0, specialists: [] };
+  epic.roadmapAgentMapping = {};
+}
 
 // Add roadmap placeholders
 for (let i = 0; i < roadmapCount; i++) {

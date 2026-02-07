@@ -151,6 +151,9 @@ function loadRoadmapState(slug) {
 {{#each planRefs}}
 ║  {{statusIcon}} {{slug}}: {{title}}                                         ║
 ║     Progress: [{{planProgress}}] {{planPercentage}}%                        ║
+{{#if agents_assigned}}
+║     🤖 Agents: {{agents_assigned}}                                          ║
+{{/if}}
 {{#if isActive}}
 ║     ▶ ACTIVE                                                                ║
 {{/if}}
@@ -228,7 +231,13 @@ async function startPlan(roadmap, planSlug) {
   // 2. Update plan reference status
   updatePlanReference(roadmap, planSlug, { status: 'in_progress' });
 
-  // 3. Delegate to /phase-track for execution
+  // 3. Pass agent context from roadmapAgentMapping (if available)
+  const agentMapping = roadmap.roadmapAgentMapping?.[planSlug];
+  if (agentMapping) {
+    console.log(`🤖 Agents for ${planSlug}: ${agentMapping.primary.join(', ')}`);
+  }
+
+  // 4. Delegate to /phase-track for execution
   console.log(`Starting plan: ${planSlug}`);
   console.log(`Delegating to /phase-track ${planSlug}...`);
 
@@ -577,6 +586,34 @@ Overall: [█████████████░░░░░░░░░░�
 Dependencies:
   auth-frontend → auth-backend ✅
   auth-testing → auth-frontend ⚠️ (waiting)
+```
+
+#### Agent Mapping Display (when roadmapAgentMapping present)
+
+If the roadmap has `roadmapAgentMapping`, display agent assignments per plan:
+
+```
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  AGENT ASSIGNMENTS                                                         ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  auth-backend:                                                             ║
+║     Primary: backend-fastapi-specialist                                    ║
+║     Secondary: test-playwright-specialist                                  ║
+║  auth-frontend:                                                            ║
+║     Primary: frontend-react-specialist                                     ║
+║     Secondary: state-zustand-specialist                                    ║
+║  auth-testing:                                                             ║
+║     Primary: test-playwright-specialist                                    ║
+╠═══════════════════════════════════════════════════════════════════════════╣
+```
+
+**Populate `agents_assigned` display field** for each plan reference:
+```javascript
+function getAgentsAssigned(roadmap, planSlug) {
+  const mapping = roadmap.roadmapAgentMapping?.[planSlug];
+  if (!mapping) return null;
+  return mapping.primary.join(', ');
+}
 ```
 
 ### Step 6: Parent Epic Sync
