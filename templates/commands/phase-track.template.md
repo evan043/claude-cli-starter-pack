@@ -31,6 +31,39 @@ View and update progress on phased development plans.
 
 {{#if phasedDevelopment.enabled}}
 
+## System Task Handling
+
+When executing phases, you will encounter tasks with `task_type: "system"` or `task_type: "orchestration"`. These are mandatory orchestration steps injected into every phase:
+
+| Task ID Pattern | Type | Action |
+|----------------|------|--------|
+| `X.0-context-check` | system | Check context %. If above threshold from `orchestration.compact_threshold_percent`, run /compact |
+| `X.0-batch-plan` | orchestration | Analyze implementation tasks, group into non-overlapping batches of max `orchestration.max_parallel_agents` |
+| `X.99-compact` | system | Run /compact, verify PROGRESS.json saved to disk |
+| `X.99-gate` | system | Re-read PROGRESS.json from disk, verify ALL phase tasks complete. HALT if any incomplete |
+
+**NEVER skip system tasks.** They are as mandatory as implementation tasks. Mark them completed in PROGRESS.json just like any other task. System tasks execute inline (not as background agents).
+
+### Reading Orchestration Config
+
+All thresholds and limits are read from the `orchestration` block in PROGRESS.json:
+```json
+{
+  "orchestration": {
+    "mode": "parallel",
+    "max_parallel_agents": 2,
+    "batch_strategy": "no_file_overlap",
+    "compact_threshold_percent": 40,
+    "poll_interval_seconds": 120,
+    "compact_after_launch": true,
+    "compact_after_poll": true,
+    "agent_model": "sonnet"
+  }
+}
+```
+
+If `orchestration` is missing (legacy plans), use defaults: `max_parallel_agents: 2, compact_threshold_percent: 40, poll_interval_seconds: 120, agent_model: 'sonnet'`.
+
 ## Configuration
 
 | Setting | Value |
@@ -218,7 +251,7 @@ async function runAllPhasesParallel(progressPath) {
 
     // HARD GATE: context check (40% remaining = 60% used)
     const usage = await estimateContextUsage();
-    if (usage.percent > 60) {
+    if (usage.percent > (100 - (progress.orchestration?.compact_threshold_percent || 40))) {
       console.log(`⛔ CONTEXT: ${usage.percent}% used (40% remaining threshold). STOPPING.`);
       console.log(`   /compact then /phase-track ${slug} --run-all --parallel`);
       fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
@@ -236,7 +269,7 @@ async function runAllPhasesParallel(progressPath) {
 
     while (pending.length > 0) {
       // Pick up to 2 independent tasks
-      const batch = selectIndependentBatch(pending, 2);
+      const batch = selectIndependentBatch(pending, progress.orchestration?.max_parallel_agents || 2);
 
       if (batch.length > 1) {
         // Launch both as background agents
@@ -246,21 +279,23 @@ async function runAllPhasesParallel(progressPath) {
             description: `Task ${task.id}: ${task.description.slice(0, 40)}`,
             prompt: buildAOPPrompt(task, cacheDir, batchId),
             subagent_type: task.assignedAgent || 'l2-specialist',
-            model: 'haiku',
+            model: progress.orchestration?.agent_model || 'sonnet',
             run_in_background: true
           });
           handles.push({ handle: h, task });
         }
 
         // COMPACT IMMEDIATELY after launching agents
-        await compactContext();
+        if (progress.orchestration?.compact_after_launch !== false) {
+          await compactContext();
+        }
 
         // Poll every 2 minutes, compact after each poll
         for (const { handle, task } of handles) {
           const result = await TaskOutput({
             task_id: handle.task_id,
             block: true,
-            timeout: 120000  // 2 minutes
+            timeout: (progress.orchestration?.poll_interval_seconds || 120) * 1000
           });
 
           // Update PROGRESS.json immediately
@@ -272,7 +307,9 @@ async function runAllPhasesParallel(progressPath) {
           fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2));
 
           // COMPACT after each poll result
-          await compactContext();
+          if (progress.orchestration?.compact_after_poll !== false) {
+            await compactContext();
+          }
         }
       } else {
         // Single task — run inline (same as sequential mode)
@@ -305,20 +342,26 @@ function selectIndependentBatch(pending, max) {
   const batch = [];
   const usedFiles = new Set();
 
-  for (const task of pending) {
+  // Filter out system/orchestration tasks (they run inline, not as agents)
+  const agentTasks = pending.filter(t =>
+    t.task_type !== 'system' && t.task_type !== 'orchestration'
+  );
+
+  for (const task of agentTasks) {
     if (batch.length >= max) break;
 
     // Skip if depends on unfinished task
-    if (task.depends_on?.some(dep => pending.some(p => p.id === dep && !p.completed))) continue;
+    if (task.blockedBy?.some(dep => pending.some(p => p.id === dep && !p.completed))) continue;
 
     // Skip if file conflict with batch
-    if (task.files?.some(f => usedFiles.has(f))) continue;
+    const taskFiles = (task.files || []).map(f => typeof f === 'string' ? f : f.path);
+    if (taskFiles.some(f => usedFiles.has(f))) continue;
 
     batch.push(task);
-    task.files?.forEach(f => usedFiles.add(f));
+    taskFiles.forEach(f => usedFiles.add(f));
   }
 
-  return batch.length > 0 ? batch : [pending[0]];
+  return batch.length > 0 ? batch : (agentTasks.length > 0 ? [agentTasks[0]] : []);
 }
 ```
 
@@ -448,7 +491,7 @@ async function runAllPhasesContextSafe(progressPath) {
     // HARD GATE #1: Context check BEFORE each phase (not after)
     // ═══════════════════════════════════════════════════════════════
     const usage = await estimateContextUsage();
-    if (usage.percent > 70) {
+    if (usage.percent > (100 - (progress.orchestration?.compact_threshold_percent || 40))) {
       console.log(`\n⛔ CONTEXT GATE: ${usage.percent}% used. STOPPING execution.`);
       console.log('   Run /compact then resume with /phase-track ${slug} --run-all');
       console.log('   Progress is saved — you will pick up where you left off.\n');

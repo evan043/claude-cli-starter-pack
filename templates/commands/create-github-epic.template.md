@@ -130,6 +130,14 @@ const epic = createEpic({
     integration_tests: false,
     e2e_tests: false,
     min_coverage: 0
+  },
+  // Orchestration directives (embedded in EPIC.json, read by executor)
+  orchestration: {
+    max_parallel_roadmaps: 2,
+    roadmap_batch_strategy: 'dependency_order',
+    compact_before_roadmap: true,
+    context_threshold_percent: 40,
+    agent_model: 'sonnet',
   }
 });
 

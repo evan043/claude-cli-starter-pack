@@ -50,6 +50,24 @@ Launching multiple plans/phases in parallel causes:
 | No full output aggregation | Read completion from files |
 | Context checkpoints | Check before each plan |
 
+### Orchestration Config (Read from ROADMAP.json)
+
+All thresholds and limits are read from the `orchestration` block embedded in ROADMAP.json:
+```json
+{
+  "orchestration": {
+    "max_parallel_plans": 2,
+    "plan_batch_strategy": "dependency_order",
+    "compact_before_plan": true,
+    "compact_after_plan": true,
+    "context_threshold_percent": 40,
+    "agent_model": "sonnet"
+  }
+}
+```
+
+If `orchestration` is missing (legacy roadmaps), defaults apply: `max_parallel_plans: 2, context_threshold_percent: 40, agent_model: 'sonnet'`.
+
 ## NEW ARCHITECTURE (Epic-Hierarchy)
 
 Roadmap now coordinates MULTIPLE phase-dev-plans instead of direct phases:
@@ -312,7 +330,7 @@ async function runAllPlans(roadmap) {
   for (const planRef of orderedPlans) {
     // CONTEXT CHECKPOINT: Check before each plan
     const contextUsage = await estimateContextUsage();
-    if (contextUsage.percent > 70) {
+    if (contextUsage.percent > (100 - (roadmap.orchestration?.context_threshold_percent || 40))) {
       console.log(`\n⚠️ CONTEXT CHECKPOINT: ${contextUsage.percent}% used`);
       console.log('   Consider: /compact to free context before continuing');
       console.log('   Progress is saved - you can safely compact and resume.\n');
@@ -330,6 +348,12 @@ async function runAllPlans(roadmap) {
     if (!depCheck.satisfied) {
       console.log(`⚠️ Plan ${planRef.slug} blocked: ${depCheck.missing.join(', ')}`);
       continue;
+    }
+
+    // Compact before plan if configured in orchestration block
+    if (roadmap.orchestration?.compact_before_plan !== false) {
+      console.log('   Compacting context before plan execution...');
+      await compactContext();
     }
 
     // Start plan - update FILE immediately
@@ -357,6 +381,12 @@ async function runAllPlans(roadmap) {
     // Minimal context output (summary only)
     console.log(`   ✓ ${planRef.status}: ${planRef.completion_percentage}%`);
     console.log(`   Roadmap: ${roadmap.metadata.overall_completion_percentage}%`);
+
+    // Compact after plan if configured in orchestration block
+    if (roadmap.orchestration?.compact_after_plan !== false) {
+      console.log('   Compacting context after plan completion...');
+      await compactContext();
+    }
 
     // Sync to parent epic (file update, not context)
     if (roadmap.parent_epic) {
@@ -464,7 +494,7 @@ async function runAllPlansParallel(roadmap) {
   while (completedSlugs.size < orderedPlans.length) {
     // Context check (40% remaining = 60% used)
     const usage = await estimateContextUsage();
-    if (usage.percent > 60) {
+    if (usage.percent > (100 - (roadmap.orchestration?.context_threshold_percent || 40))) {
       console.log(`⛔ CONTEXT: ${usage.percent}% used. STOPPING.`);
       console.log(`   /compact then /roadmap-track ${roadmap.slug} run-all --parallel`);
       fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
@@ -480,8 +510,8 @@ async function runAllPlansParallel(roadmap) {
 
     if (available.length === 0) break;
 
-    // Launch up to 2
-    const batch = available.slice(0, 2);
+    // Launch up to max_parallel_plans (default 2)
+    const batch = available.slice(0, roadmap.orchestration?.max_parallel_plans || 2);
     const handles = [];
 
     for (const plan of batch) {
@@ -492,7 +522,7 @@ async function runAllPlansParallel(roadmap) {
         description: `Plan: ${plan.slug}`,
         prompt: `Execute /phase-track ${plan.slug} --run-all\nReturn only: [PLAN:${plan.slug}] {status}: {summary}`,
         subagent_type: 'phase-orchestrator',
-        model: 'sonnet',
+        model: roadmap.orchestration?.agent_model || 'sonnet',
         run_in_background: true
       });
       handles.push({ handle: h, plan });

@@ -112,6 +112,21 @@
                 "agent": {
                   "type": "string",
                   "description": "Assigned agent (optional)"
+                },
+                "task_type": {
+                  "type": "string",
+                  "enum": ["implementation", "system", "orchestration", "validation", "testing"],
+                  "default": "implementation",
+                  "description": "Task category. system/orchestration tasks are auto-injected gate/compacting steps"
+                },
+                "run_in_background": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether this task should run as a background agent"
+                },
+                "batch_group": {
+                  "type": ["string", "null"],
+                  "description": "Batch identifier for parallel execution grouping"
                 }
               }
             }
@@ -137,6 +152,61 @@
             "enabled": { "type": "boolean" },
             "maxIterations": { "type": "integer" }
           }
+        }
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "description": "Embedded orchestration directives for parallel agent execution, batching, and compacting",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["sequential", "parallel"],
+          "default": "parallel",
+          "description": "Execution mode for tasks within phases"
+        },
+        "max_parallel_agents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 2,
+          "description": "Max concurrent background agents per batch"
+        },
+        "batch_strategy": {
+          "type": "string",
+          "enum": ["no_file_overlap", "dependency_order", "domain_isolation"],
+          "default": "no_file_overlap",
+          "description": "How to batch tasks for parallel execution"
+        },
+        "compact_threshold_percent": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 60,
+          "default": 40,
+          "description": "Compact when remaining context drops below this percentage"
+        },
+        "poll_interval_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 300,
+          "default": 120,
+          "description": "Seconds between polling background agents"
+        },
+        "compact_after_launch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact immediately after launching background agents"
+        },
+        "compact_after_poll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact after every poll cycle"
+        },
+        "agent_model": {
+          "type": "string",
+          "enum": ["haiku", "sonnet", "opus"],
+          "default": "sonnet",
+          "description": "Default model for spawned agents"
         }
       }
     }

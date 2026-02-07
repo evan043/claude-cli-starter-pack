@@ -102,6 +102,48 @@
         "used": { "type": "integer" },
         "remaining": { "type": "integer" }
       }
+    },
+    "orchestration": {
+      "type": "object",
+      "description": "Embedded orchestration directives for plan-level parallel execution and compacting",
+      "properties": {
+        "max_parallel_plans": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 2,
+          "description": "Max concurrent phase-dev-plans to execute in parallel"
+        },
+        "plan_batch_strategy": {
+          "type": "string",
+          "enum": ["dependency_order", "domain_isolation"],
+          "default": "dependency_order",
+          "description": "How to batch plans for parallel execution"
+        },
+        "compact_before_plan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact context before starting each plan"
+        },
+        "compact_after_plan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact context after each plan completes"
+        },
+        "context_threshold_percent": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 60,
+          "default": 40,
+          "description": "Stop execution when remaining context drops below this percentage"
+        },
+        "agent_model": {
+          "type": "string",
+          "enum": ["haiku", "sonnet", "opus"],
+          "default": "sonnet",
+          "description": "Default model for spawned plan execution agents"
+        }
+      }
     }
   }
 }

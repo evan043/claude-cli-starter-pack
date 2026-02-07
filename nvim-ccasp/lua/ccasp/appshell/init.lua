@@ -36,8 +36,8 @@ function M.calculate_zones()
   local footer_h = M.config.footer.visible and M.config.footer.height or 0
   local rpanel_w = M.config.right_panel.visible and M.config.right_panel.width or 0
 
-  -- cmdline takes 1 row at bottom
-  local cmdline_h = 1
+  -- cmdline takes rows at bottom (respect user's cmdheight setting)
+  local cmdline_h = vim.o.cmdheight or 1
 
   local zones = {}
 

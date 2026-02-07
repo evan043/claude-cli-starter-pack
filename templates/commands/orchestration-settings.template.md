@@ -91,6 +91,33 @@ If `orchestration` key doesn't exist in tech-stack.json, use:
 }
 ```
 
+## Settings Precedence
+
+Orchestration settings can come from two sources:
+
+1. **Artifact-level** (highest priority): `orchestration` block embedded in PROGRESS.json / ROADMAP.json / EPIC.json
+2. **Global defaults** (fallback): `orchestration` in tech-stack.json
+
+When a new plan, roadmap, or epic is created, global defaults from tech-stack.json are copied INTO the artifact's `orchestration` block. After that, the artifact's copy is authoritative.
+
+**Changing global defaults only affects NEW plans.** Existing plans retain their embedded config.
+
+### Apply Globals to Existing Artifact
+
+```
+/orchestration-settings --apply-to <artifact-path>
+```
+
+Copies current global defaults into the specified PROGRESS.json, ROADMAP.json, or EPIC.json file, overwriting its embedded orchestration block.
+
+### Artifact Orchestration Fields
+
+| Artifact | Fields |
+|----------|--------|
+| PROGRESS.json | `mode`, `max_parallel_agents`, `batch_strategy`, `compact_threshold_percent`, `poll_interval_seconds`, `compact_after_launch`, `compact_after_poll`, `agent_model` |
+| ROADMAP.json | `max_parallel_plans`, `plan_batch_strategy`, `compact_before_plan`, `compact_after_plan`, `context_threshold_percent`, `agent_model` |
+| EPIC.json | `max_parallel_roadmaps`, `roadmap_batch_strategy`, `compact_before_roadmap`, `context_threshold_percent`, `agent_model` |
+
 ## Related Commands
 
 - `/phase-track {slug} --run-all --parallel` - Uses these settings for task parallelism

@@ -49,6 +49,34 @@ function loadAgentRegistry(projectRoot = process.cwd()) {
 }
 
 /**
+ * Load orchestration config from tech-stack.json and map to PROGRESS.json format.
+ * This seeds the embedded orchestration block so plans are self-documenting.
+ */
+function loadOrchestrationConfig(projectRoot = process.cwd()) {
+  const techStackPath = join(projectRoot, '.claude', 'config', 'tech-stack.json');
+  if (!existsSync(techStackPath)) {
+    return null;
+  }
+  try {
+    const content = readFileSync(techStackPath, 'utf8');
+    const techStack = JSON.parse(content);
+    const orch = techStack.orchestration || {};
+    return {
+      mode: 'parallel',
+      max_parallel_agents: orch.parallel?.maxTasks || 2,
+      batch_strategy: 'no_file_overlap',
+      compact_threshold_percent: orch.compacting?.remainingThreshold || 40,
+      poll_interval_seconds: orch.compacting?.pollIntervalSec || 120,
+      compact_after_launch: orch.compacting?.compactAfterLaunch ?? true,
+      compact_after_poll: orch.compacting?.compactAfterPoll ?? true,
+      agent_model: 'sonnet',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generate all documentation for a phased development plan
  *
  * @param {Object} config - Project configuration
@@ -65,6 +93,11 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
   const agentRegistry = loadAgentRegistry(cwd);
   if (agentRegistry) {
     spinner.text = 'Agent registry found - enabling agent assignments...';
+  }
+
+  const orchestrationConfig = loadOrchestrationConfig(cwd);
+  if (orchestrationConfig) {
+    spinner.text = 'Orchestration config loaded - embedding in PROGRESS.json...';
   }
 
   const docsDir = join(cwd, '.claude', 'phase-dev', projectSlug);
@@ -86,6 +119,7 @@ export async function generatePhaseDevDocumentation(config, enhancements = []) {
       enhancements,
       agentRegistry,
       parentContext: config.parentContext || null,
+      orchestrationConfig,
     });
     writeFileSync(progressPath, progressContent, 'utf8');
     results.files.push({ name: 'PROGRESS.json', path: progressPath });

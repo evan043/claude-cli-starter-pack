@@ -43,6 +43,15 @@ export function createEpic(config) {
       allow_manual_override: config.gating?.allow_manual_override ?? true,
     },
 
+    // Embedded orchestration directives for parallel execution and compacting
+    orchestration: {
+      max_parallel_roadmaps: config.orchestration?.max_parallel_roadmaps ?? 2,
+      roadmap_batch_strategy: config.orchestration?.roadmap_batch_strategy ?? 'dependency_order',
+      compact_before_roadmap: config.orchestration?.compact_before_roadmap ?? true,
+      context_threshold_percent: config.orchestration?.context_threshold_percent ?? 40,
+      agent_model: config.orchestration?.agent_model ?? 'sonnet',
+    },
+
     // Testing requirements
     testing_requirements: {
       unit_tests: config.testing_requirements?.unit_tests ?? true,

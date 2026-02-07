@@ -123,6 +123,43 @@
         },
         "team_size": { "type": "integer" }
       }
+    },
+    "orchestration": {
+      "type": "object",
+      "description": "Embedded orchestration directives for roadmap-level parallel execution and compacting",
+      "properties": {
+        "max_parallel_roadmaps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3,
+          "default": 2,
+          "description": "Max concurrent roadmaps to execute in parallel"
+        },
+        "roadmap_batch_strategy": {
+          "type": "string",
+          "enum": ["dependency_order", "sequential"],
+          "default": "dependency_order",
+          "description": "How to batch roadmaps for parallel execution"
+        },
+        "compact_before_roadmap": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact context before starting each roadmap"
+        },
+        "context_threshold_percent": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 60,
+          "default": 40,
+          "description": "Stop execution when remaining context drops below this percentage"
+        },
+        "agent_model": {
+          "type": "string",
+          "enum": ["haiku", "sonnet", "opus"],
+          "default": "sonnet",
+          "description": "Default model for spawned roadmap execution agents"
+        }
+      }
     }
   }
 }

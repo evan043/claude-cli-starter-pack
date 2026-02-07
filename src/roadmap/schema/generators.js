@@ -33,6 +33,7 @@ export function createRoadmap(options = {}) {
     source = ROADMAP_SOURCE.manual,
     milestone = null,
     parent_epic = null,
+    orchestration = null,
   } = options;
 
   const now = new Date().toISOString();
@@ -52,6 +53,16 @@ export function createRoadmap(options = {}) {
 
     // Parent epic reference
     parent_epic: parent_epic || null,
+
+    // Embedded orchestration directives
+    orchestration: orchestration || {
+      max_parallel_plans: 2,
+      plan_batch_strategy: 'dependency_order',
+      compact_before_plan: true,
+      compact_after_plan: true,
+      context_threshold_percent: 40,
+      agent_model: 'sonnet',
+    },
 
     // NEW: Phase-dev-plan references
     phase_dev_plan_refs: [],
