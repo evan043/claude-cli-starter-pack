@@ -162,6 +162,30 @@ async function reportToRoadmap(projectRoot, parentContext, phaseDevSlug, complet
     await triggerProgressHook(projectRoot, roadmap, parentContext);
   }
 
+  // Compliance gate: if roadmap has compliance enabled and all phases are done,
+  // check if compliance audit has passed before marking roadmap complete
+  if (roadmap.completion_percentage === 100 && roadmap.compliance?.enabled) {
+    if (roadmap.compliance.status !== 'passed') {
+      console.log(chalk.yellow('\n⚠️  Compliance gate: All phases complete but compliance audit not passed.'));
+      console.log(chalk.yellow('   Roadmap status set to "paused" until compliance passes.'));
+      console.log(chalk.dim('   Run compliance audit or update compliance.status in ROADMAP.json.'));
+
+      roadmap.status = 'paused';
+      roadmap.updated = new Date().toISOString();
+      fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2), 'utf8');
+
+      return {
+        success: true,
+        mode: 'roadmap',
+        parent: parentContext,
+        roadmap_completion: roadmap.completion_percentage,
+        metrics: completionMetrics,
+        compliance_blocked: true,
+        compliance_status: roadmap.compliance.status,
+      };
+    }
+  }
+
   // If roadmap is complete, report to epic (if exists)
   if (roadmap.completion_percentage === 100 && roadmap.parent_epic) {
     await reportRoadmapCompleteToEpic(projectRoot, roadmap);

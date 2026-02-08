@@ -95,6 +95,74 @@ When invoked (typically auto-injected after wizard completes):
 
 ---
 
+### Step 1.5: Detect Commercial Application Mode
+
+**Check for commercial SaaS indicators:**
+1. Scan project for auth/tenancy patterns (auth middleware, tenant models, RBAC decorators)
+2. Check CLAUDE.md or project description for keywords: "SaaS", "commercial", "multi-tenant", "production", "sell"
+3. Check if competitor URLs were previously analyzed (`.claude/visions/*/compliance-audit.json`)
+
+**Ask user about application type:**
+
+```
+header: "App Type"
+question: "Is this a commercial/SaaS application?"
+options:
+  - label: "Yes - commercial SaaS (Recommended for production apps)"
+    description: "Full compliance: multi-tenancy, RBAC, API contracts, route maps, licensing"
+  - label: "Yes - commercial but single-tenant"
+    description: "IP compliance + RBAC + API contracts (no multi-tenancy)"
+  - label: "No - internal/personal project"
+    description: "Skip commercial compliance setup"
+```
+
+**If commercial SaaS selected:**
+1. Store compliance mode in `tech-stack.json`:
+   ```json
+   {
+     "compliance": {
+       "mode": "commercial-saas",
+       "enabled": true,
+       "configured_at": "{{timestamp}}"
+     }
+   }
+   ```
+2. Create `.claude/compliance/` directory
+3. Copy `commercial-saas-rules.md` policy to `.claude/compliance/COMMERCIAL_SAAS_RULES.md`
+4. Copy `commercial-compliance-policy.md` to `.claude/compliance/IP_COMPLIANCE_POLICY.md`
+5. Display compliance activation notice:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Commercial SaaS Compliance Activated                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Mode: Commercial SaaS (Full Compliance)                     ║
+║                                                              ║
+║  Enabled:                                                    ║
+║  • Multi-tenancy (default ON)                                ║
+║  • Role-based access control (RBAC)                          ║
+║  • SPA route map enforcement                                 ║
+║  • API contract documentation                                ║
+║  • IP/originality compliance                                 ║
+║  • Dependency license auditing                               ║
+║                                                              ║
+║  Policy files saved to .claude/compliance/                   ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**If single-tenant selected:**
+1. Store `compliance.mode = "ip-only"` in `tech-stack.json`
+2. Create `.claude/compliance/` with IP policy only
+3. Skip multi-tenancy requirements
+
+**If internal/personal selected:**
+1. Store `compliance.mode = "disabled"` in `tech-stack.json`
+2. Skip compliance setup entirely
+
+---
+
 ### Step 2: Configure CCASP Customized Agents (CRITICAL)
 
 **This step ensures stack-specific specialist agents are set up.**
@@ -132,6 +200,7 @@ When invoked (typically auto-injected after wizard completes):
    | Vitest/Jest | `test-unit-specialist` |
    | Railway | `deploy-railway-specialist` |
    | Cloudflare | `deploy-cloudflare-specialist` |
+   | Commercial SaaS mode | `compliance-saas-specialist` |
 
    c. **Create agent files in `.claude/agents/`:**
    - Each agent gets a markdown file with frontmatter
@@ -714,6 +783,93 @@ options:
 
 ---
 
+### Step 7k: Compliance Documentation Setup (If Commercial Mode Active)
+
+**Check if commercial compliance was activated in Step 1.5:**
+```javascript
+const compliance = techStack.compliance || {};
+const isCommercial = compliance.mode === 'commercial-saas';
+const isSingleTenant = compliance.mode === 'ip-only';
+```
+
+**If commercial SaaS mode is active**, scaffold mandatory compliance documents:
+
+1. **Generate ROUTES.md:**
+   - Read the project's router configuration (React Router, Vue Router, etc.)
+   - Pre-populate routes from detected patterns
+   - Ask user to confirm or extend the route list
+   - Save to project root as `ROUTES.md`
+   - Template: `templates/compliance/routes.template.md`
+
+2. **Generate API_CONTRACT.md:**
+   - Scan for existing API endpoints (Express routes, FastAPI paths, etc.)
+   - Ask user for API base URL
+   - Pre-populate endpoints from detected patterns
+   - Save to project root as `API_CONTRACT.md`
+   - Template: `templates/compliance/api-contract.template.md`
+
+3. **Generate RBAC.md:**
+   - Ask user for role definitions or use defaults (user/admin/super_admin)
+   - Generate permission matrix from routes + endpoints
+   - Save to project root as `RBAC.md`
+   - Template: `templates/compliance/rbac.template.md`
+
+4. **Generate DESIGN_ORIGIN.md:**
+   - Use existing template: `templates/compliance/design-origin.template.md`
+   - Pre-populate with project name and date
+   - Save to project root as `DESIGN_ORIGIN.md`
+
+5. **Save compliance config to tech-stack.json:**
+   ```json
+   {
+     "compliance": {
+       "mode": "commercial-saas",
+       "enabled": true,
+       "configured_at": "{{timestamp}}",
+       "multi_tenancy": {
+         "enabled": true,
+         "strategy": null
+       },
+       "rbac": {
+         "enabled": true,
+         "roles": ["user", "admin", "super_admin"]
+       },
+       "documentation": {
+         "design_origin": "draft",
+         "routes_md": "draft",
+         "api_contract": "draft",
+         "rbac_md": "draft"
+       }
+     }
+   }
+   ```
+
+6. **Display compliance documentation summary:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Compliance Documentation Generated                          ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  ROUTES.md:       ✓ Generated (review and update)            ║
+║  API_CONTRACT.md: ✓ Generated (review and update)            ║
+║  RBAC.md:         ✓ Generated (review and update)            ║
+║  DESIGN_ORIGIN.md:✓ Generated (review and update)            ║
+║                                                              ║
+║  These are living documents — update them as you build.      ║
+║  Roadmap compliance gates will check these before execution. ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**If single-tenant mode (ip-only):**
+- Generate only DESIGN_ORIGIN.md
+- Skip ROUTES.md, API_CONTRACT.md, RBAC.md (optional for single-tenant)
+
+**If compliance disabled:**
+- Skip this entire step
+
+---
+
 ### Step 8: Final Summary
 
 Display final completion summary:
@@ -728,6 +884,7 @@ Display final completion summary:
 ║  GitHub:     ✓ Connected (or skipped)                         ║
 ║  MCPs:       ✓ Configured (dynamically discovered)            ║
 ║  Testing:    ✓ Configured                                     ║
+║  Compliance: ✓ Commercial SaaS (or: Disabled)                 ║
 ║                                                               ║
 ║  Your stack-specific agents:                                  ║
 ║  • frontend-react-specialist                                  ║

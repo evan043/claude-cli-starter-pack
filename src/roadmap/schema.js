@@ -21,6 +21,7 @@ export {
   validateMultiProjectRoadmap,
   detectDependencyCycles,
   checkPlanDependencies,
+  validateCompliance,
 } from './schema/validators.js';
 
 // Re-export generators

@@ -52,6 +52,48 @@ export const ROADMAP_SCHEMA = {
     },
   ],
 
+  // Commercial compliance configuration (optional — activated when project is SaaS)
+  compliance: {
+    enabled: 'boolean',
+    mode: 'commercial-saas | ip-only | disabled',
+    status: 'not_started | planning | in_progress | passed | failed',
+    blocking: 'boolean', // If true, plans cannot start until compliance planning completes
+
+    // Multi-tenancy
+    multi_tenancy: {
+      enabled: 'boolean',
+      strategy: 'subdomain | header | token | path | null',
+    },
+
+    // RBAC
+    rbac: {
+      enabled: 'boolean',
+      roles: ['string'], // e.g., ['user', 'admin', 'super_admin']
+    },
+
+    // Mandatory docs status
+    documentation: {
+      design_origin: 'not_started | draft | complete',
+      routes_md: 'not_started | draft | complete',
+      api_contract: 'not_started | draft | complete',
+      rbac_md: 'not_started | draft | complete',
+    },
+
+    // Audit results
+    audit: {
+      last_audit_date: 'ISO8601 | null',
+      score: 'number (0-100) | null',
+      verdict: 'PASS | CONDITIONAL | FAIL | null',
+      audit_file: 'string | null',
+    },
+
+    // IP compliance (reuses existing compliance engine)
+    ip_compliance: {
+      competitors_analyzed: ['string'],
+      policy_version: 'string',
+    },
+  },
+
   // Metadata
   metadata: {
     plan_count: 'number',

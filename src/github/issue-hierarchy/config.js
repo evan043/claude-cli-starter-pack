@@ -89,7 +89,7 @@ export function createGitHubIssue({ owner, repo, title, body, labels = [] }) {
 /**
  * Generate CCASP-META header for issue body
  */
-export function generateCcaspMeta({ source, slug, issueType, progressFile, parentType, parentSlug }) {
+export function generateCcaspMeta({ source, slug, issueType, progressFile, parentType, parentSlug, compliance }) {
   let meta = `<!-- CCASP-META
 source: ${source}
 slug: ${slug}
@@ -101,6 +101,13 @@ created_at: ${new Date().toISOString()}`;
     meta += `
 parent_type: ${parentType}
 parent_slug: ${parentSlug}`;
+  }
+
+  if (compliance && compliance.enabled) {
+    meta += `
+compliance_required: ${compliance.enabled}
+compliance_mode: ${compliance.mode || 'unknown'}
+compliance_status: ${compliance.status || 'not_started'}`;
   }
 
   meta += '\n-->\n';

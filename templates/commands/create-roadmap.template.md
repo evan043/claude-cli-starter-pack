@@ -233,6 +233,134 @@ options:
 
 ---
 
+### Step 2.5b: Configure Compliance Strategy (If Commercial Mode Detected)
+
+**IMPORTANT:** Before creating phases, check if commercial compliance is configured and collect compliance strategy for this roadmap.
+
+**Check tech-stack.json for compliance configuration:**
+```javascript
+// Read compliance config from tech-stack.json
+const compliance = techStack.compliance || {};
+const isCommercial = compliance.mode === 'commercial-saas';
+```
+
+**If commercial mode is active**, display compliance status and ask questions:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Commercial SaaS Compliance Detected                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Mode: Commercial SaaS                                       ║
+║  Multi-Tenancy: Required                                     ║
+║  RBAC: Required                                              ║
+║  API Contracts: Required                                     ║
+║  Route Maps: Required                                        ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Ask about multi-tenancy strategy:**
+
+```
+header: "Tenancy"
+question: "How should tenant isolation work in this roadmap?"
+options:
+  - label: "Subdomain-based (Recommended for B2B SaaS)"
+    description: "tenant.app.com — each tenant gets a subdomain"
+  - label: "Header/token-based"
+    description: "X-Tenant-ID header — API-first isolation"
+  - label: "Path-based"
+    description: "/tenant-slug/... — simpler deployment"
+```
+
+**Ask about user personas:**
+
+```
+header: "Personas"
+question: "Which user personas apply to this roadmap?"
+options:
+  - label: "Standard SaaS (Recommended)"
+    description: "User + Admin + Super Admin (3 roles)"
+  - label: "Custom roles"
+    description: "I'll define custom role names"
+```
+
+**If custom roles selected, ask:**
+
+```
+header: "Roles"
+question: "Enter your custom role names (comma-separated)"
+```
+
+**Ask about compliance blocking:**
+
+```
+header: "Enforcement"
+question: "Should compliance planning block phase execution?"
+options:
+  - label: "Yes - require docs before coding (Recommended)"
+    description: "ROUTES.md + RBAC.md must exist before plans can start"
+  - label: "No - docs can be created alongside coding"
+    description: "Compliance docs are advisory, not blocking"
+```
+
+**Store compliance strategy for this roadmap:**
+
+```json
+{
+  "compliance": {
+    "enabled": true,
+    "mode": "commercial-saas",
+    "status": "planning",
+    "blocking": true,
+    "multi_tenancy": {
+      "enabled": true,
+      "strategy": "subdomain"
+    },
+    "rbac": {
+      "enabled": true,
+      "roles": ["user", "admin", "super_admin"]
+    },
+    "documentation": {
+      "design_origin": "not_started",
+      "routes_md": "not_started",
+      "api_contract": "not_started",
+      "rbac_md": "not_started"
+    },
+    "audit": {
+      "last_audit_date": null,
+      "score": null,
+      "verdict": null,
+      "audit_file": null
+    },
+    "ip_compliance": {
+      "competitors_analyzed": [],
+      "policy_version": "1.0"
+    }
+  }
+}
+```
+
+**If compliance NOT configured**, show setup reminder:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Commercial Compliance Not Configured                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Commercial SaaS compliance is not set up for this project.  ║
+║                                                              ║
+║  To enable:                                                  ║
+║    /project-impl → Step 1.5 (Commercial Mode Detection)      ║
+║                                                              ║
+║  Continuing without commercial compliance...                 ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ### Step 2.6: L2 Exploration Phase (MANDATORY - DO NOT SKIP)
 
 **CRITICAL:** You MUST run L2 exploration BEFORE creating ROADMAP.json. This step is NOT optional.
@@ -657,6 +785,9 @@ Create the roadmap file at `.claude/roadmaps/{slug}/ROADMAP.json`:
     }
   },
 
+  // NEW: Commercial compliance (if configured in Step 2.5b)
+  "compliance": null,  // Set to compliance strategy object if commercial mode active
+
   "metadata": {
     "plan_count": 2,
     "overall_completion_percentage": 0,
@@ -679,7 +810,8 @@ const roadmap = createRoadmap({
     epic_id: parentEpic.epic_id,
     epic_slug: parentEpic.slug,
     epic_path: `.claude/epics/${parentEpic.slug}/EPIC.json`
-  } : null
+  } : null,
+  compliance: complianceStrategy || null  // From Step 2.5b
 });
 
 // Add plan references
@@ -1067,6 +1199,7 @@ If any step fails:
 | Parent epic support | Accept --parent-epic flag and store reference | ✅ YES |
 | User selects issues via table | Mode B displays numbered table for selection | ✅ YES |
 | Single-phase recommendation | Recommends `/phase-dev-plan` for small scope | ⚠️ Warning |
+| Compliance docs before coding | If compliance.blocking=true, ROUTES.md + RBAC.md must exist before spawning plans | ✅ YES |
 
 ### ⛔ FAILURE CONDITIONS - DO NOT PROCEED IF:
 - Exploration directory doesn't exist: `.claude/roadmaps/{slug}/exploration/`

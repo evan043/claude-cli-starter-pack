@@ -229,3 +229,58 @@ export function checkPlanDependencies(roadmap, planSlug) {
     missing,
   };
 }
+
+/**
+ * Validate compliance configuration
+ *
+ * @param {Object} compliance - Compliance config from roadmap
+ * @returns {Object} { valid: boolean, errors: string[], warnings: string[] }
+ */
+export function validateCompliance(compliance) {
+  const errors = [];
+  const warnings = [];
+
+  if (!compliance || !compliance.enabled) {
+    return { valid: true, errors, warnings };
+  }
+
+  const validModes = ['commercial-saas', 'ip-only', 'disabled'];
+  if (compliance.mode && !validModes.includes(compliance.mode)) {
+    errors.push(`Invalid compliance mode: ${compliance.mode}. Must be one of: ${validModes.join(', ')}`);
+  }
+
+  const validStatuses = ['not_started', 'planning', 'in_progress', 'passed', 'failed'];
+  if (compliance.status && !validStatuses.includes(compliance.status)) {
+    errors.push(`Invalid compliance status: ${compliance.status}. Must be one of: ${validStatuses.join(', ')}`);
+  }
+
+  // Check required docs
+  const docs = compliance.documentation || {};
+  const requiredDocs = ['design_origin', 'routes_md', 'api_contract', 'rbac_md'];
+  for (const doc of requiredDocs) {
+    if (!docs[doc] || docs[doc] === 'not_started') {
+      warnings.push(`Compliance doc not started: ${doc}`);
+    }
+  }
+
+  // Check multi-tenancy
+  if (compliance.multi_tenancy?.enabled && !compliance.multi_tenancy?.strategy) {
+    errors.push('Multi-tenancy enabled but no resolution strategy defined');
+  }
+
+  // Check RBAC
+  if (compliance.rbac?.enabled && (!compliance.rbac?.roles || compliance.rbac.roles.length < 2)) {
+    errors.push('RBAC enabled but fewer than 2 roles defined');
+  }
+
+  // Check blocking compliance
+  if (compliance.blocking && compliance.status !== 'passed') {
+    warnings.push('Compliance is blocking but not yet passed — plans will not start');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}

@@ -68,6 +68,48 @@ All thresholds and limits are read from the `orchestration` block embedded in RO
 
 If `orchestration` is missing (legacy roadmaps), defaults apply: `max_parallel_plans: 2, context_threshold_percent: 40, agent_model: 'sonnet'`.
 
+---
+
+## COMPLIANCE GATE (If Enabled)
+
+**Before starting ANY plan execution, check compliance status:**
+
+1. Read `compliance` from ROADMAP.json
+2. **If `compliance.enabled && compliance.blocking`:**
+   a. Check `compliance.documentation.routes_md` is NOT `not_started`
+   b. Check `compliance.documentation.rbac_md` is NOT `not_started`
+   c. Check `compliance.documentation.api_contract` is NOT `not_started`
+   d. **If ANY required doc is `not_started`:**
+      ```
+      ╔═══════════════════════════════════════════════════════════════╗
+      ║  🚫 COMPLIANCE GATE — Execution Blocked                      ║
+      ╠═══════════════════════════════════════════════════════════════╣
+      ║                                                              ║
+      ║  Commercial SaaS compliance is BLOCKING plan execution.      ║
+      ║                                                              ║
+      ║  Missing required documents:                                 ║
+      ║  • ROUTES.md:       {status}                                 ║
+      ║  • API_CONTRACT.md: {status}                                 ║
+      ║  • RBAC.md:         {status}                                 ║
+      ║                                                              ║
+      ║  To unblock:                                                 ║
+      ║    1. Create missing documents                               ║
+      ║    2. Update ROADMAP.json compliance.documentation statuses  ║
+      ║    3. Re-run /roadmap-track {slug}                           ║
+      ║                                                              ║
+      ╚═══════════════════════════════════════════════════════════════╝
+      ```
+      → **STOP. Do NOT start any plans.**
+
+3. **If `compliance.enabled && !compliance.blocking`:**
+   → Display warning but allow execution:
+   ```
+   ⚠️  Compliance docs incomplete (non-blocking). Consider completing before release.
+   ```
+
+4. **If `compliance` is null or `compliance.enabled === false`:**
+   → Skip compliance checks entirely, proceed normally.
+
 ## NEW ARCHITECTURE (Epic-Hierarchy)
 
 Roadmap now coordinates MULTIPLE phase-dev-plans instead of direct phases:
@@ -144,6 +186,7 @@ function loadRoadmapState(slug) {
 ║                                                                             ║
 ║  Overall Progress: [{{progressBar}}] {{overallPercentage}}%                 ║
 ║  Plans: {{completedPlans}}/{{totalPlans}}                                   ║
+║  Compliance: {{compliance_status_display}}                                  ║
 ║                                                                             ║
 ╠═══════════════════════════════════════════════════════════════════════════╣
 ║  PHASE-DEV-PLANS                                                            ║
@@ -187,6 +230,53 @@ function loadRoadmapState(slug) {
 {{/if}}
 ║                                                                             ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+**Compliance Status Display Logic:**
+
+Compute `compliance_status_display` as follows:
+```javascript
+function getComplianceStatusDisplay(roadmap) {
+  const compliance = roadmap.compliance;
+
+  // Not configured
+  if (!compliance || !compliance.enabled) {
+    return "— (not configured)";
+  }
+
+  // Passed
+  if (compliance.status === 'passed') {
+    const score = compliance.audit?.score || 0;
+    return `✓ PASS (Score: ${score}/100)`;
+  }
+
+  // Blocked by docs
+  if (compliance.blocking) {
+    const docs = compliance.documentation || {};
+    const pendingDocs = [];
+    if (docs.routes_md === 'not_started') pendingDocs.push('ROUTES.md');
+    if (docs.rbac_md === 'not_started') pendingDocs.push('RBAC.md');
+    if (docs.api_contract === 'not_started') pendingDocs.push('API_CONTRACT.md');
+
+    if (pendingDocs.length > 0) {
+      return `🚫 BLOCKED — ${pendingDocs.join(', ')} required`;
+    }
+  }
+
+  // Planning
+  if (compliance.status === 'planning') {
+    const docs = compliance.documentation || {};
+    const pendingCount = Object.values(docs).filter(s => s !== 'complete').length;
+    return `⚠ PLANNING (${pendingCount} docs pending)`;
+  }
+
+  // Failed
+  if (compliance.status === 'failed') {
+    return "✗ FAILED — review required";
+  }
+
+  return "— (unknown status)";
+}
 ```
 
 ### Step 3: Offer Actions (Multi-Plan)
@@ -564,10 +654,178 @@ async function runAllPlansParallel(roadmap) {
   }
 
   const allDone = roadmap.phase_dev_plan_refs.every(p => p.status === 'completed');
+
+  // If all plans complete, run compliance audit (if enabled)
+  if (allDone && roadmap.compliance?.enabled) {
+    await runComplianceAudit(roadmap);
+  }
+
   roadmap.status = allDone ? 'completed' : 'partial';
   fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
 
   return { status: roadmap.status };
+}
+```
+
+### Compliance Audit at Roadmap Completion
+
+**When all phase-dev-plans reach 100% completion AND compliance is enabled:**
+
+```javascript
+async function runComplianceAudit(roadmap) {
+  console.log('\n🔍 Running compliance audit...\n');
+
+  const roadmapPath = `.claude/roadmaps/${roadmap.slug}/ROADMAP.json`;
+
+  // 1. Check documentation completeness
+  const docs = roadmap.compliance.documentation || {};
+  const incompleteDocs = [];
+
+  if (docs.routes_md !== 'complete') incompleteDocs.push('ROUTES.md');
+  if (docs.rbac_md !== 'complete') incompleteDocs.push('RBAC.md');
+  if (docs.api_contract !== 'complete') incompleteDocs.push('API_CONTRACT.md');
+  if (docs.erd !== 'complete') incompleteDocs.push('ERD');
+
+  if (incompleteDocs.length > 0) {
+    console.log(`⚠️  Compliance docs incomplete: ${incompleteDocs.join(', ')}`);
+    console.log('   Pausing roadmap. Complete docs before marking as complete.\n');
+
+    roadmap.status = 'paused';
+    roadmap.compliance.status = 'planning';
+    fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+    return;
+  }
+
+  // 2. Run dependency license audit
+  console.log('   Checking dependency licenses...');
+
+  const auditResult = await auditDependencyLicenses();
+
+  if (auditResult.blockedLicenses.length > 0) {
+    console.log(`   ✗ BLOCKED LICENSES FOUND: ${auditResult.blockedLicenses.join(', ')}\n`);
+
+    roadmap.compliance.status = 'failed';
+    roadmap.compliance.audit = {
+      last_audit_date: new Date().toISOString(),
+      score: 0,
+      verdict: 'FAIL',
+      audit_file: `.claude/roadmaps/${roadmap.slug}/compliance-audit.json`,
+      failure_reason: `Blocked licenses: ${auditResult.blockedLicenses.join(', ')}`
+    };
+
+    roadmap.status = 'paused';
+    fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+    console.log('   Roadmap PAUSED due to compliance failure.');
+    console.log('   Fix license issues before marking complete.\n');
+    return;
+  }
+
+  console.log('   ✓ No blocked licenses\n');
+
+  // 3. Run self-audit verification
+  console.log('   Checking plan self-audits...');
+
+  const planAuditsFailed = [];
+
+  for (const planRef of roadmap.phase_dev_plan_refs) {
+    const progressPath = planRef.path;
+    if (existsSync(progressPath)) {
+      const progress = JSON.parse(fs.readFileSync(progressPath, 'utf8'));
+
+      if (progress.compliance_config?.self_audit_status !== 'passed') {
+        planAuditsFailed.push(planRef.slug);
+      }
+    }
+  }
+
+  if (planAuditsFailed.length > 0) {
+    console.log(`   ✗ Plans failed self-audit: ${planAuditsFailed.join(', ')}\n`);
+
+    roadmap.compliance.status = 'failed';
+    roadmap.compliance.audit = {
+      last_audit_date: new Date().toISOString(),
+      score: 0,
+      verdict: 'FAIL',
+      audit_file: `.claude/roadmaps/${roadmap.slug}/compliance-audit.json`,
+      failure_reason: `Plans failed self-audit: ${planAuditsFailed.join(', ')}`
+    };
+
+    roadmap.status = 'paused';
+    fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+    console.log('   Roadmap PAUSED due to failed plan audits.');
+    console.log('   Review and fix failing plans before marking complete.\n');
+    return;
+  }
+
+  console.log('   ✓ All plans passed self-audit\n');
+
+  // 4. Calculate compliance score
+  const score = calculateComplianceScore(roadmap, auditResult);
+
+  // 5. Update compliance audit in ROADMAP.json
+  roadmap.compliance.status = 'passed';
+  roadmap.compliance.audit = {
+    last_audit_date: new Date().toISOString(),
+    score: score,
+    verdict: 'PASS',
+    audit_file: `.claude/roadmaps/${roadmap.slug}/compliance-audit.json`
+  };
+
+  fs.writeFileSync(roadmapPath, JSON.stringify(roadmap, null, 2));
+
+  // 6. Write detailed audit file
+  const auditDetails = {
+    timestamp: new Date().toISOString(),
+    roadmap_slug: roadmap.slug,
+    verdict: 'PASS',
+    score: score,
+    documentation: {
+      routes_md: docs.routes_md,
+      rbac_md: docs.rbac_md,
+      api_contract: docs.api_contract,
+      erd: docs.erd
+    },
+    licenses: auditResult,
+    plan_audits: roadmap.phase_dev_plan_refs.map(p => ({
+      slug: p.slug,
+      self_audit_status: 'passed'
+    }))
+  };
+
+  const auditFilePath = `.claude/roadmaps/${roadmap.slug}/compliance-audit.json`;
+  fs.writeFileSync(auditFilePath, JSON.stringify(auditDetails, null, 2));
+
+  console.log(`✅ Compliance audit PASSED (Score: ${score}/100)\n`);
+  console.log(`   Audit details: ${auditFilePath}\n`);
+}
+
+function calculateComplianceScore(roadmap, auditResult) {
+  let score = 100;
+
+  // Deduct for draft docs (not complete)
+  const docs = roadmap.compliance.documentation || {};
+  const draftDocs = Object.values(docs).filter(s => s === 'draft').length;
+  score -= draftDocs * 5;
+
+  // Deduct for risky licenses
+  if (auditResult.riskyLicenses?.length > 0) {
+    score -= auditResult.riskyLicenses.length * 2;
+  }
+
+  return Math.max(score, 0);
+}
+
+async function auditDependencyLicenses() {
+  // This would call the actual compliance audit from src/compliance/index.js
+  // For template purposes, return a mock structure
+  return {
+    blockedLicenses: [],
+    riskyLicenses: [],
+    approvedCount: 0,
+    totalCount: 0
+  };
 }
 ```
 

@@ -73,6 +73,23 @@ Use AskUserQuestion to collect:
 1. Read the parent file to extract context
 2. Store parent reference in PROGRESS.json
 3. Include parent title/slug in plan metadata
+4. **If parent is a roadmap with `compliance.enabled`:**
+   - Extract compliance config from parent ROADMAP.json
+   - Store as `compliance_config` in PROGRESS.json
+   - Include multi-tenancy strategy, RBAC roles, and doc requirements
+   - Display compliance inheritance notice:
+   ```
+   ╔═══════════════════════════════════════════════════════════════╗
+   ║  Compliance Inherited from Roadmap                           ║
+   ╠═══════════════════════════════════════════════════════════════╣
+   ║                                                              ║
+   ║  Mode: Commercial SaaS                                       ║
+   ║  Multi-Tenancy: {strategy}                                   ║
+   ║  RBAC Roles: {roles}                                         ║
+   ║  Self-Audit: Required before completion                      ║
+   ║                                                              ║
+   ╚═══════════════════════════════════════════════════════════════╝
+   ```
 
 ### Step 2: L2 Exploration (MANDATORY - DO NOT SKIP)
 
@@ -90,10 +107,27 @@ Use AskUserQuestion to collect:
 
 4. **Verification Checkpoint** - STOP and verify ALL 6 files exist before continuing
 
+5. **If compliance_config inherited from parent:**
+   - Include in exploration agent prompt: "This plan must enforce multi-tenancy with {strategy} resolution"
+   - Include: "RBAC roles: {roles} — all routes and APIs must check roles"
+   - Include: "All API endpoints must specify method/auth/role/tenant scope"
+   - Include: "Frontend routes must map to ROUTES.md definitions"
+   - Agent should identify existing auth/tenancy/RBAC patterns in codebase
+
 **⛔ DO NOT proceed to Step 3 until ALL 6 exploration files exist.**
 
 ### Step 3: Generate Phase Breakdown
 Based on exploration findings, create phases with clear objectives, success criteria, and agent assignments.
+
+**If compliance_config is active, add mandatory compliance tasks:**
+
+- **First phase:** Add task "Define route map for this plan's scope" (if ROUTES.md not yet complete)
+- **Backend phases:** Add task "Define API contracts for endpoints in this phase" with method/auth/role/tenant
+- **All phases with data access:** Add task "Verify tenant isolation on all database queries"
+- **All phases with UI:** Add task "Verify route guards match RBAC.md permissions"
+- **Last phase:** Add task "Run self-audit compliance checklist" (MANDATORY — cannot skip)
+
+These compliance tasks use the same task format as other tasks but are tagged with `"compliance": true` in PROGRESS.json.
 
 ### Step 3.5: Compute Agent Mapping Per Phase
 
@@ -212,6 +246,31 @@ Create `.claude/phase-plans/{slug}/PROGRESS.json` with parent context:
     "slug": "{parent-slug}",
     "title": "{parent-title}",
     "path": "{parent-path}"
+  },
+
+  // Commercial compliance (inherited from parent roadmap if applicable)
+  "compliance_config": {
+    "inherited_from": "roadmap | project | null",
+    "parent_compliance_path": ".claude/roadmaps/{parent-slug}/ROADMAP.json",
+    "multi_tenancy": {
+      "enabled": true,
+      "strategy": "subdomain"
+    },
+    "rbac": {
+      "enabled": true,
+      "roles": ["user", "admin", "super_admin"]
+    },
+    "self_audit_required": true,
+    "self_audit_status": "pending",
+    "self_audit_checklist": {
+      "routes_defined": false,
+      "multi_tenancy_enforced": false,
+      "rbac_applied": false,
+      "apis_only_data_access": false,
+      "ui_maps_to_routes": false,
+      "no_proprietary_ip": false,
+      "deps_license_safe": false
+    }
   },
 
   "phases": [
@@ -387,6 +446,29 @@ created_at: {timestamp}
 Create `.claude/commands/{slug}-executor.md` and `.claude/commands/{slug}.md`
 
 ### Step 7: Report Completion to Parent (When All Phases Complete)
+
+**COMPLIANCE GATE (If compliance_config active):**
+
+Before reporting completion to parent, run the self-audit checklist:
+
+1. All routes in this plan's scope defined and documented in ROUTES.md?
+2. Multi-tenancy enforced at data layer (tenant ID on all queries)?
+3. RBAC applied to all routes, APIs, and data access in this plan?
+4. APIs are the ONLY data access layer (no direct DB from frontend)?
+5. UI components map to defined routes (no orphan components)?
+6. No proprietary inspiration crossed into expression (IP safe)?
+7. All new dependencies are license-safe (no GPL/AGPL/SSPL)?
+
+**If ALL checks pass:**
+- Set `compliance_config.self_audit_status = "passed"`
+- Update all checklist items to `true`
+- Proceed with completion reporting
+
+**If ANY check fails:**
+- Set `compliance_config.self_audit_status = "failed"`
+- Display which checks failed
+- Ask user to resolve before marking complete
+- **DO NOT report completion to parent until self-audit passes**
 
 **IMPORTANT:** When all phases in PROGRESS.json are completed, report back to parent.
 

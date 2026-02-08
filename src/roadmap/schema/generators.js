@@ -34,6 +34,7 @@ export function createRoadmap(options = {}) {
     milestone = null,
     parent_epic = null,
     orchestration = null,
+    compliance = null,
   } = options;
 
   const now = new Date().toISOString();
@@ -63,6 +64,9 @@ export function createRoadmap(options = {}) {
       context_threshold_percent: 40,
       agent_model: 'sonnet',
     },
+
+    // Commercial compliance (optional)
+    compliance: compliance || null,
 
     // NEW: Phase-dev-plan references
     phase_dev_plan_refs: [],
