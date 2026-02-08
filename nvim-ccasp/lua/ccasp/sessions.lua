@@ -185,6 +185,8 @@ end
 local function launch_claude_cli(id, bufnr, name)
   vim.defer_fn(function()
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
+    -- Session may have been removed by a layer switch (e.g. template apply)
+    if not state.sessions[id] then return end
 
     local job_id = vim.b[bufnr].terminal_job_id
     if job_id and job_id > 0 then
