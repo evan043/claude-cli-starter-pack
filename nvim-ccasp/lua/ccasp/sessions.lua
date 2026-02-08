@@ -176,34 +176,12 @@ function M.spawn()
   vim.wo[winid].signcolumn = "no"
   vim.wo[winid].foldcolumn = "0"
 
-  -- Auto-scroll: keep terminal tailed to bottom as output arrives (even when unfocused).
-  -- Debounced at 300ms to avoid scroll displacement when a new split resizes existing
-  -- windows — the terminal TUI re-renders on SIGWINCH, firing rapid on_lines callbacks
-  -- that would each call normal! G, scrolling the view away from the active content.
-  local scroll_timer = nil
-  vim.api.nvim_buf_attach(bufnr, false, {
-    on_lines = function(_, buf)
-      if scroll_timer then
-        vim.fn.timer_stop(scroll_timer)
-      end
-      scroll_timer = vim.fn.timer_start(300, function()
-        scroll_timer = nil
-        vim.schedule(function()
-          if not vim.api.nvim_buf_is_valid(buf) then return end
-          for _, winid_iter in ipairs(vim.fn.win_findbuf(buf)) do
-            if vim.api.nvim_win_is_valid(winid_iter) then
-              vim.api.nvim_win_call(winid_iter, function()
-                local mode = vim.api.nvim_get_mode().mode
-                if mode == "n" or mode == "nt" then
-                  vim.cmd("normal! G")
-                end
-              end)
-            end
-          end
-        end)
-      end)
-    end,
-  })
+  -- Note: no auto-scroll handler here. Terminal mode automatically follows
+  -- the terminal cursor when a session is focused. An on_lines auto-scroll
+  -- handler (normal! G on unfocused windows) was removed because it caused
+  -- scroll displacement when new splits resize existing terminal windows —
+  -- the TUI re-renders on SIGWINCH, and the scroll callback would yank
+  -- the view away from the active content.
 
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
