@@ -90,23 +90,94 @@ local function get_status_segments()
 end
 
 -- ─── Click handler for header window buttons ─────────────────────────────
--- Uses WinEnter autocmd instead of buffer-local <LeftMouse> because
--- buffer-local keymaps only fire when that buffer is current. Clicking
--- the header float from the terminal means the terminal buffer is current,
--- so a buffer-local mapping on the header buffer never triggers.
--- Instead: clicking the focusable header float causes WinEnter → we read
--- getmousepos(), dispatch the button action, then return focus.
+-- Uses GLOBAL <LeftRelease> mappings (normal + terminal modes) that check
+-- screenrow/screencol to detect clicks in the header button region.
+-- <LeftRelease> fires AFTER Neovim has fully updated mouse position data.
+-- Window control uses LuaJIT FFI to call user32.dll directly (instant, no
+-- PowerShell process spawn delay).
 
-local function handle_header_click()
-  local mouse = vim.fn.getmousepos()
-  -- Only handle clicks on line 1 (the button row) using wincol for display-column accuracy
-  if mouse.winrow ~= 1 then return false end
+local debug_file = nil
 
-  local col = mouse.wincol -- 1-based display column within the window
+local function log_click(msg)
+  if not debug_file then
+    debug_file = vim.fn.stdpath("cache") .. "/ccasp_click_debug.txt"
+    local f = io.open(debug_file, "w")
+    if f then f:write("CCASP Click Debug\n"); f:close() end
+  end
+  local f = io.open(debug_file, "a")
+  if f then f:write(os.date("%H:%M:%S") .. " " .. msg .. "\n"); f:close() end
+end
+
+-- ─── Windows API via LuaJIT FFI ──────────────────────────────────────────
+local ffi_ok, ffi = pcall(require, "ffi")
+local user32 = nil
+
+if ffi_ok then
+  pcall(function()
+    ffi.cdef[[
+      void* GetForegroundWindow();
+      bool ShowWindow(void* hWnd, int nCmdShow);
+      bool IsZoomed(void* hWnd);
+    ]]
+    user32 = ffi.load("user32")
+  end)
+end
+
+-- SW_MINIMIZE = 6, SW_MAXIMIZE = 3, SW_RESTORE = 9
+local function win_minimize()
+  if user32 then
+    local hwnd = user32.GetForegroundWindow()
+    log_click("  FFI: ShowWindow(hwnd, 6) minimize")
+    user32.ShowWindow(hwnd, 6)
+  else
+    log_click("  FFI unavailable, falling back to PowerShell")
+    vim.fn.jobstart({
+      "powershell.exe", "-NoProfile", "-Command",
+      "Add-Type -Name NW -Namespace Win -PassThru -MemberDefinition '"
+      .. "[DllImport(\"user32.dll\")] public static extern bool ShowWindow(System.IntPtr h, int c);"
+      .. "[DllImport(\"user32.dll\")] public static extern System.IntPtr GetForegroundWindow();';"
+      .. "[Win.NW]::ShowWindow([Win.NW]::GetForegroundWindow(), 6)"
+    }, { detach = true })
+  end
+end
+
+local function win_maximize_toggle()
+  if user32 then
+    local hwnd = user32.GetForegroundWindow()
+    local is_max = user32.IsZoomed(hwnd)
+    if is_max then
+      log_click("  FFI: ShowWindow(hwnd, 9) restore")
+      user32.ShowWindow(hwnd, 9) -- SW_RESTORE
+    else
+      log_click("  FFI: ShowWindow(hwnd, 3) maximize")
+      user32.ShowWindow(hwnd, 3) -- SW_MAXIMIZE
+    end
+    -- Refresh header after resize
+    vim.defer_fn(function() M.refresh() end, 150)
+  end
+end
+
+local function handle_header_click(mouse)
+  if not mouse then
+    log_click("  mouse=nil")
+    return false
+  end
+
+  log_click(string.format("  check: row=%d col=%d | min=%s-%s max=%s-%s close=%s-%s",
+    mouse.screenrow, mouse.screencol,
+    tostring(state.min_btn_col_start), tostring(state.min_btn_col_end),
+    tostring(state.max_btn_col_start), tostring(state.max_btn_col_end),
+    tostring(state.close_btn_col_start), tostring(state.close_btn_col_end)))
+
+  -- Only handle line 1 (button row); screenrow 2 = subtitle, ignore
+  if mouse.screenrow ~= 1 then return false end
+
+  local col = mouse.screencol -- 1-based screen column
 
   -- Check close button region
   if state.close_btn_col_start and state.close_btn_col_end then
     if col >= state.close_btn_col_start and col <= state.close_btn_col_end then
+      log_click("  -> CLOSE matched")
       vim.schedule(function()
         local neovide_ok, neovide = pcall(require, "ccasp.neovide")
         if neovide_ok then neovide.quit() end
@@ -115,13 +186,11 @@ local function handle_header_click()
     end
   end
 
-  -- Check maximize button region
+  -- Check maximize/restore button region
   if state.max_btn_col_start and state.max_btn_col_end then
     if col >= state.max_btn_col_start and col <= state.max_btn_col_end then
-      vim.schedule(function()
-        vim.g.neovide_fullscreen = not vim.g.neovide_fullscreen
-        M.refresh() -- update icon (maximize ↔ restore)
-      end)
+      log_click("  -> MAXIMIZE matched")
+      vim.schedule(win_maximize_toggle)
       return true
     end
   end
@@ -129,43 +198,46 @@ local function handle_header_click()
   -- Check minimize button region
   if state.min_btn_col_start and state.min_btn_col_end then
     if col >= state.min_btn_col_start and col <= state.min_btn_col_end then
-      vim.schedule(function()
-        local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
-        if titlebar_ok then
-          local sessions_ok, sessions = pcall(require, "ccasp.sessions")
-          if sessions_ok then
-            local active = sessions.get_active()
-            if active then titlebar.minimize(active.id) end
-          end
-        end
-      end)
+      log_click("  -> MINIMIZE matched")
+      vim.schedule(win_minimize)
       return true
     end
   end
 
+  log_click("  -> no button matched at col=" .. col)
   return false
 end
 
 local function setup_click_handler()
-  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then return end
+  log_click("setup_click_handler called")
 
-  -- When the header float gets focused (by mouse click), handle button clicks
-  -- then immediately return focus to the terminal
-  vim.api.nvim_create_autocmd("WinEnter", {
-    buffer = state.buf,
-    callback = function()
-      local handled = handle_header_click()
-      -- Always return focus away from the header (it's chrome, not interactive)
-      if not handled then
-        vim.schedule(function()
-          local helpers_ok, helpers = pcall(require, "ccasp.panels.helpers")
-          if helpers_ok and helpers.restore_terminal_focus then
-            helpers.restore_terminal_focus()
-          end
-        end)
-      end
-    end,
-  })
+  local opts = { noremap = true, silent = true, desc = "CCASP: Header button click" }
+
+  -- Global <LeftRelease> for normal/visual/insert modes
+  -- Fires AFTER mouse position is fully updated by Neovim
+  vim.keymap.set({"n", "v", "i"}, "<LeftRelease>", function()
+    local mouse = vim.fn.getmousepos()
+    log_click(string.format("n-LeftRelease: row=%d col=%d", mouse.screenrow, mouse.screencol))
+    if mouse.screenrow <= 2 then
+      handle_header_click(mouse)
+    end
+  end, opts)
+
+  -- Global <LeftRelease> for terminal mode
+  vim.keymap.set("t", "<LeftRelease>", function()
+    local mouse = vim.fn.getmousepos()
+    log_click(string.format("t-LeftRelease: row=%d col=%d", mouse.screenrow, mouse.screencol))
+    if mouse.screenrow <= 2 then
+      -- Exit terminal mode, then dispatch
+      local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+      vim.api.nvim_feedkeys(esc, "n", false)
+      vim.schedule(function()
+        handle_header_click(mouse)
+      end)
+    end
+  end, opts)
+
+  log_click("click handler ready")
 end
 
 -- ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -181,10 +253,8 @@ function M.open()
   vim.bo[state.buf].bufhidden = "wipe"
   vim.bo[state.buf].swapfile = false
 
-  -- When in Neovide, make header focusable so mouse clicks register on the buffer
-  local focusable = is_neovide()
-
   -- Create floating window (full width, 2 rows, top of editor)
+  -- Non-focusable; clicks detected via global <LeftRelease> mapping
   state.win = vim.api.nvim_open_win(state.buf, false, {
     relative = "editor",
     row = 0,
@@ -192,7 +262,7 @@ function M.open()
     width = vim.o.columns,
     height = 2,
     style = "minimal",
-    focusable = focusable,
+    focusable = false,
     zindex = 90,
     border = "none",
   })
@@ -207,8 +277,8 @@ function M.open()
     helpers.sandbox_buffer(state.buf)
   end
 
-  -- Setup click handler for Neovide close/minimize buttons
-  if focusable then
+  -- Setup global click handler for Neovide window buttons (minimize/maximize/close)
+  if is_neovide() then
     setup_click_handler()
   end
 
@@ -263,7 +333,17 @@ function M.refresh()
   local line1_right = {}
   if is_neovide() then
     local min_text = " " .. icons.win_minimize .. " "
-    local max_icon = vim.g.neovide_fullscreen and icons.win_restore or icons.win_maximize
+    -- Detect maximized state via FFI IsZoomed (accurate) or fallback to neovide_fullscreen
+    local is_maximized = false
+    if user32 then
+      pcall(function()
+        local hwnd = user32.GetForegroundWindow()
+        is_maximized = user32.IsZoomed(hwnd)
+      end)
+    else
+      is_maximized = vim.g.neovide_fullscreen or false
+    end
+    local max_icon = is_maximized and icons.win_restore or icons.win_maximize
     local max_text = " " .. max_icon .. " "
     local close_text = " " .. icons.win_close .. " "
     line1_right = {
@@ -310,9 +390,18 @@ function M.refresh()
     state.min_btn_col_end = cursor + min_w - 1
     cursor = state.min_btn_col_end + 2 -- +1 for space separator, +1 for next start
 
-    -- Maximize button
-    local max_icon = vim.g.neovide_fullscreen and icons.win_restore or icons.win_maximize
-    local max_text = " " .. max_icon .. " "
+    -- Maximize button — use same icon logic as the rendered text above
+    local max_icon_2 = icons.win_maximize
+    if user32 then
+      pcall(function()
+        if user32.IsZoomed(user32.GetForegroundWindow()) then
+          max_icon_2 = icons.win_restore
+        end
+      end)
+    elseif vim.g.neovide_fullscreen then
+      max_icon_2 = icons.win_restore
+    end
+    local max_text = " " .. max_icon_2 .. " "
     local max_w = vim.fn.strdisplaywidth(max_text)
     state.max_btn_col_start = cursor
     state.max_btn_col_end = cursor + max_w - 1

@@ -854,13 +854,14 @@ function M.setup()
         return
       end
 
-      -- Terminal session windows: enter terminal mode on next tick.
+      -- Terminal session windows: track as active and enter terminal mode.
       -- vim.schedule ensures this runs after any in-progress focus() call
       -- that may do normal! G before startinsert.
       local sessions_ok, sessions = pcall(require, "ccasp.sessions")
       if sessions_ok then
         local session = sessions.get_by_window(win)
         if session then
+          sessions.set_active_by_window(win)
           vim.schedule(function()
             if not vim.api.nvim_win_is_valid(win) then return end
             if vim.api.nvim_get_current_win() ~= win then return end

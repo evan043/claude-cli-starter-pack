@@ -122,7 +122,7 @@ local section_renderers = {
       table.insert(lines, string.format("  %d commands", total_count))
     end
     table.insert(lines, "")
-    table.insert(lines, "  [Enter]expand [x]run [y]copy [e]edit [/]filter")
+    table.insert(lines, "  [Enter]run [p]preview [y]copy [e]edit [/]filter")
   end,
 
   terminal = function(lines, item_lines)
@@ -473,15 +473,19 @@ function M.execute_action(item)
       local cmd_name = item.name
       M.close()
       vim.schedule(function()
-        local sessions_ok2, sess = pcall(require, "ccasp.sessions")
-        if sessions_ok2 then
-          local primary = sess.get_primary()
-          if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
-            local job_id = vim.b[primary.bufnr].terminal_job_id
-            if job_id and job_id > 0 then
-              vim.fn.chansend(job_id, "/" .. cmd_name .. "\n")
-              return
-            end
+        local sess = require("ccasp.sessions")
+        local primary = sess.get_primary()
+        if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
+          -- Focus the session window and enter terminal mode
+          if primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+            vim.api.nvim_set_current_win(primary.winid)
+          end
+          local job_id = vim.b[primary.bufnr].terminal_job_id
+          if job_id and job_id > 0 then
+            -- Inject into prompt without \n so user can review/add args before submitting
+            vim.fn.chansend(job_id, "/" .. cmd_name)
+            vim.cmd("startinsert")
+            return
           end
         end
         vim.notify("No active Claude session to send command", vim.log.levels.WARN)
@@ -501,8 +505,19 @@ function M.execute_action(item)
 
     -- Terminal sessions
     new_session = function()
-      M.close()
-      vim.schedule(function() sessions.spawn() end)
+      -- Don't close flyout — it's a float that doesn't interfere with splits.
+      -- Closing it would leave the wide left spacer visible as a blank area.
+      -- The user can keep interacting with the flyout; Tab goes to the new session.
+      vim.schedule(function()
+        sessions.spawn()
+        -- Re-render and re-focus flyout after spawn settles
+        vim.defer_fn(function()
+          if state.win and vim.api.nvim_win_is_valid(state.win) then
+            render()
+            vim.api.nvim_set_current_win(state.win)
+          end
+        end, 1000)
+      end)
     end,
     focus_session = function()
       M.close()
@@ -675,7 +690,19 @@ local function setup_keymaps()
   if not state.buf then return end
   local opts = { buffer = state.buf, nowait = true, silent = true }
 
-  vim.keymap.set("n", "<CR>", execute_action_at_cursor, opts)
+  vim.keymap.set("n", "<CR>", function()
+    -- In commands section, Enter injects the command into the active session
+    if state.current_section == "commands" then
+      if not state.win or not vim.api.nvim_win_is_valid(state.win) then return end
+      local cursor = vim.api.nvim_win_get_cursor(state.win)
+      local cmd_item = state.item_lines[cursor[1]]
+      if cmd_item and cmd_item.action == "cmd_toggle_preview" then
+        M.execute_action({ action = "cmd_inject", name = cmd_item.name, path = cmd_item.path })
+        return
+      end
+    end
+    execute_action_at_cursor()
+  end, opts)
   vim.keymap.set("n", "l", execute_action_at_cursor, opts)
 
   -- Mouse click → execute action at clicked line
@@ -744,26 +771,15 @@ local function setup_keymaps()
   vim.keymap.set("n", "<Left>", focus_icon_rail, opts)
   vim.keymap.set("n", "<S-Tab>", focus_icon_rail, opts)
 
-  -- Tab → close flyout and return to terminal
+  -- Tab → close flyout and return to the most recently active session
   vim.keymap.set("n", "<Tab>", function()
-    M.close()
-    local appshell = require("ccasp.appshell")
-    appshell.config.flyout.visible = false
-    appshell.state.active_section = nil
-    -- Resize content area so terminal reclaims space
-    appshell.calculate_zones()
-    local content = require("ccasp.appshell.content")
-    content.resize(appshell.state.zones.content)
-    -- Update icon rail to clear active highlight
-    local icon_rail = require("ccasp.appshell.icon_rail")
-    icon_rail.set_active(nil)
-    -- Focus terminal and enter insert mode (skip restore_terminal_focus's
-    -- float check, which bails out when icon rail auto-receives focus)
+    M.close() -- handles flyout.visible, icon rail, and content resize
+    -- Focus the last active session (most recently created or clicked)
     vim.schedule(function()
       local sessions = require("ccasp.sessions")
-      local primary = sessions.get_primary()
-      if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
-        vim.api.nvim_set_current_win(primary.winid)
+      local target = sessions.get_active()
+      if target and target.winid and vim.api.nvim_win_is_valid(target.winid) then
+        vim.api.nvim_set_current_win(target.winid)
         vim.cmd("startinsert")
       end
     end)
@@ -801,6 +817,12 @@ local function setup_keymaps()
     if cmd_item and cmd_item.action == "cmd_toggle_preview" then
       M.execute_action({ action = "cmd_edit", name = cmd_item.name, path = cmd_item.path })
     end
+  end, opts)
+
+  -- p: toggle preview/expand description (commands section)
+  vim.keymap.set("n", "p", function()
+    if state.current_section ~= "commands" then return end
+    execute_action_at_cursor() -- triggers cmd_toggle_preview stored on item
   end, opts)
 
   -- /: search/filter commands
@@ -899,6 +921,14 @@ function M.close()
 
   local icon_rail = require("ccasp.appshell.icon_rail")
   icon_rail.set_active(nil)
+
+  -- Resize content area to reclaim flyout space (shrink left spacer back to rail-only width).
+  -- Without this, the wide spacer stays visible as a blank area after the flyout float closes.
+  appshell.calculate_zones()
+  local content_ok, content = pcall(require, "ccasp.appshell.content")
+  if content_ok and appshell.state and appshell.state.zones then
+    content.resize(appshell.state.zones.content)
+  end
 end
 
 -- Switch section without closing

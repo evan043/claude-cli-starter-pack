@@ -163,13 +163,14 @@ function M.setup(opts)
   vim.g.neovide_padding_left = padding
   vim.g.neovide_padding_right = padding
 
-  -- Window behavior
-  vim.g.neovide_remember_window_size = true
+  -- Window behavior — don't remember size (we set it explicitly each launch)
+  vim.g.neovide_remember_window_size = false
+  vim.g.neovide_fullscreen = false
 
-  -- Set a generous default window size on first launch
-  -- (neovide_remember_window_size will persist user's preferred size after that)
-  vim.o.lines = 45
-  vim.o.columns = 160
+  -- Fill ~85% of the screen: large enough to be useful, small enough to not cover taskbar
+  -- Neovide respects vim.o.lines/columns as the grid size; the pixel size depends on font
+  vim.o.lines = 55
+  vim.o.columns = 200
 
   -- Hide native title bar for standalone app experience
   -- (CCASP header provides its own close/minimize/maximize buttons)

@@ -18,6 +18,7 @@ local state = {
   sessions = {}, -- { id = { id, bufnr, winid, claude_running, name } }
   session_order = {}, -- ordered list of session IDs
   primary_session = nil,
+  active_session = nil, -- most recently focused/created session
   max_sessions = 8,
 }
 
@@ -90,10 +91,14 @@ function M.rearrange()
   local sessions = M.list()
   if #sessions == 0 then return end
 
+  -- Update titlebars first (winbar height affects equalization)
+  get_titlebar().update_all()
+
   vim.cmd("wincmd =")
 
-  -- Update all titlebars
-  get_titlebar().update_all()
+  -- Refresh footer to reflect current session list
+  local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if ft_ok then footer.refresh() end
 end
 
 -- Focus window by session if valid
@@ -143,8 +148,14 @@ local function launch_claude_cli(id, bufnr, name)
         require("ccasp.terminal")._set_claude_running(true)
       end
 
-      vim.notify(name .. " starting...", vim.log.levels.INFO)
-      vim.cmd("startinsert")
+      -- Only enter insert mode if the terminal window still has focus.
+      -- The flyout or another panel may be focused; blindly calling
+      -- startinsert would put INSERT mode on the wrong buffer.
+      local session = state.sessions[id]
+      if session and session.winid and vim.api.nvim_win_is_valid(session.winid)
+          and vim.api.nvim_get_current_win() == session.winid then
+        vim.cmd("startinsert")
+      end
     end
   end, 500)
 end
@@ -185,26 +196,33 @@ function M.spawn()
 
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
+  state.active_session = id -- newly created session is always active
 
   if count == 0 then
     state.primary_session = id
     require("ccasp.terminal")._set_state(bufnr, winid)
   end
 
-  -- Equalize windows immediately so the grid is even right away
-  vim.cmd("wincmd =")
-
   -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
   vim.wo[winid].statusline = " "
 
-  -- Update all titlebars immediately so existing sessions keep their winbar visible
+  -- Update all titlebars FIRST so every session has a winbar before equalization.
+  -- wincmd = accounts for winbar height; running it before winbars are set causes
+  -- misaligned quadrants (windows without winbars get 1 extra row).
   get_titlebar().update_all()
+
+  -- Equalize windows AFTER winbars are consistent across all sessions
+  vim.cmd("wincmd =")
+
+  -- Refresh footer to show the new session tab
+  local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if ft_ok then footer.refresh() end
 
   launch_claude_cli(id, bufnr, name)
 
   vim.defer_fn(function()
     get_titlebar().create(id)
-    M.rearrange()
+    M.rearrange() -- includes wincmd = and footer.refresh()
   end, 800)
 
   return id
@@ -264,6 +282,7 @@ function M.close_all()
   state.sessions = {}
   state.session_order = {}
   state.primary_session = nil
+  state.active_session = nil
 
   local terminal = require("ccasp.terminal")
   terminal._set_state(nil, nil)
@@ -274,6 +293,7 @@ end
 function M.focus(id)
   local session = state.sessions[id]
   if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    state.active_session = id
     vim.api.nvim_set_current_win(session.winid)
     -- Ensure the terminal buffer is still displayed in this window
     if session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
@@ -366,6 +386,33 @@ function M.get_primary()
   return nil
 end
 
+-- Get the most recently active session (last focused or created)
+function M.get_active()
+  if state.active_session and state.sessions[state.active_session] then
+    local s = state.sessions[state.active_session]
+    if s.winid and vim.api.nvim_win_is_valid(s.winid) then
+      return s
+    end
+  end
+  -- Fallback to primary, then first available
+  local primary = M.get_primary()
+  if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+    return primary
+  end
+  local all = M.list()
+  return all[1] or nil
+end
+
+-- Track active session from WinEnter (called by session_titlebar autocmd)
+function M.set_active_by_window(winid)
+  for id, session in pairs(state.sessions) do
+    if session.winid == winid then
+      state.active_session = id
+      return
+    end
+  end
+end
+
 -- Register an existing session (called from sidebar)
 function M.register_primary(bufnr, winid)
   local id = generate_id()
@@ -378,6 +425,7 @@ function M.register_primary(bufnr, winid)
   }
   table.insert(state.session_order, id)
   state.primary_session = id
+  state.active_session = id
 
   -- Create titlebar after short delay (allows terminal to initialize)
   vim.defer_fn(function()
