@@ -114,6 +114,12 @@ function M.open(bounds)
   -- Sync taskbar items from taskbar module
   M.sync_taskbar()
 
+  -- Sandbox buffer to prevent Neovim errors on unmapped keys
+  local helpers_ok, helpers = pcall(require, "ccasp.panels.helpers")
+  if helpers_ok then
+    helpers.sandbox_buffer(state.buf)
+  end
+
   setup_keymaps()
   render()
 end

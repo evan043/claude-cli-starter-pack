@@ -20,6 +20,7 @@ M.sections = {
   { icon = icons.search,    name = "Browse",           key = "browse" },
   { icon = icons.reload,    name = "Orchestration",    key = "orchestration" },
   { icon = icons.settings,  name = "System",           key = "system" },
+  { icon = icons.features,  name = "Features",         key = "features" },
 }
 
 -- Create rail buffer content
@@ -32,9 +33,9 @@ local function render()
   -- Top spacer
   table.insert(lines, "")
 
-  -- Section icons (one per line, centered in 3 cols)
+  -- Section icons with number labels (always visible even without Nerd Font)
   for i, section in ipairs(M.sections) do
-    table.insert(lines, " " .. section.icon)
+    table.insert(lines, string.format(" %d %s", i, section.icon))
   end
 
   -- Fill remaining space with empty lines, place logo at bottom
@@ -46,8 +47,8 @@ local function render()
   end
 
   -- Bottom separator + logo
-  table.insert(lines, " ─")
-  table.insert(lines, " " .. icons.ccasp)
+  table.insert(lines, " ───")
+  table.insert(lines, "  " .. icons.ccasp)
 
   -- Set content
   vim.bo[state.buf].modifiable = true
@@ -85,36 +86,88 @@ local function setup_keymaps()
     end, opts)
   end
 
-  -- Enter/CR to activate section at cursor
-  vim.keymap.set("n", "<CR>", function()
+  -- Helper: open flyout for section at cursor and focus it
+  local function open_and_focus_flyout()
     local cursor = vim.api.nvim_win_get_cursor(state.win)
-    local line = cursor[1] -- 1-indexed; line 2..6 are sections
-    local idx = line -- offset by spacer on line 1
-    if idx >= 1 and idx <= #M.sections then
-      M.select(idx)
-    end
-  end, opts)
+    local idx = cursor[1] - 1  -- subtract 1 for spacer line
+    if idx < 1 or idx > #M.sections then return end
 
-  -- j/k navigation
-  vim.keymap.set("n", "j", function()
+    local section = M.sections[idx]
+    local flyout = require("ccasp.appshell.flyout")
+    local appshell = require("ccasp.appshell")
+
+    -- If flyout is already open with this section, just focus it
+    if flyout.is_open() and appshell.state.active_section == section.key then
+      flyout.focus()
+    else
+      -- Open/switch to this section
+      M.select(idx)
+      -- Focus flyout after it opens
+      vim.schedule(function()
+        flyout.focus()
+      end)
+    end
+  end
+
+  -- Enter/CR to activate section and focus flyout
+  vim.keymap.set("n", "<CR>", open_and_focus_flyout, opts)
+
+  -- Right arrow / Tab → open flyout and focus it
+  vim.keymap.set("n", "<Right>", open_and_focus_flyout, opts)
+  vim.keymap.set("n", "<Tab>", open_and_focus_flyout, opts)
+
+  -- When flyout is open, switch its content to match the cursor position
+  local function sync_flyout_to_cursor()
+    local appshell = require("ccasp.appshell")
+    if not appshell.config.flyout.visible then return end
+
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    local idx = cursor[1] - 1  -- subtract spacer line
+    if idx < 1 or idx > #M.sections then return end
+
+    local section = M.sections[idx]
+    if appshell.state.active_section == section.key then return end -- already showing
+
+    -- Switch flyout to new section (without toggle — always open)
+    state.active_index = idx
+    state.active_section = section.key
+    render()
+    appshell.state.active_section = section.key
+    appshell.calculate_zones()
+    local flyout = require("ccasp.appshell.flyout")
+    flyout.open(appshell.state.zones.flyout, section.key)
+  end
+
+  -- j/k/Down/Up navigation
+  local function nav_down()
     local cursor = vim.api.nvim_win_get_cursor(state.win)
     local next_line = math.min(cursor[1] + 1, #M.sections + 1)
     if next_line >= 2 then
       vim.api.nvim_win_set_cursor(state.win, { next_line, 0 })
+      sync_flyout_to_cursor()
     end
-  end, opts)
+  end
 
-  vim.keymap.set("n", "k", function()
+  local function nav_up()
     local cursor = vim.api.nvim_win_get_cursor(state.win)
     local prev_line = math.max(cursor[1] - 1, 2)
     vim.api.nvim_win_set_cursor(state.win, { prev_line, 0 })
-  end, opts)
+    sync_flyout_to_cursor()
+  end
+
+  vim.keymap.set("n", "j", nav_down, opts)
+  vim.keymap.set("n", "k", nav_up, opts)
+  vim.keymap.set("n", "<Down>", nav_down, opts)
+  vim.keymap.set("n", "<Up>", nav_up, opts)
+
+  -- Left arrow → focus flyout if open (same direction as content)
+  vim.keymap.set("n", "<Left>", function() end, opts)
 
   -- Mouse click
   vim.keymap.set("n", "<LeftMouse>", function()
     local mouse = vim.fn.getmousepos()
     local line = mouse.line
-    local idx = line
+    local idx = line - 1  -- subtract 1 for spacer line
     if idx >= 1 and idx <= #M.sections then
       M.select(idx)
     end
@@ -159,6 +212,12 @@ function M.open(bounds)
   vim.wo[state.win].number = false
   vim.wo[state.win].relativenumber = false
   vim.wo[state.win].signcolumn = "no"
+
+  -- Sandbox buffer to prevent Neovim errors on unmapped keys
+  local helpers_ok, helpers = pcall(require, "ccasp.panels.helpers")
+  if helpers_ok then
+    helpers.sandbox_buffer(state.buf)
+  end
 
   setup_keymaps()
   render()

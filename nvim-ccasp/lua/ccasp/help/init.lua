@@ -264,9 +264,10 @@ function M.setup_content_keymaps()
   if not panel.bufnr then return end
   local opts = { buffer = panel.bufnr, nowait = true, silent = true }
 
-  -- Backspace to go back to topic list
+  -- Backspace / Enter to go back to topic list
   vim.keymap.set("n", "<BS>", M.show_topic_list, opts)
   vim.keymap.set("n", "<Backspace>", M.show_topic_list, opts)
+  vim.keymap.set("n", "<CR>", M.show_topic_list, opts)
 
   -- Search
   vim.keymap.set("n", "/", function()

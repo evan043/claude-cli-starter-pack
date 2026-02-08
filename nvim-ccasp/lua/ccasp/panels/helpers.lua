@@ -100,6 +100,110 @@ function M.set_buffer_content(bufnr, lines)
   vim.bo[bufnr].modifiable = false
 end
 
+-- Sandbox a buffer to prevent Neovim behavior from leaking through CCASP UI.
+-- Blocks all editing keys, mode changes, and command-line access as silent no-ops.
+-- MUST be called BEFORE panel-specific keymaps so panels can override specific keys.
+-- @param bufnr number: Buffer handle
+function M.sandbox_buffer(bufnr)
+  local nop = function() end
+  local opts = { buffer = bufnr, nowait = true, silent = true }
+
+  -- Block insert mode entry
+  for _, key in ipairs({ "i", "I", "a", "A", "o", "O" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block change/substitute/replace
+  for _, key in ipairs({ "c", "C", "s", "S", "r", "R" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block delete
+  for _, key in ipairs({ "d", "D", "x", "X" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block paste
+  for _, key in ipairs({ "p", "P" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block undo/redo, repeat, join, case toggle
+  for _, key in ipairs({ "u", "<C-r>", ".", "J", "~" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block visual mode
+  for _, key in ipairs({ "v", "V", "<C-v>" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block command-line mode (no : access in CCASP panels)
+  vim.keymap.set("n", ":", nop, opts)
+
+  -- Block macro record/execute
+  for _, key in ipairs({ "Q", "@" }) do
+    vim.keymap.set("n", key, nop, opts)
+  end
+
+  -- Block suspend
+  vim.keymap.set("n", "<C-z>", nop, opts)
+
+  -- Safety net: if insert mode is somehow entered, immediately exit
+  vim.api.nvim_create_autocmd("InsertEnter", {
+    buffer = bufnr,
+    callback = function()
+      vim.cmd("stopinsert")
+    end,
+  })
+end
+
+-- Restore focus to the active terminal session after closing a panel.
+-- Tries sessions (appshell), then classic terminal, as fallback.
+function M.restore_terminal_focus()
+  vim.schedule(function()
+    -- Check if a floating window grabbed focus already (another panel opening)
+    local current_win = vim.api.nvim_get_current_win()
+    local win_config = vim.api.nvim_win_get_config(current_win)
+    if win_config.relative and win_config.relative ~= "" then
+      return -- Another floating panel has focus, don't steal it
+    end
+
+    -- Try sessions module (appshell layout)
+    local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+    if sessions_ok then
+      local primary = sessions.get_primary()
+      if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+        vim.api.nvim_set_current_win(primary.winid)
+        -- Ensure the terminal buffer is still displayed in this window
+        -- (it may have been detached during panel open/close cycles)
+        if primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
+          local current_buf = vim.api.nvim_win_get_buf(primary.winid)
+          if current_buf ~= primary.bufnr then
+            vim.api.nvim_win_set_buf(primary.winid, primary.bufnr)
+          end
+        end
+        -- Scroll to bottom so terminal output is visible, then enter terminal mode
+        vim.cmd("normal! G")
+        vim.cmd("startinsert")
+        return
+      end
+      -- Fallback: first available session
+      local all = sessions.list()
+      if #all > 0 then
+        sessions.focus(all[1].id)
+        return
+      end
+    end
+
+    -- Try classic terminal module
+    local terminal_ok, terminal = pcall(require, "ccasp.terminal")
+    if terminal_ok and terminal.focus then
+      terminal.focus()
+    end
+  end)
+end
+
 -- Standard close function for panels
 -- @param state table: Panel state with winid, bufnr fields
 function M.close_panel(state)
@@ -111,6 +215,9 @@ function M.close_panel(state)
   if state.is_open ~= nil then
     state.is_open = false
   end
+
+  -- Return focus to the terminal
+  M.restore_terminal_focus()
 end
 
 -- Setup standard panel keybindings (q/Esc to close)
@@ -152,11 +259,14 @@ function M.setup_minimize(bufnr, winid, title, state)
       if state.is_open ~= nil then
         state.is_open = false
       end
+      -- Return focus to terminal after minimize
+      M.restore_terminal_focus()
     end, opts)
   end
 end
 
--- Complete panel initialization (combines window manager + minimize + close)
+-- Complete panel initialization (sandbox + window manager + minimize + close)
+-- Sandbox is applied FIRST so panel-specific keymaps can override individual keys.
 -- @param bufnr number: Buffer handle
 -- @param winid number: Window handle
 -- @param title string: Panel title
@@ -164,6 +274,7 @@ end
 -- @param close_fn function: Close function
 -- @return table: opts for additional keymaps
 function M.setup_standard_keymaps(bufnr, winid, title, state, close_fn)
+  M.sandbox_buffer(bufnr)
   M.setup_window_manager(bufnr, winid, title)
   M.setup_minimize(bufnr, winid, title, state)
   return M.setup_close_keymaps(bufnr, close_fn)

@@ -60,7 +60,7 @@ M.config = {
 
   -- Appshell layout settings (icon rail + flyout + header + content + footer)
   appshell = {
-    icon_rail = { width = 3, visible = true },
+    icon_rail = { width = 5, visible = true },
     flyout = { width = 35, visible = false },
     header = { height = 1, visible = true },
     footer = { height = 2, visible = true },
@@ -242,6 +242,7 @@ function M.setup(opts)
     features = safe_require("ccasp.panels.features"),
     hooks = safe_require("ccasp.panels.hooks"),
     dashboard = safe_require("ccasp.panels.dashboard"),
+    commands = safe_require("ccasp.panels.commands"),
     prompt_editor = safe_require("ccasp.panels.prompt_editor"),
   }
   M.agents = safe_require("ccasp.agents")
@@ -334,6 +335,13 @@ function M.setup(opts)
 
   -- Setup autocommands
   M.setup_autocmds()
+
+  -- Hide chrome that wastes vertical space in appshell mode
+  if M.is_appshell() then
+    vim.o.showmode = false    -- hides "-- TERMINAL --" etc.
+    vim.o.laststatus = 0      -- hides statuslines between splits
+    vim.o.cmdheight = 0       -- auto-shows only for errors/messages
+  end
 
   M.state.initialized = true
 
@@ -492,7 +500,7 @@ function M.quick_search()
   if M.is_classic() then
     M.ui.search.open()
   else
-    M.telescope.commands()
+    M.panels.commands.toggle()
   end
 end
 
@@ -606,8 +614,7 @@ end
 
 -- Setup modern layout keymaps
 local function setup_modern_keymaps()
-  local prefix = M.config.keys and M.config.keys.prefix or "<leader>c"
-  local keys = M.config.keys or {
+  local default_keys = {
     grid = "g",
     control = "p",
     features = "f",
@@ -621,7 +628,10 @@ local function setup_modern_keymaps()
     quick_enhance = "e",
     taskbar = "T",
     new_session = "n",
+    browser = "o",
   }
+  local prefix = M.config.keys and M.config.keys.prefix or "<leader>c"
+  local keys = vim.tbl_extend("keep", M.config.keys or {}, default_keys)
 
   -- Function lookup table for modern features
   local actions = {
@@ -629,7 +639,7 @@ local function setup_modern_keymaps()
     control = function() M.panels.control.toggle() end,
     features = function() M.panels.features.open() end,
     hooks = function() M.panels.hooks.open() end,
-    commands = function() M.telescope.commands() end,
+    commands = function() M.panels.commands.toggle() end,
     skills = function() M.telescope.skills() end,
     dashboard = function() M.panels.dashboard.open() end,
     restart_all = function() M.agents.restart_all() end,
@@ -638,6 +648,7 @@ local function setup_modern_keymaps()
     quick_enhance = function() M.prompt_injector.quick_enhance() end,
     taskbar = function() M.taskbar.show_picker() end,
     new_session = function() M.browser_tabs.show_context_menu("new_session") end,
+    browser = function() require("ccasp.browser").open_dashboard() end,
     -- Session management
     spawn_session = function() M.sessions.spawn() end,
     session_picker = function() M.sessions.show_picker() end,
@@ -658,6 +669,7 @@ local function setup_modern_keymaps()
     { keys.quick_enhance, actions.quick_enhance, "Quick Enhance" },
     { keys.taskbar, actions.taskbar, "Show Taskbar" },
     { keys.new_session, actions.new_session, "New Session Menu" },
+    { keys.browser, actions.browser, "Open Site Intel in Browser" },
   }
 
   -- Session management keymaps
@@ -736,19 +748,47 @@ local function setup_appshell_keymaps()
     end, vim.tbl_extend("force", opts, { desc = "CCASP: Section " .. i }))
   end
 
+  -- Helper: exit terminal mode safely via feedkeys (vim.cmd cannot send key sequences)
+  local function exit_terminal_mode()
+    local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+    vim.api.nvim_feedkeys(esc, "n", false)
+  end
+
   -- Terminal-mode shortcuts (exit terminal mode first, then act)
   vim.keymap.set("t", "<C-b>", function()
-    vim.cmd([[<C-\><C-n>]])
-    if M.appshell then M.appshell.toggle_rail() end
+    exit_terminal_mode()
+    vim.schedule(function()
+      if M.appshell then M.appshell.toggle_rail() end
+    end)
   end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle icon rail (terminal)" }))
 
   vim.keymap.set("t", "<C-S-b>", function()
-    vim.cmd([[<C-\><C-n>]])
+    exit_terminal_mode()
+    vim.schedule(function()
+      if M.appshell then
+        local section = M.appshell.state.active_section or "terminal"
+        M.appshell.toggle_flyout(section)
+      end
+    end)
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle flyout (terminal)" }))
+
+  -- Tab toggles command panel (flyout) from anywhere
+  vim.keymap.set("n", "<Tab>", function()
     if M.appshell then
       local section = M.appshell.state.active_section or "terminal"
       M.appshell.toggle_flyout(section)
     end
-  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle flyout (terminal)" }))
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle command panel" }))
+
+  vim.keymap.set("t", "<Tab>", function()
+    exit_terminal_mode()
+    vim.schedule(function()
+      if M.appshell then
+        local section = M.appshell.state.active_section or "terminal"
+        M.appshell.toggle_flyout(section)
+      end
+    end)
+  end, vim.tbl_extend("force", opts, { desc = "CCASP: Toggle command panel (terminal)" }))
 end
 
 -- Setup keybindings

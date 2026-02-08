@@ -5,7 +5,7 @@ local helpers = require("ccasp.panels.helpers")
 -- State
 M.bufnr = nil
 M.winid = nil
-M.selected_line = 1
+M.item_lines = {} -- line -> action mapping for navigation
 
 -- Get dependencies
 local function get_config()
@@ -42,6 +42,33 @@ M.available_hooks = {
   },
 }
 
+-- Execute an action by name
+local function execute_action(action_name, item)
+  local handlers = {
+    toggle_hook = function()
+      if item and item.event_name and item.hook_name then
+        M.toggle_hook(item.event_name, item.hook_name)
+      end
+    end,
+    toggle_all = function()
+      M.toggle_all_hooks()
+    end,
+    edit_config = function()
+      M.close()
+      local config_path = vim.fn.getcwd() .. "/.claude/config/settings.json"
+      vim.cmd("edit " .. config_path)
+    end,
+    refresh = function()
+      M.refresh()
+    end,
+    close = function()
+      M.close()
+    end,
+  }
+  local handler = handlers[action_name]
+  if handler then handler() end
+end
+
 -- Render the hooks panel
 function M.render()
   local config = get_config()
@@ -49,6 +76,7 @@ function M.render()
   local hooks = settings.hooks or {}
 
   local lines = {}
+  M.item_lines = {}
 
   table.insert(lines, "")
   table.insert(lines, "  ╭─────────────────────────────────────────────╮")
@@ -60,7 +88,8 @@ function M.render()
   local hooks_enabled = hooks.enabled ~= false
   local global_icon = hooks_enabled and "✓" or "○"
   local global_status = hooks_enabled and "ENABLED" or "DISABLED"
-  table.insert(lines, string.format("  [H] Hooks System: %s %s", global_icon, global_status))
+  table.insert(lines, string.format("    [H]  %s Hooks System: %s", global_icon, global_status))
+  M.item_lines[#lines] = { action = "toggle_all" }
   table.insert(lines, "")
 
   -- Hooks by event type
@@ -83,17 +112,23 @@ function M.render()
       local icon = enabled and "✓" or "○"
       local key = string.sub(event.name, 1, 1):lower() .. i
 
-      local line = string.format("    [%s] %s %-22s", key, icon, hook.name)
-      table.insert(lines, line)
+      table.insert(lines, string.format("    [%s]  %s %-22s", key, icon, hook.name))
+      M.item_lines[#lines] = { action = "toggle_hook", event_name = event.name, hook_name = hook.name }
       table.insert(lines, "          " .. hook.desc)
     end
 
     table.insert(lines, "")
   end
 
-  table.insert(lines, "  ─────────────────────────────────────────────")
-  table.insert(lines, "  Press key to toggle  │  H = Toggle all hooks")
-  table.insert(lines, "  e = Edit hook config │  q = Close")
+  -- Bottom actions
+  table.insert(lines, "  " .. string.rep("─", 43))
+
+  table.insert(lines, "    [e]  Edit hook config")
+  M.item_lines[#lines] = { action = "edit_config" }
+  table.insert(lines, "    [r]  Refresh")
+  M.item_lines[#lines] = { action = "refresh" }
+  table.insert(lines, "    [q]  Close")
+  M.item_lines[#lines] = { action = "close" }
   table.insert(lines, "")
 
   return lines
@@ -128,6 +163,16 @@ function M.open()
 
   -- Setup keymaps
   M.setup_keymaps()
+
+  -- Move cursor to first actionable item
+  if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) then
+    for line = 1, vim.api.nvim_buf_line_count(M.bufnr) do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        break
+      end
+    end
+  end
 end
 
 -- Refresh content
@@ -175,7 +220,7 @@ end
 
 -- Setup keymaps
 function M.setup_keymaps()
-  -- Standard panel keymaps (window manager, minimize, close)
+  -- Standard panel keymaps (sandbox, window manager, minimize, close)
   local opts = helpers.setup_standard_keymaps(M.bufnr, M.winid, "Hooks", M, M.close)
 
   -- Toggle all hooks
@@ -198,13 +243,62 @@ function M.setup_keymaps()
 
   -- Edit hook config
   vim.keymap.set("n", "e", function()
-    M.close()
-    local config_path = vim.fn.getcwd() .. "/.claude/config/settings.json"
-    vim.cmd("edit " .. config_path)
+    execute_action("edit_config")
   end, opts)
 
   -- Refresh
   vim.keymap.set("n", "r", M.refresh, opts)
+
+  -- Enter → execute action at cursor
+  vim.keymap.set("n", "<CR>", function()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    local item = M.item_lines[cursor[1]]
+    if item then
+      execute_action(item.action, item)
+    end
+  end, opts)
+
+  -- Arrow / j/k navigation (skip non-actionable lines)
+  local function nav_down()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    local total = vim.api.nvim_buf_line_count(M.bufnr)
+    for line = cursor[1] + 1, total do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        return
+      end
+    end
+  end
+
+  local function nav_up()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    for line = cursor[1] - 1, 1, -1 do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        return
+      end
+    end
+  end
+
+  vim.keymap.set("n", "j", nav_down, opts)
+  vim.keymap.set("n", "k", nav_up, opts)
+  vim.keymap.set("n", "<Down>", nav_down, opts)
+  vim.keymap.set("n", "<Up>", nav_up, opts)
+
+  -- Mouse click → execute action at clicked line
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local line = mouse.line
+    if line < 1 then return end
+    pcall(vim.api.nvim_win_set_cursor, M.winid, { line, 0 })
+    local item = M.item_lines[line]
+    if item then
+      execute_action(item.action, item)
+    end
+  end, opts)
 end
 
 -- Toggle a specific hook

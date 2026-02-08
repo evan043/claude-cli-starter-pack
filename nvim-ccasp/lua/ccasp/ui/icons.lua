@@ -50,6 +50,12 @@ M.minimize    = ""    -- nf-fa-minus
 M.maximize    = ""    -- nf-fa-plus
 M.close       = ""    -- nf-fa-times
 
+-- Window management buttons (Material Design - better cross-platform rendering)
+M.win_cycle    = "󰑐"    -- nf-md-refresh (cycle sessions)
+M.win_rename   = "󰏪"    -- nf-md-pencil (rename)
+M.win_minimize = "󰖰"    -- nf-md-window_minimize
+M.win_close    = "󰖭"    -- nf-md-window_close
+
 -- Expand / Collapse
 M.expanded    = ""    -- nf-fa-chevron_down
 M.collapsed   = ""    -- nf-fa-chevron_right
@@ -58,6 +64,7 @@ M.section_open = ""   -- nf-fa-folder_open
 
 -- Actions
 M.run         = ""    -- nf-fa-play_circle
+M.palette     = "󰏘"    -- nf-md-palette
 M.edit        = ""    -- nf-fa-pencil
 M.delete      = ""    -- nf-fa-trash
 M.reload      = "󰑐"    -- nf-md-refresh
@@ -72,6 +79,9 @@ M.claude      = "󰚩"    -- nf-md-robot_outline
 M.pin         = ""    -- nf-oct-pin
 M.git_branch  = ""    -- nf-oct-git_branch
 M.worktree    = ""    -- nf-fa-code_fork
+
+-- Browser / Web
+M.globe       = ""    -- nf-fa-globe
 
 -- Categories (for command sections)
 M.deploy      = "󰣆"    -- nf-md-rocket_launch

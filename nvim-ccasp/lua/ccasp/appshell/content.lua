@@ -23,6 +23,11 @@ local function create_spacers()
   local rail_w = config.icon_rail.visible and config.icon_rail.width or 0
   local footer_h = config.footer.visible and config.footer.height or 0
 
+  -- Save the content window ID BEFORE creating any spacer splits.
+  -- wincmd navigation is unreliable after multiple splits (cursor column
+  -- determines which window "up" lands in). Using an explicit ID is safe.
+  local content_win = vim.api.nvim_get_current_win()
+
   -- Left spacer for icon rail (pushes terminal content right)
   if rail_w > 0 then
     vim.cmd("topleft " .. rail_w .. "vnew")
@@ -39,8 +44,6 @@ local function create_spacers()
     vim.wo[state.left_spacer_win].statusline = " "
     vim.wo[state.left_spacer_win].winhighlight =
       "Normal:CcaspIconRailBg,EndOfBuffer:CcaspIconRailBg,StatusLine:CcaspIconRailBg,StatusLineNC:CcaspIconRailBg"
-    -- Return focus to content area
-    vim.cmd("wincmd l")
   end
 
   -- Bottom spacer for footer (pushes terminal content up)
@@ -59,9 +62,11 @@ local function create_spacers()
     vim.wo[state.bottom_spacer_win].statusline = " "
     vim.wo[state.bottom_spacer_win].winhighlight =
       "Normal:CcaspFooterBg,EndOfBuffer:CcaspFooterBg,StatusLine:CcaspFooterBg,StatusLineNC:CcaspFooterBg"
-    -- Return focus to content area
-    vim.cmd("wincmd k")
   end
+
+  -- Always return to the content window using its saved ID
+  -- (wincmd k/l is unreliable when cursor column falls under a spacer)
+  vim.api.nvim_set_current_win(content_win)
 end
 
 -- Close spacer windows
@@ -87,7 +92,7 @@ function M.open(bounds)
   create_spacers()
 
   -- Make window separators blend with appshell chrome
-  vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#080810", bg = "#080810" })
+  vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#0d1117", bg = "#0d1117" })
 
   -- Create the first terminal session in the content area
   -- We use splits (not floats) for terminal windows since terminal buffers
@@ -117,6 +122,7 @@ function M.open(bounds)
     -- Apply terminal background
     vim.wo[winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg"
     vim.wo[winid].scrolloff = 0
+    vim.wo[winid].statusline = " "
 
     -- Register with terminal module
     terminal._set_state(bufnr, winid)
@@ -131,7 +137,12 @@ function M.open(bounds)
         if job_id and job_id > 0 then
           vim.fn.chansend(job_id, "claude\r")
           vim.notify("Claude CLI starting...", vim.log.levels.INFO)
-          vim.cmd("startinsert")
+          -- Only enter insert mode if the terminal window still has focus.
+          -- The onboarding panel may have opened on top, stealing focus.
+          -- Blindly calling startinsert would put INSERT mode on the wrong buffer.
+          if vim.api.nvim_win_is_valid(winid) and vim.api.nvim_get_current_win() == winid then
+            vim.cmd("startinsert")
+          end
 
           vim.defer_fn(function()
             terminal._set_claude_running(true)
@@ -161,11 +172,16 @@ function M.resize(bounds)
   local appshell = require("ccasp.appshell")
   local config = appshell.config
   local rail_w = config.icon_rail.visible and config.icon_rail.width or 0
+  local flyout_w = config.flyout.visible and config.flyout.width or 0
+  local spacer_w = rail_w + flyout_w -- Reserve space for both rail and flyout
   local footer_h = config.footer.visible and config.footer.height or 0
 
   if state.left_spacer_win and vim.api.nvim_win_is_valid(state.left_spacer_win) then
-    if rail_w > 0 then
-      vim.api.nvim_win_set_width(state.left_spacer_win, rail_w)
+    if spacer_w > 0 then
+      -- Temporarily unset winfixwidth to allow resize, then re-lock
+      vim.wo[state.left_spacer_win].winfixwidth = false
+      vim.api.nvim_win_set_width(state.left_spacer_win, spacer_w)
+      vim.wo[state.left_spacer_win].winfixwidth = true
     end
   end
 
@@ -188,10 +204,11 @@ end
 -- Get available width for terminals (used by sessions.lua)
 function M.get_available_width()
   if state.bounds then
-    -- Subtract 1 for window separator between spacer and content
+    -- Subtract separator + flyout width (when open, spacer is wider)
     local appshell = require("ccasp.appshell")
     local has_spacer = appshell.config.icon_rail.visible and 1 or 0
-    return state.bounds.width - has_spacer
+    local flyout_w = appshell.config.flyout.visible and appshell.config.flyout.width or 0
+    return state.bounds.width - has_spacer - flyout_w
   end
   -- Fallback: calculate from appshell
   local appshell = require("ccasp.appshell")

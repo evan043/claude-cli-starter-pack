@@ -36,8 +36,12 @@ vim.api.nvim_create_user_command("CcaspRestartAll", function()
 end, { desc = "Restart all CCASP agents" })
 
 vim.api.nvim_create_user_command("CcaspCommands", function()
-  require("ccasp.telescope").commands()
+  require("ccasp.panels.commands").toggle()
 end, { desc = "Browse CCASP Commands" })
+
+vim.api.nvim_create_user_command("CcaspCommandsTelescope", function()
+  require("ccasp.telescope").commands()
+end, { desc = "Browse CCASP Commands (Telescope fallback)" })
 
 vim.api.nvim_create_user_command("CcaspSkills", function()
   require("ccasp.telescope").skills()

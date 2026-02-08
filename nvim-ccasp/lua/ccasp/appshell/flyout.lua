@@ -63,13 +63,27 @@ local section_renderers = {
     local panels = {
       { icon = icons.dashboard, label = "Dashboard", action = "dashboard" },
       { icon = icons.settings,  label = "Control Panel", action = "control" },
-      { icon = icons.features,  label = "Feature Toggles", action = "features" },
       { icon = icons.hooks,     label = "Hook Manager", action = "hooks" },
       { icon = icons.minimize,  label = "Taskbar", action = "taskbar" },
     }
     for _, p in ipairs(panels) do
       table.insert(lines, "  " .. p.icon .. " " .. p.label)
       item_lines[#lines] = { action = p.action }
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "  " .. icons.globe .. " Open in Browser")
+    table.insert(lines, "")
+
+    local browser_actions = {
+      { icon = icons.globe, label = "Feature Audit", action = "browser_feature_audit" },
+      { icon = icons.globe, label = "Dev Scan", action = "browser_dev_scan" },
+      { icon = icons.globe, label = "Full Dashboard", action = "browser_dashboard" },
+    }
+    for _, b in ipairs(browser_actions) do
+      table.insert(lines, "  " .. b.icon .. " " .. b.label)
+      item_lines[#lines] = { action = b.action }
     end
 
     table.insert(lines, "")
@@ -172,6 +186,65 @@ local section_renderers = {
       item_lines[#lines] = { action = a.action }
     end
   end,
+
+  features = function(lines, item_lines)
+    table.insert(lines, "  " .. icons.features .. " Feature Toggles")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+
+    -- Load current tech stack for toggle states
+    local config_ok, config = pcall(require, "ccasp.config")
+    local tech_stack = {}
+    if config_ok then
+      tech_stack = config.load_tech_stack() or {}
+    end
+
+    local categories = {
+      {
+        name = "Core Features",
+        items = {
+          { label = "Token Management", path = "tokenManagement.enabled" },
+          { label = "Happy Mode", path = "happyMode.enabled" },
+          { label = "Phased Development", path = "phasedDevelopment.enabled" },
+          { label = "Agents", path = "agents.enabled" },
+        },
+      },
+      {
+        name = "Hooks & Automation",
+        items = {
+          { label = "Hooks Enabled", path = "hooks.enabled" },
+          { label = "Auto Commit", path = "hooks.autoCommit" },
+          { label = "Git Tracking", path = "hooks.gitTracking" },
+          { label = "Decision Logging", path = "hooks.decisionLogging" },
+        },
+      },
+      {
+        name = "Integrations",
+        items = {
+          { label = "GitHub Sync", path = "versionControl.autoSync" },
+          { label = "Deployment", path = "deployment.enabled" },
+        },
+      },
+    }
+
+    for _, cat in ipairs(categories) do
+      table.insert(lines, "  " .. cat.name)
+      for _, feat in ipairs(cat.items) do
+        local enabled = config_ok and config.get_nested(tech_stack, feat.path)
+        local toggle_icon = enabled and icons.enabled or icons.disabled
+        local status = enabled and "ON" or "OFF"
+        table.insert(lines, "  " .. toggle_icon .. " " .. feat.label .. "  " .. status)
+        item_lines[#lines] = { action = "toggle_feature", path = feat.path, name = feat.label }
+      end
+      table.insert(lines, "")
+    end
+
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "  " .. icons.check .. " Enable All")
+    item_lines[#lines] = { action = "features_enable_all" }
+    table.insert(lines, "  " .. icons.close .. " Disable All")
+    item_lines[#lines] = { action = "features_disable_all" }
+  end,
 }
 
 -- Render flyout content for current section
@@ -249,9 +322,6 @@ function M.execute_action(item)
     control = function()
       if ccasp.panels and ccasp.panels.control then ccasp.panels.control.toggle() end
     end,
-    features = function()
-      if ccasp.panels and ccasp.panels.features then ccasp.panels.features.open() end
-    end,
     hooks = function()
       if ccasp.panels and ccasp.panels.hooks then ccasp.panels.hooks.open() end
     end,
@@ -283,10 +353,25 @@ function M.execute_action(item)
       if ccasp.agents then ccasp.agents.kill_all() end
     end,
 
+    -- Browser (Site Intel Dashboard)
+    browser_feature_audit = function()
+      require("ccasp.browser").open_dashboard("feature-audit")
+    end,
+    browser_dev_scan = function()
+      require("ccasp.browser").open_dashboard("dev-scan")
+    end,
+    browser_dashboard = function()
+      require("ccasp.browser").open_dashboard()
+    end,
+
     -- Browse
     commands = function()
       M.close()
-      if ccasp.telescope then ccasp.telescope.commands() end
+      if ccasp.panels and ccasp.panels.commands then
+        ccasp.panels.commands.toggle()
+      elseif ccasp.telescope then
+        ccasp.telescope.commands()
+      end
     end,
     skills = function()
       M.close()
@@ -313,6 +398,31 @@ function M.execute_action(item)
       render()
       vim.notify("Refreshed", vim.log.levels.INFO)
     end,
+
+    -- Feature toggles
+    toggle_feature = function()
+      local config_ok, config = pcall(require, "ccasp.config")
+      if not config_ok then return end
+      local tech_stack = config.load_tech_stack()
+      local new_value = config.toggle_nested(tech_stack, item.path)
+      config.save_tech_stack(tech_stack)
+      vim.notify(
+        string.format("CCASP: %s %s", item.name, new_value and "enabled" or "disabled"),
+        vim.log.levels.INFO
+      )
+    end,
+    features_enable_all = function()
+      local config_ok, config = pcall(require, "ccasp.config")
+      if not config_ok then return end
+      local features = require("ccasp.panels.features")
+      features.set_all(true)
+    end,
+    features_disable_all = function()
+      local config_ok, config = pcall(require, "ccasp.config")
+      if not config_ok then return end
+      local features = require("ccasp.panels.features")
+      features.set_all(false)
+    end,
   }
 
   local handler = action_handlers[item.action]
@@ -331,12 +441,26 @@ local function setup_keymaps()
   vim.keymap.set("n", "<CR>", execute_action_at_cursor, opts)
   vim.keymap.set("n", "l", execute_action_at_cursor, opts)
 
+  -- Mouse click → execute action at clicked line
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local line = mouse.line
+    if line < 1 then return end
+    -- Move cursor to clicked line
+    pcall(vim.api.nvim_win_set_cursor, state.win, { line, 0 })
+    -- Execute if actionable
+    local item = state.item_lines[line]
+    if item then
+      M.execute_action(item)
+    end
+  end, opts)
+
   vim.keymap.set("n", "q", function() M.close() end, opts)
   vim.keymap.set("n", "<Esc>", function() M.close() end, opts)
   vim.keymap.set("n", "h", function() M.close() end, opts)
 
-  -- j/k navigation (skip non-item lines)
-  vim.keymap.set("n", "j", function()
+  -- j/k/Down/Up navigation (skip non-item lines)
+  local function nav_down()
     local cursor = vim.api.nvim_win_get_cursor(state.win)
     local total = vim.api.nvim_buf_line_count(state.buf)
     for line = cursor[1] + 1, total do
@@ -345,9 +469,9 @@ local function setup_keymaps()
         return
       end
     end
-  end, opts)
+  end
 
-  vim.keymap.set("n", "k", function()
+  local function nav_up()
     local cursor = vim.api.nvim_win_get_cursor(state.win)
     for line = cursor[1] - 1, 1, -1 do
       if state.item_lines[line] then
@@ -355,6 +479,48 @@ local function setup_keymaps()
         return
       end
     end
+  end
+
+  vim.keymap.set("n", "j", nav_down, opts)
+  vim.keymap.set("n", "k", nav_up, opts)
+  vim.keymap.set("n", "<Down>", nav_down, opts)
+  vim.keymap.set("n", "<Up>", nav_up, opts)
+
+  -- Left arrow / Shift-Tab → focus back to icon rail
+  local function focus_icon_rail()
+    local icon_rail = require("ccasp.appshell.icon_rail")
+    local rail_win = icon_rail.get_win()
+    if rail_win and vim.api.nvim_win_is_valid(rail_win) then
+      vim.api.nvim_set_current_win(rail_win)
+    end
+  end
+
+  vim.keymap.set("n", "<Left>", focus_icon_rail, opts)
+  vim.keymap.set("n", "<S-Tab>", focus_icon_rail, opts)
+
+  -- Tab → close flyout and return to terminal
+  vim.keymap.set("n", "<Tab>", function()
+    M.close()
+    local appshell = require("ccasp.appshell")
+    appshell.config.flyout.visible = false
+    appshell.state.active_section = nil
+    -- Resize content area so terminal reclaims space
+    appshell.calculate_zones()
+    local content = require("ccasp.appshell.content")
+    content.resize(appshell.state.zones.content)
+    -- Update icon rail to clear active highlight
+    local icon_rail = require("ccasp.appshell.icon_rail")
+    icon_rail.set_active(nil)
+    -- Focus terminal and enter insert mode (skip restore_terminal_focus's
+    -- float check, which bails out when icon rail auto-receives focus)
+    vim.schedule(function()
+      local sessions = require("ccasp.sessions")
+      local primary = sessions.get_primary()
+      if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+        vim.api.nvim_set_current_win(primary.winid)
+        vim.cmd("startinsert")
+      end
+    end)
   end, opts)
 end
 
@@ -390,6 +556,12 @@ function M.open(bounds, section)
   vim.wo[state.win].winhighlight = "Normal:CcaspFlyoutBg,EndOfBuffer:CcaspFlyoutBg,FloatBorder:CcaspFlyoutBorder"
   vim.wo[state.win].cursorline = true
   vim.wo[state.win].wrap = false
+
+  -- Sandbox buffer to prevent Neovim errors on unmapped keys
+  local helpers_ok, helpers = pcall(require, "ccasp.panels.helpers")
+  if helpers_ok then
+    helpers.sandbox_buffer(state.buf)
+  end
 
   setup_keymaps()
   render()
@@ -444,6 +616,27 @@ end
 -- Check if flyout is open
 function M.is_open()
   return state.win ~= nil and vim.api.nvim_win_is_valid(state.win)
+end
+
+-- Get flyout window ID
+function M.get_win()
+  return state.win
+end
+
+-- Focus flyout and move cursor to first actionable item
+function M.focus()
+  if state.win and vim.api.nvim_win_is_valid(state.win) then
+    vim.api.nvim_set_current_win(state.win)
+    -- Move cursor to first actionable item
+    if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+      for line = 1, vim.api.nvim_buf_line_count(state.buf) do
+        if state.item_lines[line] then
+          vim.api.nvim_win_set_cursor(state.win, { line, 0 })
+          break
+        end
+      end
+    end
+  end
 end
 
 return M

@@ -5,6 +5,7 @@ local helpers = require("ccasp.panels.helpers")
 -- State
 M.bufnr = nil
 M.winid = nil
+M.item_lines = {} -- line -> action mapping for navigation
 
 -- Get dependencies
 local function get_config()
@@ -13,6 +14,82 @@ end
 
 local function get_agents()
   return require("ccasp.agents")
+end
+
+-- Action definitions for Quick Actions section
+-- These are workflow launchers NOT available in the sidebar command panel
+M.actions = {
+  { key = "u", label = "Check for Updates",   action = "update_check" },
+  { key = "n", label = "New Claude Session",   action = "new_session" },
+  { key = "m", label = "Project Menu",         action = "menu" },
+  { key = "t", label = "Create Task List",     action = "task_list" },
+  { key = "d", label = "Deploy Full Stack",    action = "deploy" },
+  { key = "w", label = "Site Intel Scan",      action = "site_intel" },
+  { key = "?", label = "Help & Docs",          action = "help" },
+  { key = "r", label = "Refresh Dashboard",    action = "refresh" },
+  { key = "q", label = "Close",               action = "close" },
+}
+
+-- Helper: close dashboard and inject a slash command into the active Claude session
+local function inject_slash_command(cmd)
+  M.close()
+  vim.schedule(function()
+    local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+    if sessions_ok then
+      local primary = sessions.get_primary()
+      if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
+        local job_id = vim.b[primary.bufnr].terminal_job_id
+        if job_id and job_id > 0 then
+          vim.fn.chansend(job_id, cmd .. "\n")
+          return
+        end
+      end
+    end
+    vim.notify("No active Claude session to send command", vim.log.levels.WARN)
+  end)
+end
+
+-- Execute an action by name
+local function execute_action(action_name)
+  local handlers = {
+    update_check = function()
+      inject_slash_command("/update-check")
+    end,
+    new_session = function()
+      M.close()
+      vim.schedule(function()
+        local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+        if sessions_ok then sessions.spawn() end
+      end)
+    end,
+    menu = function()
+      inject_slash_command("/menu")
+    end,
+    task_list = function()
+      inject_slash_command("/create-task-list")
+    end,
+    deploy = function()
+      inject_slash_command("/deploy-full")
+    end,
+    site_intel = function()
+      inject_slash_command("/site-intel")
+    end,
+    help = function()
+      M.close()
+      vim.schedule(function()
+        local help_ok, help = pcall(require, "ccasp.help")
+        if help_ok and help.open then help.open() end
+      end)
+    end,
+    refresh = function()
+      M.refresh()
+    end,
+    close = function()
+      M.close()
+    end,
+  }
+  local handler = handlers[action_name]
+  if handler then handler() end
 end
 
 -- Render the dashboard
@@ -29,6 +106,7 @@ function M.render()
   local agent_status = agents.get_status()
 
   local lines = {}
+  M.item_lines = {}
 
   -- ASCII Art Header
   table.insert(lines, "")
@@ -150,20 +228,16 @@ function M.render()
     table.insert(lines, "")
   end
 
-  -- Quick Actions
+  -- Quick Actions (one per line for arrow/Enter/click navigation)
   table.insert(lines, "  ╭─────────────────────────────────────────────────╮")
   table.insert(lines, "  │  Quick Actions                                  │")
   table.insert(lines, "  ╰─────────────────────────────────────────────────╯")
-  table.insert(lines, "    [g] Agent Grid    [p] Control Panel   [f] Features")
-  table.insert(lines, "    [h] Hooks         [c] Commands        [s] Skills")
-  table.insert(lines, "    [r] Refresh       [q] Close           [_] Minimize")
-  table.insert(lines, "")
-  table.insert(lines, "  ╭─────────────────────────────────────────────────╮")
-  table.insert(lines, "  │  Window Controls                                │")
-  table.insert(lines, "  ╰─────────────────────────────────────────────────╯")
-  table.insert(lines, "    Alt+h/j/k/l: Move window")
-  table.insert(lines, "    Alt+Shift+H/J/K/L: Resize window")
-  table.insert(lines, "    Ctrl+C: Center window    _: Minimize to taskbar")
+
+  for _, act in ipairs(M.actions) do
+    table.insert(lines, string.format("    [%s]  %s", act.key, act.label))
+    M.item_lines[#lines] = { action = act.action }
+  end
+
   table.insert(lines, "")
 
   return lines
@@ -202,11 +276,23 @@ function M.open()
     title = " CCASP Dashboard ",
   })
 
+  vim.wo[M.winid].cursorline = true
+
   -- Render
   M.refresh()
 
   -- Setup keymaps
   M.setup_keymaps()
+
+  -- Move cursor to first actionable item
+  if M.bufnr and vim.api.nvim_buf_is_valid(M.bufnr) then
+    for line = 1, vim.api.nvim_buf_line_count(M.bufnr) do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        break
+      end
+    end
+  end
 end
 
 -- Refresh content
@@ -226,28 +312,34 @@ function M.apply_highlights()
   local lines = vim.api.nvim_buf_get_lines(M.bufnr, 0, -1, false)
 
   for i, line in ipairs(lines) do
-    -- ASCII art header
+    -- ASCII art header (bright blue)
     if line:match("^   █") or line:match("^  █") then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Title", i - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspOnboardingTitle", i - 1, 0, -1)
+    -- Card borders (dark blue)
     elseif line:match("^  ╭") or line:match("^  │") or line:match("^  ╰") then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Comment", i - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspOnboardingCard", i - 1, 0, -1)
+      -- Card title text inside │ ... │ gets teal
+      local title_s, title_e = line:find("│  (.-)%s*│")
+      if title_s and line:match("^  │") then
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspOnboardingCardTitle", i - 1, title_s + 2, title_e - 2)
+      end
     elseif line:match("✓") then
       for s in line:gmatch("()✓") do
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticOk", i - 1, s - 1, s + 3)
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspStatusOk", i - 1, s - 1, s + 3)
       end
     elseif line:match("○") then
       for s in line:gmatch("()○") do
-        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Comment", i - 1, s - 1, s + 3)
+        vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspMuted", i - 1, s - 1, s + 3)
       end
     elseif line:match("Version:") then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticInfo", i - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspOnboardingHeader", i - 1, 0, -1)
     elseif line:match("Update available") then
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "DiagnosticWarn", i - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspStatusWarn", i - 1, 0, -1)
     end
 
-    -- Highlight key bindings
-    for s, e in line:gmatch("()%[%w%]()") do
-      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "Special", i - 1, s - 1, e - 1)
+    -- Highlight key bindings [x] in steel blue
+    for s, e in line:gmatch("()%[%w%?%]()") do
+      vim.api.nvim_buf_add_highlight(M.bufnr, ns, "CcaspOnboardingKey", i - 1, s - 1, e - 1)
     end
   end
 end
@@ -257,38 +349,63 @@ function M.setup_keymaps()
   -- Standard panel keymaps (window manager, minimize, close)
   local opts = helpers.setup_standard_keymaps(M.bufnr, M.winid, "Dashboard", M, M.close)
 
-  -- Quick actions
-  vim.keymap.set("n", "g", function()
-    M.close()
-    require("ccasp.agents").open_grid()
+  -- Letter shortcuts (kept for quick access)
+  for _, act in ipairs(M.actions) do
+    vim.keymap.set("n", act.key, function()
+      execute_action(act.action)
+    end, opts)
+  end
+
+  -- Enter → execute action at cursor
+  vim.keymap.set("n", "<CR>", function()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    local item = M.item_lines[cursor[1]]
+    if item then
+      execute_action(item.action)
+    end
   end, opts)
 
-  vim.keymap.set("n", "p", function()
-    M.close()
-    require("ccasp.panels.control").open()
-  end, opts)
+  -- Arrow / j/k navigation (skip non-actionable lines)
+  local function nav_down()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    local total = vim.api.nvim_buf_line_count(M.bufnr)
+    for line = cursor[1] + 1, total do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        return
+      end
+    end
+  end
 
-  vim.keymap.set("n", "f", function()
-    M.close()
-    require("ccasp.panels.features").open()
-  end, opts)
+  local function nav_up()
+    if not M.winid or not vim.api.nvim_win_is_valid(M.winid) then return end
+    local cursor = vim.api.nvim_win_get_cursor(M.winid)
+    for line = cursor[1] - 1, 1, -1 do
+      if M.item_lines[line] then
+        vim.api.nvim_win_set_cursor(M.winid, { line, 0 })
+        return
+      end
+    end
+  end
 
-  vim.keymap.set("n", "h", function()
-    M.close()
-    require("ccasp.panels.hooks").open()
-  end, opts)
+  vim.keymap.set("n", "j", nav_down, opts)
+  vim.keymap.set("n", "k", nav_up, opts)
+  vim.keymap.set("n", "<Down>", nav_down, opts)
+  vim.keymap.set("n", "<Up>", nav_up, opts)
 
-  vim.keymap.set("n", "c", function()
-    M.close()
-    require("ccasp.telescope").commands()
+  -- Mouse click → execute action at clicked line
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local line = mouse.line
+    if line < 1 then return end
+    pcall(vim.api.nvim_win_set_cursor, M.winid, { line, 0 })
+    local item = M.item_lines[line]
+    if item then
+      execute_action(item.action)
+    end
   end, opts)
-
-  vim.keymap.set("n", "s", function()
-    M.close()
-    require("ccasp.telescope").skills()
-  end, opts)
-
-  vim.keymap.set("n", "r", M.refresh, opts)
 end
 
 -- Close panel

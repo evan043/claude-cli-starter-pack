@@ -130,6 +130,12 @@ function M.open(bounds)
   vim.wo[state.win].wrap = false
   vim.wo[state.win].cursorline = false
 
+  -- Sandbox buffer to prevent Neovim errors on unmapped keys
+  local helpers_ok, helpers = pcall(require, "ccasp.panels.helpers")
+  if helpers_ok then
+    helpers.sandbox_buffer(state.buf)
+  end
+
   setup_keymaps()
   render()
 end

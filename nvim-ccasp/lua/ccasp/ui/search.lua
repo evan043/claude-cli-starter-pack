@@ -231,11 +231,12 @@ function M.open_categorized()
   vim.api.nvim_win_set_option(win, "winhighlight", "FloatBorder:CcaspBorderGlow")
 
   -- Setup highlight groups
-  vim.api.nvim_set_hl(0, "CcaspSearchMatch", { fg = "#ffaf00", bold = true, default = true })
-  vim.api.nvim_set_hl(0, "CcaspSearchSection", { fg = "#00afff", bold = true, default = true })
-  vim.api.nvim_set_hl(0, "CcaspCmdName", { fg = "#87ff5f", default = true })
-  vim.api.nvim_set_hl(0, "CcaspCmdDesc", { fg = "#808080", default = true })
-  vim.api.nvim_set_hl(0, "CcaspBorderGlow", { fg = "#5fafff", default = true })
+  -- Fallback highlights (only set if not already defined by highlights.lua)
+  vim.api.nvim_set_hl(0, "CcaspSearchMatch", { fg = "#61afef", bold = true, default = true })
+  vim.api.nvim_set_hl(0, "CcaspSearchSection", { fg = "#56b6c2", bold = true, default = true })
+  vim.api.nvim_set_hl(0, "CcaspCmdName", { fg = "#61afef", default = true })
+  vim.api.nvim_set_hl(0, "CcaspCmdDesc", { fg = "#4a5568", default = true })
+  vim.api.nvim_set_hl(0, "CcaspBorderGlow", { fg = "#1e3a5f", default = true })
 
   -- Render function
   local function render()

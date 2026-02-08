@@ -17,11 +17,11 @@ M.groups = {
   -- ─── Headers & Titles ────────────────────────────────────────
   CcaspHeaderPrimary  = { fg = "#61afef", bold = true },        -- Bright blue
   CcaspHeaderSecondary = { fg = "#528bbc" },                    -- Medium blue
-  CcaspTitle          = { fg = "#e5c07b", bg = "#1a2a3a", bold = true }, -- Gold on dark blue
+  CcaspTitle          = { fg = "#56b6c2", bg = "#0d1520", bold = true }, -- Teal on dark slate
   CcaspSubtitle       = { fg = "#abb2bf", italic = true },      -- Muted text
 
   -- ─── Borders & Separators (Glowing) ──────────────────────────
-  CcaspBorderGlow     = { fg = "#00ff88" },                     -- Bright green glow
+  CcaspBorderGlow     = { fg = "#1e3a5f" },                     -- Subtle blue glow (matches theme)
   CcaspBorderDim      = { fg = "#1a3a2a" },                     -- Dim green
   CcaspBorderActive   = { fg = "#61afef", bold = true },        -- Active window border
   CcaspBorderInactive = { fg = "#21262d" },                     -- Inactive window border
@@ -30,59 +30,59 @@ M.groups = {
   CcaspWinSeparator   = { fg = "#1e3a5f", bg = "#010409" },    -- Window divider
 
   -- ─── Command List ────────────────────────────────────────────
-  CcaspCmdName        = { fg = "#e5c07b", bold = true },        -- Gold command names
+  CcaspCmdName        = { fg = "#61afef", bold = true },        -- Blue command names
   CcaspCmdDesc        = { fg = "#5c6370", italic = true },      -- Dim description
   CcaspCmdSelected    = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Selected command
-  CcaspCmdSection     = { fg = "#c678dd", bold = true },        -- Purple section headers
-  CcaspCmdSectionIcon = { fg = "#e06c75" },                     -- Red section icons
+  CcaspCmdSection     = { fg = "#56b6c2", bold = true },        -- Teal section headers
+  CcaspCmdSectionIcon = { fg = "#3a7fcf" },                     -- Medium blue section icons
   CcaspCmdUser        = { fg = "#98c379", bold = true },        -- Green for user commands
   CcaspCmdEssential   = { fg = "#61afef", bold = true },        -- Blue for essential
-  CcaspCmdInnovative  = { fg = "#c678dd", bold = true },        -- Purple for innovative
-  CcaspCmdRecent      = { fg = "#56b6c2" },                     -- Cyan for recent
+  CcaspCmdInnovative  = { fg = "#56b6c2", bold = true },        -- Teal for innovative
+  CcaspCmdRecent      = { fg = "#5fafff" },                     -- Steel blue for recent
 
   -- ─── Status Indicators (Vivid) ───────────────────────────────
   CcaspStatusOk       = { fg = "#50fa7b", bold = true },        -- Bright green
-  CcaspStatusWarn     = { fg = "#f1fa8c", bold = true },        -- Bright yellow
+  CcaspStatusWarn     = { fg = "#d19a66", bold = true },        -- Warm amber
   CcaspStatusError    = { fg = "#ff5555", bold = true },        -- Bright red
   CcaspStatusInfo     = { fg = "#8be9fd" },                     -- Bright cyan
 
   -- ─── Feature Toggles ────────────────────────────────────────
   CcaspToggleOn       = { fg = "#50fa7b", bold = true },        -- Bright green ON
   CcaspToggleOff      = { fg = "#6272a4" },                     -- Muted OFF
-  CcaspToggleKey      = { fg = "#bd93f9", bold = true },        -- Purple keybinding
+  CcaspToggleKey      = { fg = "#5fafff", bold = true },        -- Steel blue keybinding
 
   -- ─── Topbar ──────────────────────────────────────────────────
   CcaspTopbarItem     = { fg = "#abb2bf", bg = "#0d1117" },     -- Normal item
   CcaspTopbarActive   = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active item
-  CcaspTopbarPinned   = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Pinned
+  CcaspTopbarPinned   = { fg = "#56b6c2", bg = "#0d1117", bold = true }, -- Pinned (teal)
   CcaspTopbarSection  = { fg = "#6272a4", bg = "#0d1117" },     -- Section label
-  CcaspTopbarOverflow = { fg = "#ff79c6", bg = "#0d1117", bold = true }, -- Overflow indicators
+  CcaspTopbarOverflow = { fg = "#5fafff", bg = "#0d1117", bold = true }, -- Overflow indicators
 
   -- ─── Bottom Control Stripe ───────────────────────────────────
   CcaspBarLabel       = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Labels
   CcaspBarValue       = { fg = "#abb2bf", bg = "#0d1117" },     -- Values
-  CcaspBarKey         = { fg = "#bd93f9", bg = "#0d1117", bold = true }, -- Key hints
+  CcaspBarKey         = { fg = "#5fafff", bg = "#0d1117", bold = true }, -- Key hints (steel blue)
   CcaspBarSep         = { fg = "#1e3a5f", bg = "#0d1117" },     -- Separators
 
   -- ─── Logo Animation ──────────────────────────────────────────
-  CcaspLogoGlow1      = { fg = "#1a5a3a", bg = "#0a0a0a", bold = true }, -- Dim cyan
-  CcaspLogoGlow2      = { fg = "#00cc66", bg = "#0a0a0a", bold = true }, -- Medium cyan
-  CcaspLogoGlow3      = { fg = "#00ff88", bg = "#0a0a0a", bold = true }, -- Bright green
+  CcaspLogoGlow1      = { fg = "#1e3a5f", bg = "#0a0a0a", bold = true }, -- Dim blue
+  CcaspLogoGlow2      = { fg = "#3a7fcf", bg = "#0a0a0a", bold = true }, -- Medium blue
+  CcaspLogoGlow3      = { fg = "#61afef", bg = "#0a0a0a", bold = true }, -- Bright blue
   CcaspLogoPrimary    = { fg = "#61afef", bg = "#0a0a0a", bold = true }, -- Settled blue
   CcaspLogoBorder     = { fg = "#1e3a5f", bg = "#0a0a0a" },     -- Logo border
 
   -- ─── Search ──────────────────────────────────────────────────
-  CcaspSearchMatch    = { fg = "#f1fa8c", bold = true },        -- Search match highlight
-  CcaspSearchSection  = { fg = "#c678dd", italic = true },      -- Section in results
+  CcaspSearchMatch    = { fg = "#61afef", bold = true },        -- Search match highlight (blue)
+  CcaspSearchSection  = { fg = "#56b6c2", italic = true },      -- Section in results (teal)
 
   -- ─── Session Titlebars (enhanced) ────────────────────────────
   CcaspSessionActive  = { fg = "#ffffff", bg = "#1a3a5f", bold = true },
   CcaspSessionInactive = { fg = "#6272a4", bg = "#161b22" },
-  CcaspSessionBtn     = { fg = "#ffff00", bg = "#1a3a5f", bold = true },
+  CcaspSessionBtn     = { fg = "#56b6c2", bg = "#1a3a5f", bold = true },
 
   -- ─── Misc ────────────────────────────────────────────────────
   CcaspMuted          = { fg = "#484e5b" },                     -- Very dim text
-  CcaspAccent         = { fg = "#ff79c6" },                     -- Pink accent
+  CcaspAccent         = { fg = "#56b6c2" },                     -- Teal accent
   CcaspLink           = { fg = "#8be9fd", underline = true },   -- Clickable
 
   -- ─── Appshell: Icon Rail ───────────────────────────────────
@@ -93,7 +93,7 @@ M.groups = {
 
   -- ─── Appshell: Header ─────────────────────────────────────
   CcaspHeaderBg       = { bg = "#0d1117" },                     -- Header background
-  CcaspHeaderTitle    = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Project name
+  CcaspHeaderTitle    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Project name (blue)
   CcaspHeaderTab      = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive session tab
   CcaspHeaderTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active tab
 
@@ -102,7 +102,7 @@ M.groups = {
   CcaspFooterLabel    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Labels
   CcaspFooterValue    = { fg = "#abb2bf", bg = "#0d1117" },     -- Values
   CcaspFooterSep      = { fg = "#1e3a5f", bg = "#0d1117" },     -- Separators
-  CcaspFooterTaskbar  = { fg = "#c678dd", bg = "#0d1117" },     -- Minimized items
+  CcaspFooterTaskbar  = { fg = "#5fafff", bg = "#0d1117" },     -- Minimized items (steel blue)
 
   -- ─── Appshell: Flyout ─────────────────────────────────────
   CcaspFlyoutBg       = { bg = "#0d1117", fg = "#c9d1d9" },     -- Flyout background
@@ -116,21 +116,23 @@ M.groups = {
   CcaspRightPanelBorder = { fg = "#1e3a5f" },                   -- Right panel border
 
   -- ─── Onboarding / Getting Started ───────────────────────
-  CcaspOnboardingTitle   = { fg = "#e5c07b", bold = true },       -- Page title (gold)
-  CcaspOnboardingHeader  = { fg = "#61afef", bold = true },       -- Section header (blue)
-  CcaspOnboardingDiagram = { fg = "#56b6c2" },                    -- ASCII diagram (cyan)
-  CcaspOnboardingKey     = { fg = "#bd93f9", bold = true },       -- Keybinding highlight (purple)
-  CcaspOnboardingTip     = { fg = "#98c379", italic = true },     -- Tip text (green)
-  CcaspOnboardingTryIt   = { fg = "#ff79c6", bold = true },       -- Try-it action (pink)
-  CcaspOnboardingNav     = { fg = "#6272a4" },                    -- Navigation hints (muted)
-  CcaspOnboardingPage    = { fg = "#5c6370", italic = true },     -- Page indicator (dim)
-  CcaspOnboardingLink    = { fg = "#8be9fd", underline = true },  -- Clickable links (cyan)
-  CcaspOnboardingLogo    = { fg = "#00ff88", bold = true },       -- Logo text (bright green)
+  CcaspOnboardingTitle   = { fg = "#61afef", bold = true },       -- Page title (bright blue)
+  CcaspOnboardingHeader  = { fg = "#56b6c2", bold = true },       -- Section header (teal)
+  CcaspOnboardingDiagram = { fg = "#3a7fcf" },                    -- ASCII diagram (medium blue)
+  CcaspOnboardingKey     = { fg = "#5fafff", bold = true },       -- Keybinding (steel blue)
+  CcaspOnboardingTip     = { fg = "#3a9f8f", italic = true },     -- Tip text (muted teal)
+  CcaspOnboardingTryIt   = { fg = "#56b6c2", bold = true },       -- Try-it action (teal)
+  CcaspOnboardingNav     = { fg = "#3a5a7f" },                    -- Navigation hints (dark blue)
+  CcaspOnboardingPage    = { fg = "#4a5568", italic = true },     -- Page indicator (slate)
+  CcaspOnboardingLink    = { fg = "#5fafff", underline = true },  -- Links (steel blue)
+  CcaspOnboardingLogo    = { fg = "#61afef", bold = true },       -- Logo (bright blue)
+  CcaspOnboardingCard    = { fg = "#1e3a5f" },                    -- Card borders (dark blue)
+  CcaspOnboardingCardTitle = { fg = "#56b6c2", bold = true },     -- Card section title (teal)
 
   -- ─── Help System ────────────────────────────────────────
-  CcaspHelpTitle   = { fg = "#e5c07b", bold = true },             -- Help panel title
+  CcaspHelpTitle   = { fg = "#61afef", bold = true },             -- Help panel title (blue)
   CcaspHelpTopic   = { fg = "#61afef" },                          -- Topic list item
-  CcaspHelpSearch  = { fg = "#f1fa8c", bold = true },             -- Search match
+  CcaspHelpSearch  = { fg = "#61afef", bold = true },             -- Search match (blue)
 }
 
 -- Apply all highlight groups

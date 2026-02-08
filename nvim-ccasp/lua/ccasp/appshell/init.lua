@@ -6,10 +6,10 @@ local M = {}
 
 -- Default appshell configuration
 M.config = {
-  icon_rail = { width = 3, visible = true },
+  icon_rail = { width = 5, visible = true },
   flyout = { width = 35, visible = false },
   header = { height = 1, visible = true },
-  footer = { height = 2, visible = true },
+  footer = { height = 0, visible = false },
   right_panel = { width = 40, visible = false },
 }
 
@@ -174,6 +174,11 @@ function M.toggle_flyout(section)
     M.calculate_zones()
     flyout.open(M.state.zones.flyout, section)
   end
+
+  -- Resize content area so terminal shrinks/grows with flyout
+  M.calculate_zones()
+  local content = require("ccasp.appshell.content")
+  content.resize(M.state.zones.content)
 
   -- Update icon rail to reflect active section
   local icon_rail = require("ccasp.appshell.icon_rail")

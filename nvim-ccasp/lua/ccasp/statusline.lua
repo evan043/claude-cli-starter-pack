@@ -187,18 +187,18 @@ function M.lualine_tokens_color()
   local usage = config.get_token_usage()
 
   if not usage then
-    return { fg = "#888888" }
+    return { fg = "#4a5568" }
   end
 
   local budget = usage.budget or 200000
   local pct = budget > 0 and math.floor(((usage.used or 0) / budget) * 100) or 0
 
   if pct > 90 then
-    return { fg = "#ff6b6b" } -- Red
+    return { fg = "#ff5555" } -- Red (danger)
   elseif pct > 75 then
-    return { fg = "#ffd93d" } -- Yellow
+    return { fg = "#d19a66" } -- Warm amber (warning)
   else
-    return { fg = "#6bcb77" } -- Green
+    return { fg = "#56b6c2" } -- Teal (healthy)
   end
 end
 

@@ -451,7 +451,13 @@ function M.execute_shortcut(action)
     end,
 
     -- Browse
-    commands = function() M._browse_with_telescope(ccasp, "commands") end,
+    commands = function()
+      if ccasp.panels and ccasp.panels.commands then
+        ccasp.panels.commands.toggle()
+      else
+        M._browse_with_telescope(ccasp, "commands")
+      end
+    end,
     skills = function() M._browse_with_telescope(ccasp, "skills") end,
 
     -- System

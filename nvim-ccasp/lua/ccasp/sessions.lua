@@ -309,8 +309,18 @@ function M.focus(id)
   local session = state.sessions[id]
   if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
     vim.api.nvim_set_current_win(session.winid)
+    -- Ensure the terminal buffer is still displayed in this window
+    if session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
+      local current_buf = vim.api.nvim_win_get_buf(session.winid)
+      if current_buf ~= session.bufnr then
+        vim.api.nvim_win_set_buf(session.winid, session.bufnr)
+      end
+    end
     -- Scroll to bottom using native motion (respects terminal viewport, unlike buf_line_count)
-    vim.cmd("normal! G")
+    local mode = vim.api.nvim_get_mode().mode
+    if mode ~= "t" and mode ~= "nt" then
+      vim.cmd("normal! G")
+    end
     vim.cmd("startinsert")
   end
 end

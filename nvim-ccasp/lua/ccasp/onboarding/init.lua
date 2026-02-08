@@ -21,22 +21,31 @@ function M.get_panel()
   return panel
 end
 
--- Calculate welcome panel dimensions (90% of screen)
+-- Calculate welcome panel dimensions (centered over full editor)
 local function get_panel_config()
-  local width = math.floor(vim.o.columns * 0.9)
-  local height = math.floor(vim.o.lines * 0.85)
+  local editor_w = vim.o.columns
+  local editor_h = vim.o.lines
+
+  local width = math.floor(editor_w * 0.6)
+  local height = math.floor(editor_h * 0.75)
 
   -- Minimum dimensions
   width = math.max(width, 80)
   height = math.max(height, 24)
 
-  local pos = helpers.calculate_position({ width = width, height = height })
+  -- Clamp to editor bounds
+  width = math.min(width, editor_w - 4)
+  height = math.min(height, editor_h - 4)
+
+  -- Center over full editor (ignore content zone — this is a modal overlay)
+  local row = math.floor((editor_h - height) / 2)
+  local col = math.floor((editor_w - width) / 2)
 
   return {
-    width = pos.width,
-    height = pos.height,
-    row = pos.row,
-    col = pos.col,
+    width = width,
+    height = height,
+    row = row,
+    col = col,
     border = "rounded",
     title = " 󰚩 CCASP Getting Started ",
     title_pos = "center",
@@ -47,6 +56,9 @@ end
 
 -- Open the welcome panel
 function M.open_welcome()
+  -- Ensure we're in normal mode (terminal may have started insert mode)
+  vim.cmd("stopinsert")
+
   -- Focus existing window if already open
   if helpers.focus_if_open(panel.winid) then
     return
