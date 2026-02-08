@@ -172,6 +172,21 @@ function M.close(num)
   if footer then footer.refresh() end
 end
 
+-- Find a non-spacer, non-float window in the content area.
+-- Returns the window ID, or nil if none found.
+local function find_content_window()
+  local content_ok, content = pcall(require, "ccasp.appshell.content")
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local cfg = vim.api.nvim_win_get_config(win)
+    local is_float = cfg.relative and cfg.relative ~= ""
+    local is_spacer = content_ok and content.is_spacer_win and content.is_spacer_win(win)
+    if not is_float and not is_spacer then
+      return win
+    end
+  end
+  return nil
+end
+
 -- Core operation: switch to layer N
 function M.switch_to(num)
   if not state.initialized then return end
@@ -191,10 +206,27 @@ function M.switch_to(num)
   -- 1. Snapshot current layer
   snapshot_current()
 
-  -- 2. Detach all windows (keeps buffers alive)
+  -- 2. Before detaching, find a content window to preserve.
+  --    We'll replace its buffer with a temporary one so it survives
+  --    all session window closures (can't close the last window).
+  local anchor_win = find_content_window()
+  local temp_buf = nil
+  if anchor_win then
+    temp_buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[temp_buf].buftype = "nofile"
+    vim.bo[temp_buf].bufhidden = "wipe"
+    vim.api.nvim_win_set_buf(anchor_win, temp_buf)
+  end
+
+  -- 3. Detach all windows (keeps buffers alive via bufhidden=hide)
   sessions._detach_all_windows()
 
-  -- 3. Load target layer
+  -- 4. Focus the anchor window (content area) for reattachment
+  if anchor_win and vim.api.nvim_win_is_valid(anchor_win) then
+    vim.api.nvim_set_current_win(anchor_win)
+  end
+
+  -- 5. Load target layer
   local target = state.layers[num]
   state.active_layer = num
 
@@ -206,7 +238,7 @@ function M.switch_to(num)
     sessions._reattach_windows()
     sessions.rearrange()
   else
-    -- Target is empty: import empty state and show splash
+    -- Target is empty: import empty state and spawn a fresh session
     sessions._import_state({
       sessions = {},
       session_order = {},
@@ -217,15 +249,16 @@ function M.switch_to(num)
       session_colors = {},
       minimized = {},
     })
-    -- Show splash in the content area
-    local splash_ok, splash = pcall(require, "ccasp.splash")
-    if splash_ok then
-      local current_win = vim.api.nvim_get_current_win()
-      splash.show(current_win)
-    end
+    -- Spawn a new session in the empty layer (user expects a usable terminal)
+    sessions.spawn()
   end
 
-  -- 4. Refresh chrome
+  -- Clean up temp buffer (reattach replaced it in the anchor window)
+  if temp_buf and vim.api.nvim_buf_is_valid(temp_buf) then
+    pcall(vim.api.nvim_buf_delete, temp_buf, { force = true })
+  end
+
+  -- 6. Refresh chrome
   local footer = get_footer()
   if footer then footer.refresh() end
   titlebar.update_all()

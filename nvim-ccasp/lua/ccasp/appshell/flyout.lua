@@ -669,16 +669,15 @@ function M.execute_action(item)
 
     -- Layer management
     switch_layer = function()
-      local layers_ok, layers = pcall(require, "ccasp.layers")
-      if layers_ok then
-        layers.switch_to(item.layer_num)
-        -- Re-render flyout to reflect new layer state
-        vim.defer_fn(function()
-          if state.win and vim.api.nvim_win_is_valid(state.win) then
-            render()
-          end
-        end, 400)
-      end
+      -- Close flyout FIRST so layer switch reattaches windows into the
+      -- content area, not the narrow flyout float.
+      M.close()
+      vim.schedule(function()
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok then
+          layers.switch_to(item.layer_num)
+        end
+      end)
     end,
     layer_new = function()
       close_and_run_modal(function()

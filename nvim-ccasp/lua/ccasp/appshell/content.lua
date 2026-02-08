@@ -151,6 +151,9 @@ function M.open(bounds)
     local bufnr = vim.api.nvim_get_current_buf()
     local winid = vim.api.nvim_get_current_win()
 
+    -- Keep terminal buffer alive when its window is closed (layer switching).
+    vim.bo[bufnr].bufhidden = "hide"
+
     -- Apply terminal window options
     vim.wo[winid].scrolloff = 0
     vim.wo[winid].statusline = " "

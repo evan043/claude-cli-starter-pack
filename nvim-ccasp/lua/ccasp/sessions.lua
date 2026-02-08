@@ -223,6 +223,10 @@ function M.spawn()
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
 
+  -- Keep terminal buffer alive when its window is closed (layer switching).
+  -- Without this, Neovim deletes the buffer on window close, killing the process.
+  vim.bo[bufnr].bufhidden = "hide"
+
   -- Apply terminal window options (winhighlight set later by titlebar.update)
   vim.wo[winid].scrolloff = 0
   vim.wo[winid].number = false
@@ -296,6 +300,9 @@ function M.spawn_at_path(path)
   vim.cmd("terminal")
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+
+  -- Keep terminal buffer alive when its window is closed (layer switching).
+  vim.bo[bufnr].bufhidden = "hide"
 
   -- Apply terminal window options (winhighlight set later by titlebar.update)
   vim.wo[winid].scrolloff = 0
@@ -703,6 +710,10 @@ function M._detach_all_windows()
   state.resizing = true
 
   for id, session in pairs(state.sessions) do
+    -- Ensure terminal buffer survives window close
+    if session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
+      vim.bo[session.bufnr].bufhidden = "hide"
+    end
     -- Destroy titlebar (winbar is removed when window closes)
     get_titlebar().destroy(id)
     -- Close window but keep buffer
@@ -733,9 +744,39 @@ function M._reattach_windows()
     return
   end
 
-  -- First session: use current window
+  -- Find a suitable content-area window to host the first session.
+  -- After detaching, current window may be a spacer or float — both are wrong.
+  -- Walk all windows and pick the first non-spacer, non-float window.
+  local content_ok, content = pcall(require, "ccasp.appshell.content")
+  local first_win = nil
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local cfg = vim.api.nvim_win_get_config(win)
+    local is_float = cfg.relative and cfg.relative ~= ""
+    local is_spacer = content_ok and content.is_spacer_win and content.is_spacer_win(win)
+    if not is_float and not is_spacer then
+      first_win = win
+      break
+    end
+  end
+
+  -- Fallback: if every real window was a spacer, create a new split from any spacer
+  if not first_win then
+    -- Focus any valid window, then create a new window beside it
+    local all_wins = vim.api.nvim_tabpage_list_wins(0)
+    for _, win in ipairs(all_wins) do
+      local cfg = vim.api.nvim_win_get_config(win)
+      if not (cfg.relative and cfg.relative ~= "") then
+        vim.api.nvim_set_current_win(win)
+        break
+      end
+    end
+    vim.cmd("vnew")
+    first_win = vim.api.nvim_get_current_win()
+  end
+
+  -- Place the first session buffer into the content window
   local first = ordered[1]
-  local first_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(first_win)
   vim.api.nvim_win_set_buf(first_win, first.bufnr)
   first.winid = first_win
 
