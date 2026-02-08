@@ -251,8 +251,9 @@ function M.switch_to(num)
     end
   else
     -- Target is empty: import empty state and spawn a fresh session.
-    -- The anchor window still exists with temp_buf — spawn a terminal
-    -- directly in it to avoid the vnew split that would halve the area.
+    -- Pass the anchor window directly to spawn() so it places the terminal
+    -- there without creating any splits.  The temp_buf (bufhidden=wipe) is
+    -- automatically cleaned up when vim.cmd("terminal") replaces it.
     sessions._import_state({
       sessions = {},
       session_order = {},
@@ -264,15 +265,12 @@ function M.switch_to(num)
       minimized = {},
     })
 
-    if anchor_win and vim.api.nvim_win_is_valid(anchor_win) then
-      -- Reuse the anchor window: focus it, open terminal, then register as session
-      vim.api.nvim_set_current_win(anchor_win)
-      if temp_buf and vim.api.nvim_buf_is_valid(temp_buf) then
-        pcall(vim.api.nvim_buf_delete, temp_buf, { force = true })
-        temp_buf = nil
-      end
-    end
-    sessions.spawn()
+    -- Spawn directly in the anchor window (no split, full width)
+    local spawn_win = (anchor_win and vim.api.nvim_win_is_valid(anchor_win))
+        and anchor_win or nil
+    sessions.spawn(spawn_win)
+    -- temp_buf was auto-wiped when terminal replaced it; nil out to skip final cleanup
+    temp_buf = nil
   end
 
   -- Clean up temp buffer if still around

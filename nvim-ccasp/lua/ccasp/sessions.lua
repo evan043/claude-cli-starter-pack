@@ -207,8 +207,10 @@ local function launch_claude_cli(id, bufnr, name)
   end, 500)
 end
 
--- Create a new Claude CLI session
-function M.spawn()
+-- Create a new Claude CLI session.
+-- Optional: pass a target_win to place the terminal in an existing window
+-- instead of creating a split (used by layer switch for empty layers).
+function M.spawn(target_win)
   cleanup_invalid()
 
   local count = M.count()
@@ -223,7 +225,12 @@ function M.spawn()
   -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
   state.resizing = true
 
-  create_split_window(count, M.list())
+  if target_win and vim.api.nvim_win_is_valid(target_win) then
+    -- Layer switch: place terminal directly in the given window (no split)
+    vim.api.nvim_set_current_win(target_win)
+  else
+    create_split_window(count, M.list())
+  end
 
   vim.cmd("lcd " .. vim.fn.fnameescape(vim.fn.getcwd()))
   vim.cmd("terminal")
@@ -832,6 +839,12 @@ function M._reattach_windows()
   -- Equalize windows
   get_titlebar().update_all()
   vim.cmd("wincmd =")
+
+  -- Update terminal module with the reattached primary's new winid
+  local primary = state.primary_session and state.sessions[state.primary_session]
+  if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+    require("ccasp.terminal")._set_state(primary.bufnr, primary.winid)
+  end
 
   -- Focus the active session
   local active = state.active_session and state.sessions[state.active_session]
