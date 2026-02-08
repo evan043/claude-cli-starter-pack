@@ -1,5 +1,6 @@
 @echo off
 REM CCASP Neovide Launcher - Opens CCASP as a standalone GUI application
+REM Launches silently without keeping a terminal window open.
 REM Requires: neovide (https://neovide.dev) and a Nerd Font installed
 
 where neovide >nul 2>nul
@@ -20,4 +21,5 @@ REM Resolve nvim-ccasp directory relative to this script (bin/../nvim-ccasp)
 set "SCRIPT_DIR=%~dp0"
 set "PLUGIN_DIR=%SCRIPT_DIR%..\nvim-ccasp"
 
-"%NEOVIDE%" --frame none -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"
+REM "start /b" detaches the process so the cmd window closes immediately
+start "" /b "%NEOVIDE%" --frame none -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"

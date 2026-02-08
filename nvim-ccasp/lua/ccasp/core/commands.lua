@@ -130,11 +130,13 @@ local SECTION_PATTERNS = {
   { name = nf.commands .. " OTHER", pattern = ".*", order = 99 },
 }
 
--- Get commands directory path
+-- Get commands directory path (normalized for Windows)
 local function get_commands_dir()
   local ccasp = require("ccasp")
   local cwd = vim.fn.getcwd()
-  return cwd .. "/" .. ccasp.config.ccasp_root .. "/commands"
+  -- Normalize to forward slashes for consistent cross-platform paths
+  local dir = (cwd .. "/" .. ccasp.config.ccasp_root .. "/commands"):gsub("\\", "/")
+  return dir
 end
 
 -- Extract frontmatter bounds from content
@@ -239,13 +241,22 @@ function M.load_all()
   commands_cache = {}
   sections_cache = init_sections()
 
-  local files = vim.fn.glob(dir .. "/*.md", false, true)
-  for _, file in ipairs(files) do
-    local cmd = load_command_file(file)
-    if cmd then
-      commands_cache[cmd.name] = cmd
-      if sections_cache[cmd.section] then
-        table.insert(sections_cache[cmd.section].commands, cmd.name)
+  -- Use readdir + filter instead of glob to avoid issues with special
+  -- characters (parentheses, spaces) in directory paths on Windows
+  local ok, entries = pcall(vim.fn.readdir, dir)
+  if not ok then
+    return commands_cache
+  end
+
+  for _, entry in ipairs(entries) do
+    if entry:match("%.md$") then
+      local file = dir .. "/" .. entry
+      local cmd = load_command_file(file)
+      if cmd then
+        commands_cache[cmd.name] = cmd
+        if sections_cache[cmd.section] then
+          table.insert(sections_cache[cmd.section].commands, cmd.name)
+        end
       end
     end
   end
