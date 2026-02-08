@@ -216,6 +216,11 @@ function M.switch_to(num)
     vim.bo[temp_buf].buftype = "nofile"
     vim.bo[temp_buf].bufhidden = "wipe"
     vim.api.nvim_win_set_buf(anchor_win, temp_buf)
+
+    -- Clear the winid reference for whichever session owned this window
+    -- so _detach_all_windows() won't close the anchor. The snapshot was
+    -- already taken above, so the original winid is preserved in the layer.
+    sessions._clear_winid(anchor_win)
   end
 
   -- 3. Detach all windows (keeps buffers alive via bufhidden=hide)
@@ -232,13 +237,22 @@ function M.switch_to(num)
 
   if target.sessions_data and target.sessions_data.session_order
       and #target.sessions_data.session_order > 0 then
-    -- Target has sessions: import state and reattach windows
+    -- Target has sessions: import state and reattach windows.
+    -- _reattach_windows() will find the anchor as the first content window
+    -- and reuse it for the first session buffer.
     sessions._import_state(target.sessions_data)
     titlebar._import_state(target.titlebar_data)
     sessions._reattach_windows()
     sessions.rearrange()
+
+    -- Clean up temp buffer (reattach replaced it in the anchor window)
+    if temp_buf and vim.api.nvim_buf_is_valid(temp_buf) then
+      pcall(vim.api.nvim_buf_delete, temp_buf, { force = true })
+    end
   else
-    -- Target is empty: import empty state and spawn a fresh session
+    -- Target is empty: import empty state and spawn a fresh session.
+    -- The anchor window still exists with temp_buf — spawn a terminal
+    -- directly in it to avoid the vnew split that would halve the area.
     sessions._import_state({
       sessions = {},
       session_order = {},
@@ -249,11 +263,19 @@ function M.switch_to(num)
       session_colors = {},
       minimized = {},
     })
-    -- Spawn a new session in the empty layer (user expects a usable terminal)
+
+    if anchor_win and vim.api.nvim_win_is_valid(anchor_win) then
+      -- Reuse the anchor window: focus it, open terminal, then register as session
+      vim.api.nvim_set_current_win(anchor_win)
+      if temp_buf and vim.api.nvim_buf_is_valid(temp_buf) then
+        pcall(vim.api.nvim_buf_delete, temp_buf, { force = true })
+        temp_buf = nil
+      end
+    end
     sessions.spawn()
   end
 
-  -- Clean up temp buffer (reattach replaced it in the anchor window)
+  -- Clean up temp buffer if still around
   if temp_buf and vim.api.nvim_buf_is_valid(temp_buf) then
     pcall(vim.api.nvim_buf_delete, temp_buf, { force = true })
   end

@@ -192,12 +192,17 @@ local function setup_click_handler()
   -- Global <LeftRelease> for normal/visual/insert modes
   -- Fires AFTER mouse position is fully updated by Neovim
   -- Used for button clicks (close/maximize/minimize)
+  -- MUST passthrough when not on the header, otherwise text selection breaks.
   vim.keymap.set({"n", "v", "i"}, "<LeftRelease>", function()
     local mouse = vim.fn.getmousepos()
     log_click(string.format("n-LeftRelease: row=%d col=%d", mouse.screenrow, mouse.screencol))
     if mouse.screenrow <= 2 then
       handle_header_click(mouse)
+      return
     end
+    -- Passthrough: replay default LeftRelease (text selection, etc.)
+    local key = vim.api.nvim_replace_termcodes("<LeftRelease>", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", false)
   end, opts)
 
   -- Global <LeftRelease> for terminal mode
@@ -211,7 +216,11 @@ local function setup_click_handler()
       vim.schedule(function()
         handle_header_click(mouse)
       end)
+      return
     end
+    -- Passthrough: replay default LeftRelease for terminal
+    local key = vim.api.nvim_replace_termcodes("<LeftRelease>", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", false)
   end, opts)
 
   -- ─── Drag-to-move: <LeftMouse> on header non-button area ──────────────

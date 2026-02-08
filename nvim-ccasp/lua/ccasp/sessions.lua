@@ -153,8 +153,15 @@ end
 -- buffer of the focused session into the new window.
 local function create_split_window(count, sessions)
   if count == 0 then
-    -- First additional split (shouldn't normally hit – content.lua creates session 1)
-    vim.cmd("vnew")
+    -- First session: reuse current window if it's a valid content window
+    -- (layer switch focuses the anchor before calling spawn). Only vnew
+    -- as fallback if current window is a float or spacer.
+    local cur = vim.api.nvim_get_current_win()
+    local cfg = vim.api.nvim_win_get_config(cur)
+    if cfg.relative and cfg.relative ~= "" then
+      vim.cmd("vnew")
+    end
+    -- else: stay in current window — vim.cmd("terminal") will replace its buffer
   elseif count == 1 then
     -- 1 → 2: side-by-side columns
     focus_session_window(sessions[#sessions])
@@ -702,6 +709,17 @@ function M._import_state(data)
   else
     terminal._set_state(nil, nil)
     terminal._set_claude_running(false)
+  end
+end
+
+-- Clear the winid reference for the session that owns a given window.
+-- Used by layers.lua to protect the anchor window from being closed by _detach_all_windows().
+function M._clear_winid(winid)
+  for _, session in pairs(state.sessions) do
+    if session.winid == winid then
+      session.winid = nil
+      return
+    end
   end
 end
 
