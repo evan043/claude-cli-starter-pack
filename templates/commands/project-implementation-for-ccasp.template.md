@@ -29,6 +29,106 @@ After running `ccasp wizard` in the terminal, this command handles ALL intellige
 
 When invoked (typically auto-injected after wizard completes):
 
+### Step 0.5: Read CCASP Panel Configuration (ALWAYS FIRST)
+
+**MANDATORY:** Before asking ANY questions, check if the user has pre-configured their preferences via the nvim-ccasp Project Configuration panel.
+
+1. **Read the panel config file:**
+   - **Path:** `~/.ccasp/project-config.json` (cross-platform: use `$HOME/.ccasp/project-config.json`)
+   - Use the Read tool to check if this file exists
+
+2. **If the file exists, parse it:**
+   ```json
+   {
+     "version": "1.0.0",
+     "app_mode": "commercial_saas" | "commercial_single" | "personal",
+     "features": {
+       "compliance": boolean,
+       "multi_tenancy": boolean,
+       "rbac": boolean,
+       "billing": boolean,
+       "api_contracts": boolean,
+       "route_maps": boolean,
+       "deployment": boolean,
+       "agents": boolean,
+       "github_integration": boolean,
+       "mcp_servers": boolean,
+       "phased_dev": boolean,
+       "hooks": boolean
+     }
+   }
+   ```
+
+3. **Use the config to AUTO-SELECT decisions throughout this workflow:**
+
+   | Panel Config Key | Affects Step | Auto-Selection |
+   |-----------------|-------------|----------------|
+   | `app_mode = "commercial_saas"` | Step 1.5 | Skip question, select "Yes - commercial SaaS" |
+   | `app_mode = "commercial_single"` | Step 1.5 | Skip question, select "Yes - commercial but single-tenant" |
+   | `app_mode = "personal"` | Step 1.5 | Skip question, select "No - internal/personal project" |
+   | `features.compliance = false` | Step 7k | Skip compliance documentation setup |
+   | `features.multi_tenancy = false` | Step 1.6b | Skip multi-tenancy configuration |
+   | `features.rbac = false` | Step 1.6c | Skip RBAC role definition |
+   | `features.billing = false` | Step 1.6 | Skip entire billing & entitlements configuration |
+   | `features.api_contracts = false` | Step 7k | Skip API_CONTRACT.md generation |
+   | `features.route_maps = false` | Step 7k | Skip ROUTES.md generation |
+   | `features.deployment = false` | Step 5 | Skip deployment MCP recommendations |
+   | `features.agents = false` | Step 2 | Skip agent generation entirely |
+   | `features.github_integration = false` | Step 4 | Skip GitHub Project Board setup |
+   | `features.mcp_servers = false` | Step 5 | Skip MCP server discovery |
+   | `features.phased_dev = false` | Step 7l | Skip roadmap enforcement setup |
+   | `features.hooks = false` | Step 2e | Skip delegation hook setup |
+
+4. **Stub behavior for disabled features in commercial modes:**
+   - When `app_mode` is `"commercial_saas"` or `"commercial_single"` AND a feature is disabled:
+     - Still create the config entry in `tech-stack.json` but mark it as `"stubbed": true`
+     - Add comment: `"_note": "CCASP:STUB — enable via Project Configuration panel"`
+   - When `app_mode` is `"personal"` AND a feature is disabled:
+     - Skip entirely — do not create any config entry for that feature
+
+5. **Display detected panel config:**
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  CCASP Panel Configuration Detected                          ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Source: ~/.ccasp/project-config.json                         ║
+║                                                               ║
+║  App Mode: Commercial SaaS                                    ║
+║                                                               ║
+║  Enabled Features:                                            ║
+║    ✓ Compliance    ✓ Multi-Tenancy    ✓ RBAC                  ║
+║    ✓ Billing       ✓ API Contracts    ✗ Route Maps            ║
+║    ✓ Deployment    ✓ Agents           ✓ GitHub                ║
+║    ✓ MCP Servers   ✓ Phased Dev       ✓ Hooks                 ║
+║                                                               ║
+║  Disabled features will be: stubbed (CCASP:STUB)              ║
+║                                                               ║
+║  Using these preferences for auto-configuration.              ║
+║  Questions for disabled features will be skipped.             ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+6. **If the file does NOT exist:**
+   - Continue with the normal question-based flow (no auto-selection)
+   - Display notice: "Tip: Use the Project Configuration panel in nvim-ccasp to pre-configure these settings."
+
+7. **Save panel config reference to `tech-stack.json`:**
+   ```json
+   {
+     "panel_config": {
+       "source": "~/.ccasp/project-config.json",
+       "loaded_at": "{{timestamp}}",
+       "app_mode": "{{panel_config.app_mode}}",
+       "features": { ... }
+     }
+   }
+   ```
+
+---
+
 ### Step 1: Tech Stack Detection (ALWAYS FIRST)
 
 **Deploy Explore agent** to scan the codebase:
@@ -96,6 +196,18 @@ When invoked (typically auto-injected after wizard completes):
 ---
 
 ### Step 1.5: Detect Commercial Application Mode
+
+**FIRST: Check panel config from Step 0.5.**
+
+If `panel_config` was loaded AND `panel_config.app_mode` is set:
+- **Auto-select** the application type based on `panel_config.app_mode`:
+  - `"commercial_saas"` → select "Yes - commercial SaaS"
+  - `"commercial_single"` → select "Yes - commercial but single-tenant"
+  - `"personal"` → select "No - internal/personal project"
+- Display: "App mode auto-configured from CCASP panel: **{mode}**"
+- **Skip the question below** — proceed directly to the corresponding action
+
+**ONLY if panel config was NOT loaded**, fall back to detection + question:
 
 **Check for commercial SaaS indicators:**
 1. Scan project for auth/tenancy patterns (auth middleware, tenant models, RBAC decorators)
@@ -167,6 +279,12 @@ options:
 ### Step 1.6: SaaS Billing & Entitlements Configuration (If Commercial SaaS)
 
 **IMPORTANT:** This step ONLY runs when `compliance.mode === "commercial-saas"` was selected in Step 1.5. Billing and entitlements are a FIRST-CLASS foundation — they MUST be designed BEFORE major feature development begins.
+
+**Panel config gate:** If `panel_config.features.billing === false`, skip this entire step. In commercial modes, save a stub entry to `tech-stack.json`:
+```json
+{ "billing": { "stubbed": true, "_note": "CCASP:STUB — enable via Project Configuration panel" } }
+```
+Similarly, if `panel_config.features.multi_tenancy === false`, skip Step 1.6b (multi-tenancy). If `panel_config.features.rbac === false`, skip Step 1.6c (RBAC).
 
 #### 1.6a. Subscription Plan Definition
 
@@ -370,6 +488,8 @@ options:
 
 ### Step 2: Configure CCASP Customized Agents (CRITICAL)
 
+**Panel config gate:** If `panel_config.features.agents === false`, skip this entire step. Display: "Agent generation skipped (disabled in panel config)."
+
 **This step ensures stack-specific specialist agents are set up.**
 
 1. **Check existing agents:**
@@ -492,6 +612,8 @@ options:
 
 ### Step 4: GitHub Project Board (Optional)
 
+**Panel config gate:** If `panel_config.features.github_integration === false`, skip this entire step. Display: "GitHub integration skipped (disabled in panel config)."
+
 **Ask user via AskUserQuestion:**
 ```
 header: "GitHub"
@@ -509,6 +631,8 @@ options:
 ---
 
 ### Step 5: MCP Server Discovery (Dynamic)
+
+**Panel config gate:** If `panel_config.features.mcp_servers === false`, skip this entire step. Display: "MCP server discovery skipped (disabled in panel config)." If `panel_config.features.deployment === false`, skip deployment-related MCP recommendations (Railway, Cloudflare, Vercel) but still offer non-deployment MCPs.
 
 **IMPORTANT:** MCP recommendations MUST be discovered dynamically based on the user's actual tech stack. Do NOT hardcode or assume any specific platform.
 
@@ -991,6 +1115,13 @@ options:
 
 ### Step 7k: Compliance Documentation Setup (If Commercial Mode Active)
 
+**Panel config gates for individual documents:**
+- If `panel_config.features.compliance === false`: Skip this entire step
+- If `panel_config.features.api_contracts === false`: Skip API_CONTRACT.md generation
+- If `panel_config.features.route_maps === false`: Skip ROUTES.md generation
+- If `panel_config.features.rbac === false`: Skip RBAC.md generation
+- If `panel_config.features.billing === false`: Skip billing deliverables (PLANS_AND_ENTITLEMENTS.md, ENTITLEMENTS_SPEC.md, STRIPE_SPEC.md)
+
 **Check if commercial compliance was activated in Step 1.5:**
 ```javascript
 const compliance = techStack.compliance || {};
@@ -1158,6 +1289,8 @@ const isSingleTenant = compliance.mode === 'ip-only';
 ---
 
 ### Step 7l: SaaS Billing Roadmap Enforcement (If Commercial SaaS)
+
+**Panel config gate:** If `panel_config.features.phased_dev === false`, skip roadmap enforcement. If `panel_config.features.billing === false`, skip billing-specific enforcement rules but keep general compliance rules.
 
 **IMPORTANT:** This step configures enforcement rules that ALL subsequent roadmap/phase-dev operations MUST respect. This ensures billing infrastructure is built BEFORE feature code.
 
