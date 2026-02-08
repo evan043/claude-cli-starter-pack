@@ -123,13 +123,14 @@ test("get_default: returns complete config", function()
   assert_eq(true, cfg.features.mcp_servers, "mcp_servers default")
   assert_eq(true, cfg.features.phased_dev, "phased_dev default")
   assert_eq(true, cfg.features.api_contracts, "api_contracts default")
+  assert_eq(false, cfg.features.mobile_packaging, "mobile_packaging default")
 end)
 
-test("get_default: has all 12 feature keys", function()
+test("get_default: has all 13 feature keys", function()
   local cfg = storage.get_default()
   local count = 0
   for _ in pairs(cfg.features) do count = count + 1 end
-  assert_eq(12, count, "feature count")
+  assert_eq(13, count, "feature count")
 end)
 
 -- ─── Load / Save Round-Trip Tests ───────────────────────────────

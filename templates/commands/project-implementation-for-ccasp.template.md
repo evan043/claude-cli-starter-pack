@@ -54,7 +54,8 @@ When invoked (typically auto-injected after wizard completes):
        "github_integration": boolean,
        "mcp_servers": boolean,
        "phased_dev": boolean,
-       "hooks": boolean
+       "hooks": boolean,
+       "mobile_packaging": boolean
      }
    }
    ```
@@ -78,6 +79,7 @@ When invoked (typically auto-injected after wizard completes):
    | `features.mcp_servers = false` | Step 5 | Skip MCP server discovery |
    | `features.phased_dev = false` | Step 7l | Skip roadmap enforcement setup |
    | `features.hooks = false` | Step 2e | Skip delegation hook setup |
+   | `features.mobile_packaging = false` | Step 1.7 | Skip mobile packaging configuration |
 
 4. **Stub behavior for disabled features in commercial modes:**
    - When `app_mode` is `"commercial_saas"` or `"commercial_single"` AND a feature is disabled:
@@ -102,6 +104,7 @@ When invoked (typically auto-injected after wizard completes):
 ║    ✓ Billing       ✓ API Contracts    ✗ Route Maps            ║
 ║    ✓ Deployment    ✓ Agents           ✓ GitHub                ║
 ║    ✓ MCP Servers   ✓ Phased Dev       ✓ Hooks                 ║
+║    ✗ Mobile Packaging                                        ║
 ║                                                               ║
 ║  Disabled features will be: stubbed (CCASP:STUB)              ║
 ║                                                               ║
@@ -486,6 +489,133 @@ options:
 
 ---
 
+### Step 1.7: Mobile App Packaging Configuration (If Enabled)
+
+**Panel config gate:** If `panel_config.features.mobile_packaging === false`, skip this entire step. Display: "Mobile packaging skipped (disabled in panel config)."
+
+This step configures native mobile app packaging so the web app can be submitted to the Apple App Store and Google Play Store.
+
+1. **Auto-detect existing mobile framework from tech-stack detection:**
+   - Check `tech-stack.json` → `mobile.framework` field
+   - If a framework was already detected (e.g., Capacitor, React Native), note it and skip to metadata collection
+
+2. **If no mobile framework detected, ask packaging strategy:**
+
+   a. **Use AskUserQuestion:**
+   ```
+   header: "Mobile"
+   question: "Which mobile packaging strategy should we use?"
+   options:
+     - "Capacitor (Recommended) — wraps your existing web app in native WebView containers for iOS & Android"
+     - "PWA + TWA — Progressive Web App with Trusted Web Activity (Android-only, no iOS App Store)"
+     - "Tauri — Rust-based native shell (lighter weight, requires Rust toolchain)"
+     - "Skip — I'll configure mobile packaging later"
+   ```
+
+   b. **If Skip selected**, mark as skipped and proceed to Step 2.
+
+3. **Platform selection:**
+
+   a. **Use AskUserQuestion:**
+   ```
+   header: "Platforms"
+   question: "Which platforms should we target?"
+   options:
+     - "Both iOS & Android (Recommended)"
+     - "Android only"
+     - "iOS only"
+   ```
+
+4. **App metadata collection:**
+
+   a. **Use AskUserQuestion:**
+   ```
+   header: "App Name"
+   question: "What is the display name for the mobile app?"
+   options:
+     - "Use project name: {{project.name}}"
+     - "Custom name"
+   ```
+
+   b. **Use AskUserQuestion:**
+   ```
+   header: "Bundle ID"
+   question: "What bundle/application ID should we use? (e.g., com.company.appname)"
+   options:
+     - "com.{{project.owner}}.{{project.name}} (Recommended)"
+     - "Custom bundle ID"
+   ```
+
+5. **Native features selection:**
+
+   a. **Use AskUserQuestion (multiSelect: true):**
+   ```
+   header: "Native APIs"
+   question: "Which native features does your app need?"
+   multiSelect: true
+   options:
+     - "Push Notifications"
+     - "Camera / Photo Library"
+     - "Geolocation"
+     - "Biometric Auth (Face ID / Fingerprint)"
+   ```
+
+6. **Map selected features to Capacitor plugins (if Capacitor strategy):**
+
+   | Native Feature | Capacitor Plugin |
+   |---------------|-----------------|
+   | Push Notifications | `@capacitor/push-notifications` |
+   | Camera / Photo Library | `@capacitor/camera` |
+   | Geolocation | `@capacitor/geolocation` |
+   | Biometric Auth | `capacitor-native-biometric` |
+   | In-App Purchases | `@capawesome/capacitor-in-app-purchases` |
+
+7. **Save mobile packaging config to `tech-stack.json`:**
+   ```json
+   {
+     "mobilePackaging": {
+       "enabled": true,
+       "strategy": "capacitor",
+       "platforms": ["ios", "android"],
+       "appName": "My App",
+       "appId": "com.company.myapp",
+       "version": "1.0.0",
+       "nativeFeatures": ["push-notifications", "camera"],
+       "plugins": ["@capacitor/push-notifications", "@capacitor/camera"],
+       "buildRequirements": {
+         "ios": "macOS with Xcode 15+",
+         "android": "Android Studio with SDK 34+"
+       }
+     }
+   }
+   ```
+
+8. **Platform warnings:**
+   - If iOS selected and NOT on macOS: "⚠ iOS builds require macOS with Xcode. You can develop on Windows/Linux but must use a Mac (or CI like GitHub Actions with macOS runners) for iOS builds."
+
+9. **Display summary:**
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📱 Mobile App Packaging Configured                           ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Strategy:   Capacitor (Web → Native Container)               ║
+║  Platforms:  iOS + Android                                    ║
+║  App Name:   My App                                           ║
+║  Bundle ID:  com.company.myapp                                ║
+║                                                               ║
+║  Native Features:                                             ║
+║    • Push Notifications (@capacitor/push-notifications)       ║
+║    • Camera (@capacitor/camera)                               ║
+║                                                               ║
+║  Config saved to: .claude/config/tech-stack.json              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ### Step 2: Configure CCASP Customized Agents (CRITICAL)
 
 **Panel config gate:** If `panel_config.features.agents === false`, skip this entire step. Display: "Agent generation skipped (disabled in panel config)."
@@ -527,6 +657,7 @@ options:
    | Cloudflare | `deploy-cloudflare-specialist` |
    | Commercial SaaS mode | `compliance-saas-specialist` |
    | Stripe/Billing (SaaS) | `billing-saas-specialist` |
+   | Capacitor (mobile) | `mobile-capacitor-specialist` |
 
    c. **Create agent files in `.claude/agents/`:**
    - Each agent gets a markdown file with frontmatter
@@ -1396,6 +1527,66 @@ Generate and save the following enforcement rules:
 
 ---
 
+### Step 7m: Mobile Build Documentation (If Mobile Packaging Configured)
+
+**Panel config gate:** If `panel_config.features.mobile_packaging === false` or `tech-stack.json` has no `mobilePackaging` section, skip this step.
+
+Generate mobile build documentation based on the packaging strategy selected in Step 1.7.
+
+1. **Generate `MOBILE_BUILD_GUIDE.md`:**
+
+   Content should include:
+   - **Prerequisites:** Required tools per platform (Xcode for iOS, Android Studio for Android)
+   - **Capacitor Setup:** `npm install @capacitor/core @capacitor/cli`, `npx cap init`
+   - **Build Commands:**
+     - `npx cap add android` / `npx cap add ios`
+     - `npm run build && npx cap sync`
+     - `npx cap open android` / `npx cap open ios`
+   - **Store Submission Steps:**
+     - Android: Generate signed AAB, upload to Google Play Console
+     - iOS: Archive in Xcode, upload via App Store Connect
+   - **CI/CD Integration:** GitHub Actions workflow for automated builds
+
+2. **Generate `capacitor.config.ts` template (if Capacitor strategy):**
+   ```typescript
+   import type { CapacitorConfig } from '@capacitor/cli';
+
+   const config: CapacitorConfig = {
+     appId: '{{mobilePackaging.appId}}',
+     appName: '{{mobilePackaging.appName}}',
+     webDir: 'dist',
+     server: {
+       androidScheme: 'https',
+     },
+   };
+
+   export default config;
+   ```
+
+3. **Update CLAUDE.md with mobile build commands:**
+   - Add `npx cap sync` after `npm run build`
+   - Add `npx cap open android` / `npx cap open ios` commands
+   - Add mobile-specific testing notes
+
+4. **Display summary:**
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  📱 Mobile Build Documentation Generated                      ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Created:                                                     ║
+║    • MOBILE_BUILD_GUIDE.md — build & submission steps         ║
+║    • capacitor.config.ts — pre-filled Capacitor config        ║
+║    • Updated CLAUDE.md with mobile build commands             ║
+║                                                               ║
+║  Next: npm run build && npx cap sync                          ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ### Step 8: Final Summary
 
 Display final completion summary:
@@ -1412,6 +1603,7 @@ Display final completion summary:
 ║  Testing:     ✓ Configured                                    ║
 ║  Compliance:  ✓ Commercial SaaS (or: Disabled)                ║
 ║  Billing:     ✓ SaaS billing configured (or: N/A)             ║
+║  Mobile:      ✓ Capacitor configured (or: Disabled)          ║
 ║                                                               ║
 ║  Next steps:                                                  ║
 ║  • Type /menu to see all available commands                   ║

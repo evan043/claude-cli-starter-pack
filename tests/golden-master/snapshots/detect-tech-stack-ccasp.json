@@ -12,6 +12,7 @@
     "healthEndpoint": "/api/health"
   },
   "database": {},
+  "mobile": {},
   "deployment": {
     "frontend": {},
     "backend": {}

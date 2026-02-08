@@ -80,6 +80,7 @@ export function createResultStructure(projectName) {
     frontend: {},
     backend: {},
     database: {},
+    mobile: {},
     deployment: { frontend: {}, backend: {} },
     devEnvironment: {},
     testing: { e2e: {}, unit: {}, selectors: {}, credentials: {} },

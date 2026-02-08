@@ -199,6 +199,30 @@ export const DETECTION_PATTERNS = {
     },
   },
 
+  // Mobile frameworks
+  mobileFramework: {
+    capacitor: {
+      packages: ['@capacitor/core', '@capacitor/cli'],
+      configFiles: ['capacitor.config.ts', 'capacitor.config.json'],
+    },
+    cordova: {
+      packages: ['cordova'],
+      configFiles: ['config.xml'],
+    },
+    reactNative: {
+      packages: ['react-native'],
+      configFiles: ['metro.config.js'],
+    },
+    expo: {
+      packages: ['expo'],
+      configFiles: ['app.config.js', 'app.config.ts'],
+    },
+    tauri: {
+      packages: ['@tauri-apps/cli'],
+      configFiles: ['src-tauri/tauri.conf.json'],
+    },
+  },
+
   // Tunnel services
   tunnel: {
     ngrok: {

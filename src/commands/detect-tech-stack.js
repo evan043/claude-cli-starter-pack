@@ -206,6 +206,20 @@ export async function detectTechStack(projectRoot, options = {}) {
     }
   }
 
+  // --- MOBILE FRAMEWORK DETECTION ---
+  if (spinner) spinner.text = 'Detecting mobile framework...';
+
+  for (const [framework, patterns] of Object.entries(DETECTION_PATTERNS.mobileFramework)) {
+    if (
+      hasPackages(pkgJson, patterns.packages) ||
+      fileExists(projectRoot, patterns.configFiles)
+    ) {
+      result.mobile = { framework };
+      result._detected.push(`mobile.framework: ${framework}`);
+      break;
+    }
+  }
+
   // --- DEV ENVIRONMENT ---
   if (spinner) spinner.text = 'Detecting dev environment...';
 

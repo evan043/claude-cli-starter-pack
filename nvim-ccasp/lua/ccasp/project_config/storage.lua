@@ -23,6 +23,7 @@ function M.get_default()
       mcp_servers = true,
       phased_dev = true,
       hooks = true,
+      mobile_packaging = false,
     },
   }
 end
