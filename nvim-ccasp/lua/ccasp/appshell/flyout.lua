@@ -495,6 +495,44 @@ local section_renderers = {
     table.insert(lines, "  " .. icons.close .. " Disable All")
     item_lines[#lines] = { action = "features_disable_all" }
   end,
+
+  project = function(lines, item_lines)
+    table.insert(lines, "  " .. icons.config .. " Project Configuration")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+
+    local storage_ok, proj_storage = pcall(require, "ccasp.project_config.storage")
+    if storage_ok then
+      local cfg = proj_storage.load()
+      local mode_labels = {
+        commercial_saas = "Commercial SaaS",
+        commercial_single = "Single-Tenant",
+        personal = "Personal",
+      }
+      table.insert(lines, "  Mode: " .. (mode_labels[cfg.app_mode] or "Unknown"))
+
+      local total, enabled = 0, 0
+      for _, v in pairs(cfg.features) do
+        total = total + 1
+        if v then enabled = enabled + 1 end
+      end
+      table.insert(lines, "  Features: " .. enabled .. "/" .. total .. " enabled")
+
+      table.insert(lines, "")
+
+      if cfg.app_mode == "personal" then
+        table.insert(lines, "  Disabled: skipped entirely")
+      else
+        table.insert(lines, "  Disabled: stubbed (CCASP:STUB)")
+      end
+    else
+      table.insert(lines, "  (config module not available)")
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "  " .. icons.settings .. " Open Configuration Panel")
+    item_lines[#lines] = { action = "project_config" }
+  end,
 }
 
 -- Render flyout content for current section
@@ -576,13 +614,10 @@ local function close_and_run_modal(fn)
   M.close()
   vim.schedule(function()
     local mode = vim.api.nvim_get_mode().mode
-    if mode == "t" then
-      local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
-      vim.api.nvim_feedkeys(esc, "n", false)
-      vim.schedule(fn)
-    else
-      fn()
+    if mode == "t" or mode == "i" then
+      vim.cmd("stopinsert")
     end
+    fn()
   end)
 end
 
@@ -884,6 +919,13 @@ function M.execute_action(item)
       local features = require("ccasp.panels.features")
       features.set_all(false)
     end,
+
+    -- Project configuration
+    project_config = function()
+      close_and_run_modal(function()
+        require("ccasp.project_config").open()
+      end)
+    end,
   }
 
   local handler = action_handlers[item.action]
@@ -915,6 +957,7 @@ function M.execute_action(item)
         or item.action == "rename_template"
         or item.action == "set_default_template"
         or item.action == "delete_template"
+        or item.action == "project_config"
     if not skip_rerender then
       vim.defer_fn(function() render() end, 500)
     end

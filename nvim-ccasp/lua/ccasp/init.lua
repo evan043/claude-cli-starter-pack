@@ -212,9 +212,28 @@ M.state = {
   last_command = nil,
 }
 
+-- Detect project root by walking up from cwd looking for .claude/ directory.
+-- Returns the detected root or falls back to the starting directory.
+local function detect_project_root()
+  local cwd = vim.fn.getcwd():gsub("\\", "/")
+  local dir = cwd
+  while true do
+    if vim.fn.isdirectory(dir .. "/.claude") == 1 then
+      return dir
+    end
+    local parent = vim.fn.fnamemodify(dir, ":h"):gsub("\\", "/")
+    if parent == dir then break end -- reached filesystem root
+    dir = parent
+  end
+  return cwd -- fallback: use original cwd
+end
+
 -- Setup function
 function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+
+  -- Detect and store project root (used by commands scanner, config paths, etc.)
+  M.config.project_root = detect_project_root()
 
   -- Protected module loader: logs warning on failure instead of crashing
   local function safe_require(mod)
@@ -308,6 +327,11 @@ function M.setup(opts)
       M.appshell.setup(M.config.appshell or {})
     end
   end
+
+  -- Register :CcaspProjectConfig command
+  vim.api.nvim_create_user_command("CcaspProjectConfig", function()
+    require("ccasp.project_config").open()
+  end, { desc = "Open CCASP Project Configuration panel" })
 
   -- Neovide-specific configuration (font, padding, quit keybinds)
   local neovide = safe_require("ccasp.neovide")
@@ -652,6 +676,7 @@ local function setup_modern_keymaps()
     taskbar = "T",
     new_session = "n",
     browser = "o",
+    project_config = "P",
   }
   local prefix = M.config.keys and M.config.keys.prefix or "<leader>c"
   local keys = vim.tbl_extend("keep", M.config.keys or {}, default_keys)
@@ -672,6 +697,7 @@ local function setup_modern_keymaps()
     taskbar = function() M.taskbar.show_picker() end,
     new_session = function() M.browser_tabs.show_context_menu("new_session") end,
     browser = function() require("ccasp.browser").open_dashboard() end,
+    project_config = function() require("ccasp.project_config").toggle() end,
     -- Session management
     spawn_session = function() M.sessions.spawn() end,
     session_picker = function() M.sessions.show_picker() end,
@@ -693,6 +719,7 @@ local function setup_modern_keymaps()
     { keys.taskbar, actions.taskbar, "Show Taskbar" },
     { keys.new_session, actions.new_session, "New Session Menu" },
     { keys.browser, actions.browser, "Open Site Intel in Browser" },
+    { keys.project_config, actions.project_config, "Project Configuration" },
   }
 
   -- Session management keymaps
@@ -879,7 +906,7 @@ function M.health()
   end
 
   -- Check directories
-  local claude_dir = vim.fn.getcwd() .. "/.claude"
+  local claude_dir = (M.config.project_root or vim.fn.getcwd()) .. "/.claude"
   if not check_directory(health, ".claude directory", claude_dir) then
     health.warn(".claude directory not found", { "Run: ccasp init" })
   end

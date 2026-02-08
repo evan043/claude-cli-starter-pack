@@ -25,6 +25,7 @@ M.actions = {
   { key = "t", label = "Create Task List",     action = "task_list" },
   { key = "d", label = "Deploy Full Stack",    action = "deploy" },
   { key = "w", label = "Site Intel Scan",      action = "site_intel" },
+  { key = "P", label = "Project Configuration", action = "project_config" },
   { key = "?", label = "Help & Docs",          action = "help" },
   { key = "r", label = "Refresh Dashboard",    action = "refresh" },
   { key = "q", label = "Close",               action = "close" },
@@ -73,6 +74,12 @@ local function execute_action(action_name)
     end,
     site_intel = function()
       inject_slash_command("/site-intel")
+    end,
+    project_config = function()
+      M.close()
+      vim.schedule(function()
+        require("ccasp.project_config").open()
+      end)
     end,
     help = function()
       M.close()
