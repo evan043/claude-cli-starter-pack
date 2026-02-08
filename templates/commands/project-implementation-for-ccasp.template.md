@@ -130,7 +130,8 @@ options:
 2. Create `.claude/compliance/` directory
 3. Copy `commercial-saas-rules.md` policy to `.claude/compliance/COMMERCIAL_SAAS_RULES.md`
 4. Copy `commercial-compliance-policy.md` to `.claude/compliance/IP_COMPLIANCE_POLICY.md`
-5. Display compliance activation notice:
+5. **Proceed to billing & entitlements configuration (Step 1.6)**
+6. Display compliance activation notice:
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
@@ -160,6 +161,210 @@ options:
 **If internal/personal selected:**
 1. Store `compliance.mode = "disabled"` in `tech-stack.json`
 2. Skip compliance setup entirely
+
+---
+
+### Step 1.6: SaaS Billing & Entitlements Configuration (If Commercial SaaS)
+
+**IMPORTANT:** This step ONLY runs when `compliance.mode === "commercial-saas"` was selected in Step 1.5. Billing and entitlements are a FIRST-CLASS foundation — they MUST be designed BEFORE major feature development begins.
+
+#### 1.6a. Subscription Plan Definition
+
+**Ask user about pricing model:**
+```
+header: "Pricing"
+question: "How many subscription tiers will your app have?"
+options:
+  - "3 tiers (Free, Pro, Business) (Recommended)"
+  - "4 tiers (Free, Starter, Pro, Business)"
+  - "4 tiers + Enterprise (custom pricing)"
+  - "Custom - I'll define tiers manually"
+```
+
+**For each selected tier model, pre-populate plan scaffolding:**
+- **Free**: $0/mo, limited features, no payment required
+- **Starter** (if 4-tier): $9–19/mo, core features, limited seats/storage
+- **Pro**: $29–49/mo, full features, higher limits
+- **Business**: $99–199/mo, all features, team management, priority support
+- **Enterprise** (if selected): Custom pricing, SLA, dedicated support
+
+**Ask about billing periods:**
+```
+header: "Billing"
+question: "Which billing periods should be supported?"
+options:
+  - "Monthly + Annual with discount (Recommended)"
+  - "Monthly only"
+  - "Annual only"
+  - "Monthly + Annual + Lifetime"
+```
+
+**Ask about free trial policy:**
+```
+header: "Free Trial"
+question: "Offer a free trial for paid plans?"
+options:
+  - "14-day free trial (Recommended)"
+  - "7-day free trial"
+  - "30-day free trial"
+  - "No free trial"
+```
+
+**Save billing configuration to `tech-stack.json`:**
+```json
+{
+  "billing": {
+    "provider": "stripe",
+    "plans": {
+      "tier_count": 3,
+      "tiers": ["free", "pro", "business"],
+      "enterprise": false
+    },
+    "billing_periods": ["monthly", "annual"],
+    "annual_discount_percent": 20,
+    "free_trial": {
+      "enabled": true,
+      "days": 14
+    },
+    "configured_at": "{{timestamp}}"
+  }
+}
+```
+
+#### 1.6b. Multi-Tenancy Strategy
+
+**Ask about tenant resolution:**
+```
+header: "Tenancy"
+question: "How should tenants be identified?"
+options:
+  - "tenant_id in JWT claims (Recommended for APIs)"
+  - "Subdomain-based (e.g., acme.yourapp.com)"
+  - "Path-based (e.g., /org/acme/...)"
+  - "Custom - I'll define the strategy"
+```
+
+**Ask about tenant isolation level:**
+```
+header: "Isolation"
+question: "Tenant data isolation strategy?"
+options:
+  - "Row-level isolation with tenant_id column (Recommended)"
+  - "Schema-per-tenant (stronger isolation, more complex)"
+  - "Database-per-tenant (strongest, enterprise-only)"
+```
+
+**Save tenancy config:**
+```json
+{
+  "compliance": {
+    "multi_tenancy": {
+      "enabled": true,
+      "strategy": "jwt_tenant_id",
+      "isolation": "row_level"
+    }
+  }
+}
+```
+
+#### 1.6c. RBAC Role Definition
+
+**Ask about roles:**
+```
+header: "Roles"
+question: "Which roles does your application need?"
+multiSelect: true
+options:
+  - "user (default member)"
+  - "admin (tenant administrator)"
+  - "super_admin (system-wide, your team only)"
+  - "viewer (read-only access)"
+```
+
+**Save RBAC config:**
+```json
+{
+  "compliance": {
+    "rbac": {
+      "enabled": true,
+      "roles": ["user", "admin", "super_admin"],
+      "enforcement": "server_side"
+    }
+  }
+}
+```
+
+#### 1.6d. Stripe Integration Preferences
+
+**Ask about Stripe checkout flow:**
+```
+header: "Stripe Flow"
+question: "Which Stripe checkout method?"
+options:
+  - "Stripe Checkout (hosted page, fastest to implement) (Recommended)"
+  - "Stripe Elements (embedded in your UI, more control)"
+  - "Stripe Payment Links (no-code, simplest)"
+```
+
+**Ask about billing portal:**
+```
+header: "Self-Service"
+question: "Enable Stripe Billing Portal for self-service?"
+options:
+  - "Yes - customers manage their own billing (Recommended)"
+  - "No - admin-only billing management"
+```
+
+**Save Stripe preferences:**
+```json
+{
+  "billing": {
+    "stripe": {
+      "checkout_method": "stripe_checkout",
+      "billing_portal": true,
+      "webhooks_required": [
+        "checkout.session.completed",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "invoice.payment_succeeded",
+        "invoice.payment_failed"
+      ]
+    }
+  }
+}
+```
+
+#### 1.6e. Display Billing Foundation Summary
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  SaaS Billing Foundation Configured                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Subscription Plans:                                         ║
+║    Tiers: Free / Pro / Business                              ║
+║    Billing: Monthly + Annual (20% annual discount)           ║
+║    Free Trial: 14 days                                       ║
+║                                                              ║
+║  Multi-Tenancy:                                              ║
+║    Strategy: JWT tenant_id                                   ║
+║    Isolation: Row-level (tenant_id column)                   ║
+║                                                              ║
+║  RBAC Roles: user, admin, super_admin                        ║
+║    Enforcement: Server-side (mandatory)                      ║
+║                                                              ║
+║  Stripe Integration:                                         ║
+║    Checkout: Stripe Checkout (hosted)                        ║
+║    Billing Portal: Enabled                                   ║
+║    Webhooks: 6 events configured                             ║
+║                                                              ║
+║  IMPORTANT: Billing foundation will be Phase 1 of any        ║
+║  roadmap generated for this project. Feature development     ║
+║  MUST NOT begin until billing + entitlements are working.    ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 ---
 
@@ -201,6 +406,7 @@ options:
    | Railway | `deploy-railway-specialist` |
    | Cloudflare | `deploy-cloudflare-specialist` |
    | Commercial SaaS mode | `compliance-saas-specialist` |
+   | Stripe/Billing (SaaS) | `billing-saas-specialist` |
 
    c. **Create agent files in `.claude/agents/`:**
    - Each agent gets a markdown file with frontmatter
@@ -819,7 +1025,74 @@ const isSingleTenant = compliance.mode === 'ip-only';
    - Pre-populate with project name and date
    - Save to project root as `DESIGN_ORIGIN.md`
 
-5. **Save compliance config to tech-stack.json:**
+5. **If SaaS billing was configured in Step 1.6, generate billing deliverables:**
+
+   a. **Generate PLANS_AND_ENTITLEMENTS.md:**
+      - Read billing config from `tech-stack.json` (`billing.plans`, `billing.free_trial`)
+      - For each tier, scaffold:
+        - Price and billing period (monthly/annual)
+        - Plan limits (seats, storage, projects, API calls)
+        - Included features by `feature_key`
+        - Upgrade/downgrade behavior and proration strategy
+      - Include feature inventory table with columns:
+        - `feature_key` (stable identifier, e.g., `feat_advanced_analytics`)
+        - Plan availability (which tiers include it)
+        - Limit model (`boolean` on/off OR `metered` with cap)
+        - Role restrictions (admin-only features)
+        - Tenant-level vs user-level entitlement
+      - Save to project root as `PLANS_AND_ENTITLEMENTS.md`
+
+   b. **Generate ENTITLEMENTS_SPEC.md:**
+      - Define how entitlements are computed, stored, cached, and enforced
+      - MUST include:
+        - Server-side entitlement computation (source of truth)
+        - `GET /api/me/entitlements` snapshot endpoint spec
+        - Frontend consumption pattern (read-only, never enforce alone)
+        - API middleware enforcement pattern
+        - Route guard enforcement pattern
+        - Background job entitlement checks (if applicable)
+      - Gating must apply to: routes, UI components, API endpoints, background jobs
+      - Save to project root as `ENTITLEMENTS_SPEC.md`
+
+   c. **Generate STRIPE_SPEC.md:**
+      - Read Stripe config from `tech-stack.json` (`billing.stripe`)
+      - Include:
+        - Stripe Products/Prices mapping to app tiers
+        - Checkout flow (Checkout, Elements, or Payment Links — as configured)
+        - Billing Portal configuration
+        - Webhook events and their handlers:
+          - `checkout.session.completed`
+          - `customer.subscription.created/updated/deleted`
+          - `invoice.payment_succeeded`
+          - `invoice.payment_failed`
+        - Database fields for billing objects:
+          - `tenant_id`, `stripe_customer_id`, `stripe_subscription_id`
+          - `plan_id`/`price_id`, `status`, `current_period_end`
+          - `cancel_at_period_end`, `trial_end`
+        - Webhook signature verification requirement
+        - Upgrade/downgrade/cancel flows
+      - Save to project root as `STRIPE_SPEC.md`
+
+   d. **Enhance existing API_CONTRACT.md with billing endpoints:**
+      - Add billing-specific endpoints:
+        - `POST /api/billing/create-checkout-session` (auth, any role, tenant-scoped)
+        - `POST /api/billing/webhook` (no auth, Stripe signature verified)
+        - `GET /api/billing/subscription` (auth, admin, tenant-scoped)
+        - `POST /api/billing/portal-session` (auth, admin, tenant-scoped)
+        - `GET /api/me/entitlements` (auth, any role, tenant-scoped)
+      - Each endpoint declares: auth requirement, role requirement, tenant scope, entitlement gate
+
+   e. **Enhance existing ROUTES.md with entitlement gates:**
+      - Add entitlement column to route table
+      - Mark which routes require specific plan tier or feature_key
+      - Add billing-specific routes:
+        - `/billing` (admin, authenticated)
+        - `/billing/plans` (public or authenticated)
+        - `/billing/success` (authenticated, post-checkout)
+        - `/billing/cancel` (authenticated)
+        - `/settings/subscription` (admin, authenticated)
+
+6. **Save compliance config to tech-stack.json:**
    ```json
    {
      "compliance": {
@@ -828,7 +1101,8 @@ const isSingleTenant = compliance.mode === 'ip-only';
        "configured_at": "{{timestamp}}",
        "multi_tenancy": {
          "enabled": true,
-         "strategy": null
+         "strategy": "jwt_tenant_id",
+         "isolation": "row_level"
        },
        "rbac": {
          "enabled": true,
@@ -838,25 +1112,38 @@ const isSingleTenant = compliance.mode === 'ip-only';
          "design_origin": "draft",
          "routes_md": "draft",
          "api_contract": "draft",
-         "rbac_md": "draft"
+         "rbac_md": "draft",
+         "plans_and_entitlements": "draft",
+         "entitlements_spec": "draft",
+         "stripe_spec": "draft"
        }
      }
    }
    ```
 
-6. **Display compliance documentation summary:**
+7. **Display compliance documentation summary:**
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  Compliance Documentation Generated                          ║
+║  Compliance & Billing Documentation Generated               ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  ROUTES.md:       ✓ Generated (review and update)            ║
-║  API_CONTRACT.md: ✓ Generated (review and update)            ║
-║  RBAC.md:         ✓ Generated (review and update)            ║
-║  DESIGN_ORIGIN.md:✓ Generated (review and update)            ║
+║  Core Compliance:                                            ║
+║  ROUTES.md:               ✓ Generated (+ entitlement gates)  ║
+║  API_CONTRACT.md:         ✓ Generated (+ billing endpoints)  ║
+║  RBAC.md:                 ✓ Generated (review and update)    ║
+║  DESIGN_ORIGIN.md:        ✓ Generated (review and update)    ║
+║                                                              ║
+║  SaaS Billing (NEW):                                         ║
+║  PLANS_AND_ENTITLEMENTS.md: ✓ Plan tiers + feature matrix    ║
+║  ENTITLEMENTS_SPEC.md:      ✓ Gating architecture spec       ║
+║  STRIPE_SPEC.md:            ✓ Stripe integration spec        ║
 ║                                                              ║
 ║  These are living documents — update them as you build.      ║
 ║  Roadmap compliance gates will check these before execution. ║
+║                                                              ║
+║  CRITICAL: Billing foundation (tenant + RBAC + Stripe +      ║
+║  entitlements) MUST be Phase 1 of your roadmap. Do NOT       ║
+║  implement premium features until gating works end-to-end.   ║
 ║                                                              ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -870,28 +1157,128 @@ const isSingleTenant = compliance.mode === 'ip-only';
 
 ---
 
+### Step 7l: SaaS Billing Roadmap Enforcement (If Commercial SaaS)
+
+**IMPORTANT:** This step configures enforcement rules that ALL subsequent roadmap/phase-dev operations MUST respect. This ensures billing infrastructure is built BEFORE feature code.
+
+#### Roadmap Phase Ordering (MANDATORY for SaaS projects)
+
+When `/phase-dev-plan` or `/create-roadmap` is invoked for a commercial SaaS project, the roadmap MUST follow this phase ordering:
+
+**Phase 1 — Billing Foundation (MUST be first):**
+1. Tenant model + membership table (user ↔ tenant ↔ role)
+2. RBAC middleware (server-side enforcement)
+3. Stripe customer creation on tenant signup
+4. Stripe subscription lifecycle (create, upgrade, downgrade, cancel)
+5. Webhook handlers for all configured events
+6. Entitlements snapshot endpoint (`GET /api/me/entitlements`)
+7. Feature gating middleware for API routes
+8. Route guards on frontend (read entitlements, gate components)
+
+**Phase 2 — User Registration & Tenant Onboarding:**
+1. User signup → creates user + tenant + membership records
+2. Invite flow (user joins existing tenant)
+3. Admin member management
+4. Role assignment rules
+5. Post-signup billing redirect (if paid plan required)
+
+**Phase 3+ — Feature Development (ONLY after Phases 1-2 pass audit):**
+- All feature code MUST use the entitlements system
+- Every new endpoint MUST declare: auth, role, tenant scope, entitlement gate
+- Every new route MUST declare: auth, role, entitlement requirement
+- No "premium" feature may be implemented without a corresponding `feature_key`
+
+#### Implementation Rules (Saved to `.claude/compliance/BILLING_RULES.md`)
+
+Generate and save the following enforcement rules:
+
+```markdown
+# SaaS Billing Implementation Rules
+
+## FORBIDDEN — Do NOT proceed if any of these are true:
+- Premium features implemented without plan gating
+- API endpoints without auth + role + tenant scope declarations
+- Frontend enforcing entitlements without server-side backup
+- Direct database access from frontend
+- Raw card details stored anywhere (Stripe handles payment data)
+- Webhook handlers without signature verification
+- Cross-tenant data accessible via any endpoint
+
+## REQUIRED — Before implementing feature modules:
+1. Multi-tenancy enforced on ALL data queries
+2. RBAC enforced server-side on ALL routes and APIs
+3. Stripe subscription state synced via webhooks (NOT polling)
+4. Plan → entitlements → feature gating works end-to-end
+5. All routes and endpoints declare required entitlements
+6. Entitlements snapshot endpoint returns correct data per tenant+plan
+
+## Self-Audit Checklist (Run before each phase):
+- [ ] Can a user from Tenant A access Tenant B's data? (MUST be NO)
+- [ ] Can a non-admin user access admin-only endpoints? (MUST be NO)
+- [ ] Does the frontend gate features that the API also gates? (MUST be YES)
+- [ ] Are Stripe webhooks the source of truth for subscription state? (MUST be YES)
+- [ ] Is every new feature mapped to a feature_key in PLANS_AND_ENTITLEMENTS.md? (MUST be YES)
+
+## Default Fallback — When uncertain:
+- Choose server-side enforcement
+- Choose explicit entitlements over implicit
+- Choose conservative permissions
+- Choose strong tenant isolation
+```
+
+#### Save Enforcement Config
+
+**Add to `tech-stack.json`:**
+```json
+{
+  "billing": {
+    "enforcement": {
+      "roadmap_phase_1": "billing_foundation",
+      "roadmap_phase_2": "registration_onboarding",
+      "feature_dev_gate": "phases_1_2_must_pass_audit",
+      "rules_file": ".claude/compliance/BILLING_RULES.md"
+    }
+  }
+}
+```
+
+**Display enforcement activation:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  SaaS Billing Roadmap Enforcement Active                    ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Phase ordering enforced:                                    ║
+║    Phase 1: Billing Foundation (tenant, RBAC, Stripe, gates) ║
+║    Phase 2: Registration & Onboarding                        ║
+║    Phase 3+: Feature development (gated by audit)            ║
+║                                                              ║
+║  Rules saved to: .claude/compliance/BILLING_RULES.md         ║
+║                                                              ║
+║  Any /phase-dev-plan or /create-roadmap for this project     ║
+║  will enforce billing-first phase ordering.                  ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ### Step 8: Final Summary
 
 Display final completion summary:
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  ✅ CCASP Setup Complete                                       ║
+║  CCASP Setup Complete                                        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
-║  Tech Stack: ✓ Detected and saved                             ║
-║  Agents:     ✓ 5 specialists configured                       ║
-║  CLAUDE.md:  ✓ Generated/Enhanced                             ║
-║  GitHub:     ✓ Connected (or skipped)                         ║
-║  MCPs:       ✓ Configured (dynamically discovered)            ║
-║  Testing:    ✓ Configured                                     ║
-║  Compliance: ✓ Commercial SaaS (or: Disabled)                 ║
-║                                                               ║
-║  Your stack-specific agents:                                  ║
-║  • frontend-react-specialist                                  ║
-║  • state-zustand-specialist                                   ║
-║  • test-playwright-specialist                                 ║
-║  • deploy-railway-specialist                                  ║
-║  • deploy-cloudflare-specialist                               ║
+║  Tech Stack:  ✓ Detected and saved                            ║
+║  Agents:      ✓ Specialists configured                        ║
+║  CLAUDE.md:   ✓ Generated/Enhanced                            ║
+║  GitHub:      ✓ Connected (or skipped)                        ║
+║  MCPs:        ✓ Configured (dynamically discovered)           ║
+║  Testing:     ✓ Configured                                    ║
+║  Compliance:  ✓ Commercial SaaS (or: Disabled)                ║
+║  Billing:     ✓ SaaS billing configured (or: N/A)             ║
 ║                                                               ║
 ║  Next steps:                                                  ║
 ║  • Type /menu to see all available commands                   ║
@@ -899,6 +1286,12 @@ Display final completion summary:
 ║  • Type /explore-mcp to discover more MCPs                    ║
 ║  • Type /e2e-test or /ralph to run tests                      ║
 ║  • Use Task tool to delegate to your specialists!             ║
+║                                                               ║
+║  If SaaS billing is active:                                   ║
+║  • /phase-dev-plan will enforce billing-first phase ordering  ║
+║  • Review PLANS_AND_ENTITLEMENTS.md before feature dev        ║
+║  • Review STRIPE_SPEC.md before Stripe integration            ║
+║  • Review ENTITLEMENTS_SPEC.md for gating architecture        ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -918,7 +1311,8 @@ If user invokes command manually (not auto-injected):
 | **5** | Configure GitHub | Connect to GitHub Project Board |
 | **6** | Discover MCPs | Web search for stack-specific MCP servers |
 | **7** | Configure Testing | Set up E2E, unit tests, and Ralph Loop |
-| **A** | Run All | Execute full setup flow (Steps 1-7) |
+| **8** | SaaS Billing Setup | Configure plans, Stripe, entitlements, and gating |
+| **A** | Run All | Execute full setup flow (Steps 1-8) |
 | **B** | Back to /menu | Return to main menu |
 
 ---
