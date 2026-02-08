@@ -700,20 +700,17 @@ function M.execute_action(item)
 
     -- Repo launcher
     open_repo = function()
-      M.close()
-      vim.schedule(function()
+      close_and_run_modal(function()
         require("ccasp.repo_launcher").open_repo(item.path)
       end)
     end,
     open_path_dialog = function()
-      M.close()
-      vim.schedule(function()
+      close_and_run_modal(function()
         require("ccasp.repo_launcher").open_launcher()
       end)
     end,
     open_browser = function()
-      M.close()
-      vim.schedule(function()
+      close_and_run_modal(function()
         require("ccasp.repo_launcher").open_browser()
       end)
     end,
