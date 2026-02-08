@@ -89,12 +89,11 @@ local function get_status_segments()
   }
 end
 
--- ─── Click handler for header window buttons ─────────────────────────────
--- Uses GLOBAL <LeftRelease> mappings (normal + terminal modes) that check
--- screenrow/screencol to detect clicks in the header button region.
--- <LeftRelease> fires AFTER Neovim has fully updated mouse position data.
--- Window control uses LuaJIT FFI to call user32.dll directly (instant, no
--- PowerShell process spawn delay).
+-- ─── Click handler for header window buttons + drag-to-move ──────────────
+-- Button clicks: GLOBAL <LeftRelease> (fires AFTER mouse position is updated)
+-- Drag-to-move: GLOBAL <LeftMouse> on non-button header area initiates native
+--   Windows drag via WM_NCLBUTTONDOWN + HTCAPTION (supports snap and multi-monitor)
+-- Window control uses LuaJIT FFI (ccasp.neovide module) for instant Win32 calls.
 
 local debug_file = nil
 
@@ -108,54 +107,8 @@ local function log_click(msg)
   if f then f:write(os.date("%H:%M:%S") .. " " .. msg .. "\n"); f:close() end
 end
 
--- ─── Windows API via LuaJIT FFI ──────────────────────────────────────────
-local ffi_ok, ffi = pcall(require, "ffi")
-local user32 = nil
-
-if ffi_ok then
-  pcall(function()
-    ffi.cdef[[
-      void* GetForegroundWindow();
-      bool ShowWindow(void* hWnd, int nCmdShow);
-      bool IsZoomed(void* hWnd);
-    ]]
-    user32 = ffi.load("user32")
-  end)
-end
-
--- SW_MINIMIZE = 6, SW_MAXIMIZE = 3, SW_RESTORE = 9
-local function win_minimize()
-  if user32 then
-    local hwnd = user32.GetForegroundWindow()
-    log_click("  FFI: ShowWindow(hwnd, 6) minimize")
-    user32.ShowWindow(hwnd, 6)
-  else
-    log_click("  FFI unavailable, falling back to PowerShell")
-    vim.fn.jobstart({
-      "powershell.exe", "-NoProfile", "-Command",
-      "Add-Type -Name NW -Namespace Win -PassThru -MemberDefinition '"
-      .. "[DllImport(\"user32.dll\")] public static extern bool ShowWindow(System.IntPtr h, int c);"
-      .. "[DllImport(\"user32.dll\")] public static extern System.IntPtr GetForegroundWindow();';"
-      .. "[Win.NW]::ShowWindow([Win.NW]::GetForegroundWindow(), 6)"
-    }, { detach = true })
-  end
-end
-
-local function win_maximize_toggle()
-  if user32 then
-    local hwnd = user32.GetForegroundWindow()
-    local is_max = user32.IsZoomed(hwnd)
-    if is_max then
-      log_click("  FFI: ShowWindow(hwnd, 9) restore")
-      user32.ShowWindow(hwnd, 9) -- SW_RESTORE
-    else
-      log_click("  FFI: ShowWindow(hwnd, 3) maximize")
-      user32.ShowWindow(hwnd, 3) -- SW_MAXIMIZE
-    end
-    -- Refresh header after resize
-    vim.defer_fn(function() M.refresh() end, 150)
-  end
-end
+-- Window control functions are provided by ccasp.neovide (LuaJIT FFI).
+-- Lazy-loaded to avoid circular requires during init.
 
 local function handle_header_click(mouse)
   if not mouse then
@@ -190,7 +143,13 @@ local function handle_header_click(mouse)
   if state.max_btn_col_start and state.max_btn_col_end then
     if col >= state.max_btn_col_start and col <= state.max_btn_col_end then
       log_click("  -> MAXIMIZE matched")
-      vim.schedule(win_maximize_toggle)
+      vim.schedule(function()
+        local nv_ok, nv = pcall(require, "ccasp.neovide")
+        if nv_ok then
+          nv.win_maximize_toggle()
+          vim.defer_fn(function() M.refresh() end, 150)
+        end
+      end)
       return true
     end
   end
@@ -199,12 +158,29 @@ local function handle_header_click(mouse)
   if state.min_btn_col_start and state.min_btn_col_end then
     if col >= state.min_btn_col_start and col <= state.min_btn_col_end then
       log_click("  -> MINIMIZE matched")
-      vim.schedule(win_minimize)
+      vim.schedule(function()
+        local nv_ok, nv = pcall(require, "ccasp.neovide")
+        if nv_ok then nv.win_minimize() end
+      end)
       return true
     end
   end
 
   log_click("  -> no button matched at col=" .. col)
+  return false
+end
+
+-- Check if a screen column is on any header button (close/max/min)
+local function is_on_header_button(screencol)
+  if state.close_btn_col_start and screencol >= state.close_btn_col_start and screencol <= state.close_btn_col_end then
+    return true
+  end
+  if state.max_btn_col_start and screencol >= state.max_btn_col_start and screencol <= state.max_btn_col_end then
+    return true
+  end
+  if state.min_btn_col_start and screencol >= state.min_btn_col_start and screencol <= state.min_btn_col_end then
+    return true
+  end
   return false
 end
 
@@ -215,6 +191,7 @@ local function setup_click_handler()
 
   -- Global <LeftRelease> for normal/visual/insert modes
   -- Fires AFTER mouse position is fully updated by Neovim
+  -- Used for button clicks (close/maximize/minimize)
   vim.keymap.set({"n", "v", "i"}, "<LeftRelease>", function()
     local mouse = vim.fn.getmousepos()
     log_click(string.format("n-LeftRelease: row=%d col=%d", mouse.screenrow, mouse.screencol))
@@ -237,7 +214,49 @@ local function setup_click_handler()
     end
   end, opts)
 
-  log_click("click handler ready")
+  -- ─── Drag-to-move: <LeftMouse> on header non-button area ──────────────
+  -- When user clicks and holds on the header (but not on a button), initiate
+  -- native Windows drag via WM_NCLBUTTONDOWN + HTCAPTION. Windows handles
+  -- the entire drag operation including snap-to-edges and multi-monitor movement.
+
+  local drag_opts = { noremap = true, silent = true, desc = "CCASP: Header drag-to-move" }
+
+  vim.keymap.set({"n", "v", "i"}, "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    if mouse.screenrow >= 1 and mouse.screenrow <= 2 and not is_on_header_button(mouse.screencol) then
+      log_click(string.format("n-LeftMouse DRAG: row=%d col=%d", mouse.screenrow, mouse.screencol))
+      local nv_ok, nv = pcall(require, "ccasp.neovide")
+      if nv_ok and nv.ffi_available() then
+        nv.win_drag_start()
+        return
+      end
+    end
+    -- Passthrough: replay default LeftMouse behavior (focus window, set cursor, etc.)
+    local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", false)
+  end, drag_opts)
+
+  vim.keymap.set("t", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    if mouse.screenrow >= 1 and mouse.screenrow <= 2 and not is_on_header_button(mouse.screencol) then
+      log_click(string.format("t-LeftMouse DRAG: row=%d col=%d", mouse.screenrow, mouse.screencol))
+      -- Exit terminal mode first
+      local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+      vim.api.nvim_feedkeys(esc, "n", false)
+      vim.schedule(function()
+        local nv_ok, nv = pcall(require, "ccasp.neovide")
+        if nv_ok and nv.ffi_available() then
+          nv.win_drag_start()
+        end
+      end)
+      return
+    end
+    -- Passthrough: replay default LeftMouse for terminal
+    local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", false)
+  end, drag_opts)
+
+  log_click("click handler ready (buttons + drag)")
 end
 
 -- ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -333,16 +352,9 @@ function M.refresh()
   local line1_right = {}
   if is_neovide() then
     local min_text = " " .. icons.win_minimize .. " "
-    -- Detect maximized state via FFI IsZoomed (accurate) or fallback to neovide_fullscreen
-    local is_maximized = false
-    if user32 then
-      pcall(function()
-        local hwnd = user32.GetForegroundWindow()
-        is_maximized = user32.IsZoomed(hwnd)
-      end)
-    else
-      is_maximized = vim.g.neovide_fullscreen or false
-    end
+    -- Detect maximized state via neovide module FFI
+    local nv_ok, nv = pcall(require, "ccasp.neovide")
+    local is_maximized = nv_ok and nv.is_maximized() or false
     local max_icon = is_maximized and icons.win_restore or icons.win_maximize
     local max_text = " " .. max_icon .. " "
     local close_text = " " .. icons.win_close .. " "
@@ -391,16 +403,8 @@ function M.refresh()
     cursor = state.min_btn_col_end + 2 -- +1 for space separator, +1 for next start
 
     -- Maximize button — use same icon logic as the rendered text above
-    local max_icon_2 = icons.win_maximize
-    if user32 then
-      pcall(function()
-        if user32.IsZoomed(user32.GetForegroundWindow()) then
-          max_icon_2 = icons.win_restore
-        end
-      end)
-    elseif vim.g.neovide_fullscreen then
-      max_icon_2 = icons.win_restore
-    end
+    local nv2_ok, nv2 = pcall(require, "ccasp.neovide")
+    local max_icon_2 = (nv2_ok and nv2.is_maximized()) and icons.win_restore or icons.win_maximize
     local max_text = " " .. max_icon_2 .. " "
     local max_w = vim.fn.strdisplaywidth(max_text)
     state.max_btn_col_start = cursor

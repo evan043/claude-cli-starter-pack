@@ -20,7 +20,40 @@ local state = {
   primary_session = nil,
   active_session = nil, -- most recently focused/created session
   max_sessions = 8,
+  resizing = false, -- true during split/rearrange to suppress auto-scroll
 }
+
+-- Attach on_lines auto-scroll to a terminal buffer so unfocused session
+-- windows stay pinned to the bottom as new output arrives.
+-- Guarded by state.resizing to avoid SIGWINCH-triggered scroll displacement
+-- when splits resize all terminal TUIs simultaneously.
+local function attach_auto_scroll(id, bufnr)
+  vim.api.nvim_buf_attach(bufnr, false, {
+    on_lines = function(_, buf)
+      -- Detach if session or buffer gone
+      local session = state.sessions[id]
+      if not session or not vim.api.nvim_buf_is_valid(buf) then
+        return true -- detach
+      end
+      local winid = session.winid
+      if not winid or not vim.api.nvim_win_is_valid(winid) then
+        return true -- detach
+      end
+      -- Skip during split/rearrange (SIGWINCH triggers bulk on_lines)
+      if state.resizing then return end
+      -- Skip if this is the focused window (terminal mode auto-follows)
+      if vim.api.nvim_get_current_win() == winid then return end
+      -- Scroll unfocused window to bottom on next tick
+      vim.schedule(function()
+        if not vim.api.nvim_win_is_valid(winid) then return end
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+        if state.resizing then return end -- re-check after schedule
+        local line_count = vim.api.nvim_buf_line_count(buf)
+        pcall(vim.api.nvim_win_set_cursor, winid, { line_count, 0 })
+      end)
+    end,
+  })
+end
 
 -- Generate unique session ID
 local function generate_id()
@@ -87,9 +120,13 @@ end
 -- wincmd = understands the window tree hierarchy and respects
 -- winfixwidth/winfixheight on spacer windows (icon rail, footer).
 function M.rearrange()
+  state.resizing = true
   cleanup_invalid()
   local sessions = M.list()
-  if #sessions == 0 then return end
+  if #sessions == 0 then
+    state.resizing = false
+    return
+  end
 
   -- Update titlebars first (winbar height affects equalization)
   get_titlebar().update_all()
@@ -99,6 +136,9 @@ function M.rearrange()
   -- Refresh footer to reflect current session list
   local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
   if ft_ok then footer.refresh() end
+
+  -- Clear resizing flag after TUI has settled (SIGWINCH fires on_lines synchronously)
+  vim.defer_fn(function() state.resizing = false end, 300)
 end
 
 -- Focus window by session if valid
@@ -173,6 +213,9 @@ function M.spawn()
   local id = generate_id()
   local name = "Claude " .. (count + 1)
 
+  -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
+  state.resizing = true
+
   create_split_window(count, M.list())
 
   vim.cmd("lcd " .. vim.fn.fnameescape(vim.fn.getcwd()))
@@ -187,13 +230,6 @@ function M.spawn()
   vim.wo[winid].signcolumn = "no"
   vim.wo[winid].foldcolumn = "0"
 
-  -- Note: no auto-scroll handler here. Terminal mode automatically follows
-  -- the terminal cursor when a session is focused. An on_lines auto-scroll
-  -- handler (normal! G on unfocused windows) was removed because it caused
-  -- scroll displacement when new splits resize existing terminal windows —
-  -- the TUI re-renders on SIGWINCH, and the scroll callback would yank
-  -- the view away from the active content.
-
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
@@ -202,6 +238,9 @@ function M.spawn()
     state.primary_session = id
     require("ccasp.terminal")._set_state(bufnr, winid)
   end
+
+  -- Auto-scroll: keep unfocused terminal windows pinned to bottom
+  attach_auto_scroll(id, bufnr)
 
   -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
   vim.wo[winid].statusline = " "
@@ -222,7 +261,81 @@ function M.spawn()
 
   vim.defer_fn(function()
     get_titlebar().create(id)
-    M.rearrange() -- includes wincmd = and footer.refresh()
+    M.rearrange() -- includes wincmd = and footer.refresh() (also sets/clears resizing)
+  end, 800)
+
+  return id
+end
+
+-- Create a new Claude CLI session at a specific directory path
+function M.spawn_at_path(path)
+  -- Validate path is a directory
+  if vim.fn.isdirectory(path) == 0 then
+    vim.notify("Directory not found: " .. path, vim.log.levels.ERROR)
+    return nil
+  end
+
+  cleanup_invalid()
+
+  local count = M.count()
+  if count >= state.max_sessions then
+    vim.notify("Maximum sessions reached (" .. state.max_sessions .. ")", vim.log.levels.WARN)
+    return nil
+  end
+
+  local id = generate_id()
+  local name = vim.fn.fnamemodify(path, ":t")
+
+  -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
+  state.resizing = true
+
+  create_split_window(count, M.list())
+
+  -- Set the local directory to the provided repo path
+  vim.cmd("lcd " .. vim.fn.fnameescape(path))
+  vim.cmd("terminal")
+
+  local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+
+  -- Apply terminal window options (winhighlight set later by titlebar.update)
+  vim.wo[winid].scrolloff = 0
+  vim.wo[winid].number = false
+  vim.wo[winid].relativenumber = false
+  vim.wo[winid].signcolumn = "no"
+  vim.wo[winid].foldcolumn = "0"
+
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = path }
+  table.insert(state.session_order, id)
+  state.active_session = id -- newly created session is always active
+
+  if count == 0 then
+    state.primary_session = id
+    require("ccasp.terminal")._set_state(bufnr, winid)
+  end
+
+  -- Auto-scroll: keep unfocused terminal windows pinned to bottom
+  attach_auto_scroll(id, bufnr)
+
+  -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
+  vim.wo[winid].statusline = " "
+
+  -- Update all titlebars FIRST so every session has a winbar before equalization.
+  -- wincmd = accounts for winbar height; running it before winbars are set causes
+  -- misaligned quadrants (windows without winbars get 1 extra row).
+  get_titlebar().update_all()
+
+  -- Equalize windows AFTER winbars are consistent across all sessions
+  vim.cmd("wincmd =")
+
+  -- Refresh footer to show the new session tab
+  local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if ft_ok then footer.refresh() end
+
+  launch_claude_cli(id, bufnr, name)
+
+  vim.defer_fn(function()
+    get_titlebar().create(id)
+    M.rearrange() -- includes wincmd = and footer.refresh() (also sets/clears resizing)
   end, 800)
 
   return id
@@ -258,6 +371,9 @@ function M.close(id)
   local session = state.sessions[id]
   if not session then return end
 
+  -- Suppress auto-scroll during close (remaining windows resize)
+  state.resizing = true
+
   get_titlebar().destroy(id)
 
   if session.winid and vim.api.nvim_win_is_valid(session.winid) then
@@ -268,7 +384,7 @@ function M.close(id)
   remove_from_order(id)
   reassign_primary_if_needed(id)
 
-  vim.defer_fn(M.rearrange, 100)
+  vim.defer_fn(M.rearrange, 100) -- rearrange sets/clears resizing
 end
 
 -- Close all sessions
@@ -427,6 +543,9 @@ function M.register_primary(bufnr, winid)
   state.primary_session = id
   state.active_session = id
 
+  -- Auto-scroll: keep unfocused terminal windows pinned to bottom
+  attach_auto_scroll(id, bufnr)
+
   -- Create titlebar after short delay (allows terminal to initialize)
   vim.defer_fn(function()
     local ok, err = pcall(function()
@@ -438,6 +557,10 @@ function M.register_primary(bufnr, winid)
       end)
     end
   end, 500)
+
+  -- Initialize layer system on first session registration
+  local layers_ok, layers = pcall(require, "ccasp.layers")
+  if layers_ok then layers.init() end
 
   return id
 end
@@ -530,5 +653,134 @@ vim.api.nvim_create_autocmd("VimResized", {
     end, 100)
   end,
 })
+
+-- ═══════════════════════════════════════════════════════════════════
+-- Layer Manager Internal API (called only by layers.lua)
+-- ═══════════════════════════════════════════════════════════════════
+
+-- Deep copy utility
+local function deep_copy(t)
+  if type(t) ~= "table" then return t end
+  local copy = {}
+  for k, v in pairs(t) do
+    copy[k] = type(v) == "table" and deep_copy(v) or v
+  end
+  return copy
+end
+
+-- Export current session state for layer snapshot
+function M._export_state()
+  return {
+    sessions = deep_copy(state.sessions),
+    session_order = deep_copy(state.session_order),
+    primary_session = state.primary_session,
+    active_session = state.active_session,
+  }
+end
+
+-- Import session state from a layer snapshot
+function M._import_state(data)
+  data = data or {}
+  state.sessions = data.sessions or {}
+  state.session_order = data.session_order or {}
+  state.primary_session = data.primary_session
+  state.active_session = data.active_session
+
+  -- Update terminal module with new primary
+  local primary = state.primary_session and state.sessions[state.primary_session]
+  local terminal = require("ccasp.terminal")
+  if primary then
+    terminal._set_state(primary.bufnr, primary.winid)
+    terminal._set_claude_running(primary.claude_running or false)
+  else
+    terminal._set_state(nil, nil)
+    terminal._set_claude_running(false)
+  end
+end
+
+-- Detach all session windows (close windows, keep buffers alive)
+function M._detach_all_windows()
+  state.resizing = true
+
+  for id, session in pairs(state.sessions) do
+    -- Destroy titlebar (winbar is removed when window closes)
+    get_titlebar().destroy(id)
+    -- Close window but keep buffer
+    if session.winid and vim.api.nvim_win_is_valid(session.winid) then
+      vim.api.nvim_win_close(session.winid, true)
+    end
+    session.winid = nil
+  end
+
+  vim.defer_fn(function() state.resizing = false end, 300)
+end
+
+-- Reattach windows for sessions that have valid buffers but no windows.
+-- Recreates the split grid, assigns buffers, rebuilds titlebars.
+function M._reattach_windows()
+  state.resizing = true
+
+  local ordered = {}
+  for _, id in ipairs(state.session_order) do
+    local session = state.sessions[id]
+    if session and session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
+      table.insert(ordered, session)
+    end
+  end
+
+  if #ordered == 0 then
+    state.resizing = false
+    return
+  end
+
+  -- First session: use current window
+  local first = ordered[1]
+  local first_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(first_win, first.bufnr)
+  first.winid = first_win
+
+  -- Apply terminal window options
+  vim.wo[first_win].scrolloff = 0
+  vim.wo[first_win].number = false
+  vim.wo[first_win].relativenumber = false
+  vim.wo[first_win].signcolumn = "no"
+  vim.wo[first_win].foldcolumn = "0"
+  vim.wo[first_win].statusline = " "
+
+  -- Remaining sessions: create splits
+  for i = 2, #ordered do
+    local session = ordered[i]
+    create_split_window(i - 1, ordered)
+    local new_win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(new_win, session.bufnr)
+    session.winid = new_win
+
+    vim.wo[new_win].scrolloff = 0
+    vim.wo[new_win].number = false
+    vim.wo[new_win].relativenumber = false
+    vim.wo[new_win].signcolumn = "no"
+    vim.wo[new_win].foldcolumn = "0"
+    vim.wo[new_win].statusline = " "
+  end
+
+  -- Rebuild titlebars for all sessions
+  for _, session in ipairs(ordered) do
+    get_titlebar().create(session.id)
+    -- Re-attach auto-scroll
+    attach_auto_scroll(session.id, session.bufnr)
+  end
+
+  -- Equalize windows
+  get_titlebar().update_all()
+  vim.cmd("wincmd =")
+
+  -- Focus the active session
+  local active = state.active_session and state.sessions[state.active_session]
+  if active and active.winid and vim.api.nvim_win_is_valid(active.winid) then
+    vim.api.nvim_set_current_win(active.winid)
+  end
+
+  vim.defer_fn(function() state.resizing = false end, 300)
+end
 
 return M

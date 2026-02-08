@@ -11,6 +11,94 @@ function M.is_neovide()
   return vim.g.neovide == true
 end
 
+-- ─── Windows API via LuaJIT FFI ──────────────────────────────────────────
+-- Provides instant window control without PowerShell process spawn delay.
+-- Used by header.lua (drag, minimize, maximize, close) and footer.lua (resize grip).
+
+local ffi_ok, ffi = pcall(require, "ffi")
+local user32 = nil
+
+if ffi_ok then
+  pcall(function()
+    ffi.cdef[[
+      void* GetForegroundWindow();
+      bool ShowWindow(void* hWnd, int nCmdShow);
+      bool IsZoomed(void* hWnd);
+      bool ReleaseCapture();
+      intptr_t SendMessageA(void* hWnd, unsigned int Msg, uintptr_t wParam, intptr_t lParam);
+    ]]
+    user32 = ffi.load("user32")
+  end)
+end
+
+function M.ffi_available()
+  return user32 ~= nil
+end
+
+-- ─── Window control functions ────────────────────────────────────────────
+
+-- SW_MINIMIZE = 6, SW_MAXIMIZE = 3, SW_RESTORE = 9
+
+function M.win_minimize()
+  if user32 then
+    local hwnd = user32.GetForegroundWindow()
+    user32.ShowWindow(hwnd, 6)
+  end
+end
+
+function M.win_maximize_toggle()
+  if user32 then
+    local hwnd = user32.GetForegroundWindow()
+    if user32.IsZoomed(hwnd) then
+      user32.ShowWindow(hwnd, 9) -- SW_RESTORE
+    else
+      user32.ShowWindow(hwnd, 3) -- SW_MAXIMIZE
+    end
+  end
+end
+
+function M.is_maximized()
+  if user32 then
+    local ok, result = pcall(function()
+      local hwnd = user32.GetForegroundWindow()
+      return user32.IsZoomed(hwnd)
+    end)
+    if ok then return result end
+  end
+  return vim.g.neovide_fullscreen or false
+end
+
+-- Initiate native Windows drag-to-move on the Neovide window.
+-- WM_NCLBUTTONDOWN(0x00A1) + HTCAPTION(2) tells Windows the user pressed
+-- on the title bar, so the OS handles the entire drag (including snap and
+-- multi-monitor movement) until the mouse button is released.
+function M.win_drag_start()
+  if user32 then
+    local hwnd = user32.GetForegroundWindow()
+    user32.ReleaseCapture()
+    user32.SendMessageA(hwnd, 0x00A1, 2, 0) -- WM_NCLBUTTONDOWN, HTCAPTION
+  end
+end
+
+-- Initiate native Windows resize from a specific edge/corner.
+-- Hit-test constants: HTLEFT=10, HTRIGHT=11, HTTOP=12, HTTOPLEFT=13,
+-- HTTOPRIGHT=14, HTBOTTOM=15, HTBOTTOMLEFT=16, HTBOTTOMRIGHT=17
+local HT = {
+  left = 10, right = 11, top = 12,
+  topleft = 13, topright = 14,
+  bottom = 15, bottomleft = 16, bottomright = 17,
+}
+
+function M.win_resize_start(edge)
+  if user32 then
+    local ht = HT[edge]
+    if not ht then return end
+    local hwnd = user32.GetForegroundWindow()
+    user32.ReleaseCapture()
+    user32.SendMessageA(hwnd, 0x00A1, ht, 0) -- WM_NCLBUTTONDOWN, HT*
+  end
+end
+
 -- ─── Quit confirmation modal ───────────────────────────────────────────────
 -- Reuses the same modal pattern as session_titlebar.close_session
 
@@ -182,6 +270,18 @@ function M.setup(opts)
 
   -- Clean typing UX
   vim.g.neovide_hide_mouse_when_typing = true
+
+  -- ── Clipboard paste (Neovide doesn't add these - must be explicit) ──
+  -- Uses nvim_paste() which handles all modes correctly (insert, normal, terminal, cmdline)
+  local function paste()
+    vim.api.nvim_paste(vim.fn.getreg("+"), true, -1)
+  end
+  vim.keymap.set({ "n", "v", "i", "c", "t" }, "<C-S-v>", paste, { silent = true, desc = "Paste from clipboard" })
+  -- Ctrl+V: remap to paste in insert/cmdline/terminal (keep visual block in normal mode)
+  vim.keymap.set({ "i", "c", "t" }, "<C-v>", paste, { silent = true, desc = "Paste from clipboard" })
+
+  -- Copy: Ctrl+C in visual mode copies selection to system clipboard
+  vim.keymap.set("v", "<C-c>", '"+y', { noremap = true, silent = true, desc = "Copy to clipboard" })
 
   -- Global quit keybinds (Neovide only)
   local keyopts = { noremap = true, silent = true }

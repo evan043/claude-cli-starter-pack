@@ -742,6 +742,19 @@ function M.setup_keymaps(bufnr, session_id)
   set_keymap("n", "_", function() M.minimize(session_id) end, opts, "Minimize session")
   set_keymap("n", "x", function() M.close_session(session_id) end, opts, "Close session")
 
+  -- Alt+1-9: Switch layers from terminal mode
+  for i = 1, 9 do
+    set_keymap("t", "<M-" .. i .. ">", function()
+      exit_terminal_mode()
+      vim.schedule(function()
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok and layers.is_initialized() then
+          layers.switch_to(i)
+        end
+      end)
+    end, opts, "Switch to layer " .. i)
+  end
+
   -- Normal mode: clicking inside a terminal should enter terminal mode.
   -- Handles the case where WinEnter doesn't fire (clicking within the same window
   -- after exiting terminal mode with Ctrl+\, Ctrl+N). Without this, the user
@@ -821,6 +834,35 @@ local function debounced_winbar_update()
       M.update_all()
     end)
   end)
+end
+
+-- ═══════════════════════════════════════════════════════════════════
+-- Layer Manager Internal API (called only by layers.lua)
+-- ═══════════════════════════════════════════════════════════════════
+
+-- Deep copy utility
+local function deep_copy(t)
+  if type(t) ~= "table" then return t end
+  local copy = {}
+  for k, v in pairs(t) do
+    copy[k] = type(v) == "table" and deep_copy(v) or v
+  end
+  return copy
+end
+
+-- Export titlebar state for layer snapshot
+function M._export_state()
+  return {
+    session_colors = deep_copy(session_colors),
+    minimized = deep_copy(minimized),
+  }
+end
+
+-- Import titlebar state from a layer snapshot
+function M._import_state(data)
+  data = data or {}
+  session_colors = data.session_colors or {}
+  minimized = data.minimized or {}
 end
 
 -- Initialize

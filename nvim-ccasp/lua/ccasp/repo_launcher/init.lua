@@ -1,0 +1,44 @@
+-- CCASP Repo Launcher - Public API
+-- Provides quick-launch of Claude CLI sessions in specific repo directories
+
+local M = {}
+
+-- Open the repo launcher (path input dialog)
+function M.open_launcher()
+  require("ccasp.repo_launcher.ui").open_path_dialog()
+end
+
+-- Open the repo browser (library panel)
+function M.open_browser()
+  require("ccasp.repo_launcher.ui").open_browser()
+end
+
+-- Quick-launch most recent repo (no UI, just opens it)
+function M.quick_recent()
+  local storage = require("ccasp.repo_launcher.storage")
+  local recent = storage.get_recent(1)
+  if #recent == 0 then
+    vim.notify("No recent repos in library", vim.log.levels.INFO)
+    return
+  end
+  M.open_repo(recent[1].path)
+end
+
+-- Open a specific repo path (core action)
+function M.open_repo(path)
+  if vim.fn.isdirectory(path) == 0 then
+    vim.notify("Directory not found: " .. path, vim.log.levels.ERROR)
+    return
+  end
+
+  -- Add to library
+  local storage = require("ccasp.repo_launcher.storage")
+  storage.add(path)
+  storage.prune()
+
+  -- Spawn session at path
+  local sessions = require("ccasp.sessions")
+  sessions.spawn_at_path(path)
+end
+
+return M

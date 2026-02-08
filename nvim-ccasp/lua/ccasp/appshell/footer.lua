@@ -6,12 +6,47 @@
 local M = {}
 local icons = require("ccasp.ui.icons")
 
+-- Neovide detection (cached)
+local function is_neovide()
+  return vim.g.neovide == true
+end
+
 local state = {
   win = nil,
   buf = nil,
   taskbar_items = {},   -- { { title, type = "panel"|"session", ... }, ... }
   click_regions = {},   -- { { col_start, col_end, action, id }, ... } for line 1 mouse clicks
+  grip_col_start = nil, -- display column range of resize grip on line 2 (Neovide only)
+  grip_col_end = nil,
 }
+
+-- Build layer tab line with highlight spans and click regions
+-- Returns: { text, highlights, click_regions } (same format as build_session_tabs)
+local function build_layer_tabs()
+  local text_parts = {}
+  local highlights = {}
+  local click_regions = {}
+  local byte_pos = 1
+
+  local layers_ok, layers = pcall(require, "ccasp.layers")
+  if not layers_ok or not layers.is_initialized() then
+    return { text = "", highlights = {}, click_regions = {} }
+  end
+
+  local all = layers.list()
+  for _, layer in ipairs(all) do
+    local tab_text = string.format(" %d %s (%d) ", layer.num, layer.name, layer.session_count)
+    local col_start = byte_pos - 1
+    local col_end = col_start + #tab_text
+    local hl_group = layer.is_active and "CcaspLayerTabActive" or "CcaspLayerTab"
+    table.insert(highlights, { hl_group, col_start, col_end })
+    table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "switch_layer", layer_num = layer.num })
+    table.insert(text_parts, tab_text)
+    byte_pos = byte_pos + #tab_text
+  end
+
+  return { text = table.concat(text_parts, ""), highlights = highlights, click_regions = click_regions }
+end
 
 -- Build session tab line with highlight spans and click regions
 -- Returns: { text, highlights = { { group, col_start, col_end }, ... },
@@ -94,15 +129,34 @@ local function render()
   local content_col = zone and zone.content_col or 0
   local left_pad = string.rep(" ", content_col)
 
-  -- Line 1: Session tabs (styled like header), shifted right past icon rail
-  local tabs = build_session_tabs()
-  local line1 = left_pad .. tabs.text
-  -- Shift click regions by left padding bytes
+  -- Line 1: Layer tabs (left) │ Session tabs (right)
+  local layer_tabs = build_layer_tabs()
+  local session_tabs = build_session_tabs()
+
+  local separator = ""
+  if layer_tabs.text ~= "" and session_tabs.text ~= "" then
+    separator = " " .. icons.pipe .. " "
+  end
+
+  local line1 = left_pad .. layer_tabs.text .. separator .. session_tabs.text
+
+  -- Build combined click regions (shifted by left padding)
   state.click_regions = {}
-  for _, region in ipairs(tabs.click_regions or {}) do
+  local layer_offset = content_col
+  for _, region in ipairs(layer_tabs.click_regions or {}) do
     table.insert(state.click_regions, {
-      col_start = region.col_start + content_col,
-      col_end = region.col_end + content_col,
+      col_start = region.col_start + layer_offset,
+      col_end = region.col_end + layer_offset,
+      action = region.action,
+      layer_num = region.layer_num,
+    })
+  end
+
+  local session_offset = content_col + #layer_tabs.text + #separator
+  for _, region in ipairs(session_tabs.click_regions or {}) do
+    table.insert(state.click_regions, {
+      col_start = region.col_start + session_offset,
+      col_end = region.col_end + session_offset,
       action = region.action,
       id = region.id,
       index = region.index,
@@ -140,11 +194,27 @@ local function render()
     status.version
   )
 
-  -- Right-align status text within footer width
+  -- Resize grip (Neovide only): appended at the far right of line 2
+  local grip_text = ""
+  if is_neovide() then
+    grip_text = " " .. icons.resize_grip .. " "
+  end
+
+  -- Right-align status text + grip within footer width
   local total_w = zone and zone.width or vim.o.columns
   local status_w = vim.fn.strdisplaywidth(status_text)
-  local pad = math.max(0, total_w - status_w)
-  local line2 = string.rep(" ", pad) .. status_text
+  local grip_w = vim.fn.strdisplaywidth(grip_text)
+  local pad = math.max(0, total_w - status_w - grip_w)
+  local line2 = string.rep(" ", pad) .. status_text .. grip_text
+
+  -- Track grip column range for click detection (0-indexed byte offset)
+  if is_neovide() and grip_w > 0 then
+    state.grip_col_start = pad + #status_text
+    state.grip_col_end = state.grip_col_start + #grip_text
+  else
+    state.grip_col_start = nil
+    state.grip_col_end = nil
+  end
 
   local lines = { line1, line2 }
 
@@ -155,13 +225,27 @@ local function render()
   -- Apply highlights
   vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
 
-  -- Line 1: Per-tab highlights from build_session_tabs() (shifted by left padding)
-  for _, hl in ipairs(tabs.highlights) do
-    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + content_col, hl[3] + content_col)
+  -- Line 1: Per-tab highlights from layer tabs + session tabs (shifted appropriately)
+  for _, hl in ipairs(layer_tabs.highlights) do
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + layer_offset, hl[3] + layer_offset)
+  end
+  -- Separator highlight
+  if separator ~= "" then
+    local sep_start = content_col + #layer_tabs.text
+    local sep_end = sep_start + #separator
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFooterSep", 0, sep_start, sep_end)
+  end
+  for _, hl in ipairs(session_tabs.highlights) do
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + session_offset, hl[3] + session_offset)
   end
 
   -- Line 2: Status line (light greyish blue, same as "No sessions")
   pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", 1, 0, -1)
+
+  -- Resize grip highlight (slightly brighter so it's discoverable)
+  if state.grip_col_start and state.grip_col_end then
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspHeaderSub", 1, state.grip_col_start, state.grip_col_end)
+  end
 end
 
 -- Sync minimized items and rebuild taskbar_items for number-key restore
@@ -197,17 +281,38 @@ function M.sync_taskbar()
   end
 end
 
--- Handle mouse click on line 1 (session tabs)
-local function handle_tab_click()
+-- Handle mouse click on line 1 (session tabs) or line 2 (resize grip)
+local function handle_footer_click()
   local mouse = vim.fn.getmousepos()
-  if not mouse or mouse.line ~= 1 then return end
+  if not mouse then return end
+
+  -- Line 2: check resize grip (Neovide only)
+  if mouse.line == 2 and is_neovide() and state.grip_col_start and state.grip_col_end then
+    local col = mouse.column - 1 -- 0-indexed
+    if col >= state.grip_col_start and col < state.grip_col_end then
+      local nv_ok, nv = pcall(require, "ccasp.neovide")
+      if nv_ok and nv.ffi_available() then
+        nv.win_resize_start("bottomright")
+      end
+      return
+    end
+  end
+
+  -- Line 1: session tab clicks
+  if mouse.line ~= 1 then return end
 
   -- mouse.column is 1-indexed display column; click_regions use 0-indexed byte offsets
   local col = mouse.column - 1
 
   for _, region in ipairs(state.click_regions) do
     if col >= region.col_start and col < region.col_end then
-      if region.action == "focus" then
+      if region.action == "switch_layer" then
+        -- Switch to layer
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok then
+          layers.switch_to(region.layer_num)
+        end
+      elseif region.action == "focus" then
         -- Focus active session
         local sessions_ok, sessions = pcall(require, "ccasp.sessions")
         if sessions_ok then
@@ -239,14 +344,15 @@ local function setup_keymaps()
   if not state.buf then return end
   local opts = { buffer = state.buf, nowait = true, silent = true }
 
-  -- Mouse click on session tabs (line 1)
-  vim.keymap.set("n", "<LeftMouse>", handle_tab_click, opts)
+  -- Mouse click on session tabs (line 1) or resize grip (line 2)
+  vim.keymap.set("n", "<LeftMouse>", handle_footer_click, opts)
 
-  -- Number keys to restore minimized items (sessions + panels)
+  -- Number keys to switch layers (1-9)
   for i = 1, 9 do
     vim.keymap.set("n", tostring(i), function()
-      if state.taskbar_items[i] then
-        M.restore_item(i)
+      local layers_ok, layers = pcall(require, "ccasp.layers")
+      if layers_ok and layers.is_initialized() then
+        layers.switch_to(i)
       end
     end, opts)
   end

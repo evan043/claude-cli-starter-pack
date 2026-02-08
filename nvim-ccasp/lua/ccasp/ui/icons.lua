@@ -57,6 +57,7 @@ M.win_minimize = "󰖰"    -- nf-md-window_minimize
 M.win_maximize = "󰖯"    -- nf-md-window_maximize
 M.win_restore  = "󰖳"    -- nf-md-window_restore
 M.win_close    = "󰖭"    -- nf-md-window_close
+M.resize_grip  = "◢"    -- resize grip indicator (bottom-right corner)
 
 -- Expand / Collapse
 M.expanded    = ""    -- nf-fa-chevron_down
@@ -81,6 +82,11 @@ M.claude      = "󰚩"    -- nf-md-robot_outline
 M.pin         = ""    -- nf-oct-pin
 M.git_branch  = ""    -- nf-oct-git_branch
 M.worktree    = ""    -- nf-fa-code_fork
+
+-- Repository launcher
+M.repo         = ""    -- nf-oct-repo
+M.clock        = ""    -- nf-fa-clock_o
+M.path_input   = "󰉋"    -- nf-md-folder_open
 
 -- Layout
 M.layout      = "󰕰"    -- nf-md-view_dashboard_variant

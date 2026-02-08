@@ -165,6 +165,10 @@ function M.open(bounds)
     -- Register as primary session
     local session_id = sessions.register_primary(bufnr, winid)
 
+    -- Initialize layer system (creates Layer 1 for the first session)
+    local layers_ok, layers = pcall(require, "ccasp.layers")
+    if layers_ok then layers.init() end
+
     -- Set winbar + winhighlight SYNCHRONOUSLY right after registration
     -- (deferred callbacks can fail silently when cmdheight=0)
     local tb_ok, tb = pcall(require, "ccasp.session_titlebar")

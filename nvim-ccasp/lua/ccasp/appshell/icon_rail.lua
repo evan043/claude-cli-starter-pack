@@ -16,6 +16,7 @@ local state = {
 M.sections = {
   { icon = icons.commands,  name = "Commands",         key = "commands" },
   { icon = icons.terminal,  name = "Sessions",         key = "terminal" },
+  { icon = icons.repo,      name = "Repos",            key = "repos" },
   { icon = icons.dashboard, name = "Panels",           key = "panels" },
   { icon = icons.agents,    name = "Agents",            key = "agents" },
   { icon = icons.search,    name = "Browse",            key = "browse" },

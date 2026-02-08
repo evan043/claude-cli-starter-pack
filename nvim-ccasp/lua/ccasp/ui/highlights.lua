@@ -102,6 +102,10 @@ M.groups = {
   CcaspHeaderArt      = { fg = "#4a8fbf", bg = "#0d1117", bold = true }, -- Logo text: muted steel blue
   CcaspHeaderSub      = { fg = "#2a4a6a", bg = "#0d1117" },     -- Subtitle: dim blue
 
+  -- ─── Appshell: Layer Tabs ─────────────────────────────────
+  CcaspLayerTab       = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive layer tab
+  CcaspLayerTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active layer tab
+
   -- ─── Appshell: Footer ─────────────────────────────────────
   CcaspFooterBg       = { bg = "#0d1117" },                     -- Footer background
   CcaspFooterLabel    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Labels

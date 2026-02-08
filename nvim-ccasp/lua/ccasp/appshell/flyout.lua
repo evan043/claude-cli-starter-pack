@@ -126,6 +126,38 @@ local section_renderers = {
   end,
 
   terminal = function(lines, item_lines)
+    -- ── Layers Section ──
+    local layers_ok, layers = pcall(require, "ccasp.layers")
+    if layers_ok and layers.is_initialized() then
+      table.insert(lines, "  " .. icons.dashboard .. " Layers")
+      table.insert(lines, "  " .. string.rep("─", 30))
+      table.insert(lines, "")
+
+      local all_layers = layers.list()
+      for _, layer in ipairs(all_layers) do
+        local marker = layer.is_active and icons.arrow_right or " "
+        local line = string.format("  %s %d %s (%d)", marker, layer.num, layer.name, layer.session_count)
+        table.insert(lines, line)
+        item_lines[#lines] = { action = "switch_layer", layer_num = layer.num }
+      end
+
+      table.insert(lines, "")
+
+      -- Layer actions
+      local layer_actions = {
+        { icon = icons.maximize, label = "New Layer", action = "layer_new" },
+        { icon = icons.edit,     label = "Rename Layer", action = "layer_rename" },
+        { icon = icons.close,    label = "Close Layer", action = "layer_close" },
+      }
+      for _, a in ipairs(layer_actions) do
+        table.insert(lines, "  " .. a.icon .. " " .. a.label)
+        item_lines[#lines] = { action = a.action }
+      end
+
+      table.insert(lines, "")
+    end
+
+    -- ── Terminal Sessions Section ──
     table.insert(lines, "  " .. icons.terminal .. " Terminal Sessions")
     table.insert(lines, "  " .. string.rep("─", 30))
     table.insert(lines, "")
@@ -151,20 +183,92 @@ local section_renderers = {
       table.insert(lines, "")
     end
 
-    -- Actions
+    -- Session actions
     table.insert(lines, "  " .. string.rep("─", 30))
-    local actions = {
-      { icon = icons.maximize, label = "New Claude Session", action = "new_session" },
+
+    -- New Session action
+    table.insert(lines, "  " .. icons.maximize .. " New Claude Session")
+    item_lines[#lines] = { action = "new_session" }
+
+    -- Recent repos (indented under New Session for quick-launch)
+    local repo_ok, repo_storage = pcall(require, "ccasp.repo_launcher.storage")
+    if repo_ok then
+      local recent = repo_storage.get_recent(5)
+      if #recent > 0 then
+        table.insert(lines, "    Recent repos:")
+        for _, repo in ipairs(recent) do
+          table.insert(lines, "      " .. icons.repo .. " " .. repo.name)
+          item_lines[#lines] = { action = "new_session_at_repo", path = repo.path, name = repo.name }
+        end
+      end
+    end
+
+    local remaining_actions = {
       { icon = icons.edit,     label = "Rename Current Session", action = "session_rename" },
       { icon = icons.settings, label = "Change Session Color", action = "session_color" },
       { icon = icons.minimize, label = "Minimize Current", action = "session_minimize" },
       { icon = icons.reload,   label = "Restore Minimized", action = "session_restore" },
       { icon = icons.close,    label = "Close All Sessions", action = "session_close_all" },
     }
-    for _, a in ipairs(actions) do
+    for _, a in ipairs(remaining_actions) do
       table.insert(lines, "  " .. a.icon .. " " .. a.label)
       item_lines[#lines] = { action = a.action }
     end
+  end,
+
+  repos = function(lines, item_lines)
+    local storage_ok, storage = pcall(require, "ccasp.repo_launcher.storage")
+    if not storage_ok then
+      table.insert(lines, "  Repo launcher not available")
+      return
+    end
+
+    local nf_ok, nf = pcall(require, "ccasp.ui.icons")
+    local pin_icon = nf_ok and nf.pin or "*"
+    local repo_icon = nf_ok and nf.repo or ">"
+    local clock_icon = nf_ok and nf.clock or "@"
+
+    -- Header
+    table.insert(lines, "  " .. repo_icon .. " Repository Launcher")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+
+    -- Pinned repos
+    local pinned = storage.get_pinned()
+    if #pinned > 0 then
+      table.insert(lines, "  " .. pin_icon .. " Pinned")
+      for _, repo in ipairs(pinned) do
+        table.insert(lines, "    " .. repo.name)
+        item_lines[#lines] = { action = "open_repo", path = repo.path, name = repo.name }
+      end
+      table.insert(lines, "")
+    end
+
+    -- Recent repos (top 5, excluding pinned)
+    local recent = storage.get_recent(10)
+    local shown = 0
+    table.insert(lines, "  " .. clock_icon .. " Recent")
+    for _, repo in ipairs(recent) do
+      if not repo.pinned and shown < 5 then
+        table.insert(lines, "    " .. repo.name)
+        item_lines[#lines] = { action = "open_repo", path = repo.path, name = repo.name }
+        shown = shown + 1
+      end
+    end
+
+    if shown == 0 then
+      table.insert(lines, "    (no recent repos)")
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "  " .. string.rep("─", 30))
+
+    -- Action items
+    table.insert(lines, "  Open new path...")
+    item_lines[#lines] = { action = "open_path_dialog" }
+
+    table.insert(lines, "  Browse all repos...")
+    item_lines[#lines] = { action = "open_browser" }
   end,
 
   panels = function(lines, item_lines)
@@ -393,6 +497,9 @@ local function render()
     elseif line:match("^      ┊") then
       -- Expanded description line (commands section)
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
+    elseif line:match("^    Recent repos:") then
+      -- Recent repos sub-header (terminal section)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
     elseif line:match("^    /") then
       -- Command name line (commands section) - highlight name vs description
       local dash_pos = line:find(" %- ")
@@ -519,6 +626,13 @@ function M.execute_action(item)
         end, 1000)
       end)
     end,
+    new_session_at_repo = function()
+      -- Launch a new session at the selected repo path
+      M.close()
+      vim.schedule(function()
+        require("ccasp.repo_launcher").open_repo(item.path)
+      end)
+    end,
     focus_session = function()
       M.close()
       vim.schedule(function() sessions.focus(item.id) end)
@@ -551,6 +665,58 @@ function M.execute_action(item)
     session_close_all = function()
       M.close()
       vim.schedule(function() sessions.close_all() end)
+    end,
+
+    -- Layer management
+    switch_layer = function()
+      local layers_ok, layers = pcall(require, "ccasp.layers")
+      if layers_ok then
+        layers.switch_to(item.layer_num)
+        -- Re-render flyout to reflect new layer state
+        vim.defer_fn(function()
+          if state.win and vim.api.nvim_win_is_valid(state.win) then
+            render()
+          end
+        end, 400)
+      end
+    end,
+    layer_new = function()
+      close_and_run_modal(function()
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok then layers.show_new_modal() end
+      end)
+    end,
+    layer_rename = function()
+      close_and_run_modal(function()
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok then layers.show_rename_modal() end
+      end)
+    end,
+    layer_close = function()
+      close_and_run_modal(function()
+        local layers_ok, layers = pcall(require, "ccasp.layers")
+        if layers_ok then layers.show_close_modal() end
+      end)
+    end,
+
+    -- Repo launcher
+    open_repo = function()
+      M.close()
+      vim.schedule(function()
+        require("ccasp.repo_launcher").open_repo(item.path)
+      end)
+    end,
+    open_path_dialog = function()
+      M.close()
+      vim.schedule(function()
+        require("ccasp.repo_launcher").open_launcher()
+      end)
+    end,
+    open_browser = function()
+      M.close()
+      vim.schedule(function()
+        require("ccasp.repo_launcher").open_browser()
+      end)
     end,
 
     -- Panels
@@ -679,6 +845,14 @@ function M.execute_action(item)
         or item.action == "session_minimize"
         or item.action == "session_restore"
         or item.action == "session_close_all"
+        or item.action == "new_session_at_repo"
+        or item.action == "open_repo"
+        or item.action == "open_path_dialog"
+        or item.action == "open_browser"
+        or item.action == "switch_layer"
+        or item.action == "layer_new"
+        or item.action == "layer_rename"
+        or item.action == "layer_close"
     if not skip_rerender then
       vim.defer_fn(function() render() end, 500)
     end
