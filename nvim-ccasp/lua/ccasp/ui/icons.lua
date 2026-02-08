@@ -54,6 +54,8 @@ M.close       = ""    -- nf-fa-times
 M.win_cycle    = "󰑐"    -- nf-md-refresh (cycle sessions)
 M.win_rename   = "󰏪"    -- nf-md-pencil (rename)
 M.win_minimize = "󰖰"    -- nf-md-window_minimize
+M.win_maximize = "󰖯"    -- nf-md-window_maximize
+M.win_restore  = "󰖳"    -- nf-md-window_restore
 M.win_close    = "󰖭"    -- nf-md-window_close
 
 -- Expand / Collapse
@@ -79,6 +81,9 @@ M.claude      = "󰚩"    -- nf-md-robot_outline
 M.pin         = ""    -- nf-oct-pin
 M.git_branch  = ""    -- nf-oct-git_branch
 M.worktree    = ""    -- nf-fa-code_fork
+
+-- Layout
+M.layout      = "󰕰"    -- nf-md-view_dashboard_variant
 
 -- Browser / Web
 M.globe       = ""    -- nf-fa-globe

@@ -259,7 +259,7 @@ function M.launch_claude()
     if state.bufnr and vim.api.nvim_buf_is_valid(state.bufnr) then
       local job_id = vim.b[state.bufnr].terminal_job_id
       if job_id and job_id > 0 then
-        vim.fn.chansend(job_id, "claude\n")
+        vim.fn.chansend(job_id, "claude\r")
         state.claude_running = true
         vim.notify("Launching Claude CLI...", vim.log.levels.INFO)
       end

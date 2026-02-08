@@ -95,6 +95,14 @@ function M.commands()
         vim.notify("Copied: /" .. selection.value.name)
       end)
 
+      -- Close window
+      map("n", "q", function()
+        actions.close(prompt_bufnr)
+      end)
+      map("n", "<Esc>", function()
+        actions.close(prompt_bufnr)
+      end)
+
       return true
     end,
   }):find()
@@ -154,6 +162,14 @@ function M.skills()
         local selection = action_state.get_selected_entry()
         actions.close(prompt_bufnr)
         vim.cmd("edit " .. selection.value.path)
+      end)
+
+      -- Close window
+      map("n", "q", function()
+        actions.close(prompt_bufnr)
+      end)
+      map("n", "<Esc>", function()
+        actions.close(prompt_bufnr)
       end)
 
       return true

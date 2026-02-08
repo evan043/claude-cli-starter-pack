@@ -96,6 +96,11 @@ M.groups = {
   CcaspHeaderTitle    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Project name (blue)
   CcaspHeaderTab      = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive session tab
   CcaspHeaderTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active tab
+  CcaspHeaderGrad1    = { fg = "#101820", bg = "#0d1117" },     -- Gradient: barely visible
+  CcaspHeaderGrad2    = { fg = "#1a2a3f", bg = "#0d1117" },     -- Gradient: very dim navy
+  CcaspHeaderGrad3    = { fg = "#2a4a6a", bg = "#0d1117" },     -- Gradient: dim steel
+  CcaspHeaderArt      = { fg = "#4a8fbf", bg = "#0d1117", bold = true }, -- Logo text: muted steel blue
+  CcaspHeaderSub      = { fg = "#2a4a6a", bg = "#0d1117" },     -- Subtitle: dim blue
 
   -- ─── Appshell: Footer ─────────────────────────────────────
   CcaspFooterBg       = { bg = "#0d1117" },                     -- Footer background
@@ -133,6 +138,11 @@ M.groups = {
   CcaspHelpTitle   = { fg = "#61afef", bold = true },             -- Help panel title (blue)
   CcaspHelpTopic   = { fg = "#61afef" },                          -- Topic list item
   CcaspHelpSearch  = { fg = "#61afef", bold = true },             -- Search match (blue)
+
+  -- ─── Neovide: Window Control Buttons ───────────────────
+  CcaspCloseBtn    = { fg = "#e06c75", bg = "#0d1117", bold = true }, -- Red close button
+  CcaspMaxBtn      = { fg = "#98c379", bg = "#0d1117", bold = true }, -- Green maximize button
+  CcaspMinBtn      = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Yellow minimize button
 }
 
 -- Apply all highlight groups

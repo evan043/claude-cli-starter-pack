@@ -6,7 +6,8 @@
   "bin": {
     "ccasp": "./bin/gtask.js",
     "claude-advanced": "./bin/gtask.js",
-    "claude-cli-advanced-starter-pack": "./bin/gtask.js"
+    "claude-cli-advanced-starter-pack": "./bin/gtask.js",
+    "ccasp-neovide": "./bin/ccasp-neovide.bat"
   },
   "type": "module",
   "scripts": {

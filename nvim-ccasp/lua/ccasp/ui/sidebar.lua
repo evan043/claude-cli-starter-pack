@@ -370,9 +370,9 @@ function M.execute_shortcut(action)
       end)
     end,
     session_rename = function()
-      local current_session = sessions.get_by_window()
-      if current_session then
-        sessions.rename(current_session.id)
+      local primary = sessions.get_primary()
+      if primary then
+        sessions.rename(primary.id)
       else
         M._pick_session_for_action(sessions.list(), "Rename which session?", function(s)
           sessions.rename(s.id)
@@ -380,9 +380,9 @@ function M.execute_shortcut(action)
       end
     end,
     session_color = function()
-      local current_session = sessions.get_by_window()
-      if current_session then
-        sessions.change_color(current_session.id)
+      local primary = sessions.get_primary()
+      if primary then
+        sessions.change_color(primary.id)
       else
         M._pick_session_for_action(sessions.list(), "Change color for which session?", function(s)
           sessions.change_color(s.id)
@@ -390,12 +390,12 @@ function M.execute_shortcut(action)
       end
     end,
     session_minimize = function()
-      local current_session = sessions.get_by_window()
-      if current_session then
-        sessions.minimize(current_session.id)
+      local primary = sessions.get_primary()
+      if primary then
+        sessions.minimize(primary.id)
         M.refresh()
       else
-        vim.notify("Focus a session window first", vim.log.levels.INFO)
+        vim.notify("No active session to minimize", vim.log.levels.INFO)
       end
     end,
     session_restore = function()

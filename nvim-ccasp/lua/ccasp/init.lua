@@ -139,6 +139,12 @@ M.config = {
     show_on_update = false, -- Show welcome on version update
   },
 
+  -- Neovide GUI settings (applied only when running inside Neovide)
+  neovide = {
+    font = "JetBrainsMono NF:h12",
+    padding = 4,
+  },
+
   -- Keymaps
   keys = {
     prefix = "<leader>c",
@@ -303,6 +309,12 @@ function M.setup(opts)
     end
   end
 
+  -- Neovide-specific configuration (font, padding, quit keybinds)
+  local neovide = safe_require("ccasp.neovide")
+  if neovide then
+    neovide.setup(M.config.neovide or {})
+  end
+
   -- Load Multi-Session Terminal Manager
   M.sessions = safe_require("ccasp.sessions")
 
@@ -341,11 +353,22 @@ function M.setup(opts)
     vim.o.showmode = false    -- hides "-- TERMINAL --" etc.
     vim.o.laststatus = 0      -- hides statuslines between splits
     vim.o.cmdheight = 0       -- auto-shows only for errors/messages
+
+    -- Make any uncovered area (base window, message area) match the dark appshell background.
+    -- With cmdheight=0, the message area overlays on the last row and can show stale content
+    -- like "C:\...\cmd.exe" from :terminal. These highlights make it invisible.
+    vim.api.nvim_set_hl(0, "Normal", { bg = "#0d1117" })
+    vim.api.nvim_set_hl(0, "MsgArea", { fg = "#0d1117", bg = "#0d1117" })
+    vim.api.nvim_set_hl(0, "EndOfBuffer", { fg = "#0d1117", bg = "#0d1117" })
   end
 
   M.state.initialized = true
 
-  vim.notify("CCASP.nvim v" .. M.version .. " loaded (" .. M.config.layout .. " layout)", vim.log.levels.INFO)
+  -- Only notify in non-appshell layouts; appshell uses cmdheight=0
+  -- which turns any message into a "Press ENTER" prompt
+  if not M.is_appshell() then
+    vim.notify("CCASP.nvim v" .. M.version .. " loaded (" .. M.config.layout .. " layout)", vim.log.levels.INFO)
+  end
 
   -- Check for first-launch onboarding (deferred to let UI settle)
   if M.config.onboarding and M.config.onboarding.auto_open then

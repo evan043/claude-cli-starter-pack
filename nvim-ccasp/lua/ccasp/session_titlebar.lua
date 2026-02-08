@@ -211,7 +211,7 @@ function M.update(session_id)
   if is_active then
     vim.wo[session.winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg,WinBar:CcaspWinbarActive" .. color_idx_val .. ",WinBarNC:CcaspWinbar" .. color_idx_val .. ",WinSeparator:CcaspBorderActive"
   else
-    vim.wo[session.winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg,WinSeparator:CcaspBorderInactive"
+    vim.wo[session.winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg,WinBar:CcaspWinbar" .. color_idx_val .. ",WinBarNC:CcaspWinbar" .. color_idx_val .. ",WinSeparator:CcaspBorderInactive"
   end
 
   -- Setup keymaps for this buffer
@@ -439,12 +439,39 @@ function M.minimize(session_id)
     name = session.name,
     color_idx = session_colors[session_id] or 1,
     bufnr = session.bufnr,
+    winid = session.winid, -- preserve for splash restore
   }
 
-  -- Hide the window
-  if session.winid and vim.api.nvim_win_is_valid(session.winid) then
-    vim.api.nvim_win_hide(session.winid)
+  -- Check if there are other visible sessions
+  local visible = sessions.list()
+  local other_visible = 0
+  for _, s in ipairs(visible) do
+    if s.id ~= session_id then
+      other_visible = other_visible + 1
+    end
   end
+
+  if other_visible == 0 and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    -- Last visible session: show splash instead of hiding window
+    local splash = require("ccasp.splash")
+    splash.show(session.winid)
+  else
+    -- Other sessions visible: hide window, focus next
+    if session.winid and vim.api.nvim_win_is_valid(session.winid) then
+      vim.api.nvim_win_hide(session.winid)
+    end
+    -- Focus the next available session
+    local remaining = sessions.list()
+    if #remaining > 0 then
+      sessions.focus(remaining[1].id)
+    end
+  end
+
+  -- Refresh header and footer to show minimized state
+  local header_ok, header = pcall(require, "ccasp.appshell.header")
+  if header_ok then header.refresh() end
+  local footer_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if footer_ok then footer.refresh() end
 
   vim.notify(session.name .. " minimized", vim.log.levels.INFO)
 end
@@ -455,13 +482,23 @@ function M.restore(session_id)
   if not min_session then return end
 
   local sessions = require("ccasp.sessions")
+  local splash = require("ccasp.splash")
 
-  -- Create a new window for the buffer
-  vim.cmd("vsplit")
-  local new_winid = vim.api.nvim_get_current_win()
+  local new_winid
 
-  if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
-    vim.api.nvim_win_set_buf(new_winid, min_session.bufnr)
+  if splash.is_showing() then
+    -- Splash is active: hide splash, reuse the window
+    local splash_win = splash.get_win()
+    splash.hide(splash_win, min_session.bufnr)
+    new_winid = splash_win
+  else
+    -- Other sessions visible: create vsplit
+    vim.cmd("vsplit")
+    new_winid = vim.api.nvim_get_current_win()
+
+    if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
+      vim.api.nvim_win_set_buf(new_winid, min_session.bufnr)
+    end
   end
 
   -- Update session state
@@ -478,6 +515,23 @@ function M.restore(session_id)
 
   -- Update winbar
   M.update(session_id)
+
+  -- Focus the restored session
+  if new_winid and vim.api.nvim_win_is_valid(new_winid) then
+    vim.api.nvim_set_current_win(new_winid)
+    -- Scroll to bottom and enter terminal mode
+    local mode = vim.api.nvim_get_mode().mode
+    if mode ~= "t" and mode ~= "nt" then
+      pcall(vim.cmd, "normal! G")
+      vim.cmd("startinsert")
+    end
+  end
+
+  -- Refresh header and footer
+  local header_ok, header = pcall(require, "ccasp.appshell.header")
+  if header_ok then header.refresh() end
+  local footer_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if footer_ok then footer.refresh() end
 
   vim.notify(min_session.name .. " restored", vim.log.levels.INFO)
 end
@@ -687,6 +741,46 @@ function M.setup_keymaps(bufnr, session_id)
   set_keymap("n", "c", function() M.change_color(session_id) end, opts, "Change session color")
   set_keymap("n", "_", function() M.minimize(session_id) end, opts, "Minimize session")
   set_keymap("n", "x", function() M.close_session(session_id) end, opts, "Close session")
+
+  -- Normal mode: clicking inside a terminal should enter terminal mode.
+  -- Handles the case where WinEnter doesn't fire (clicking within the same window
+  -- after exiting terminal mode with Ctrl+\, Ctrl+N). Without this, the user
+  -- would be stuck in normal mode and get E21 when trying to type.
+  set_keymap("n", "<LeftMouse>", function()
+    vim.schedule(function()
+      local buf = vim.api.nvim_get_current_buf()
+      if vim.bo[buf].buftype == "terminal" then
+        local mode = vim.api.nvim_get_mode().mode
+        if mode ~= "t" then
+          vim.cmd("startinsert")
+        end
+      end
+    end)
+  end, opts, "Click to activate terminal")
+
+  -- Terminal mode: intercept mouse clicks for cross-window session switching.
+  -- Terminal apps (Claude CLI) enable mouse tracking which consumes click events,
+  -- preventing Neovim from switching windows on single click. This handler
+  -- detects clicks targeting a different window, exits terminal mode, and
+  -- switches to the target window. Same-window clicks pass through to the
+  -- terminal app so Claude CLI input positioning still works.
+  vim.keymap.set("t", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local current_win = vim.api.nvim_get_current_win()
+
+    if mouse.winid ~= 0 and mouse.winid ~= current_win then
+      -- Cross-window click: switch to target window
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(mouse.winid) then
+          vim.api.nvim_set_current_win(mouse.winid)
+          -- WinEnter autocmd will auto-enter terminal mode if target is a session
+        end
+      end)
+      return ""  -- suppress the mouse event (don't send to terminal app)
+    end
+    -- Same window: pass click through to terminal app (Claude CLI input)
+    return vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
+  end, { buffer = bufnr, noremap = true, silent = true, expr = true, desc = "Click to switch sessions" })
 end
 
 -- Show context menu
@@ -716,36 +810,8 @@ function M.show_context_menu(session_id)
   end)
 end
 
--- Handle auto-enter insert mode for session terminals
-local _last_focus_win = nil
-local function handle_session_terminal_focus()
-  local sessions = require("ccasp.sessions")
-  local current_win = vim.api.nvim_get_current_win()
-
-  -- Skip if we already focused this window (prevents repeated startinsert)
-  if current_win == _last_focus_win then return end
-  _last_focus_win = current_win
-
-  local session = sessions.get_by_window(current_win)
-
-  if session then
-    local bufnr = vim.api.nvim_win_get_buf(current_win)
-    if vim.bo[bufnr].buftype == "terminal" then
-      -- If already in terminal mode (e.g. restore_terminal_focus already called startinsert),
-      -- skip normal! G which would error with "Can't re-enter normal mode from terminal mode"
-      local mode = vim.api.nvim_get_mode().mode
-      if mode == "t" or mode == "nt" then
-        return
-      end
-      -- Scroll to bottom using native motion (respects terminal viewport, unlike buf_line_count)
-      vim.cmd("normal! G")
-      vim.cmd("startinsert")
-    end
-  end
-end
-
--- Debounced update to prevent rapid-fire redraws from WinEnter+BufEnter
-local function debounced_update(include_focus)
+-- Debounced winbar title update (prevents rapid-fire redraws from WinEnter+BufEnter)
+local function debounced_winbar_update()
   if _update_timer then
     vim.fn.timer_stop(_update_timer)
   end
@@ -753,9 +819,6 @@ local function debounced_update(include_focus)
     _update_timer = nil
     vim.schedule(function()
       M.update_all()
-      if include_focus then
-        handle_session_terminal_focus()
-      end
     end)
   end)
 end
@@ -767,18 +830,65 @@ function M.setup()
 
   local group = vim.api.nvim_create_augroup("CcaspSessionActive", { clear = true })
 
+  -- IMMEDIATE: Auto-enter terminal mode when focusing a session window.
+  -- Prevents E21 ("modifiable is off") which occurs when clicking a terminal
+  -- window leaves the user in normal mode (terminal buffers are non-modifiable
+  -- in normal mode). Uses vim.schedule so it runs after focus() completes its
+  -- own setup without conflicting (e.g. sessions.focus calls normal! G first).
+  vim.api.nvim_create_autocmd("WinEnter", {
+    group = group,
+    callback = function()
+      local win = vim.api.nvim_get_current_win()
+
+      -- Spacer windows (header/rail/footer padding) should never hold focus.
+      -- Redirect to the nearest visible terminal session immediately.
+      local content_ok, content = pcall(require, "ccasp.appshell.content")
+      if content_ok and content.is_spacer_win and content.is_spacer_win(win) then
+        vim.schedule(function()
+          local sessions = require("ccasp.sessions")
+          local active = sessions.list()
+          if #active > 0 then
+            sessions.focus(active[1].id)
+          end
+        end)
+        return
+      end
+
+      -- Terminal session windows: enter terminal mode on next tick.
+      -- vim.schedule ensures this runs after any in-progress focus() call
+      -- that may do normal! G before startinsert.
+      local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+      if sessions_ok then
+        local session = sessions.get_by_window(win)
+        if session then
+          vim.schedule(function()
+            if not vim.api.nvim_win_is_valid(win) then return end
+            if vim.api.nvim_get_current_win() ~= win then return end
+            local bufnr = vim.api.nvim_win_get_buf(win)
+            if vim.bo[bufnr].buftype == "terminal" then
+              local mode = vim.api.nvim_get_mode().mode
+              if mode ~= "t" then
+                vim.cmd("startinsert")
+              end
+            end
+          end)
+        end
+      end
+    end,
+  })
+
+  -- DEBOUNCED: Update winbar titles (active/inactive styling)
   vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter" }, {
     group = group,
     callback = function()
-      debounced_update(true)
+      debounced_winbar_update()
     end,
   })
 
   vim.api.nvim_create_autocmd("WinLeave", {
     group = group,
     callback = function()
-      _last_focus_win = nil
-      debounced_update(false)
+      debounced_winbar_update()
     end,
   })
 end

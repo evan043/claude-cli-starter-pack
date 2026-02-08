@@ -82,55 +82,15 @@ function M.get_layout()
   end
 end
 
--- Equalize all session windows
+-- Equalize all session windows using Neovim's built-in equalization.
+-- wincmd = understands the window tree hierarchy and respects
+-- winfixwidth/winfixheight on spacer windows (icon rail, footer).
 function M.rearrange()
   cleanup_invalid()
   local sessions = M.list()
-  local count = #sessions
-  if count == 0 then return end
+  if #sessions == 0 then return end
 
-  -- Calculate available space based on active layout
-  local total_width, total_height
-  local ccasp_ok, ccasp = pcall(require, "ccasp")
-  local is_appshell = ccasp_ok and ccasp.config.layout == "appshell"
-
-  if is_appshell then
-    -- Appshell mode: use content zone bounds from appshell manager
-    local content_ok, content = pcall(require, "ccasp.appshell.content")
-    if content_ok then
-      total_width = content.get_available_width()
-      total_height = content.get_available_height()
-    else
-      total_width = vim.o.columns - 4
-      total_height = vim.o.lines - 5
-    end
-  else
-    -- Classic mode: subtract sidebar width
-    local sidebar_ok, sidebar = pcall(require, "ccasp.ui.sidebar")
-    local sidebar_width = 0
-    if sidebar_ok and sidebar.get_win then
-      local sidebar_win = sidebar.get_win()
-      if sidebar_win and vim.api.nvim_win_is_valid(sidebar_win) then
-        sidebar_width = vim.api.nvim_win_get_width(sidebar_win) + 1
-      end
-    end
-    total_width = vim.o.columns - sidebar_width - 1
-    total_height = vim.o.lines - 4 -- minus topbar, bottombar, cmdline
-  end
-
-  -- Calculate grid dimensions
-  local cols = count <= 2 and count or 2
-  local rows = math.ceil(count / cols)
-  local cell_width = math.floor(total_width / cols)
-  local cell_height = math.floor(total_height / rows)
-
-  -- Apply exact dimensions to each window
-  for _, session in ipairs(sessions) do
-    if session.winid and vim.api.nvim_win_is_valid(session.winid) then
-      vim.api.nvim_win_set_width(session.winid, cell_width)
-      vim.api.nvim_win_set_height(session.winid, cell_height)
-    end
-  end
+  vim.cmd("wincmd =")
 
   -- Update all titlebars
   get_titlebar().update_all()
@@ -144,21 +104,28 @@ local function focus_session_window(session)
 end
 
 -- Create split window based on session count
+-- Uses vnew/new (not vsplit/split) to avoid briefly duplicating the terminal
+-- buffer of the focused session into the new window.
 local function create_split_window(count, sessions)
   if count == 0 then
-    vim.cmd("vsplit")
+    -- First additional split (shouldn't normally hit – content.lua creates session 1)
+    vim.cmd("vnew")
   elseif count == 1 then
+    -- 1 → 2: side-by-side columns
     focus_session_window(sessions[#sessions])
-    vim.cmd("vsplit")
+    vim.cmd("vnew")
   elseif count == 2 then
+    -- 2 → 3: split left column vertically (session 1 top, new bottom-left)
     focus_session_window(sessions[1])
-    vim.cmd("split")
+    vim.cmd("new")
   elseif count == 3 then
+    -- 3 → 4: split right column vertically (session 2 top, new bottom-right)
     focus_session_window(sessions[2])
-    vim.cmd("split")
+    vim.cmd("new")
   else
+    -- 5+: alternate between column and row splits
     focus_session_window(sessions[#sessions])
-    vim.cmd(count % 2 == 0 and "vsplit" or "split")
+    vim.cmd(count % 2 == 0 and "vnew" or "new")
   end
 end
 
@@ -202,10 +169,12 @@ function M.spawn()
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
 
-  -- Apply pure black terminal background
-  vim.wo[winid].winhighlight = "Normal:CcaspTerminalBg,NormalFloat:CcaspTerminalBg,EndOfBuffer:CcaspTerminalBg"
-  -- Prevent scrolloff from interfering with TUI rendering (causes cursor jumpiness)
+  -- Apply terminal window options (winhighlight set later by titlebar.update)
   vim.wo[winid].scrolloff = 0
+  vim.wo[winid].number = false
+  vim.wo[winid].relativenumber = false
+  vim.wo[winid].signcolumn = "no"
+  vim.wo[winid].foldcolumn = "0"
 
   -- Auto-scroll: keep terminal tailed to bottom as output arrives (even when unfocused)
   vim.api.nvim_buf_attach(bufnr, false, {
@@ -233,6 +202,15 @@ function M.spawn()
     state.primary_session = id
     require("ccasp.terminal")._set_state(bufnr, winid)
   end
+
+  -- Equalize windows immediately so the grid is even right away
+  vim.cmd("wincmd =")
+
+  -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
+  vim.wo[winid].statusline = " "
+
+  -- Update all titlebars immediately so existing sessions keep their winbar visible
+  get_titlebar().update_all()
 
   launch_claude_cli(id, bufnr, name)
 
@@ -413,9 +391,17 @@ function M.register_primary(bufnr, winid)
   table.insert(state.session_order, id)
   state.primary_session = id
 
+  -- Create titlebar after short delay (allows terminal to initialize)
   vim.defer_fn(function()
-    get_titlebar().create(id)
-  end, 1500)
+    local ok, err = pcall(function()
+      get_titlebar().create(id)
+    end)
+    if not ok then
+      vim.schedule(function()
+        vim.notify("Titlebar create error: " .. tostring(err), vim.log.levels.WARN)
+      end)
+    end
+  end, 500)
 
   return id
 end

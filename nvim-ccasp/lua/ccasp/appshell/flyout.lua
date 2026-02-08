@@ -9,10 +9,122 @@ local state = {
   buf = nil,
   current_section = nil,
   item_lines = {}, -- line -> action mapping
+  expanded_command = nil, -- name of currently expanded command (commands section)
+  commands_search_query = "", -- active filter for commands section
 }
+
+-- Word-wrap text to max_width, returning up to max_lines lines
+local function word_wrap(text, max_width, max_lines)
+  if not text or text == "" then return {} end
+  max_lines = max_lines or 3
+
+  local result = {}
+  local remaining = text
+
+  while #result < max_lines and #remaining > 0 do
+    if #remaining <= max_width then
+      table.insert(result, remaining)
+      break
+    end
+
+    -- Find last space within max_width
+    local cut = max_width
+    local space_pos = remaining:sub(1, max_width):match(".*()%s")
+    if space_pos and space_pos > 1 then
+      cut = space_pos
+    end
+
+    table.insert(result, (remaining:sub(1, cut):gsub("%s+$", "")))
+    remaining = remaining:sub(cut + 1):gsub("^%s+", "")
+  end
+
+  return result
+end
 
 -- Section content renderers
 local section_renderers = {
+  commands = function(lines, item_lines)
+    local commands_ok, commands_mod = pcall(require, "ccasp.core.commands")
+    if not commands_ok then
+      table.insert(lines, "  Commands module not available")
+      return
+    end
+
+    commands_mod.load_all()
+    local sections = commands_mod.get_sections()
+    local all_cmds = commands_mod.get_all()
+
+    -- Header
+    table.insert(lines, "  " .. icons.commands .. " Slash Commands")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+
+    -- Active search indicator
+    local query = state.commands_search_query:lower()
+    if query ~= "" then
+      table.insert(lines, string.format("  %s Filter: %s", icons.search, state.commands_search_query))
+      table.insert(lines, "")
+    end
+
+    -- Flyout width for wrapping (approximate)
+    local wrap_width = 28
+
+    local total_count = 0
+    local shown_count = 0
+
+    for _, section in ipairs(sections) do
+      -- Collect commands matching the search query
+      local section_cmds = {}
+      for _, cmd_name in ipairs(section.commands) do
+        local cmd = all_cmds[cmd_name]
+        if cmd then
+          total_count = total_count + 1
+          if query == ""
+              or cmd_name:lower():find(query, 1, true)
+              or (cmd.description or ""):lower():find(query, 1, true) then
+            table.insert(section_cmds, cmd)
+            shown_count = shown_count + 1
+          end
+        end
+      end
+
+      if #section_cmds > 0 then
+        -- Section header with box-drawing
+        table.insert(lines, "  ╭" .. string.rep("─", 30) .. "╮")
+        table.insert(lines, "  │  " .. section.name .. string.rep(" ", math.max(0, 26 - vim.fn.strdisplaywidth(section.name))) .. "  │")
+        table.insert(lines, "  ╰" .. string.rep("─", 30) .. "╯")
+
+        -- Command entries (name only; description shown on expand)
+        for _, cmd in ipairs(section_cmds) do
+          local desc = cmd.description or ""
+
+          table.insert(lines, "    /" .. cmd.name)
+          item_lines[#lines] = { action = "cmd_toggle_preview", name = cmd.name, path = cmd.path, description = desc }
+
+          -- Expanded description (inline preview)
+          if state.expanded_command == cmd.name and desc ~= "" then
+            local wrapped = word_wrap(desc, wrap_width, 3)
+            for _, wline in ipairs(wrapped) do
+              table.insert(lines, "      ┊ " .. wline)
+              -- Description lines are NOT actionable (nav skips them)
+            end
+          end
+        end
+        table.insert(lines, "")
+      end
+    end
+
+    -- Footer counter
+    table.insert(lines, "  " .. string.rep("─", 30))
+    if query ~= "" then
+      table.insert(lines, string.format("  %d / %d commands", shown_count, total_count))
+    else
+      table.insert(lines, string.format("  %d commands", total_count))
+    end
+    table.insert(lines, "")
+    table.insert(lines, "  [Enter]expand [x]run [y]copy [e]edit [/]filter")
+  end,
+
   terminal = function(lines, item_lines)
     table.insert(lines, "  " .. icons.terminal .. " Terminal Sessions")
     table.insert(lines, "  " .. string.rep("─", 30))
@@ -272,6 +384,30 @@ local function render()
   for i, line in ipairs(lines) do
     if line:match("^  [─]+$") then
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspSeparator", i - 1, 0, -1)
+    elseif line:match("^  ╭") or line:match("^  ╰") then
+      -- Box-drawing borders (commands section)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
+    elseif line:match("^  │") then
+      -- Section name inside box (commands section)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutTitle", i - 1, 0, -1)
+    elseif line:match("^      ┊") then
+      -- Expanded description line (commands section)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
+    elseif line:match("^    /") then
+      -- Command name line (commands section) - highlight name vs description
+      local dash_pos = line:find(" %- ")
+      local name_end = dash_pos and (dash_pos - 1) or #line
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutItem", i - 1, 4, name_end)
+      if dash_pos then
+        pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, dash_pos + 2, -1)
+      end
+    elseif line:match("Filter:") then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "DiagnosticInfo", i - 1, 0, -1)
+    elseif line:match("commands$") then
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
+    elseif line:match("^  %[") then
+      -- Keybinding hint footer
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
     elseif i == 1 then
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutTitle", i - 1, 0, -1)
     elseif state.item_lines[i] then
@@ -291,29 +427,116 @@ local function execute_action_at_cursor()
   M.execute_action(item)
 end
 
+-- Helper: close flyout, exit terminal mode if needed, then run a function.
+-- Used for actions that open modals (rename, color picker, etc.) from the flyout.
+-- The WinEnter handler auto-enters terminal mode when the flyout closes and focus
+-- lands on a terminal window, so we must exit terminal mode before opening a modal.
+local function close_and_run_modal(fn)
+  M.close()
+  vim.schedule(function()
+    local mode = vim.api.nvim_get_mode().mode
+    if mode == "t" then
+      local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+      vim.api.nvim_feedkeys(esc, "n", false)
+      vim.schedule(fn)
+    else
+      fn()
+    end
+  end)
+end
+
 -- Execute a flyout action
 function M.execute_action(item)
   local ccasp = require("ccasp")
   local sessions = require("ccasp.sessions")
 
   local action_handlers = {
+    -- Commands section
+    cmd_toggle_preview = function()
+      if state.expanded_command == item.name then
+        state.expanded_command = nil
+      else
+        state.expanded_command = item.name
+      end
+      render()
+      -- Re-position cursor on the toggled command
+      if state.win and vim.api.nvim_win_is_valid(state.win) then
+        for line_nr, line_item in pairs(state.item_lines) do
+          if line_item.name == item.name then
+            pcall(vim.api.nvim_win_set_cursor, state.win, { line_nr, 0 })
+            break
+          end
+        end
+      end
+    end,
+    cmd_inject = function()
+      local cmd_name = item.name
+      M.close()
+      vim.schedule(function()
+        local sessions_ok2, sess = pcall(require, "ccasp.sessions")
+        if sessions_ok2 then
+          local primary = sess.get_primary()
+          if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
+            local job_id = vim.b[primary.bufnr].terminal_job_id
+            if job_id and job_id > 0 then
+              vim.fn.chansend(job_id, "/" .. cmd_name .. "\n")
+              return
+            end
+          end
+        end
+        vim.notify("No active Claude session to send command", vim.log.levels.WARN)
+      end)
+    end,
+    cmd_copy = function()
+      vim.fn.setreg("+", "/" .. item.name)
+      vim.notify("Copied: /" .. item.name, vim.log.levels.INFO)
+    end,
+    cmd_edit = function()
+      local path = item.path
+      M.close()
+      vim.schedule(function()
+        vim.cmd("edit " .. vim.fn.fnameescape(path))
+      end)
+    end,
+
     -- Terminal sessions
-    new_session = function() sessions.spawn() end,
-    focus_session = function() sessions.focus(item.id) end,
+    new_session = function()
+      M.close()
+      vim.schedule(function() sessions.spawn() end)
+    end,
+    focus_session = function()
+      M.close()
+      vim.schedule(function() sessions.focus(item.id) end)
+    end,
     session_rename = function()
-      local s = sessions.get_by_window()
-      if s then sessions.rename(s.id) end
+      local primary = sessions.get_primary()
+      if not primary then return end
+      close_and_run_modal(function()
+        sessions.rename(primary.id)
+      end)
     end,
     session_color = function()
-      local s = sessions.get_by_window()
-      if s then sessions.change_color(s.id) end
+      local primary = sessions.get_primary()
+      if not primary then return end
+      close_and_run_modal(function()
+        sessions.change_color(primary.id)
+      end)
     end,
     session_minimize = function()
-      local s = sessions.get_by_window()
-      if s then sessions.minimize(s.id) end
+      local primary = sessions.get_primary()
+      if not primary then return end
+      M.close()
+      vim.schedule(function() sessions.minimize(primary.id) end)
     end,
-    session_restore = function() sessions.show_minimized_picker() end,
-    session_close_all = function() sessions.close_all() end,
+    session_restore = function()
+      close_and_run_modal(function()
+        sessions.show_minimized_picker()
+      end)
+    end,
+    session_close_all = function()
+      M.close()
+      vim.schedule(function() sessions.close_all() end)
+    end,
 
     -- Panels
     dashboard = function()
@@ -429,7 +652,21 @@ function M.execute_action(item)
   if handler then
     handler()
     -- Re-render after action (session list may have changed)
-    vim.defer_fn(function() render() end, 500)
+    -- Skip for commands actions that already call render() themselves
+    local skip_rerender = item.action == "cmd_toggle_preview"
+        or item.action == "cmd_inject"
+        or item.action == "cmd_copy"
+        or item.action == "cmd_edit"
+        or item.action == "new_session"
+        or item.action == "focus_session"
+        or item.action == "session_rename"
+        or item.action == "session_color"
+        or item.action == "session_minimize"
+        or item.action == "session_restore"
+        or item.action == "session_close_all"
+    if not skip_rerender then
+      vim.defer_fn(function() render() end, 500)
+    end
   end
 end
 
@@ -456,7 +693,16 @@ local function setup_keymaps()
   end, opts)
 
   vim.keymap.set("n", "q", function() M.close() end, opts)
-  vim.keymap.set("n", "<Esc>", function() M.close() end, opts)
+  vim.keymap.set("n", "<Esc>", function()
+    -- In commands section, first Esc clears filter; second Esc closes
+    if state.current_section == "commands" and state.commands_search_query ~= "" then
+      state.commands_search_query = ""
+      state.expanded_command = nil
+      render()
+      return
+    end
+    M.close()
+  end, opts)
   vim.keymap.set("n", "h", function() M.close() end, opts)
 
   -- j/k/Down/Up navigation (skip non-item lines)
@@ -522,10 +768,70 @@ local function setup_keymaps()
       end
     end)
   end, opts)
+
+  -- Commands-section-specific keymaps (guarded by current section check)
+  -- x: inject command into Claude session
+  vim.keymap.set("n", "x", function()
+    if state.current_section ~= "commands" then return end
+    if not state.win or not vim.api.nvim_win_is_valid(state.win) then return end
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    local cmd_item = state.item_lines[cursor[1]]
+    if cmd_item and cmd_item.action == "cmd_toggle_preview" then
+      M.execute_action({ action = "cmd_inject", name = cmd_item.name, path = cmd_item.path })
+    end
+  end, opts)
+
+  -- y: copy command name to clipboard
+  vim.keymap.set("n", "y", function()
+    if state.current_section ~= "commands" then return end
+    if not state.win or not vim.api.nvim_win_is_valid(state.win) then return end
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    local cmd_item = state.item_lines[cursor[1]]
+    if cmd_item and cmd_item.action == "cmd_toggle_preview" then
+      M.execute_action({ action = "cmd_copy", name = cmd_item.name })
+    end
+  end, opts)
+
+  -- e: open command file in editor
+  vim.keymap.set("n", "e", function()
+    if state.current_section ~= "commands" then return end
+    if not state.win or not vim.api.nvim_win_is_valid(state.win) then return end
+    local cursor = vim.api.nvim_win_get_cursor(state.win)
+    local cmd_item = state.item_lines[cursor[1]]
+    if cmd_item and cmd_item.action == "cmd_toggle_preview" then
+      M.execute_action({ action = "cmd_edit", name = cmd_item.name, path = cmd_item.path })
+    end
+  end, opts)
+
+  -- /: search/filter commands
+  vim.keymap.set("n", "/", function()
+    if state.current_section ~= "commands" then return end
+    vim.ui.input({ prompt = icons.search .. " Filter: " }, function(input)
+      if input ~= nil then
+        state.commands_search_query = input
+        state.expanded_command = nil
+        render()
+        -- Move cursor to first actionable item after re-render
+        if state.win and vim.api.nvim_win_is_valid(state.win) and state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+          for line_nr = 1, vim.api.nvim_buf_line_count(state.buf) do
+            if state.item_lines[line_nr] then
+              pcall(vim.api.nvim_win_set_cursor, state.win, { line_nr, 0 })
+              break
+            end
+          end
+        end
+      end
+    end)
+  end, opts)
 end
 
 -- Open flyout for a section
 function M.open(bounds, section)
+  -- Reset commands-specific state when switching away
+  if state.current_section ~= section then
+    state.expanded_command = nil
+    state.commands_search_query = ""
+  end
   state.current_section = section
 
   -- If window already exists, just re-render with new section
@@ -583,6 +889,8 @@ function M.close()
   state.win = nil
   state.buf = nil
   state.current_section = nil
+  state.expanded_command = nil
+  state.commands_search_query = ""
 
   -- Notify appshell that flyout is closed
   local appshell = require("ccasp.appshell")
@@ -595,6 +903,11 @@ end
 
 -- Switch section without closing
 function M.switch_section(section)
+  -- Reset commands-specific state when leaving commands section
+  if state.current_section == "commands" and section ~= "commands" then
+    state.expanded_command = nil
+    state.commands_search_query = ""
+  end
   state.current_section = section
   render()
 end

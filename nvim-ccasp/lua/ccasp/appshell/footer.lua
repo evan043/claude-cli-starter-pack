@@ -1,5 +1,7 @@
 -- ccasp/appshell/footer.lua - Appshell Bottom Status Bar
--- Shows mode, sync, version, and minimized windows (taskbar)
+-- Line 1: Session tabs (active + minimized) styled like header tabs
+-- Line 2: Status indicators (mode, sync, version)
+-- Positioned to the right of icon rail / flyout (aligned with content area)
 
 local M = {}
 local icons = require("ccasp.ui.icons")
@@ -7,22 +9,113 @@ local icons = require("ccasp.ui.icons")
 local state = {
   win = nil,
   buf = nil,
-  taskbar_items = {}, -- { { title = "...", winid = ... }, ... }
+  taskbar_items = {},   -- { { title, type = "panel"|"session", ... }, ... }
+  click_regions = {},   -- { { col_start, col_end, action, id }, ... } for line 1 mouse clicks
 }
+
+-- Build session tab line with highlight spans and click regions
+-- Returns: { text, highlights = { { group, col_start, col_end }, ... },
+--            click_regions = { { col_start, col_end, action, id }, ... } }
+local function build_session_tabs()
+  local text_parts = {}
+  local highlights = {}
+  local click_regions = {}
+  local byte_pos = 1 -- 1-indexed byte position in the final string
+
+  local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+  local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
+  local current_win = vim.api.nvim_get_current_win()
+
+  -- Active sessions (click → focus)
+  if sessions_ok then
+    local all = sessions.list()
+    for _, session in ipairs(all) do
+      local is_active = session.winid == current_win
+      local status_icon = session.claude_running and icons.claude_on or icons.claude_off
+      local primary = session.is_primary and (" " .. icons.primary) or ""
+      local tab_text = string.format(" %s %s%s ", status_icon, session.name, primary)
+
+      local col_start = byte_pos - 1
+      local col_end = col_start + #tab_text
+      local hl_group = is_active and "CcaspHeaderTabActive" or "CcaspHeaderTab"
+      table.insert(highlights, { hl_group, col_start, col_end })
+      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "focus", id = session.id })
+      table.insert(text_parts, tab_text)
+      byte_pos = byte_pos + #tab_text
+    end
+  end
+
+  -- Minimized sessions (click → restore)
+  if titlebar_ok then
+    local min_sessions = titlebar.get_minimized()
+    for _, s in ipairs(min_sessions) do
+      local tab_text = string.format(" %s %s ", icons.win_minimize, s.name)
+      local col_start = byte_pos - 1
+      local col_end = col_start + #tab_text
+      local color_idx = s.color_idx or 1
+      local hl_group = "CcaspWinbar" .. color_idx
+      table.insert(highlights, { hl_group, col_start, col_end })
+      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "restore_session", id = s.id })
+      table.insert(text_parts, tab_text)
+      byte_pos = byte_pos + #tab_text
+    end
+  end
+
+  -- Minimized panels (click → restore)
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok and taskbar.list then
+    local panel_items = taskbar.list() or {}
+    for _, item in ipairs(panel_items) do
+      local tab_text = string.format(" %s %s ", icons.minimize, item.name)
+      local col_start = byte_pos - 1
+      local col_end = col_start + #tab_text
+      table.insert(highlights, { "CcaspHeaderTab", col_start, col_end })
+      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "restore_panel", id = item.id, index = item.index })
+      table.insert(text_parts, tab_text)
+      byte_pos = byte_pos + #tab_text
+    end
+  end
+
+  if #text_parts == 0 then
+    return { text = " No sessions", highlights = { { "Comment", 0, 12 } }, click_regions = {} }
+  end
+
+  return { text = table.concat(text_parts, ""), highlights = highlights, click_regions = click_regions }
+end
 
 -- Render footer content
 local function render()
   if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then return end
 
+  local ns = vim.api.nvim_create_namespace("ccasp_footer")
+
+  -- Left padding: footer spans full width but content starts after icon rail / flyout
+  local zone = require("ccasp.appshell").get_zone_bounds("footer")
+  local content_col = zone and zone.content_col or 0
+  local left_pad = string.rep(" ", content_col)
+
+  -- Line 1: Session tabs (styled like header), shifted right past icon rail
+  local tabs = build_session_tabs()
+  local line1 = left_pad .. tabs.text
+  -- Shift click regions by left padding bytes
+  state.click_regions = {}
+  for _, region in ipairs(tabs.click_regions or {}) do
+    table.insert(state.click_regions, {
+      col_start = region.col_start + content_col,
+      col_end = region.col_end + content_col,
+      action = region.action,
+      id = region.id,
+      index = region.index,
+    })
+  end
+
+  -- Line 2: Status indicators
   local ccasp_ok, ccasp = pcall(require, "ccasp")
   local status = ccasp_ok and ccasp.get_status() or {
     version = "?", permissions_mode = "auto", update_mode = "manual",
     protected_count = 0, sync_status = "unknown",
   }
 
-  local ns = vim.api.nvim_create_namespace("ccasp_footer")
-
-  -- Line 1: Status indicators
   local perm_icon = icons.perm_mode(status.permissions_mode)
   local update_icon = icons.update_mode(status.update_mode)
   local sync_icon = status.sync_status == "synced" and icons.sync_ok or icons.sync_warn
@@ -30,8 +123,8 @@ local function render()
   local terminal_ok, terminal = pcall(require, "ccasp.terminal")
   local claude_icon = (terminal_ok and terminal.is_claude_running()) and icons.claude_on or icons.claude_off
 
-  local line1 = string.format(
-    " %s %s %s %s %s %s %d %s %s Claude %s Sync: %s %s v%s",
+  local status_text = string.format(
+    "%s %s %s %s %s %s %d %s %s Claude %s Sync: %s %s v%s ",
     perm_icon,
     status.permissions_mode:sub(1, 1):upper() .. status.permissions_mode:sub(2),
     icons.pipe,
@@ -47,17 +140,11 @@ local function render()
     status.version
   )
 
-  -- Line 2: Taskbar (minimized windows)
-  local line2 = " "
-  if #state.taskbar_items > 0 then
-    local items = {}
-    for i, item in ipairs(state.taskbar_items) do
-      table.insert(items, string.format("[%d] %s %s", i, icons.minimize, item.title))
-    end
-    line2 = " " .. table.concat(items, "  ")
-  else
-    line2 = " " .. icons.minimize .. " No minimized windows"
-  end
+  -- Right-align status text within footer width
+  local total_w = zone and zone.width or vim.o.columns
+  local status_w = vim.fn.strdisplaywidth(status_text)
+  local pad = math.max(0, total_w - status_w)
+  local line2 = string.rep(" ", pad) .. status_text
 
   local lines = { line1, line2 }
 
@@ -67,8 +154,84 @@ local function render()
 
   -- Apply highlights
   vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
-  pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFooterLabel", 0, 0, -1)
-  pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFooterTaskbar", 1, 0, -1)
+
+  -- Line 1: Per-tab highlights from build_session_tabs() (shifted by left padding)
+  for _, hl in ipairs(tabs.highlights) do
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + content_col, hl[3] + content_col)
+  end
+
+  -- Line 2: Status line (light greyish blue, same as "No sessions")
+  pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", 1, 0, -1)
+end
+
+-- Sync minimized items and rebuild taskbar_items for number-key restore
+function M.sync_taskbar()
+  state.taskbar_items = {}
+
+  -- Gather all items in order: active sessions, minimized sessions, minimized panels
+  -- (only minimized items are restorable via number keys)
+  local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
+  if titlebar_ok then
+    local min_sessions = titlebar.get_minimized()
+    for _, s in ipairs(min_sessions) do
+      table.insert(state.taskbar_items, {
+        title = s.name,
+        type = "session",
+        id = s.id,
+        color_idx = s.color_idx,
+      })
+    end
+  end
+
+  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+  if tb_ok and taskbar.list then
+    local panel_items = taskbar.list() or {}
+    for _, item in ipairs(panel_items) do
+      table.insert(state.taskbar_items, {
+        title = item.name,
+        type = "panel",
+        panel_index = item.index,
+        panel_id = item.id,
+      })
+    end
+  end
+end
+
+-- Handle mouse click on line 1 (session tabs)
+local function handle_tab_click()
+  local mouse = vim.fn.getmousepos()
+  if not mouse or mouse.line ~= 1 then return end
+
+  -- mouse.column is 1-indexed display column; click_regions use 0-indexed byte offsets
+  local col = mouse.column - 1
+
+  for _, region in ipairs(state.click_regions) do
+    if col >= region.col_start and col < region.col_end then
+      if region.action == "focus" then
+        -- Focus active session
+        local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+        if sessions_ok then
+          sessions.focus(region.id)
+        end
+      elseif region.action == "restore_session" then
+        -- Restore minimized session
+        local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
+        if titlebar_ok then
+          titlebar.restore(region.id)
+        end
+        M.sync_taskbar()
+        -- render() is called by titlebar.restore → footer.refresh()
+      elseif region.action == "restore_panel" then
+        -- Restore minimized panel
+        local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+        if tb_ok then
+          taskbar.restore_by_index(region.index)
+        end
+        M.sync_taskbar()
+      end
+      return
+    end
+  end
 end
 
 -- Setup keymaps for footer
@@ -76,7 +239,10 @@ local function setup_keymaps()
   if not state.buf then return end
   local opts = { buffer = state.buf, nowait = true, silent = true }
 
-  -- Number keys to restore taskbar items
+  -- Mouse click on session tabs (line 1)
+  vim.keymap.set("n", "<LeftMouse>", handle_tab_click, opts)
+
+  -- Number keys to restore minimized items (sessions + panels)
   for i = 1, 9 do
     vim.keymap.set("n", tostring(i), function()
       if state.taskbar_items[i] then
@@ -111,7 +277,7 @@ function M.open(bounds)
   vim.wo[state.win].wrap = false
   vim.wo[state.win].cursorline = false
 
-  -- Sync taskbar items from taskbar module
+  -- Sync taskbar items
   M.sync_taskbar()
 
   -- Sandbox buffer to prevent Neovim errors on unmapped keys
@@ -153,28 +319,25 @@ function M.refresh()
   render()
 end
 
--- Sync minimized windows from taskbar module
-function M.sync_taskbar()
-  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
-  if tb_ok and taskbar.get_items then
-    state.taskbar_items = taskbar.get_items() or {}
-  end
-end
-
--- Add a minimized window to footer
-function M.add_taskbar_item(title, winid)
-  table.insert(state.taskbar_items, { title = title, winid = winid })
-  render()
-end
-
--- Restore a minimized window by index
+-- Restore a minimized item by index
 function M.restore_item(index)
-  local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
-  if tb_ok then
-    taskbar.restore_by_index(index)
-    M.sync_taskbar()
-    render()
+  local item = state.taskbar_items[index]
+  if not item then return end
+
+  if item.type == "session" then
+    local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
+    if titlebar_ok then
+      titlebar.restore(item.id)
+    end
+  else
+    local tb_ok, taskbar = pcall(require, "ccasp.taskbar")
+    if tb_ok then
+      taskbar.restore_by_index(item.panel_index)
+    end
   end
+
+  M.sync_taskbar()
+  render()
 end
 
 -- Get footer window

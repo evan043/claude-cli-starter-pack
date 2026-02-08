@@ -8,7 +8,7 @@ local M = {}
 M.config = {
   icon_rail = { width = 5, visible = true },
   flyout = { width = 35, visible = false },
-  header = { height = 1, visible = true },
+  header = { height = 2, visible = true },
   footer = { height = 0, visible = false },
   right_panel = { width = 40, visible = false },
 }
@@ -41,20 +41,22 @@ function M.calculate_zones()
 
   local zones = {}
 
-  -- Icon rail: far left, full height between header and footer
+  -- Icon rail: far left, extends full height to bottom of window
+  -- (footer sits to the right at col=panel_w, so no vertical overlap)
   zones.icon_rail = {
     row = header_h,
     col = 0,
     width = rail_w,
-    height = editor_h - header_h - footer_h - cmdline_h,
+    height = editor_h - header_h - cmdline_h,
   }
 
-  -- Flyout: next to icon rail, overlays content area
+  -- Flyout: next to icon rail, borders extend full height to bottom of window
+  -- (footer sits to the right at col=panel_w, so no vertical overlap)
   zones.flyout = {
     row = header_h,
     col = rail_w,
     width = flyout_w,
-    height = editor_h - header_h - footer_h - cmdline_h,
+    height = editor_h - header_h - cmdline_h,
   }
 
   -- Header: full width, top of editor
@@ -65,12 +67,15 @@ function M.calculate_zones()
     height = header_h,
   }
 
-  -- Footer: full width, bottom of editor (above cmdline)
+  -- Footer: full width at bottom of screen (covers bottom-left corner gap)
+  -- Session tabs are padded to start after icon rail / flyout
+  local panel_w = rail_w + flyout_w
   zones.footer = {
     row = editor_h - footer_h - cmdline_h,
     col = 0,
-    width = editor_w,
+    width = editor_w - rpanel_w,
     height = footer_h,
+    content_col = panel_w, -- offset where content starts (after rail/flyout)
   }
 
   -- Right panel: right side, between header and footer
@@ -105,7 +110,6 @@ end
 function M.open()
   if M.state.active then return end
 
-  M.calculate_zones()
   M.state.active = true
 
   -- Load and open components
@@ -114,10 +118,13 @@ function M.open()
   local footer = require("ccasp.appshell.footer")
   local content = require("ccasp.appshell.content")
 
-  -- Open zones in order: header, footer, icon rail, content
+  -- Open header FIRST (disables tabline, which shifts editor grid)
   if M.config.header.visible then
-    header.open(M.state.zones.header)
+    header.open()
   end
+
+  -- Calculate zones AFTER tabline state is settled
+  M.calculate_zones()
 
   if M.config.footer.visible then
     footer.open(M.state.zones.footer)
@@ -129,7 +136,9 @@ function M.open()
 
   content.open(M.state.zones.content)
 
-  vim.notify("CCASP Appshell active", vim.log.levels.INFO)
+  -- Clear any residual command-line messages (e.g. "C:\...\cmd.exe" from :terminal)
+  -- that would otherwise persist as an overlay with cmdheight=0
+  vim.cmd("redraw!")
 end
 
 -- Close the appshell layout
@@ -175,10 +184,15 @@ function M.toggle_flyout(section)
     flyout.open(M.state.zones.flyout, section)
   end
 
-  -- Resize content area so terminal shrinks/grows with flyout
+  -- Resize content area and footer so they shrink/grow with flyout
   M.calculate_zones()
   local content = require("ccasp.appshell.content")
   content.resize(M.state.zones.content)
+
+  if M.config.footer.visible then
+    local footer = require("ccasp.appshell.footer")
+    footer.resize(M.state.zones.footer)
+  end
 
   -- Update icon rail to reflect active section
   local icon_rail = require("ccasp.appshell.icon_rail")
