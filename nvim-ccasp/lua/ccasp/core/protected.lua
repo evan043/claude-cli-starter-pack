@@ -16,8 +16,8 @@ local protected_assets = {
 -- Get protected file path
 local function get_protected_path()
   local ccasp = require("ccasp")
-  local cwd = vim.fn.getcwd()
-  return cwd .. "/" .. ccasp.config.protected_file
+  local root = ccasp.config.project_root or vim.fn.getcwd()
+  return root .. "/" .. ccasp.config.protected_file
 end
 
 -- Read JSON file

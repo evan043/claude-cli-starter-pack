@@ -765,7 +765,36 @@ function M.setup_keymaps(bufnr, session_id)
   -- Handles the case where WinEnter doesn't fire (clicking within the same window
   -- after exiting terminal mode with Ctrl+\, Ctrl+N). Without this, the user
   -- would be stuck in normal mode and get E21 when trying to type.
+  -- Cross-window clicks are dispatched to the target (footer gets direct handling).
+  -- Winbar clicks (line==0) are replayed with noremap so Neovim's native %@ handlers fire.
   set_keymap("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local current_win = vim.api.nvim_get_current_win()
+
+    -- Winbar click: replay with noremap so native %@ handlers fire
+    -- (cycle, rename, color, minimize, close buttons)
+    if mouse.line == 0 then
+      local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
+      vim.api.nvim_feedkeys(key, "n", false)
+      return
+    end
+
+    if mouse.winid ~= 0 and mouse.winid ~= current_win then
+      -- Cross-window click: dispatch to footer or focus target window
+      local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+      if ft_ok and footer.get_win and footer.get_win() == mouse.winid then
+        footer.handle_click()
+        return
+      end
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(mouse.winid) then
+          vim.api.nvim_set_current_win(mouse.winid)
+        end
+      end)
+      return
+    end
+
+    -- Same window, buffer content: enter terminal mode
     vim.schedule(function()
       local buf = vim.api.nvim_get_current_buf()
       if vim.bo[buf].buftype == "terminal" then
@@ -783,11 +812,23 @@ function M.setup_keymaps(bufnr, session_id)
   -- detects clicks targeting a different window, exits terminal mode, and
   -- switches to the target window. Same-window clicks pass through to the
   -- terminal app so Claude CLI input positioning still works.
+  -- Footer clicks are dispatched directly (same pattern as Alt+1-9 layer switch)
+  -- so layer/session tab clicks work with a single click from terminal mode.
   vim.keymap.set("t", "<LeftMouse>", function()
     local mouse = vim.fn.getmousepos()
     local current_win = vim.api.nvim_get_current_win()
 
     if mouse.winid ~= 0 and mouse.winid ~= current_win then
+      -- Footer click: handle layer/session switching directly (single-click)
+      local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+      if ft_ok and footer.get_win and footer.get_win() == mouse.winid then
+        exit_terminal_mode()
+        vim.schedule(function()
+          footer.handle_click()
+        end)
+        return ""
+      end
+
       -- Cross-window click: switch to target window
       vim.schedule(function()
         if vim.api.nvim_win_is_valid(mouse.winid) then
@@ -797,7 +838,19 @@ function M.setup_keymaps(bufnr, session_id)
       end)
       return ""  -- suppress the mouse event (don't send to terminal app)
     end
-    -- Same window: pass click through to terminal app (Claude CLI input)
+
+    -- Same window, winbar click: exit terminal mode and replay with noremap
+    -- so Neovim's native %@ handlers fire (cycle, rename, color, minimize, close)
+    if mouse.line == 0 then
+      exit_terminal_mode()
+      vim.schedule(function()
+        local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
+        vim.api.nvim_feedkeys(key, "n", false)
+      end)
+      return ""
+    end
+
+    -- Same window, buffer content: pass click through to terminal app (Claude CLI input)
     return vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
   end, { buffer = bufnr, noremap = true, silent = true, expr = true, desc = "Click to switch sessions" })
 end

@@ -55,7 +55,8 @@ When invoked (typically auto-injected after wizard completes):
        "mcp_servers": boolean,
        "phased_dev": boolean,
        "hooks": boolean,
-       "mobile_packaging": boolean
+       "mobile_packaging": boolean,
+       "competitor_research": boolean
      }
    }
    ```
@@ -80,6 +81,7 @@ When invoked (typically auto-injected after wizard completes):
    | `features.phased_dev = false` | Step 7l | Skip roadmap enforcement setup |
    | `features.hooks = false` | Step 2e | Skip delegation hook setup |
    | `features.mobile_packaging = false` | Step 1.7 | Skip mobile packaging configuration |
+   | `features.competitor_research = false` | Step 1.8 | Skip competitor research & build mode |
 
 4. **Stub behavior for disabled features in commercial modes:**
    - When `app_mode` is `"commercial_saas"` or `"commercial_single"` AND a feature is disabled:
@@ -105,6 +107,7 @@ When invoked (typically auto-injected after wizard completes):
 ║    ✓ Deployment    ✓ Agents           ✓ GitHub                ║
 ║    ✓ MCP Servers   ✓ Phased Dev       ✓ Hooks                 ║
 ║    ✗ Mobile Packaging                                        ║
+║    ✗ Competitor Research                                     ║
 ║                                                               ║
 ║  Disabled features will be: stubbed (CCASP:STUB)              ║
 ║                                                               ║
@@ -610,6 +613,260 @@ This step configures native mobile app packaging so the web app can be submitted
 ║    • Camera (@capacitor/camera)                               ║
 ║                                                               ║
 ║  Config saved to: .claude/config/tech-stack.json              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+### Step 1.8: Competitor Research → MVP Build Mode (If Enabled)
+
+**Panel config gate:** If `panel_config.features.competitor_research === false`, skip this entire step. Display: "Competitor research skipped (disabled in panel config)."
+
+This step runs competitive intelligence analysis, validates compliance, and lets the user choose between B2C MVP or Enterprise B2B build modes. The chosen tier auto-configures feature toggles to focus on the highest-ROI features for day-1 profitability.
+
+#### 1.8a. Offer Research or Skip
+
+**Use AskUserQuestion:**
+```
+header: "Research"
+question: "Run competitive intelligence analysis to identify high-ROI features and choose a build tier?"
+options:
+  - "Yes - run /research-competitor workflow now (Recommended)"
+  - "Skip - I already know what features to build"
+```
+
+**If Skip selected**: Save `competitorResearch: { enabled: false, skipped: true }` to `tech-stack.json`, proceed to Step 2.
+
+#### 1.8b. Deploy Research Agent
+
+**If Yes**: Deploy agent running `/research-competitor` workflow (6 phases):
+
+1. **Competitor Discovery** — WebSearch for alternatives in the product category
+2. **Feature Extraction** — WebFetch product pages, extract full feature lists
+3. **Pricing Analysis** — Tiers, free tier availability, enterprise pricing patterns
+4. **Tech Stack Discovery** — Technologies used by competitors (builtwith.com, job postings)
+5. **Market Sentiment** — G2, Capterra, Product Hunt reviews for pain points
+6. **Feature Gap Analysis** — What competitors have vs what they're missing
+
+Output saved to: `docs/competitive-analysis/[project-slug]-analysis-[date].md` and `.json`
+
+#### 1.8c. Extract Top ROI Features
+
+From competitive analysis results:
+
+1. **Rank features by ROI potential:**
+   - **Competitive coverage** — % of competitors that have the feature
+   - **User demand** — mentions in reviews and requests
+   - **Pricing correlation** — features that appear only in paid tiers
+   - **Gap opportunities** — features missing from all competitors
+
+2. **Categorize top features:**
+
+   | Category | Criteria | Priority |
+   |----------|----------|----------|
+   | **Must-have** | 80%+ competitors have it | Build in MVP |
+   | **Differentiator** | Only 1-2 competitors have it | Build in MVP if feasible |
+   | **Innovation** | Gap in ALL competitors | High priority for competitive advantage |
+   | **Nice-to-have** | < 50% have it, low demand | Defer to post-MVP |
+
+3. **Save to `tech-stack.json`:**
+   ```json
+   {
+     "competitorResearch": {
+       "enabled": true,
+       "run_date": "{{timestamp}}",
+       "competitors_analyzed": 5,
+       "analysis_path": "docs/competitive-analysis/[slug]-analysis-[date].json",
+       "top_features": [
+         {
+           "name": "Real-time collaboration",
+           "category": "must-have",
+           "coverage": 0.8,
+           "demand_score": 9,
+           "tier_correlation": "pro"
+         }
+       ],
+       "innovation_opportunities": [
+         {
+           "name": "AI-powered suggestions",
+           "gap_type": "missing_from_all",
+           "estimated_impact": "high"
+         }
+       ]
+     }
+   }
+   ```
+
+#### 1.8d. Run Compliance Check
+
+Deploy `/compliance-check` agent for discovered competitors:
+
+1. Analyze each competitor URL for differentiation opportunities
+2. Generate original naming for shared features (avoid trademark issues)
+3. Identify UX divergence points (don't clone competitor UI patterns)
+4. Validate dependency licenses (SAFE/WARNING/BLOCKED)
+5. Generate DESIGN_ORIGIN.md documenting our original approach
+
+**Display compliance results:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Compliance Check Complete                                    ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Competitors Analyzed: 5                                      ║
+║  Compliance Score:     95/100                                 ║
+║  Verdict:              PASS                                   ║
+║                                                               ║
+║  Must-Have Features:   12 (with original naming)              ║
+║  Innovation Gaps:      8 opportunities                        ║
+║  Naming Conflicts:     3 resolved                             ║
+║                                                               ║
+║  DESIGN_ORIGIN.md:     Generated                              ║
+║  compliance-audit.json: Generated                             ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**If compliance score < 80**: Display warning and ask user to review differentiation plan before proceeding.
+
+#### 1.8e. Choose Build Tier
+
+**Use AskUserQuestion:**
+```
+header: "Build Tier"
+question: "Which build tier should we optimize for?"
+options:
+  - "B2C MVP (Recommended for consumer apps) — fast to market, freemium, viral growth"
+  - "Enterprise B2B — full commercial platform, multi-tenancy, RBAC, compliance"
+```
+
+**B2C MVP targets:**
+- Individual users, small teams (1-10 people)
+- Auth: Email/password + OAuth (Google, GitHub)
+- Billing: 2-3 tiers (Free, Pro, Business), Stripe Checkout only
+- Tenancy: Shared workspaces (no strict isolation needed)
+- Priorities: Onboarding, sharing, notifications, mobile-ready
+- Day-1 revenue potential: HIGH (freemium conversion, viral loops)
+- Time to MVP: ~6 weeks
+
+**Enterprise B2B targets:**
+- Organizations (10-1000+ users)
+- Auth: RBAC + SSO readiness (SAML, OIDC)
+- Billing: 4+ tiers with custom/enterprise pricing, Billing Portal
+- Tenancy: Row-level or schema-per-tenant isolation
+- Priorities: Admin dashboard, audit logs, API contracts, compliance docs
+- Day-1 revenue potential: LOWER (longer sales cycle), but higher LTV
+- Time to MVP: ~10 weeks
+
+#### 1.8f. Auto-Configure Feature Toggles
+
+Based on the selected build tier, automatically adjust feature toggles:
+
+**B2C MVP auto-configuration:**
+| Feature | Setting | Reason |
+|---------|---------|--------|
+| `multi_tenancy` | `false` (stub) | Shared workspaces, no strict tenant isolation |
+| `rbac` | `false` (stub) | User + Admin roles only, no custom roles |
+| `billing` | `true` | Simplified: 3 tiers, Stripe Checkout, 14-day trial |
+| `api_contracts` | `false` (stub) | Internal API only, document later |
+| `route_maps` | `false` (stub) | Simple SPA routing, no enforcement needed |
+| `compliance` | `true` | Lighter: IP compliance only (skip full SaaS rules) |
+| `mobile_packaging` | `true` | Consumer apps need mobile presence |
+
+**Enterprise B2B auto-configuration:**
+| Feature | Setting | Reason |
+|---------|---------|--------|
+| `multi_tenancy` | `true` | Required for org isolation |
+| `rbac` | `true` | Full role hierarchy with custom roles |
+| `billing` | `true` | Full: 4+ tiers, custom pricing, Billing Portal |
+| `api_contracts` | `true` | API documentation required for integrations |
+| `route_maps` | `true` | Route enforcement for security |
+| `compliance` | `true` | Full commercial SaaS compliance |
+| `mobile_packaging` | `false` | Desktop-first for enterprise |
+
+**Apply changes:**
+1. Update `~/.ccasp/project-config.json` with new feature states
+2. For B2C MVP + commercial mode: set `compliance.mode = "ip-only"` in tech-stack.json
+3. For Enterprise B2B: keep `compliance.mode = "commercial-saas"` in tech-stack.json
+4. Display notification of which features were auto-configured
+
+#### 1.8g. Save Build Tier Config
+
+**Add to `tech-stack.json`:**
+```json
+{
+  "buildTier": {
+    "selected": "b2c_mvp",
+    "configured_at": "{{timestamp}}",
+    "target_market": "individual_users_small_teams",
+    "time_to_mvp_weeks": 6,
+    "day_1_revenue_strategy": "freemium_conversion",
+    "roadmap_phase_ordering": "b2c_optimized",
+    "auto_configured_features": {
+      "multi_tenancy": false,
+      "rbac": false,
+      "api_contracts": false,
+      "route_maps": false,
+      "mobile_packaging": true
+    },
+    "top_roi_features": ["...from Step 1.8c..."]
+  }
+}
+```
+
+#### 1.8h. Set Roadmap Phase Ordering
+
+**B2C MVP phase ordering** (used by `/phase-dev-plan` and `/create-roadmap`):
+1. **Foundation** — Database, core layout, environment setup
+2. **Auth & Onboarding** — Email/OAuth signup, welcome flow, profile setup
+3. **Core Features** — Top ROI features from competitor research
+4. **Payments** — Stripe Checkout, 3 tiers (Free/Pro/Business), 14-day trial
+5. **Growth & Viral** — Sharing, referrals, notifications, social proof
+6. **Polish** — Performance, mobile optimization, SEO, analytics
+
+**Enterprise B2B phase ordering:**
+1. **Billing Foundation** — Tenant model, RBAC middleware, Stripe lifecycle, entitlements
+2. **Registration & Tenancy** — Signup, invite flow, admin member management
+3. **Admin Dashboard** — User management, audit logs, settings, usage stats
+4. **Core Features** — Top ROI features from competitor research
+5. **API & Integrations** — API contracts, webhooks, SSO readiness, docs
+6. **Compliance & Scale** — Documentation, rate limits, monitoring, security hardening
+
+Save to `buildTier.roadmap_phases` in `tech-stack.json`.
+
+#### 1.8i. Display Summary
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  B2C MVP Build Mode Activated                                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                               ║
+║  Competitor Research:                                         ║
+║    Analyzed: 5 competitors                                    ║
+║    Must-Have Features: 12                                     ║
+║    Innovation Gaps: 8 opportunities                           ║
+║    Compliance Score: 95/100 (PASS)                            ║
+║                                                               ║
+║  Build Tier: B2C MVP                                          ║
+║    Target: Individual users, small teams                      ║
+║    Time to MVP: ~6 weeks                                      ║
+║    Revenue Strategy: Freemium conversion + viral growth       ║
+║                                                               ║
+║  Auto-Configured:                                             ║
+║    Enabled:  Billing, Compliance (IP), Mobile                 ║
+║    Stubbed:  Multi-Tenancy, RBAC, API Contracts, Route Maps   ║
+║                                                               ║
+║  Roadmap Phases:                                              ║
+║    1. Foundation                                              ║
+║    2. Auth & Onboarding                                       ║
+║    3. Core Features (top ROI from research)                   ║
+║    4. Payments (Stripe Checkout, 3 tiers)                     ║
+║    5. Growth & Viral                                          ║
+║    6. Polish                                                  ║
+║                                                               ║
+║  Stubbed features can be enabled later via the                ║
+║  Project Configuration panel in nvim-ccasp.                   ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
@@ -1604,6 +1861,7 @@ Display final completion summary:
 ║  Compliance:  ✓ Commercial SaaS (or: Disabled)                ║
 ║  Billing:     ✓ SaaS billing configured (or: N/A)             ║
 ║  Mobile:      ✓ Capacitor configured (or: Disabled)          ║
+║  Research:    ✓ B2C MVP build mode (or: Enterprise / N/A)     ║
 ║                                                               ║
 ║  Next steps:                                                  ║
 ║  • Type /menu to see all available commands                   ║
@@ -1617,6 +1875,16 @@ Display final completion summary:
 ║  • Review PLANS_AND_ENTITLEMENTS.md before feature dev        ║
 ║  • Review STRIPE_SPEC.md before Stripe integration            ║
 ║  • Review ENTITLEMENTS_SPEC.md for gating architecture        ║
+║                                                               ║
+║  If B2C MVP build mode is active:                             ║
+║  • Enterprise features (multi-tenancy, RBAC) are stubbed      ║
+║  • Enable later via Project Configuration panel               ║
+║  • Roadmap follows B2C-optimized phase ordering               ║
+║                                                               ║
+║  If Enterprise B2B build mode is active:                      ║
+║  • All enterprise features enabled (full SaaS compliance)     ║
+║  • Roadmap follows enterprise phase ordering                  ║
+║  • API contracts and route maps enforced from Phase 1         ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```

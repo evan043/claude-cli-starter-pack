@@ -143,8 +143,9 @@ function M.open(bounds)
       vim.cmd("silent enew")
     end
 
-    -- Create terminal
-    local project_root = vim.fn.getcwd()
+    -- Create terminal - use detected project root so sessions start in the right directory
+    local ccasp = require("ccasp")
+    local project_root = ccasp.config.project_root or vim.fn.getcwd()
     vim.cmd("silent lcd " .. vim.fn.fnameescape(project_root))
     vim.cmd("silent terminal")
 

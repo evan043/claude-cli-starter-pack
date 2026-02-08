@@ -6,6 +6,12 @@ local function get_ccasp()
   return require("ccasp")
 end
 
+-- Get the project root (detected at setup time, falls back to cwd)
+local function get_root()
+  local ccasp = get_ccasp()
+  return (ccasp.config.project_root or vim.fn.getcwd()):gsub("\\", "/")
+end
+
 -- Get full path for a config file
 function M.get_path(key)
   local ccasp = get_ccasp()
@@ -13,12 +19,12 @@ function M.get_path(key)
   if not relative then
     return nil
   end
-  return vim.fn.getcwd() .. "/" .. relative
+  return get_root() .. "/" .. relative
 end
 
 -- Check if .claude directory exists
 function M.has_claude_dir()
-  return vim.fn.isdirectory(vim.fn.getcwd() .. "/.claude") == 1
+  return vim.fn.isdirectory(get_root() .. "/.claude") == 1
 end
 
 -- Read JSON file safely
@@ -182,7 +188,7 @@ end
 
 -- Get list of installed hooks
 function M.get_hooks()
-  local hooks_dir = vim.fn.getcwd() .. "/.claude/hooks/tools"
+  local hooks_dir = get_root() .. "/.claude/hooks/tools"
   if vim.fn.isdirectory(hooks_dir) ~= 1 then
     return {}
   end
@@ -202,7 +208,7 @@ end
 
 -- Get list of installed commands
 function M.get_commands()
-  local commands_dir = vim.fn.getcwd() .. "/.claude/commands"
+  local commands_dir = get_root() .. "/.claude/commands"
   if vim.fn.isdirectory(commands_dir) ~= 1 then
     return {}
   end
@@ -231,7 +237,7 @@ end
 
 -- Get list of installed skills
 function M.get_skills()
-  local skills_dir = vim.fn.getcwd() .. "/.claude/skills"
+  local skills_dir = get_root() .. "/.claude/skills"
   if vim.fn.isdirectory(skills_dir) ~= 1 then
     return {}
   end
@@ -265,7 +271,7 @@ end
 
 -- Get token usage from cache
 function M.get_token_usage()
-  local cache_path = vim.fn.getcwd() .. "/.claude/hooks/cache/token-usage.json"
+  local cache_path = get_root() .. "/.claude/hooks/cache/token-usage.json"
   if vim.fn.filereadable(cache_path) ~= 1 then
     return nil
   end

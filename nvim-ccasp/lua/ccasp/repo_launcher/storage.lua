@@ -60,9 +60,17 @@ function M.add(path)
     repo.open_count = (repo.open_count or 0) + 1
     library.repos[idx] = repo
   else
+    local base = vim.fn.fnamemodify(path, ":t")
+    local rname
+    if base:match("^%d+$") or #base <= 1 then
+      -- Use "parent/base" for meaningless names like "0", "2", etc.
+      rname = vim.fn.fnamemodify(path, ":h:t") .. "/" .. base
+    else
+      rname = base
+    end
     repo = {
       path = path,
-      name = vim.fn.fnamemodify(path, ":t"),
+      name = rname,
       last_opened = now(),
       open_count = 1,
       pinned = false,

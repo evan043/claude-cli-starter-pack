@@ -38,8 +38,8 @@ local ASSET_TYPES = {
 -- Get base directory path
 local function get_base_dir()
   local ccasp = require("ccasp")
-  local cwd = vim.fn.getcwd()
-  return cwd .. "/" .. ccasp.config.ccasp_root
+  local root = ccasp.config.project_root or vim.fn.getcwd()
+  return root .. "/" .. ccasp.config.ccasp_root
 end
 
 -- Helper: Read and parse file content

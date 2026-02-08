@@ -282,7 +282,9 @@ function M.sync_taskbar()
 end
 
 -- Handle mouse click on line 1 (session tabs) or line 2 (resize grip)
-local function handle_footer_click()
+-- Public: called directly by session_titlebar's t/n <LeftMouse> handler
+-- when clicking the footer from a terminal buffer (avoids needing two clicks).
+function M.handle_click()
   local mouse = vim.fn.getmousepos()
   if not mouse then return end
 
@@ -345,7 +347,7 @@ local function setup_keymaps()
   local opts = { buffer = state.buf, nowait = true, silent = true }
 
   -- Mouse click on session tabs (line 1) or resize grip (line 2)
-  vim.keymap.set("n", "<LeftMouse>", handle_footer_click, opts)
+  vim.keymap.set("n", "<LeftMouse>", function() M.handle_click() end, opts)
 
   -- Number keys to switch layers (1-9)
   for i = 1, 9 do

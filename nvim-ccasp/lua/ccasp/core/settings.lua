@@ -26,8 +26,8 @@ local defaults = {
 -- Get the settings file path
 local function get_settings_path()
   local ccasp = require("ccasp")
-  local cwd = vim.fn.getcwd()
-  return cwd .. "/" .. ccasp.config.settings_file
+  local root = ccasp.config.project_root or vim.fn.getcwd()
+  return root .. "/" .. ccasp.config.settings_file
 end
 
 -- Read JSON file

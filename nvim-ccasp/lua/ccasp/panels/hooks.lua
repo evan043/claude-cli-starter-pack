@@ -55,7 +55,9 @@ local function execute_action(action_name, item)
     end,
     edit_config = function()
       M.close()
-      local config_path = vim.fn.getcwd() .. "/.claude/config/settings.json"
+      local ccasp = require("ccasp")
+      local root = ccasp.config.project_root or vim.fn.getcwd()
+      local config_path = root .. "/.claude/config/settings.json"
       vim.cmd("edit " .. config_path)
     end,
     refresh = function()

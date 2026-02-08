@@ -284,6 +284,7 @@ function M.open_path_dialog()
   vim.keymap.set("i", "<CR>", function()
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)
     local input = vim.fn.trim(lines[1] or "")
+    vim.cmd("stopinsert")
     close_path_dialog()
 
     if input == "" then
@@ -300,6 +301,10 @@ function M.open_path_dialog()
     end
 
     vim.schedule(function()
+      local mode = vim.api.nvim_get_mode().mode
+      if mode == "t" or mode == "i" then
+        vim.cmd("stopinsert")
+      end
       require("ccasp.repo_launcher").open_repo(path)
     end)
   end, opts)
@@ -346,6 +351,10 @@ function M.open_path_dialog()
     end
 
     vim.schedule(function()
+      local mode = vim.api.nvim_get_mode().mode
+      if mode == "t" or mode == "i" then
+        vim.cmd("stopinsert")
+      end
       require("ccasp.repo_launcher").open_repo(path)
     end)
   end, opts)

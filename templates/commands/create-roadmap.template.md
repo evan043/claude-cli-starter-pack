@@ -342,6 +342,41 @@ options:
 }
 ```
 
+### Step 2.5c: Check Build Tier Configuration (If Competitor Research Active)
+
+**Check tech-stack.json for build tier configuration:**
+```javascript
+// Read build tier config from tech-stack.json
+const buildTier = techStack.buildTier || {};
+const tier = buildTier.tier; // "b2c_mvp" or "enterprise_b2b" or undefined
+const phaseOrdering = buildTier.roadmap_phase_ordering || [];
+```
+
+**If build tier is configured**, display and apply tier-specific roadmap structure:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Build Tier Detected                                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Tier: {B2C MVP / Enterprise B2B}                            ║
+║  Roadmap structure follows tier-specific phase ordering.     ║
+║                                                              ║
+║  B2C MVP (6 weeks target):                                   ║
+║    Foundation → Auth → Core → Payments → Growth → Polish     ║
+║                                                              ║
+║  Enterprise B2B (10 weeks target):                           ║
+║    Billing → Tenancy → Admin → Core → API → Compliance       ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Use `buildTier.roadmap_phase_ordering`** as the basis for ROADMAP.json phase structure. Each entry in the ordering array becomes a phase in the roadmap. Stubbed features (from B2C MVP tier) should generate `CCASP:STUB` placeholder phases that can be enabled later.
+
+**If build tier NOT configured**, use default phase ordering based on feature complexity and dependencies.
+
+---
+
 **If compliance NOT configured**, show setup reminder:
 
 ```

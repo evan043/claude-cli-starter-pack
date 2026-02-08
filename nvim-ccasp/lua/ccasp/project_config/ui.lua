@@ -102,6 +102,12 @@ local FEATURE_SECTIONS = {
     },
   },
   {
+    name = "MARKET RESEARCH",
+    items = {
+      { key = "competitor_research", label = "Competitor Research → Build Mode" },
+    },
+  },
+  {
     name = "DEVELOPMENT TOOLS",
     items = {
       { key = "deployment",          label = "Deployment Automation" },
@@ -178,7 +184,7 @@ local function render()
   -- Highlights
   local ns = helpers.prepare_highlights("ccasp_project_config", bufnr)
   for i, line in ipairs(lines) do
-    if line:match("^  APP MODE") or line:match("^  COMPLIANCE") or line:match("^  BILLING") or line:match("^  MOBILE") or line:match("^  DEVELOPMENT") then
+    if line:match("^  APP MODE") or line:match("^  COMPLIANCE") or line:match("^  BILLING") or line:match("^  MOBILE") or line:match("^  MARKET") or line:match("^  DEVELOPMENT") then
       helpers.add_highlight(bufnr, ns, "Title", i - 1, 0, -1)
     elseif line:match("^  " .. string.rep("─", 5)) then
       helpers.add_highlight(bufnr, ns, "NonText", i - 1, 0, -1)

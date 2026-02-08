@@ -94,6 +94,7 @@ local EXPECTED_FEATURE_KEYS = {
   "phased_dev",
   "hooks",
   "mobile_packaging",
+  "competitor_research",
 }
 
 test("features: all expected keys present in default config", function()
@@ -209,6 +210,7 @@ local FEATURE_STEP_MAP = {
   phased_dev    = "Step 7l",
   hooks         = "Step 2e",
   mobile_packaging = "Step 1.7",
+  competitor_research = "Step 1.8",
 }
 
 test("feature→step: every feature key has a mapped step", function()

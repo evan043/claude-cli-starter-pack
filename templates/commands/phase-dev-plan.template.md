@@ -116,8 +116,43 @@ Use AskUserQuestion to collect:
 
 **⛔ DO NOT proceed to Step 3 until ALL 6 exploration files exist.**
 
+### Step 2.8: Check Build Tier Configuration (If Competitor Research Active)
+
+**Check tech-stack.json for build tier configuration:**
+```javascript
+// Read build tier config from tech-stack.json
+const buildTier = techStack.buildTier || {};
+const tier = buildTier.tier; // "b2c_mvp" or "enterprise_b2b" or undefined
+const phaseOrdering = buildTier.roadmap_phase_ordering || [];
+```
+
+**If build tier is configured**, display and apply:
+
+```
+╔═══════════════════════════════════════════════════════════════╗
+║  Build Tier Detected                                         ║
+╠═══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║  Tier: {B2C MVP / Enterprise B2B}                            ║
+║  Phase ordering: {phaseOrdering summary}                     ║
+║                                                              ║
+║  Stubbed features will generate CCASP:STUB placeholders.     ║
+║  Enable later via Project Configuration panel.               ║
+║                                                              ║
+╚═══════════════════════════════════════════════════════════════╝
+```
+
+**Phase ordering by tier:**
+
+- **B2C MVP**: Foundation → Auth/Onboarding → Core Features → Payments → Growth/Viral → Polish
+- **Enterprise B2B**: Billing Foundation → Registration/Tenancy → Admin Dashboard → Core Features → API/Integrations → Compliance/Scale
+
+Use the tier-specific phase ordering from `buildTier.roadmap_phase_ordering` when generating the phase breakdown in Step 3. If no build tier is configured, use the default ordering.
+
 ### Step 3: Generate Phase Breakdown
 Based on exploration findings, create phases with clear objectives, success criteria, and agent assignments.
+
+**If build tier is configured, use tier-specific phase ordering** from Step 2.8. B2C MVP plans should prioritize revenue-generating features early; Enterprise B2B plans should prioritize infrastructure and compliance.
 
 **If compliance_config is active, add mandatory compliance tasks:**
 

@@ -24,6 +24,7 @@ function M.get_default()
       phased_dev = true,
       hooks = true,
       mobile_packaging = false,
+      competitor_research = false,
     },
   }
 end

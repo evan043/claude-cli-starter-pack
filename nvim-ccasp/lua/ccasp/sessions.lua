@@ -289,6 +289,12 @@ end
 
 -- Create a new Claude CLI session at a specific directory path
 function M.spawn_at_path(path)
+  -- Ensure we're in normal mode before creating splits
+  local mode = vim.api.nvim_get_mode().mode
+  if mode == "t" or mode == "i" then
+    vim.cmd("stopinsert")
+  end
+
   -- Validate path is a directory
   if vim.fn.isdirectory(path) == 0 then
     vim.notify("Directory not found: " .. path, vim.log.levels.ERROR)

@@ -133,9 +133,11 @@ local SECTION_PATTERNS = {
 -- Get commands directory path (normalized for Windows)
 local function get_commands_dir()
   local ccasp = require("ccasp")
-  local cwd = vim.fn.getcwd()
+  -- Use stored project root (detected at setup time) instead of vim.fn.getcwd()
+  -- which can return different values from floating windows vs terminal windows
+  local root = ccasp.config.project_root or vim.fn.getcwd()
   -- Normalize to forward slashes for consistent cross-platform paths
-  local dir = (cwd .. "/" .. ccasp.config.ccasp_root .. "/commands"):gsub("\\", "/")
+  local dir = (root .. "/" .. ccasp.config.ccasp_root .. "/commands"):gsub("\\", "/")
   return dir
 end
 
