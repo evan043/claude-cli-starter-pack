@@ -224,6 +224,12 @@ function M.destroy(session_id)
   -- Winbar is automatically removed when window closes
 end
 
+-- Set session color directly (used by layout templates)
+function M.set_color(session_id, color_idx)
+  session_colors[session_id] = color_idx
+  M.update(session_id)
+end
+
 -- Update all session winbars
 function M.update_all()
   local sessions = require("ccasp.sessions")

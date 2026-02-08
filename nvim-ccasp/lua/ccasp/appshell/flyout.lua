@@ -157,6 +157,40 @@ local section_renderers = {
       table.insert(lines, "")
     end
 
+    -- ── Layout Templates Section ──
+    local tmpl_ok, tmpl = pcall(require, "ccasp.layout_templates")
+    if tmpl_ok then
+      table.insert(lines, "  " .. icons.layout .. " Layout Templates")
+      table.insert(lines, "  " .. string.rep("─", 30))
+      table.insert(lines, "")
+
+      local all_templates = tmpl.list()
+      if #all_templates > 0 then
+        for _, t in ipairs(all_templates) do
+          local marker = t.is_default and icons.star_filled or " "
+          local line = string.format("  %s %s (%dL/%dS)", marker, t.name, t.layer_count, t.session_count)
+          table.insert(lines, line)
+          item_lines[#lines] = { action = "load_template", template_name = t.name }
+        end
+      else
+        table.insert(lines, "    (no saved templates)")
+      end
+      table.insert(lines, "")
+
+      local tmpl_actions = {
+        { icon = icons.save,        label = "Save Current Layout",  action = "save_template" },
+        { icon = icons.edit,         label = "Rename Template",      action = "rename_template" },
+        { icon = icons.star_filled,  label = "Set Default Template", action = "set_default_template" },
+        { icon = icons.delete,       label = "Delete Template",      action = "delete_template" },
+      }
+      for _, a in ipairs(tmpl_actions) do
+        table.insert(lines, "  " .. a.icon .. " " .. a.label)
+        item_lines[#lines] = { action = a.action }
+      end
+
+      table.insert(lines, "")
+    end
+
     -- ── Terminal Sessions Section ──
     table.insert(lines, "  " .. icons.terminal .. " Terminal Sessions")
     table.insert(lines, "  " .. string.rep("─", 30))
@@ -698,6 +732,33 @@ function M.execute_action(item)
       end)
     end,
 
+    -- Layout templates
+    save_template = function()
+      close_and_run_modal(function()
+        require("ccasp.layout_templates").show_save_modal()
+      end)
+    end,
+    load_template = function()
+      close_and_run_modal(function()
+        require("ccasp.layout_templates").apply(item.template_name)
+      end)
+    end,
+    rename_template = function()
+      close_and_run_modal(function()
+        require("ccasp.layout_templates").show_rename_modal()
+      end)
+    end,
+    set_default_template = function()
+      close_and_run_modal(function()
+        require("ccasp.layout_templates").show_set_default_modal()
+      end)
+    end,
+    delete_template = function()
+      close_and_run_modal(function()
+        require("ccasp.layout_templates").show_delete_modal()
+      end)
+    end,
+
     -- Repo launcher
     open_repo = function()
       close_and_run_modal(function()
@@ -849,6 +910,11 @@ function M.execute_action(item)
         or item.action == "layer_new"
         or item.action == "layer_rename"
         or item.action == "layer_close"
+        or item.action == "save_template"
+        or item.action == "load_template"
+        or item.action == "rename_template"
+        or item.action == "set_default_template"
+        or item.action == "delete_template"
     if not skip_rerender then
       vim.defer_fn(function() render() end, 500)
     end

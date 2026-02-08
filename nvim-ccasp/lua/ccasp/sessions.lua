@@ -515,6 +515,13 @@ function M.get(id)
   return state.sessions[id]
 end
 
+-- Set session name (used by layout templates)
+function M.set_name(id, name)
+  if state.sessions[id] then
+    state.sessions[id].name = name
+  end
+end
+
 -- Get primary session
 function M.get_primary()
   if state.primary_session then

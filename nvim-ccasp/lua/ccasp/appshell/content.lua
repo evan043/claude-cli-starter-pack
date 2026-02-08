@@ -212,6 +212,17 @@ function M.open(bounds)
         end
       end
     end, launch_delay)
+
+    -- Apply default layout template on startup (after initial session stabilizes)
+    vim.defer_fn(function()
+      local tmpl_ok, tmpl = pcall(require, "ccasp.layout_templates")
+      if tmpl_ok then
+        local default_tmpl = tmpl.get_default()
+        if default_tmpl then
+          tmpl.apply(default_tmpl.name)
+        end
+      end
+    end, vim.g.neovide and 3500 or 2500)
   end
 end
 
