@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.8.1  •  Production Ready                         ║
+║                           v2.11.1  •  Production Ready                        ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -38,63 +38,60 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## v2.8.0 Feature Update — Neovim UI Testing Framework + Appshell Layout
+## v2.11.1 Feature Update — Competitor Research & MVP Build Mode
 
 </div>
 
-> **Feb 2026** — New deterministic headless Neovim UI testing framework for the nvim-ccasp plugin with plenary.nvim-based test harness, UI driver/snapshot modules, appshell layout (VS Code-inspired zone-based UI), and a complete Claude workflow system with 6 commands, 3 agents, 2 hooks, and per-folder documentation.
+> **Feb 2026** — New optional competitive intelligence workflow during project setup. Run 6-phase competitor research, validate compliance, and choose between **B2C MVP** (6-week, freemium) or **Enterprise B2B** (10-week, full compliance) build tiers. Auto-configures feature toggles to maximize day-1 profitability.
 
-### What's New in v2.8.0
+### What's New in v2.11.1
 
 <table>
 <tr>
 <td width="50%">
 
-#### Neovim UI Testing Framework
-**Deterministic headless testing for nvim-ccasp:**
-- **Test Harness** — plenary.nvim with smoke, keymap, and layout tests
-- **UI Driver** — Automated UI traversal (open, navigate, close) — 534 lines
-- **Layout Snapshots** — Capture and diff window layouts — 512 lines
-- **Runner Scripts** — `nvim-test.ps1`, `nvim-smoke.ps1`, `nvim-snapshot.ps1`
-- **Headless Execution** — CI-ready with `minimal_init.lua`
+#### Competitor Research Workflow
+**6-phase competitive intelligence in `/project-implementation`:**
+- **Competitor Discovery** — WebSearch for alternatives
+- **Feature Extraction** — Product page analysis
+- **Pricing Analysis** — Tiers, free plans, enterprise pricing
+- **Tech Stack Discovery** — Technologies used by competitors
+- **Market Sentiment** — G2, Capterra, Product Hunt reviews
+- **Feature Gap Analysis** — What competitors miss
 
 </td>
 <td width="50%">
 
-#### Appshell Layout (nvim-ccasp v1.5.0)
-**VS Code / Discord-inspired zone-based UI:**
-- **Icon Rail** — 3-column vertical navigation strip
-- **Flyout** — Expandable 35-column sidebar panel
-- **Header/Footer** — Tabline + status bar zones
-- **Content Zone** — Adaptive main editing area
-- **Right Panel** — Optional context/logs panel
-- **Zone-Aware Panels** — All panels respect appshell bounds
+#### B2C MVP vs Enterprise B2B Build Tiers
+**Auto-configure feature toggles by market:**
+- **B2C MVP** — 6 weeks, freemium, viral growth, mobile-first
+- **Enterprise B2B** — 10 weeks, multi-tenancy, RBAC, compliance
+- Auto-stubs enterprise features for B2C (enable later)
+- Tier-specific roadmap phase ordering
+- Compliance check on discovered competitors
+- DESIGN_ORIGIN.md for IP protection
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### Claude Workflow System
-**6 new slash commands for UI testing:**
-- `/ui-test` — Run full test suite
-- `/ui-smoke` — Quick smoke test
-- `/ui-snapshot` — Layout snapshot + diff
-- `/ui-bug` — Structured bug reporting
-- `/ui-fix` — Guided debug/fix workflow
-- `/repo-guard` — Pre-commit quality gate
+#### Neovim Panel Integration
+**New "MARKET RESEARCH" section in Project Config:**
+- `competitor_research` toggle (14th feature)
+- Defaults to OFF (opt-in, research takes ~38 min)
+- Auto-configures all dependent toggles on tier selection
+- Tests: 17/17 config + 29/29 bridge passing
 
 </td>
 <td width="50%">
 
-#### Agents, Hooks & Documentation
-**3 agents + 2 hooks + per-folder docs:**
-- **ui-driver** agent — Drives UI, validates windows
-- **ui-debugger** agent — Diagnoses and fixes bugs
-- **nvim-test-runner** agent — Runs tests, reports results
-- **nvim-after-edit-test** hook — Auto-smoke on `.lua` edit
-- **agent-limit-compact** hook — Limits to 3 concurrent agents
-- **15 doc files** across 4 `nvim-ui-testing/` subfolders
+#### Build Tier Awareness
+**Orchestration templates updated:**
+- `/phase-dev-plan` reads `buildTier` from tech-stack.json
+- `/create-roadmap` uses tier-specific phase structure
+- B2C: Foundation → Auth → Core → Payments → Growth → Polish
+- Enterprise: Billing → Registration → Admin → Core → API → Compliance
 
 </td>
 </tr>
@@ -103,7 +100,7 @@ npx claude-cli-advanced-starter-pack init
 ### Upgrade Now
 
 ```bash
-# Update to v2.8.0
+# Update to v2.11.1
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync new commands to your project
@@ -260,7 +257,7 @@ CCASP scans your project, detects your stack (React? FastAPI? Prisma? Playwright
 
 | Component | Count | Examples |
 |-----------|-------|----------|
-| **Slash Commands** | 64 | `/deploy-full`, `/pr-merge`, `/ralph`, `/ui-test`, `/vision-list` |
+| **Slash Commands** | 66 | `/deploy-full`, `/pr-merge`, `/ralph`, `/ui-test`, `/research-competitor` |
 | **Enforcement Hooks** | 44 | Token tracking, agent orchestration, refactor safety, UI test auto-run |
 | **Tech Stack Detection** | 55+ | React, Vue, FastAPI, Express, Prisma, Playwright |
 | **Agent Templates** | L1/L2/L3 | Orchestrators → Specialists → Workers + UI testing agents |
@@ -620,6 +617,7 @@ npx claude-cli-advanced-starter-pack init
 
 | Feature | Status |
 |---------|--------|
+| **Competitor Research & MVP Build Mode** | ✅ Complete |
 | **Neovim UI Testing + Appshell Layout** | ✅ Complete |
 | **Vision Multi-Instance & Decision Engine** | ✅ Complete |
 | **Smart Site Intel Dev-Scan** | ✅ Complete |
@@ -637,6 +635,17 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.11.1
+**Competitor Research & MVP Build Mode** — Feb 2026
+- **Competitor Research Workflow**: Optional 6-phase competitive intelligence in `/project-implementation` Step 1.8
+- **Build Tier Selection**: B2C MVP (6 weeks, freemium) vs Enterprise B2B (10 weeks, full compliance)
+- **Auto-Configure Feature Toggles**: Tier selection auto-stubs/enables multi-tenancy, RBAC, billing, API contracts, mobile
+- **Neovim Panel**: New "MARKET RESEARCH" section with `competitor_research` toggle (14th feature)
+- **Build Tier Awareness**: `/phase-dev-plan` and `/create-roadmap` read `buildTier` from tech-stack.json
+- **Compliance Integration**: Runs `/compliance-check` on discovered competitors for IP protection
+- **Tier-Specific Roadmap Phases**: B2C and Enterprise each get optimized 6-phase ordering
+- **Tests**: 17/17 config tests, 29/29 bridge tests, all syntax checks passing
 
 ### v2.8.0
 **Neovim UI Testing Framework + Appshell Layout** — Feb 2026
@@ -1002,6 +1011,8 @@ ccasp roadmap import          # Mode B: GitHub issues → phases
 | `/repo-guard` | Pre-commit quality gate |
 | `/site-intel` | Website intelligence + dev scanning |
 | `/site-intel-dashboard` | Dev scan dashboard viewer |
+| `/competitor-research-build-mode` | Competitor research & build tier tracker |
+| `/research-competitor` | 6-phase competitive intelligence |
 
 [Full Commands Reference →](./docs/WIKI.md)
 
