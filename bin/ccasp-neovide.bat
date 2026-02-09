@@ -20,6 +20,8 @@ if %ERRORLEVEL% neq 0 (
 REM Resolve nvim-ccasp directory relative to this script (bin/../nvim-ccasp)
 set "SCRIPT_DIR=%~dp0"
 set "PLUGIN_DIR=%SCRIPT_DIR%..\nvim-ccasp"
+set "PROJECT_DIR=%SCRIPT_DIR%.."
 
+REM Start in the CCASP project root so detect_project_root() finds .claude/
 REM "start /b" detaches the process so the cmd window closes immediately
-start "" /b "%NEOVIDE%" --frame none -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"
+start "" /b /d "%PROJECT_DIR%" "%NEOVIDE%" --frame none -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"

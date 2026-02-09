@@ -40,9 +40,12 @@ local function inject_slash_command(cmd_name)
   vim.schedule(function()
     local sessions_ok, sessions = pcall(require, "ccasp.sessions")
     if sessions_ok then
-      local primary = sessions.get_primary()
-      if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
-        local job_id = vim.b[primary.bufnr].terminal_job_id
+      local active = sessions.get_active()
+      if active and active.bufnr and vim.api.nvim_buf_is_valid(active.bufnr) then
+        if active.winid and vim.api.nvim_win_is_valid(active.winid) then
+          vim.api.nvim_set_current_win(active.winid)
+        end
+        local job_id = vim.b[active.bufnr].terminal_job_id
         if job_id and job_id > 0 then
           vim.fn.chansend(job_id, "/" .. cmd_name .. "\n")
           return
@@ -586,5 +589,18 @@ function M.toggle()
     M.open()
   end
 end
+
+-- Refresh commands when the active terminal session changes.
+-- Each session may be in a different project with different .claude/commands/.
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CcaspActiveSessionChanged",
+  callback = function()
+    if M.is_open and M.bufnr_list and vim.api.nvim_buf_is_valid(M.bufnr_list) then
+      get_commands_module().reload()
+      M.refresh()
+      M.nav_to_first()
+    end
+  end,
+})
 
 return M

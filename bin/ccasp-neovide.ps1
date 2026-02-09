@@ -50,5 +50,10 @@ $luaRtp = "lua vim.opt.runtimepath:prepend('$pluginDir')"
 $luaSetup = "lua require('ccasp').setup({layout='appshell', neovide={font='$Font', padding=$Padding}})"
 $luaOpen = "lua require('ccasp').open()"
 
+# Start in the CCASP project root so detect_project_root() finds .claude/
+$projectDir = (Resolve-Path (Join-Path $scriptDir "..")).Path
+
 Write-Host "Launching CCASP via Neovide..." -ForegroundColor Cyan
+Push-Location $projectDir
 & $neovide --frame none -- --clean -c $luaRtp -c $luaSetup -c $luaOpen
+Pop-Location

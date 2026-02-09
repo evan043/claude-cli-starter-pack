@@ -7,6 +7,7 @@ local M = {}
 local commands_cache = nil
 local sections_cache = nil
 local last_scan_time = 0
+local last_commands_dir = nil -- track scanned dir to detect session switches
 
 -- Command sections mapping (organized by developer workflow lifecycle)
 -- Setup → Explore → Plan → Build → Refactor → Test → Deploy → Operate → Maintain
@@ -130,15 +131,47 @@ local SECTION_PATTERNS = {
   { name = nf.commands .. " OTHER", pattern = ".*", order = 99 },
 }
 
--- Get commands directory path (normalized for Windows)
+-- Detect project root by walking up from a directory looking for .claude/
+local function detect_root_from(start_dir)
+  if not start_dir or start_dir == "" then return nil end
+  local dir = start_dir:gsub("\\", "/")
+  while true do
+    if vim.fn.isdirectory(dir .. "/.claude") == 1 then
+      return dir
+    end
+    local parent = vim.fn.fnamemodify(dir, ":h"):gsub("\\", "/")
+    if parent == dir then break end
+    dir = parent
+  end
+  return nil
+end
+
+-- Get commands directory path, preferring the active session's project root.
+-- Each terminal session may be in a different project directory, so we derive
+-- the commands dir from the focused session's window-local cwd.
 local function get_commands_dir()
+  -- Try active session's window-local directory first
+  local sessions_ok, sessions = pcall(require, "ccasp.sessions")
+  if sessions_ok then
+    local active = sessions.get_active()
+    if active and active.winid and vim.api.nvim_win_is_valid(active.winid) then
+      local ok, cwd = pcall(vim.fn.getcwd, 0, active.winid)
+      if ok and cwd and cwd ~= "" then
+        local root = detect_root_from(cwd)
+        if root then
+          local dir = (root .. "/.claude/commands"):gsub("\\", "/")
+          if vim.fn.isdirectory(dir) == 1 then
+            return dir
+          end
+        end
+      end
+    end
+  end
+
+  -- Fallback to global project root (detected at setup time)
   local ccasp = require("ccasp")
-  -- Use stored project root (detected at setup time) instead of vim.fn.getcwd()
-  -- which can return different values from floating windows vs terminal windows
   local root = ccasp.config.project_root or vim.fn.getcwd()
-  -- Normalize to forward slashes for consistent cross-platform paths
-  local dir = (root .. "/" .. ccasp.config.ccasp_root .. "/commands"):gsub("\\", "/")
-  return dir
+  return (root .. "/" .. ccasp.config.ccasp_root .. "/commands"):gsub("\\", "/")
 end
 
 -- Extract frontmatter bounds from content
@@ -234,6 +267,16 @@ end
 -- Scan commands directory
 function M.load_all()
   local dir = get_commands_dir()
+
+  -- If the resolved directory changed (session switch), clear the cache
+  if dir ~= last_commands_dir then
+    commands_cache = nil
+    sections_cache = nil
+    last_commands_dir = dir
+  end
+
+  -- Return cached results if available (cleared on dir change or reload)
+  if commands_cache then return commands_cache end
 
   if vim.fn.isdirectory(dir) ~= 1 then
     commands_cache, sections_cache = {}, {}
@@ -361,6 +404,7 @@ end
 function M.reload()
   commands_cache = nil
   sections_cache = nil
+  last_commands_dir = nil
   return M.load_all()
 end
 

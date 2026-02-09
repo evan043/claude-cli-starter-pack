@@ -250,7 +250,8 @@ function M.spawn(target_win)
   vim.wo[winid].signcolumn = "no"
   vim.wo[winid].foldcolumn = "0"
 
-  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false }
+  local spawn_path = vim.fn.getcwd()
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = spawn_path }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
 
@@ -283,6 +284,9 @@ function M.spawn(target_win)
     get_titlebar().create(id)
     M.rearrange() -- includes wincmd = and footer.refresh() (also sets/clears resizing)
   end, 800)
+
+  -- Notify listeners that a new session is active
+  pcall(vim.api.nvim_exec_autocmds, "User", { pattern = "CcaspActiveSessionChanged" })
 
   return id
 end
@@ -557,9 +561,16 @@ end
 
 -- Track active session from WinEnter (called by session_titlebar autocmd)
 function M.set_active_by_window(winid)
+  local prev_active = state.active_session
   for id, session in pairs(state.sessions) do
     if session.winid == winid then
       state.active_session = id
+      -- Notify listeners (flyout commands, panels) when session changes
+      if prev_active ~= id then
+        vim.schedule(function()
+          pcall(vim.api.nvim_exec_autocmds, "User", { pattern = "CcaspActiveSessionChanged" })
+        end)
+      end
       return
     end
   end

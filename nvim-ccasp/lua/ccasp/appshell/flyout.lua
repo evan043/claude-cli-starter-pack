@@ -650,13 +650,13 @@ function M.execute_action(item)
       M.close()
       vim.schedule(function()
         local sess = require("ccasp.sessions")
-        local primary = sess.get_primary()
-        if primary and primary.bufnr and vim.api.nvim_buf_is_valid(primary.bufnr) then
+        local active = sess.get_active()
+        if active and active.bufnr and vim.api.nvim_buf_is_valid(active.bufnr) then
           -- Focus the session window and enter terminal mode
-          if primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
-            vim.api.nvim_set_current_win(primary.winid)
+          if active.winid and vim.api.nvim_win_is_valid(active.winid) then
+            vim.api.nvim_set_current_win(active.winid)
           end
-          local job_id = vim.b[primary.bufnr].terminal_job_id
+          local job_id = vim.b[active.bufnr].terminal_job_id
           if job_id and job_id > 0 then
             -- Inject into prompt without \n so user can review/add args before submitting
             vim.fn.chansend(job_id, "/" .. cmd_name)
@@ -1260,5 +1260,20 @@ function M.focus()
     end
   end
 end
+
+-- Refresh commands section when the active terminal session changes.
+-- Each session may be in a different project with different .claude/commands/.
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CcaspActiveSessionChanged",
+  callback = function()
+    if state.current_section == "commands" and state.win and vim.api.nvim_win_is_valid(state.win) then
+      local commands_ok, commands_mod = pcall(require, "ccasp.core.commands")
+      if commands_ok then
+        commands_mod.reload()
+      end
+      render()
+    end
+  end,
+})
 
 return M
