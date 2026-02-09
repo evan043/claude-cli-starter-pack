@@ -555,7 +555,86 @@ function M.get_minimized()
   return result
 end
 
--- Show minimized sessions picker
+-- Restore all minimized sessions at once
+function M.restore_all()
+  local min_sessions = M.get_minimized()
+
+  if #min_sessions == 0 then
+    vim.notify("No minimized sessions", vim.log.levels.INFO)
+    return
+  end
+
+  local sessions_mod = require("ccasp.sessions")
+  local splash = require("ccasp.splash")
+  local count = #min_sessions
+  local last_winid
+
+  for i, ms in ipairs(min_sessions) do
+    local min_session = minimized[ms.id]
+    if not min_session then goto continue end
+
+    local new_winid
+
+    if i == 1 and splash.is_showing() then
+      -- First restore: reuse splash window if visible
+      local splash_win = splash.get_win()
+      splash.hide(splash_win, min_session.bufnr)
+      new_winid = splash_win
+      -- Focus splash window so subsequent vsplits happen in content area
+      vim.api.nvim_set_current_win(new_winid)
+    else
+      -- Create vsplit for each restored session
+      vim.cmd("vsplit")
+      new_winid = vim.api.nvim_get_current_win()
+
+      if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
+        vim.api.nvim_win_set_buf(new_winid, min_session.bufnr)
+      end
+    end
+
+    -- Update session state
+    local session = sessions_mod.get(ms.id)
+    if session then
+      session.winid = new_winid
+    end
+
+    -- Restore color
+    session_colors[ms.id] = min_session.color_idx
+
+    -- Remove from minimized
+    minimized[ms.id] = nil
+
+    -- Update winbar
+    M.update(ms.id)
+
+    last_winid = new_winid
+
+    ::continue::
+  end
+
+  -- Equalize windows after all restores
+  vim.cmd("wincmd =")
+
+  -- Focus the last restored session
+  if last_winid and vim.api.nvim_win_is_valid(last_winid) then
+    vim.api.nvim_set_current_win(last_winid)
+    local mode = vim.api.nvim_get_mode().mode
+    if mode ~= "t" and mode ~= "nt" then
+      pcall(vim.cmd, "normal! G")
+      vim.cmd("startinsert")
+    end
+  end
+
+  -- Refresh header and footer once
+  local header_ok, header = pcall(require, "ccasp.appshell.header")
+  if header_ok then header.refresh() end
+  local footer_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if footer_ok then footer.refresh() end
+
+  vim.notify(count .. " session(s) restored", vim.log.levels.INFO)
+end
+
+-- Show minimized sessions picker (single select)
 function M.show_minimized_picker()
   local min_sessions = M.get_minimized()
 
@@ -783,7 +862,7 @@ function M.setup_keymaps(bufnr, session_id)
       -- Cross-window click: dispatch to footer or focus target window
       local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
       if ft_ok and footer.get_win and footer.get_win() == mouse.winid then
-        footer.handle_click()
+        footer.handle_click(mouse)
         return
       end
       vim.schedule(function()
@@ -822,9 +901,10 @@ function M.setup_keymaps(bufnr, session_id)
       -- Footer click: handle layer/session switching directly (single-click)
       local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
       if ft_ok and footer.get_win and footer.get_win() == mouse.winid then
+        local saved_mouse = mouse
         exit_terminal_mode()
         vim.schedule(function()
-          footer.handle_click()
+          footer.handle_click(saved_mouse)
         end)
         return ""
       end

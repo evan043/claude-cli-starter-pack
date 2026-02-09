@@ -26,7 +26,8 @@ local function build_layer_tabs()
   local text_parts = {}
   local highlights = {}
   local click_regions = {}
-  local byte_pos = 1
+  local byte_pos = 1       -- 1-indexed byte position (for highlights)
+  local display_pos = 0    -- 0-indexed display column (for click regions)
 
   local layers_ok, layers = pcall(require, "ccasp.layers")
   if not layers_ok or not layers.is_initialized() then
@@ -36,13 +37,15 @@ local function build_layer_tabs()
   local all = layers.list()
   for _, layer in ipairs(all) do
     local tab_text = string.format(" %d %s (%d) ", layer.num, layer.name, layer.session_count)
-    local col_start = byte_pos - 1
-    local col_end = col_start + #tab_text
+    local tab_bytes = #tab_text
+    local tab_display = vim.fn.strdisplaywidth(tab_text)
+    local byte_start = byte_pos - 1
     local hl_group = layer.is_active and "CcaspLayerTabActive" or "CcaspLayerTab"
-    table.insert(highlights, { hl_group, col_start, col_end })
-    table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "switch_layer", layer_num = layer.num })
+    table.insert(highlights, { hl_group, byte_start, byte_start + tab_bytes })
+    table.insert(click_regions, { col_start = display_pos, col_end = display_pos + tab_display, action = "switch_layer", layer_num = layer.num })
     table.insert(text_parts, tab_text)
-    byte_pos = byte_pos + #tab_text
+    byte_pos = byte_pos + tab_bytes
+    display_pos = display_pos + tab_display
   end
 
   return { text = table.concat(text_parts, ""), highlights = highlights, click_regions = click_regions }
@@ -55,7 +58,8 @@ local function build_session_tabs()
   local text_parts = {}
   local highlights = {}
   local click_regions = {}
-  local byte_pos = 1 -- 1-indexed byte position in the final string
+  local byte_pos = 1       -- 1-indexed byte position (for highlights)
+  local display_pos = 0    -- 0-indexed display column (for click regions)
 
   local sessions_ok, sessions = pcall(require, "ccasp.sessions")
   local titlebar_ok, titlebar = pcall(require, "ccasp.session_titlebar")
@@ -70,13 +74,15 @@ local function build_session_tabs()
       local primary = session.is_primary and (" " .. icons.primary) or ""
       local tab_text = string.format(" %s %s%s ", status_icon, session.name, primary)
 
-      local col_start = byte_pos - 1
-      local col_end = col_start + #tab_text
+      local tab_bytes = #tab_text
+      local tab_display = vim.fn.strdisplaywidth(tab_text)
+      local byte_start = byte_pos - 1
       local hl_group = is_active and "CcaspHeaderTabActive" or "CcaspHeaderTab"
-      table.insert(highlights, { hl_group, col_start, col_end })
-      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "focus", id = session.id })
+      table.insert(highlights, { hl_group, byte_start, byte_start + tab_bytes })
+      table.insert(click_regions, { col_start = display_pos, col_end = display_pos + tab_display, action = "focus", id = session.id })
       table.insert(text_parts, tab_text)
-      byte_pos = byte_pos + #tab_text
+      byte_pos = byte_pos + tab_bytes
+      display_pos = display_pos + tab_display
     end
   end
 
@@ -85,14 +91,16 @@ local function build_session_tabs()
     local min_sessions = titlebar.get_minimized()
     for _, s in ipairs(min_sessions) do
       local tab_text = string.format(" %s %s ", icons.win_minimize, s.name)
-      local col_start = byte_pos - 1
-      local col_end = col_start + #tab_text
+      local tab_bytes = #tab_text
+      local tab_display = vim.fn.strdisplaywidth(tab_text)
+      local byte_start = byte_pos - 1
       local color_idx = s.color_idx or 1
       local hl_group = "CcaspWinbar" .. color_idx
-      table.insert(highlights, { hl_group, col_start, col_end })
-      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "restore_session", id = s.id })
+      table.insert(highlights, { hl_group, byte_start, byte_start + tab_bytes })
+      table.insert(click_regions, { col_start = display_pos, col_end = display_pos + tab_display, action = "restore_session", id = s.id })
       table.insert(text_parts, tab_text)
-      byte_pos = byte_pos + #tab_text
+      byte_pos = byte_pos + tab_bytes
+      display_pos = display_pos + tab_display
     end
   end
 
@@ -102,12 +110,14 @@ local function build_session_tabs()
     local panel_items = taskbar.list() or {}
     for _, item in ipairs(panel_items) do
       local tab_text = string.format(" %s %s ", icons.minimize, item.name)
-      local col_start = byte_pos - 1
-      local col_end = col_start + #tab_text
-      table.insert(highlights, { "CcaspHeaderTab", col_start, col_end })
-      table.insert(click_regions, { col_start = col_start, col_end = col_end, action = "restore_panel", id = item.id, index = item.index })
+      local tab_bytes = #tab_text
+      local tab_display = vim.fn.strdisplaywidth(tab_text)
+      local byte_start = byte_pos - 1
+      table.insert(highlights, { "CcaspHeaderTab", byte_start, byte_start + tab_bytes })
+      table.insert(click_regions, { col_start = display_pos, col_end = display_pos + tab_display, action = "restore_panel", id = item.id, index = item.index })
       table.insert(text_parts, tab_text)
-      byte_pos = byte_pos + #tab_text
+      byte_pos = byte_pos + tab_bytes
+      display_pos = display_pos + tab_display
     end
   end
 
@@ -152,11 +162,12 @@ local function render()
     })
   end
 
-  local session_offset = content_col + #layer_tabs.text + #separator
+  -- Click regions use display columns (to match mouse.wincol); highlights use byte offsets
+  local session_click_offset = content_col + vim.fn.strdisplaywidth(layer_tabs.text .. separator)
   for _, region in ipairs(session_tabs.click_regions or {}) do
     table.insert(state.click_regions, {
-      col_start = region.col_start + session_offset,
-      col_end = region.col_end + session_offset,
+      col_start = region.col_start + session_click_offset,
+      col_end = region.col_end + session_click_offset,
       action = region.action,
       id = region.id,
       index = region.index,
@@ -207,13 +218,17 @@ local function render()
   local pad = math.max(0, total_w - status_w - grip_w)
   local line2 = string.rep(" ", pad) .. status_text .. grip_text
 
-  -- Track grip column range for click detection (0-indexed byte offset)
+  -- Track grip column range for click detection (0-indexed display columns)
   if is_neovide() and grip_w > 0 then
-    state.grip_col_start = pad + #status_text
-    state.grip_col_end = state.grip_col_start + #grip_text
+    state.grip_col_start = pad + status_w
+    state.grip_col_end = state.grip_col_start + grip_w
+    state.grip_byte_start = pad + #status_text
+    state.grip_byte_end = state.grip_byte_start + #grip_text
   else
     state.grip_col_start = nil
     state.grip_col_end = nil
+    state.grip_byte_start = nil
+    state.grip_byte_end = nil
   end
 
   local lines = { line1, line2 }
@@ -225,9 +240,10 @@ local function render()
   -- Apply highlights
   vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
 
-  -- Line 1: Per-tab highlights from layer tabs + session tabs (shifted appropriately)
+  -- Line 1: Per-tab highlights from layer tabs + session tabs (byte offsets for highlight API)
+  local layer_hl_offset = content_col
   for _, hl in ipairs(layer_tabs.highlights) do
-    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + layer_offset, hl[3] + layer_offset)
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + layer_hl_offset, hl[3] + layer_hl_offset)
   end
   -- Separator highlight
   if separator ~= "" then
@@ -235,16 +251,17 @@ local function render()
     local sep_end = sep_start + #separator
     pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFooterSep", 0, sep_start, sep_end)
   end
+  local session_hl_offset = content_col + #layer_tabs.text + #separator
   for _, hl in ipairs(session_tabs.highlights) do
-    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + session_offset, hl[3] + session_offset)
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, hl[1], 0, hl[2] + session_hl_offset, hl[3] + session_hl_offset)
   end
 
   -- Line 2: Status line (light greyish blue, same as "No sessions")
   pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", 1, 0, -1)
 
   -- Resize grip highlight (slightly brighter so it's discoverable)
-  if state.grip_col_start and state.grip_col_end then
-    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspHeaderSub", 1, state.grip_col_start, state.grip_col_end)
+  if state.grip_byte_start and state.grip_byte_end then
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspHeaderSub", 1, state.grip_byte_start, state.grip_byte_end)
   end
 end
 
@@ -284,13 +301,15 @@ end
 -- Handle mouse click on line 1 (session tabs) or line 2 (resize grip)
 -- Public: called directly by session_titlebar's t/n <LeftMouse> handler
 -- when clicking the footer from a terminal buffer (avoids needing two clicks).
-function M.handle_click()
-  local mouse = vim.fn.getmousepos()
+function M.handle_click(saved_mouse)
+  local mouse = saved_mouse or vim.fn.getmousepos()
   if not mouse then return end
+
+  -- wincol is 1-indexed display column; click_regions use 0-indexed display columns
+  local col = mouse.wincol - 1
 
   -- Line 2: check resize grip (Neovide only)
   if mouse.line == 2 and is_neovide() and state.grip_col_start and state.grip_col_end then
-    local col = mouse.column - 1 -- 0-indexed
     if col >= state.grip_col_start and col < state.grip_col_end then
       local nv_ok, nv = pcall(require, "ccasp.neovide")
       if nv_ok and nv.ffi_available() then
@@ -302,9 +321,6 @@ function M.handle_click()
 
   -- Line 1: session tab clicks
   if mouse.line ~= 1 then return end
-
-  -- mouse.column is 1-indexed display column; click_regions use 0-indexed byte offsets
-  local col = mouse.column - 1
 
   for _, region in ipairs(state.click_regions) do
     if col >= region.col_start and col < region.col_end then

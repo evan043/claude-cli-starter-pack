@@ -116,6 +116,40 @@ local function render_content(winid)
   end
 end
 
+-- Setup keymaps on splash buffer so users can interact from splash screen
+local function setup_splash_keymaps(buf)
+  local opts = { buffer = buf, nowait = true, silent = true }
+
+  -- Tab: toggle flyout (matches terminal-mode Tab behavior)
+  vim.keymap.set("n", "<Tab>", function()
+    local flyout_ok, flyout = pcall(require, "ccasp.appshell.flyout")
+    if flyout_ok then
+      flyout.toggle()
+    end
+  end, opts)
+
+  -- LeftMouse: dispatch cross-window clicks to footer for minimized session restore
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local current_win = vim.api.nvim_get_current_win()
+
+    if mouse.winid ~= 0 and mouse.winid ~= current_win then
+      -- Footer click: dispatch directly
+      local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+      if ft_ok and footer.get_win and footer.get_win() == mouse.winid then
+        footer.handle_click(mouse)
+        return
+      end
+      -- Other cross-window click: focus target
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(mouse.winid) then
+          vim.api.nvim_set_current_win(mouse.winid)
+        end
+      end)
+    end
+  end, opts)
+end
+
 -- Show splash in the given window (swaps buffer)
 function M.show(winid)
   if not winid or not vim.api.nvim_win_is_valid(winid) then return end
@@ -130,6 +164,9 @@ function M.show(winid)
 
   -- Render content centered for this window
   render_content(winid)
+
+  -- Setup keymaps AFTER sandbox so they override sandbox nops
+  setup_splash_keymaps(buf)
 
   M.active_win = winid
 

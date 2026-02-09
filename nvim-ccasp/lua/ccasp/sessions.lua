@@ -670,6 +670,11 @@ function M.get_minimized()
   return get_titlebar().get_minimized()
 end
 
+-- Restore all minimized sessions at once
+function M.restore_all()
+  get_titlebar().restore_all()
+end
+
 -- Show minimized sessions picker
 function M.show_minimized_picker()
   get_titlebar().show_minimized_picker()

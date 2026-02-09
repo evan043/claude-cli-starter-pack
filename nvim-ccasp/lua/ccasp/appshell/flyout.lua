@@ -237,6 +237,10 @@ local section_renderers = {
       end
     end
 
+    -- New session at custom path (opens path input dialog)
+    table.insert(lines, "  " .. icons.repo .. " New Claude Repository Session")
+    item_lines[#lines] = { action = "open_path_dialog" }
+
     local remaining_actions = {
       { icon = icons.edit,     label = "Rename Current Session", action = "session_rename" },
       { icon = icons.settings, label = "Change Session Color", action = "session_color" },
@@ -727,9 +731,8 @@ function M.execute_action(item)
       vim.schedule(function() sessions.minimize(primary.id) end)
     end,
     session_restore = function()
-      close_and_run_modal(function()
-        sessions.show_minimized_picker()
-      end)
+      M.close()
+      vim.schedule(function() sessions.restore_all() end)
     end,
     session_close_all = function()
       M.close()
