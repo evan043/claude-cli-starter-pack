@@ -284,6 +284,8 @@ function M.open_path_dialog()
   vim.keymap.set("i", "<CR>", function()
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)
     local input = vim.fn.trim(lines[1] or "")
+    -- Strip surrounding quotes (common when pasting from Windows Explorer)
+    input = input:gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1")
     vim.cmd("stopinsert")
     close_path_dialog()
 
@@ -335,6 +337,8 @@ function M.open_path_dialog()
   vim.keymap.set("n", "<CR>", function()
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)
     local input = vim.fn.trim(lines[1] or "")
+    -- Strip surrounding quotes (common when pasting from Windows Explorer)
+    input = input:gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1")
     close_path_dialog()
 
     if input == "" then
@@ -523,10 +527,217 @@ function M.open_browser()
 end
 
 -------------------------------------------------------------------------------
+-- Happy Repo Browser (picker for launching Happy sessions)
+-------------------------------------------------------------------------------
+
+-- Happy browser state
+local happy_browser_state = {
+  bufnr = nil,
+  winid = nil,
+  item_lines = {},
+}
+
+local function close_happy_browser()
+  if happy_browser_state.winid and vim.api.nvim_win_is_valid(happy_browser_state.winid) then
+    vim.api.nvim_win_close(happy_browser_state.winid, true)
+  end
+  happy_browser_state.winid = nil
+  happy_browser_state.bufnr = nil
+  happy_browser_state.item_lines = {}
+end
+
+local function close_happy_browser_and_restore()
+  close_happy_browser()
+  helpers.restore_terminal_focus()
+end
+
+local function navigate_happy_browser(direction)
+  if not happy_browser_state.winid or not vim.api.nvim_win_is_valid(happy_browser_state.winid) then
+    return
+  end
+  local cursor = vim.api.nvim_win_get_cursor(happy_browser_state.winid)
+  local line = cursor[1]
+  local total = vim.api.nvim_buf_line_count(happy_browser_state.bufnr)
+  local next_line = line + direction
+  while next_line >= 1 and next_line <= total do
+    if happy_browser_state.item_lines[next_line] then
+      vim.api.nvim_win_set_cursor(happy_browser_state.winid, { next_line, 2 })
+      return
+    end
+    next_line = next_line + direction
+  end
+end
+
+local function move_to_first_happy_item()
+  if not happy_browser_state.winid or not vim.api.nvim_win_is_valid(happy_browser_state.winid) then
+    return
+  end
+  local total = vim.api.nvim_buf_line_count(happy_browser_state.bufnr)
+  for i = 1, total do
+    if happy_browser_state.item_lines[i] then
+      vim.api.nvim_win_set_cursor(happy_browser_state.winid, { i, 2 })
+      return
+    end
+  end
+end
+
+local function render_happy_browser()
+  local bufnr = happy_browser_state.bufnr
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+  local storage = require("ccasp.repo_launcher.storage")
+  local lines = {}
+  happy_browser_state.item_lines = {}
+
+  -- Pinned repos
+  local pinned = storage.get_pinned()
+
+  table.insert(lines, "")
+  table.insert(lines, "  " .. nf.pin .. " PINNED")
+  table.insert(lines, "  " .. string.rep("─", 40))
+
+  if #pinned == 0 then
+    table.insert(lines, "  (no pinned repos)")
+    table.insert(lines, "")
+  else
+    for _, repo in ipairs(pinned) do
+      local time_str = relative_time(repo.last_opened)
+      local display = string.format("  %s %s  %s", nf.pin, repo.name, time_str)
+      table.insert(lines, display)
+      happy_browser_state.item_lines[#lines] = repo
+    end
+    table.insert(lines, "")
+  end
+
+  -- Recent repos (exclude pinned)
+  local recent = storage.get_recent(20)
+  local unpinned_recent = {}
+  for _, repo in ipairs(recent) do
+    if not repo.pinned then
+      table.insert(unpinned_recent, repo)
+    end
+  end
+
+  table.insert(lines, "  " .. nf.clock .. " RECENT")
+  table.insert(lines, "  " .. string.rep("─", 40))
+
+  if #unpinned_recent == 0 then
+    table.insert(lines, "  (no recent repos)")
+  else
+    for _, repo in ipairs(unpinned_recent) do
+      local time_str = relative_time(repo.last_opened)
+      local display = string.format("  %s %s  %s", nf.repo, repo.name, time_str)
+      table.insert(lines, display)
+      happy_browser_state.item_lines[#lines] = repo
+    end
+  end
+
+  table.insert(lines, "")
+
+  helpers.set_buffer_content(bufnr, lines)
+
+  -- Highlights
+  local ns = helpers.prepare_highlights("ccasp_happy_browser", bufnr)
+  for i, line in ipairs(lines) do
+    if line:match("PINNED") or line:match("RECENT") then
+      helpers.add_highlight(bufnr, ns, "Title", i - 1, 0, -1)
+    elseif line:match("^  " .. string.rep("─", 5)) then
+      helpers.add_highlight(bufnr, ns, "NonText", i - 1, 0, -1)
+    elseif line:match("^  %(no ") then
+      helpers.add_highlight(bufnr, ns, "Comment", i - 1, 0, -1)
+    end
+  end
+end
+
+--- Open the Happy repo browser picker.
+--- Shows pinned and recent repos; selecting one spawns a Happy session.
+function M.open_happy_browser()
+  close_path_dialog()
+  close_browser()
+
+  -- If already open, just focus it
+  if helpers.focus_if_open(happy_browser_state.winid) then
+    return
+  end
+
+  local width = 60
+  local height = 22
+  local pos = helpers.calculate_position({ width = width, height = height })
+
+  local bufnr = helpers.create_buffer("ccasp://happy-repo-browser")
+
+  local winid = helpers.create_window(bufnr, {
+    width = width,
+    height = height,
+    row = pos.row,
+    col = pos.col,
+    border = "rounded",
+    title = " " .. nf.terminal .. " New Happy Session — Select Repo ",
+    title_pos = "center",
+    footer = " j/k Move  Enter Open  Esc/q Close ",
+    footer_pos = "center",
+  })
+
+  happy_browser_state.bufnr = bufnr
+  happy_browser_state.winid = winid
+  happy_browser_state.item_lines = {}
+
+  helpers.sandbox_buffer(bufnr)
+  helpers.setup_window_manager(bufnr, winid, "Happy Repo Picker")
+
+  render_happy_browser()
+
+  -- Keymaps
+  local opts = { buffer = bufnr, nowait = true, silent = true }
+
+  vim.keymap.set("n", "q", close_happy_browser_and_restore, opts)
+  vim.keymap.set("n", "<Esc>", close_happy_browser_and_restore, opts)
+
+  vim.keymap.set("n", "j", function() navigate_happy_browser(1) end, opts)
+  vim.keymap.set("n", "k", function() navigate_happy_browser(-1) end, opts)
+  vim.keymap.set("n", "<Down>", function() navigate_happy_browser(1) end, opts)
+  vim.keymap.set("n", "<Up>", function() navigate_happy_browser(-1) end, opts)
+
+  -- Enter: open selected repo with Happy
+  vim.keymap.set("n", "<CR>", function()
+    local line = vim.api.nvim_win_get_cursor(happy_browser_state.winid)[1]
+    local repo = happy_browser_state.item_lines[line]
+    if repo then
+      close_happy_browser()
+      vim.schedule(function()
+        require("ccasp.repo_launcher").open_repo_happy(repo.path)
+      end)
+    end
+  end, opts)
+
+  -- Mouse click: navigate (single), open (double)
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    if mouse and mouse.line and happy_browser_state.item_lines[mouse.line] then
+      pcall(vim.api.nvim_win_set_cursor, happy_browser_state.winid, { mouse.line, 2 })
+    end
+  end, opts)
+  vim.keymap.set("n", "<2-LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    if mouse and mouse.line then
+      local repo = happy_browser_state.item_lines[mouse.line]
+      if repo then
+        close_happy_browser()
+        vim.schedule(function()
+          require("ccasp.repo_launcher").open_repo_happy(repo.path)
+        end)
+      end
+    end
+  end, opts)
+
+  move_to_first_happy_item()
+end
+
+-------------------------------------------------------------------------------
 -- Public: close all UI panels
 -------------------------------------------------------------------------------
 
---- Close both the path dialog and the repo browser, restoring terminal focus.
+--- Close all UI panels (path dialog, repo browser, happy browser), restoring terminal focus.
 function M.close_all()
   local had_open = false
 
@@ -536,9 +747,13 @@ function M.close_all()
   if browser_state.winid and vim.api.nvim_win_is_valid(browser_state.winid) then
     had_open = true
   end
+  if happy_browser_state.winid and vim.api.nvim_win_is_valid(happy_browser_state.winid) then
+    had_open = true
+  end
 
   close_path_dialog()
   close_browser()
+  close_happy_browser()
 
   if had_open then
     helpers.restore_terminal_focus()

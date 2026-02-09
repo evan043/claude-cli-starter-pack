@@ -76,6 +76,7 @@ function M.save_current(name)
               name = session.name or "Claude",
               path = session.path or vim.fn.getcwd(),
               color_idx = color_idx,
+              command = session.command or "claude",
             })
           end
         end
@@ -161,11 +162,12 @@ function M.apply(name)
       else
         if sess_idx == 1 then
           -- First session: reuse the existing default session.
-          -- Just set its path by lcd-ing and updating its name/color.
+          -- Set its path, name, color, and CLI command type.
           local all = sessions.list()
           if #all > 0 then
             local first_id = all[1].id
             sessions.set_name(first_id, sess_def.name)
+            sessions.set_command(first_id, sess_def.command or "claude")
             titlebar.set_color(first_id, sess_def.color_idx or 1)
             -- Set working directory for the existing terminal
             local first_session = sessions.get(first_id)
@@ -178,11 +180,13 @@ function M.apply(name)
             table.insert(spawned_ids, first_id)
           end
         else
-          -- Subsequent sessions: spawn new ones
-          local id = sessions.spawn_at_path(path)
+          -- Subsequent sessions: spawn new ones with saved command type
+          local id = sessions.spawn_at_path(path, {
+            command = sess_def.command or "claude",
+            name = sess_def.name,
+            color_idx = sess_def.color_idx or 1,
+          })
           if id then
-            sessions.set_name(id, sess_def.name)
-            titlebar.set_color(id, sess_def.color_idx or 1)
             table.insert(spawned_ids, id)
           end
         end

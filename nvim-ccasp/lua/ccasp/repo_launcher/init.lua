@@ -41,4 +41,31 @@ function M.open_repo(path)
   sessions.spawn_at_path(path)
 end
 
+-- Open a specific repo path with Happy CLI instead of Claude
+function M.open_repo_happy(path)
+  if vim.fn.isdirectory(path) == 0 then
+    vim.notify("Directory not found: " .. path, vim.log.levels.ERROR)
+    return
+  end
+
+  -- Add to library
+  local storage = require("ccasp.repo_launcher.storage")
+  storage.add(path)
+  storage.prune()
+
+  -- Spawn session at path with Happy command, gold titlebar, "Happy" name
+  local sessions = require("ccasp.sessions")
+  local titlebar = require("ccasp.session_titlebar")
+  sessions.spawn_at_path(path, {
+    command = "happy",
+    name = "Happy",
+    color_idx = titlebar.COLOR_GOLD,
+  })
+end
+
+-- Open the Happy repo picker (select repo to launch Happy session)
+function M.open_happy_picker()
+  require("ccasp.repo_launcher.ui").open_happy_browser()
+end
+
 return M

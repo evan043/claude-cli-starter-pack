@@ -1,0 +1,4 @@
+# Empty .npmignore overrides .gitignore for npm pack
+# This ensures .ttf font files ARE included in the npm package
+# even though .gitignore excludes them from git
+download-font.ps1

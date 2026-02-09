@@ -36,7 +36,7 @@ local function build_layer_tabs()
 
   local all = layers.list()
   for _, layer in ipairs(all) do
-    local tab_text = string.format(" %d %s (%d) ", layer.num, layer.name, layer.session_count)
+    local tab_text = string.format(" %s (%d) ", layer.name, layer.session_count)
     local tab_bytes = #tab_text
     local tab_display = vim.fn.strdisplaywidth(tab_text)
     local byte_start = byte_pos - 1
@@ -77,7 +77,19 @@ local function build_session_tabs()
       local tab_bytes = #tab_text
       local tab_display = vim.fn.strdisplaywidth(tab_text)
       local byte_start = byte_pos - 1
-      local hl_group = is_active and "CcaspHeaderTabActive" or "CcaspHeaderTab"
+      local hl_group
+      if is_active then
+        hl_group = "CcaspHeaderTabActive"
+      else
+        local activity = sessions.get_activity and sessions.get_activity(session.id) or "idle"
+        if activity == "working" then
+          hl_group = "CcaspHeaderTabWorking"
+        elseif activity == "done" then
+          hl_group = "CcaspHeaderTabDone"
+        else
+          hl_group = "CcaspHeaderTab"
+        end
+      end
       table.insert(highlights, { hl_group, byte_start, byte_start + tab_bytes })
       table.insert(click_regions, { col_start = display_pos, col_end = display_pos + tab_display, action = "focus", id = session.id })
       table.insert(text_parts, tab_text)

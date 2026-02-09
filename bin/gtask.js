@@ -46,6 +46,7 @@ import { runModelMode } from '../src/commands/model-mode.js';
 import { runVision } from '../src/commands/vision.js';
 import { runConstitutionInit } from '../src/commands/constitution-init.js';
 import { runNvimSetup } from '../src/commands/nvim-setup.js';
+import { runInstallFont } from '../src/commands/install-font.js';
 import { runNvimLaunch } from '../src/commands/nvim-launch.js';
 import { registerSiteIntelCommands } from '../src/commands/site-intel.js';
 import { getVersion, checkPrerequisites } from '../src/utils.js';
@@ -504,6 +505,15 @@ program
   .option('--uninstall', 'Remove the plugin from Neovim config')
   .action(async (options) => {
     await runNvimSetup(options);
+  });
+
+// Nerd Font installer
+program
+  .command('install-font')
+  .description('Install JetBrainsMono Nerd Font (required for CCASP icon rail)')
+  .option('-q, --quiet', 'Minimal output')
+  .action(async (options) => {
+    await runInstallFont(options);
   });
 
 // Neovim launcher - launch Neovim with CCASP loaded

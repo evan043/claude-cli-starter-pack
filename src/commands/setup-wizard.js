@@ -38,6 +38,7 @@ import {
   showPriorReleases,
   installHappyEngineering,
 } from './wizard/index.js';
+import { installFont } from './install-font.js';
 
 /**
  * Check for updates and show banner if available
@@ -196,6 +197,11 @@ export async function runSetupWizard(options = {}) {
       case 'happy':
         // Install Happy.engineering integration
         await installHappyEngineering();
+        break;
+
+      case 'install-font':
+        // Install JetBrainsMono Nerd Font for icon rail
+        await installFont();
         break;
 
       case 'exit':

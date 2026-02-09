@@ -21,10 +21,20 @@ local state = {
   active_session = nil, -- most recently focused/created session
   max_sessions = 8,
   resizing = false, -- true during split/rearrange to suppress auto-scroll
+  activity = {}, -- { session_id = "idle"|"working"|"done" }
+  activity_timers = {}, -- { session_id = timer_handle } for 3s silence detection
 }
+
+-- Refresh footer + titlebar for a session after activity state change
+local function refresh_activity_chrome(id)
+  local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if ft_ok then footer.refresh() end
+  get_titlebar().update(id)
+end
 
 -- Attach on_lines auto-scroll to a terminal buffer so unfocused session
 -- windows stay pinned to the bottom as new output arrives.
+-- Also tracks activity state (working/done) for unfocused sessions.
 -- Guarded by state.resizing to avoid SIGWINCH-triggered scroll displacement
 -- when splits resize all terminal TUIs simultaneously.
 local function attach_auto_scroll(id, bufnr)
@@ -42,15 +52,35 @@ local function attach_auto_scroll(id, bufnr)
       -- Skip during split/rearrange (SIGWINCH triggers bulk on_lines)
       if state.resizing then return end
       -- Skip if this is the focused window (terminal mode auto-follows)
-      if vim.api.nvim_get_current_win() == winid then return end
-      -- Scroll unfocused window to bottom on next tick
-      vim.schedule(function()
-        if not vim.api.nvim_win_is_valid(winid) then return end
-        if not vim.api.nvim_buf_is_valid(buf) then return end
-        if state.resizing then return end -- re-check after schedule
-        local line_count = vim.api.nvim_buf_line_count(buf)
-        pcall(vim.api.nvim_win_set_cursor, winid, { line_count, 0 })
-      end)
+      local is_focused = vim.api.nvim_get_current_win() == winid
+      if not is_focused then
+        -- Scroll unfocused window to bottom on next tick
+        vim.schedule(function()
+          if not vim.api.nvim_win_is_valid(winid) then return end
+          if not vim.api.nvim_buf_is_valid(buf) then return end
+          if state.resizing then return end -- re-check after schedule
+          local line_count = vim.api.nvim_buf_line_count(buf)
+          pcall(vim.api.nvim_win_set_cursor, winid, { line_count, 0 })
+        end)
+
+        -- Activity tracking: unfocused session receiving output → working
+        if state.activity[id] ~= "working" then
+          state.activity[id] = "working"
+          vim.schedule(function() refresh_activity_chrome(id) end)
+        end
+
+        -- Reset/start 3-second silence timer → done
+        if state.activity_timers[id] then
+          vim.fn.timer_stop(state.activity_timers[id])
+        end
+        state.activity_timers[id] = vim.fn.timer_start(3000, function()
+          state.activity_timers[id] = nil
+          if state.activity[id] == "working" then
+            state.activity[id] = "done"
+            vim.schedule(function() refresh_activity_chrome(id) end)
+          end
+        end)
+      end
     end,
   })
 end
@@ -91,15 +121,20 @@ function M.list()
   return sessions
 end
 
--- Clean up invalid sessions from order list
+-- Clean up invalid sessions from order list.
+-- Keeps sessions alive if they have a valid buffer (minimized sessions have
+-- bufhidden=hide so their buffers persist even after their window is closed).
 local function cleanup_invalid()
   local new_order = {}
   for _, id in ipairs(state.session_order) do
     local session = state.sessions[id]
-    if session and session.winid and vim.api.nvim_win_is_valid(session.winid) then
-      table.insert(new_order, id)
-    else
-      state.sessions[id] = nil
+    if session then
+      if (session.winid and vim.api.nvim_win_is_valid(session.winid))
+          or (session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr)) then
+        table.insert(new_order, id)
+      else
+        state.sessions[id] = nil
+      end
     end
   end
   state.session_order = new_order
@@ -148,9 +183,132 @@ local function focus_session_window(session)
   end
 end
 
+-- Calculate grid dimensions for a given session count.
+-- Layout progression: 1 → 1x2 → 2x2 → 2x3 → 2x4
+local function grid_dimensions(count)
+  if count <= 1 then return 1, 1
+  elseif count <= 2 then return 2, 1
+  elseif count <= 4 then return 2, 2
+  elseif count <= 6 then return 3, 2
+  else return 4, 2
+  end
+end
+
+-- Apply standard terminal window options to a window
+local function apply_terminal_win_opts(win)
+  vim.wo[win].scrolloff = 0
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = "no"
+  vim.wo[win].foldcolumn = "0"
+  vim.wo[win].statusline = " "
+end
+
+--- Rebuild all session windows into a proper cols×rows grid.
+--- Closes existing windows (keeping terminal buffers alive via bufhidden=hide),
+--- creates a fresh grid, and places session buffers in row-major order
+--- (left→right, top→bottom). Terminal processes are NOT interrupted.
+---
+--- @param existing table[] Ordered list from M.list() — sessions to rearrange
+--- @param include_new_cell boolean If true, leave one empty cell at the end
+--- @param anchor_win number|nil Explicit anchor window (skip closing existing windows)
+--- @return number|nil new_cell_win Window ID of the empty cell (if include_new_cell)
+local function rebuild_to_grid(existing, include_new_cell, anchor_win)
+  local total = #existing + (include_new_cell and 1 or 0)
+  local cols, rows = grid_dimensions(total)
+
+  -- Protect all terminal buffers from deletion when their windows close.
+  -- The process keeps running inside the buffer.
+  for _, s in ipairs(existing) do
+    if s.bufnr and vim.api.nvim_buf_is_valid(s.bufnr) then
+      vim.bo[s.bufnr].bufhidden = "hide"
+    end
+  end
+
+  if anchor_win then
+    -- Caller provided anchor (e.g. _reattach_windows) — sessions have no windows yet
+  else
+    -- Close all session windows except the first (Neovim needs at least one window).
+    -- Terminal buffers stay alive (bufhidden=hide) so CLI processes are unaffected.
+    anchor_win = existing[1].winid
+    for i = #existing, 2, -1 do
+      if existing[i].winid and vim.api.nvim_win_is_valid(existing[i].winid) then
+        vim.api.nvim_win_close(existing[i].winid, true)
+      end
+    end
+  end
+
+  vim.api.nvim_set_current_win(anchor_win)
+
+  -- Build columns: anchor is column 1, create cols 2..N with belowright vnew
+  local col_wins = { anchor_win }
+  for c = 2, cols do
+    vim.cmd("belowright vnew")
+    -- Mark temp buffer for auto-cleanup when replaced by session buffer
+    vim.bo[vim.api.nvim_get_current_buf()].bufhidden = "wipe"
+    col_wins[c] = vim.api.nvim_get_current_win()
+  end
+
+  -- Split each column into rows
+  -- grid[col][row] = winid
+  local grid = {}
+  for c = 1, cols do
+    grid[c] = { col_wins[c] }
+    vim.api.nvim_set_current_win(col_wins[c])
+    for r = 2, rows do
+      local cell_num = (r - 1) * cols + c -- row-major cell index
+      if cell_num <= total then
+        vim.cmd("belowright new")
+        vim.bo[vim.api.nvim_get_current_buf()].bufhidden = "wipe"
+        grid[c][r] = vim.api.nvim_get_current_win()
+      end
+    end
+  end
+
+  -- Place existing session buffers into grid cells (row-major order).
+  -- Session state (winid) is updated but the buffer/process is untouched.
+  local session_idx = 0
+  local new_cell_win = nil
+  for r = 1, rows do
+    for c = 1, cols do
+      local win = grid[c] and grid[c][r]
+      if not win then goto continue end
+      session_idx = session_idx + 1
+
+      if session_idx <= #existing then
+        local s = existing[session_idx]
+        vim.api.nvim_win_set_buf(win, s.bufnr)
+        -- Update session state with new window reference
+        if state.sessions[s.id] then
+          state.sessions[s.id].winid = win
+        end
+        apply_terminal_win_opts(win)
+      else
+        -- This cell is for the new session (caller will run vim.cmd("terminal") here)
+        new_cell_win = win
+      end
+
+      ::continue::
+    end
+  end
+
+  -- Re-attach auto-scroll for relocated sessions (old callbacks detach on invalid winid)
+  for _, s in ipairs(existing) do
+    attach_auto_scroll(s.id, s.bufnr)
+  end
+
+  -- Focus the new cell window so the caller can create a terminal there
+  if new_cell_win then
+    vim.api.nvim_set_current_win(new_cell_win)
+  end
+
+  return new_cell_win
+end
+
 -- Create split window based on session count
 -- Uses vnew/new (not vsplit/split) to avoid briefly duplicating the terminal
 -- buffer of the focused session into the new window.
+-- For 5+ sessions, uses rebuild_to_grid for proper 2x3/2x4 layouts.
 local function create_split_window(count, sessions)
   if count == 0 then
     -- First session: reuse current window if it's a valid content window
@@ -163,34 +321,50 @@ local function create_split_window(count, sessions)
     end
     -- else: stay in current window — vim.cmd("terminal") will replace its buffer
   elseif count == 1 then
-    -- 1 → 2: side-by-side columns
+    -- 1 → 2: side-by-side columns (new window to the right)
     focus_session_window(sessions[#sessions])
-    vim.cmd("vnew")
+    vim.cmd("belowright vnew")
   elseif count == 2 then
-    -- 2 → 3: split left column vertically (session 1 top, new bottom-left)
+    -- 2 → 3: split left column vertically (session 1 top, new below = bottom-left)
     focus_session_window(sessions[1])
-    vim.cmd("new")
+    vim.cmd("belowright new")
   elseif count == 3 then
-    -- 3 → 4: split right column vertically (session 2 top, new bottom-right)
+    -- 3 → 4: split right column vertically (session 2 top, new below = bottom-right)
     focus_session_window(sessions[2])
-    vim.cmd("new")
-  else
-    -- 5+: alternate between column and row splits
-    focus_session_window(sessions[#sessions])
-    vim.cmd(count % 2 == 0 and "vnew" or "new")
+    vim.cmd("belowright new")
+  elseif count == 4 then
+    -- 4 → 5: transition from 2x2 to 2x3 (full grid rebuild, sessions stay alive)
+    rebuild_to_grid(sessions, true)
+  elseif count == 5 then
+    -- 5 → 6: complete 2x3 by splitting 3rd column (sessions[3] is top-right, full height)
+    focus_session_window(sessions[3])
+    vim.cmd("belowright new")
+  elseif count == 6 then
+    -- 6 → 7: transition from 2x3 to 2x4 (full grid rebuild, sessions stay alive)
+    rebuild_to_grid(sessions, true)
+  elseif count == 7 then
+    -- 7 → 8: complete 2x4 by splitting 4th column (sessions[4] is top-right, full height)
+    focus_session_window(sessions[4])
+    vim.cmd("belowright new")
   end
 end
 
--- Launch Claude CLI in terminal buffer
-local function launch_claude_cli(id, bufnr, name)
+-- Launch CLI in terminal buffer (defaults to "claude", pass command to override).
+-- Reads session.command at fire time so template apply can override before the defer fires.
+local function launch_claude_cli(id, bufnr, name, command)
+  command = command or "claude"
   vim.defer_fn(function()
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
     -- Session may have been removed by a layer switch (e.g. template apply)
     if not state.sessions[id] then return end
 
+    -- Use session's stored command if updated (e.g. by template apply before this fires)
+    local session = state.sessions[id]
+    local actual_command = session.command or command
+
     local job_id = vim.b[bufnr].terminal_job_id
     if job_id and job_id > 0 then
-      vim.fn.chansend(job_id, "claude\r")
+      vim.fn.chansend(job_id, actual_command .. "\r")
       state.sessions[id].claude_running = true
 
       if id == state.primary_session then
@@ -244,16 +418,13 @@ function M.spawn(target_win)
   vim.bo[bufnr].bufhidden = "hide"
 
   -- Apply terminal window options (winhighlight set later by titlebar.update)
-  vim.wo[winid].scrolloff = 0
-  vim.wo[winid].number = false
-  vim.wo[winid].relativenumber = false
-  vim.wo[winid].signcolumn = "no"
-  vim.wo[winid].foldcolumn = "0"
+  apply_terminal_win_opts(winid)
 
   local spawn_path = vim.fn.getcwd()
-  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = spawn_path }
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = spawn_path, command = "claude" }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
+  state.activity[id] = "idle"
 
   if count == 0 then
     state.primary_session = id
@@ -262,9 +433,6 @@ function M.spawn(target_win)
 
   -- Auto-scroll: keep unfocused terminal windows pinned to bottom
   attach_auto_scroll(id, bufnr)
-
-  -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
-  vim.wo[winid].statusline = " "
 
   -- Update all titlebars FIRST so every session has a winbar before equalization.
   -- wincmd = accounts for winbar height; running it before winbars are set causes
@@ -291,8 +459,12 @@ function M.spawn(target_win)
   return id
 end
 
--- Create a new Claude CLI session at a specific directory path
-function M.spawn_at_path(path)
+-- Create a new CLI session at a specific directory path.
+-- opts.command: CLI command to launch (default "claude")
+function M.spawn_at_path(path, opts)
+  opts = opts or {}
+  local cli_command = opts.command or "claude"
+
   -- Ensure we're in normal mode before creating splits
   local mode = vim.api.nvim_get_mode().mode
   if mode == "t" or mode == "i" then
@@ -314,7 +486,7 @@ function M.spawn_at_path(path)
   end
 
   local id = generate_id()
-  local name = vim.fn.fnamemodify(path, ":t")
+  local name = opts.name or vim.fn.fnamemodify(path, ":t")
 
   -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
   state.resizing = true
@@ -331,26 +503,25 @@ function M.spawn_at_path(path)
   vim.bo[bufnr].bufhidden = "hide"
 
   -- Apply terminal window options (winhighlight set later by titlebar.update)
-  vim.wo[winid].scrolloff = 0
-  vim.wo[winid].number = false
-  vim.wo[winid].relativenumber = false
-  vim.wo[winid].signcolumn = "no"
-  vim.wo[winid].foldcolumn = "0"
+  apply_terminal_win_opts(winid)
 
-  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = path }
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = path, command = cli_command }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
+  state.activity[id] = "idle"
 
   if count == 0 then
     state.primary_session = id
     require("ccasp.terminal")._set_state(bufnr, winid)
   end
 
+  -- Pre-assign titlebar color before first update (so it renders immediately)
+  if opts.color_idx then
+    get_titlebar().pre_assign_color(id, opts.color_idx)
+  end
+
   -- Auto-scroll: keep unfocused terminal windows pinned to bottom
   attach_auto_scroll(id, bufnr)
-
-  -- Set consistent statusline (content.lua sets this for session 1, do it here for 2+)
-  vim.wo[winid].statusline = " "
 
   -- Update all titlebars FIRST so every session has a winbar before equalization.
   -- wincmd = accounts for winbar height; running it before winbars are set causes
@@ -364,7 +535,7 @@ function M.spawn_at_path(path)
   local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
   if ft_ok then footer.refresh() end
 
-  launch_claude_cli(id, bufnr, name)
+  launch_claude_cli(id, bufnr, name, cli_command)
 
   vim.defer_fn(function()
     get_titlebar().create(id)
@@ -409,9 +580,30 @@ function M.close(id)
 
   get_titlebar().destroy(id)
 
-  if session.winid and vim.api.nvim_win_is_valid(session.winid) then
+  -- Check if this is the last visible session with minimized sessions remaining
+  local visible = M.list()
+  local other_visible = 0
+  for _, s in ipairs(visible) do
+    if s.id ~= id then
+      other_visible = other_visible + 1
+    end
+  end
+  local minimized_sessions = M.get_minimized()
+
+  if other_visible == 0 and #minimized_sessions > 0 and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    -- Last visible session with minimized sessions: show splash instead of closing
+    local splash = require("ccasp.splash")
+    splash.show(session.winid)
+  elseif session.winid and vim.api.nvim_win_is_valid(session.winid) then
     vim.api.nvim_win_close(session.winid, true)
   end
+
+  -- Clean up activity tracking
+  if state.activity_timers[id] then
+    vim.fn.timer_stop(state.activity_timers[id])
+    state.activity_timers[id] = nil
+  end
+  state.activity[id] = nil
 
   state.sessions[id] = nil
   remove_from_order(id)
@@ -432,6 +624,13 @@ function M.close_all()
   state.session_order = {}
   state.primary_session = nil
   state.active_session = nil
+
+  -- Clean up all activity timers
+  for id, timer in pairs(state.activity_timers) do
+    vim.fn.timer_stop(timer)
+  end
+  state.activity = {}
+  state.activity_timers = {}
 
   local terminal = require("ccasp.terminal")
   terminal._set_state(nil, nil)
@@ -534,6 +733,13 @@ function M.set_name(id, name)
   end
 end
 
+-- Set session CLI command type (used by layout templates)
+function M.set_command(id, command)
+  if state.sessions[id] then
+    state.sessions[id].command = command
+  end
+end
+
 -- Get primary session
 function M.get_primary()
   if state.primary_session then
@@ -559,12 +765,29 @@ function M.get_active()
   return all[1] or nil
 end
 
+-- Get activity state for a session ("idle", "working", or "done")
+function M.get_activity(id)
+  return state.activity[id] or "idle"
+end
+
 -- Track active session from WinEnter (called by session_titlebar autocmd)
 function M.set_active_by_window(winid)
   local prev_active = state.active_session
   for id, session in pairs(state.sessions) do
     if session.winid == winid then
       state.active_session = id
+
+      -- Clear activity indicator when user focuses a done/working session
+      if state.activity[id] == "done" or state.activity[id] == "working" then
+        -- Stop any pending silence timer
+        if state.activity_timers[id] then
+          vim.fn.timer_stop(state.activity_timers[id])
+          state.activity_timers[id] = nil
+        end
+        state.activity[id] = "idle"
+        vim.schedule(function() refresh_activity_chrome(id) end)
+      end
+
       -- Notify listeners (flyout commands, panels) when session changes
       if prev_active ~= id then
         vim.schedule(function()
@@ -585,10 +808,12 @@ function M.register_primary(bufnr, winid)
     bufnr = bufnr,
     winid = winid,
     claude_running = false,
+    command = "claude",
   }
   table.insert(state.session_order, id)
   state.primary_session = id
   state.active_session = id
+  state.activity[id] = "idle"
 
   -- Auto-scroll: keep unfocused terminal windows pinned to bottom
   attach_auto_scroll(id, bufnr)
@@ -727,16 +952,23 @@ function M._export_state()
     session_order = deep_copy(state.session_order),
     primary_session = state.primary_session,
     active_session = state.active_session,
+    activity = deep_copy(state.activity),
   }
 end
 
 -- Import session state from a layer snapshot
 function M._import_state(data)
   data = data or {}
+  -- Stop existing activity timers before replacing state
+  for _, timer in pairs(state.activity_timers) do
+    vim.fn.timer_stop(timer)
+  end
   state.sessions = data.sessions or {}
   state.session_order = data.session_order or {}
   state.primary_session = data.primary_session
   state.active_session = data.active_session
+  state.activity = data.activity or {}
+  state.activity_timers = {} -- timers don't survive layer switch
 
   -- Update terminal module with new primary
   local primary = state.primary_session and state.sessions[state.primary_session]
@@ -787,10 +1019,13 @@ end
 function M._reattach_windows()
   state.resizing = true
 
+  -- Only reattach non-minimized sessions (minimized stay hidden)
+  local tb = get_titlebar()
   local ordered = {}
   for _, id in ipairs(state.session_order) do
     local session = state.sessions[id]
-    if session and session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
+    if session and session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr)
+        and not (tb.is_minimized and tb.is_minimized(id)) then
       table.insert(ordered, session)
     end
   end
@@ -830,34 +1065,32 @@ function M._reattach_windows()
     first_win = vim.api.nvim_get_current_win()
   end
 
-  -- Place the first session buffer into the content window
-  local first = ordered[1]
-  vim.api.nvim_set_current_win(first_win)
-  vim.api.nvim_win_set_buf(first_win, first.bufnr)
-  first.winid = first_win
+  if #ordered >= 5 then
+    -- 5+ sessions: use grid builder for proper 2x3/2x4 layout.
+    -- Place first session in anchor, then rebuild_to_grid handles all windows.
+    -- Terminal processes continue running — only windows are rearranged.
+    local first = ordered[1]
+    vim.api.nvim_set_current_win(first_win)
+    vim.api.nvim_win_set_buf(first_win, first.bufnr)
+    first.winid = first_win
+    apply_terminal_win_opts(first_win)
+    rebuild_to_grid(ordered, false, first_win)
+  else
+    -- 1-4 sessions: use incremental splits
+    local first = ordered[1]
+    vim.api.nvim_set_current_win(first_win)
+    vim.api.nvim_win_set_buf(first_win, first.bufnr)
+    first.winid = first_win
+    apply_terminal_win_opts(first_win)
 
-  -- Apply terminal window options
-  vim.wo[first_win].scrolloff = 0
-  vim.wo[first_win].number = false
-  vim.wo[first_win].relativenumber = false
-  vim.wo[first_win].signcolumn = "no"
-  vim.wo[first_win].foldcolumn = "0"
-  vim.wo[first_win].statusline = " "
-
-  -- Remaining sessions: create splits
-  for i = 2, #ordered do
-    local session = ordered[i]
-    create_split_window(i - 1, ordered)
-    local new_win = vim.api.nvim_get_current_win()
-    vim.api.nvim_win_set_buf(new_win, session.bufnr)
-    session.winid = new_win
-
-    vim.wo[new_win].scrolloff = 0
-    vim.wo[new_win].number = false
-    vim.wo[new_win].relativenumber = false
-    vim.wo[new_win].signcolumn = "no"
-    vim.wo[new_win].foldcolumn = "0"
-    vim.wo[new_win].statusline = " "
+    for i = 2, #ordered do
+      local session = ordered[i]
+      create_split_window(i - 1, ordered)
+      local new_win = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(new_win, session.bufnr)
+      session.winid = new_win
+      apply_terminal_win_opts(new_win)
+    end
   end
 
   -- Rebuild titlebars for all sessions

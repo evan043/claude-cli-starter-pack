@@ -50,6 +50,11 @@ export const SETUP_OPTIONS = [
     short: 'Happy',
   },
   {
+    name: `${chalk.blue('8.')} Install Nerd Font ${chalk.dim('- Icons for Neovim icon rail')}`,
+    value: 'install-font',
+    short: 'Font',
+  },
+  {
     name: `${chalk.dim('0.')} Exit`,
     value: 'exit',
     short: 'Exit',

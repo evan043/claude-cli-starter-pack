@@ -141,7 +141,7 @@ M.config = {
 
   -- Neovide GUI settings (applied only when running inside Neovide)
   neovide = {
-    font = "JetBrainsMono NF:h12",
+    font = "JetBrainsMono Nerd Font Mono:h12",
     padding = 4,
   },
 

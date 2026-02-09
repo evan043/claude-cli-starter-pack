@@ -18,13 +18,18 @@ M.colors = {
   { name = "Ice", fg = "#7ec8e3", bg = "#1e3a4f" },
   { name = "Navy", fg = "#4a8fcf", bg = "#0d1a2f" },
   { name = "Mint", fg = "#6fcf97", bg = "#1a3a2a" },
+  { name = "Gold", fg = "#e5c07b", bg = "#3a2f1a" },
 }
+
+-- Named color index constants
+M.COLOR_GOLD = 9
 
 -- Session color assignments
 local session_colors = {} -- { session_id = color_idx }
 
 -- Minimized sessions storage
-local minimized = {} -- { session_id = { name, color_idx, bufnr } }
+local minimized = {} -- { session_id = { name, color_idx, bufnr, minimized_at } }
+local minimized_counter = 0 -- tracks order of minimization for display sorting
 
 -- Active session border color (steel blue for visibility)
 local ACTIVE_BORDER_COLOR = "#3a7fcf"
@@ -41,6 +46,8 @@ local function setup_highlights()
     create_highlight_group("CcaspWinbar" .. i, color.fg, color.bg, true)
     create_highlight_group("CcaspWinbarBtn" .. i, "#56b6c2", color.bg, true)
     create_highlight_group("CcaspWinbarActive" .. i, "#ffffff", color.bg, true)
+    -- Dimmed variant: muted grey fg, same per-color bg (used when Claude is streaming)
+    create_highlight_group("CcaspWinbarDim" .. i, "#5c6370", color.bg, false)
   end
 
   create_highlight_group("CcaspWinbarDefault", "#8899aa", "#1e2a3a", true)
@@ -134,9 +141,16 @@ local function setup_click_handlers()
 end
 
 -- Build winbar string for a session
-local function build_winbar(session_id, name, is_primary, claude_running, is_active)
+local function build_winbar(session_id, name, is_primary, claude_running, is_active, activity)
   local color_idx = get_color_idx(session_id)
-  local hl = is_active and ("CcaspWinbarActive" .. color_idx) or ("CcaspWinbar" .. color_idx)
+  local hl
+  if is_active then
+    hl = "CcaspWinbarActive" .. color_idx
+  elseif activity == "working" then
+    hl = "CcaspWinbarDim" .. color_idx
+  else
+    hl = "CcaspWinbar" .. color_idx
+  end
   local btn_hl = "CcaspWinbarBtn" .. color_idx
 
   local status = claude_running and "●" or "○"
@@ -181,6 +195,9 @@ end
 
 -- Update winbar for a session
 function M.update(session_id)
+  -- Skip minimized sessions (their winid is nil or stale)
+  if minimized[session_id] then return end
+
   local sessions = require("ccasp.sessions")
   local session = sessions.get(session_id)
 
@@ -195,12 +212,19 @@ function M.update(session_id)
   local current_win = vim.api.nvim_get_current_win()
   local is_active = session.winid == current_win
 
+  -- Get activity state (working/done/idle) for dimmed winbar styling
+  local activity = "idle"
+  if sessions.get_activity then
+    activity = sessions.get_activity(session_id) or "idle"
+  end
+
   local winbar = build_winbar(
     session_id,
     session.name,
     is_primary,
     session.claude_running,
-    is_active
+    is_active,
+    activity
   )
 
   -- Set winbar for this window
@@ -228,6 +252,11 @@ end
 function M.set_color(session_id, color_idx)
   session_colors[session_id] = color_idx
   M.update(session_id)
+end
+
+-- Pre-assign color before titlebar creation (no update call)
+function M.pre_assign_color(session_id, color_idx)
+  session_colors[session_id] = color_idx
 end
 
 -- Update all session winbars
@@ -440,12 +469,13 @@ function M.minimize(session_id)
 
   if not session then return end
 
-  -- Store minimized state
+  -- Store minimized state (ordered by minimized_counter for display sorting)
+  minimized_counter = minimized_counter + 1
   minimized[session_id] = {
     name = session.name,
     color_idx = session_colors[session_id] or 1,
     bufnr = session.bufnr,
-    winid = session.winid, -- preserve for splash restore
+    minimized_at = minimized_counter,
   }
 
   -- Check if there are other visible sessions
@@ -461,11 +491,17 @@ function M.minimize(session_id)
     -- Last visible session: show splash instead of hiding window
     local splash = require("ccasp.splash")
     splash.show(session.winid)
+    -- Clear winbar so the session title doesn't persist on the splash window
+    vim.wo[session.winid].winbar = ""
+    -- Disconnect session from window so it's no longer "active" in sessions.list()
+    session.winid = nil
   else
     -- Other sessions visible: hide window, focus next
     if session.winid and vim.api.nvim_win_is_valid(session.winid) then
       vim.api.nvim_win_hide(session.winid)
     end
+    -- Disconnect session from window (buffer stays alive via bufhidden=hide)
+    session.winid = nil
     -- Focus the next available session
     local remaining = sessions.list()
     if #remaining > 0 then
@@ -480,6 +516,43 @@ function M.minimize(session_id)
   if footer_ok then footer.refresh() end
 
   vim.notify(session.name .. " minimized", vim.log.levels.INFO)
+end
+
+-- Progressive split: create window in the right position based on visible count
+-- Mirrors create_split_window() logic from sessions.lua
+local function restore_split_window(visible_count, visible_list)
+  if visible_count == 0 then
+    -- Fullscreen: reuse current window
+    return
+  elseif visible_count == 1 then
+    -- 1 → 2: side-by-side columns
+    local target = visible_list[#visible_list]
+    if target and target.winid and vim.api.nvim_win_is_valid(target.winid) then
+      vim.api.nvim_set_current_win(target.winid)
+    end
+    vim.cmd("belowright vnew")
+  elseif visible_count == 2 then
+    -- 2 → 3: split first column vertically (start 2x2)
+    local target = visible_list[1]
+    if target and target.winid and vim.api.nvim_win_is_valid(target.winid) then
+      vim.api.nvim_set_current_win(target.winid)
+    end
+    vim.cmd("belowright new")
+  elseif visible_count == 3 then
+    -- 3 → 4: split second column vertically (complete 2x2)
+    local target = visible_list[2]
+    if target and target.winid and vim.api.nvim_win_is_valid(target.winid) then
+      vim.api.nvim_set_current_win(target.winid)
+    end
+    vim.cmd("belowright new")
+  else
+    -- 5+: alternate between column and row splits
+    local target = visible_list[#visible_list]
+    if target and target.winid and vim.api.nvim_win_is_valid(target.winid) then
+      vim.api.nvim_set_current_win(target.winid)
+    end
+    vim.cmd(visible_count % 2 == 0 and "belowright vnew" or "belowright new")
+  end
 end
 
 -- Restore minimized session
@@ -498,8 +571,15 @@ function M.restore(session_id)
     splash.hide(splash_win, min_session.bufnr)
     new_winid = splash_win
   else
-    -- Other sessions visible: create vsplit
-    vim.cmd("vsplit")
+    -- Progressive split based on how many non-minimized sessions are visible
+    local all_listed = sessions.list()
+    local visible = {}
+    for _, s in ipairs(all_listed) do
+      if not minimized[s.id] then
+        table.insert(visible, s)
+      end
+    end
+    restore_split_window(#visible, visible)
     new_winid = vim.api.nvim_get_current_win()
 
     if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
@@ -522,6 +602,9 @@ function M.restore(session_id)
   -- Update winbar
   M.update(session_id)
 
+  -- Equalize windows after restore
+  vim.cmd("wincmd =")
+
   -- Focus the restored session
   if new_winid and vim.api.nvim_win_is_valid(new_winid) then
     vim.api.nvim_set_current_win(new_winid)
@@ -542,7 +625,12 @@ function M.restore(session_id)
   vim.notify(min_session.name .. " restored", vim.log.levels.INFO)
 end
 
--- Get minimized sessions list
+-- Check if a session is minimized
+function M.is_minimized(session_id)
+  return minimized[session_id] ~= nil
+end
+
+-- Get minimized sessions list (sorted by minimization order)
 function M.get_minimized()
   local result = {}
   for id, data in pairs(minimized) do
@@ -550,8 +638,11 @@ function M.get_minimized()
       id = id,
       name = data.name,
       color_idx = data.color_idx,
+      minimized_at = data.minimized_at or 0,
     })
   end
+  -- Sort by minimization order (first minimized appears first/leftmost)
+  table.sort(result, function(a, b) return a.minimized_at < b.minimized_at end)
   return result
 end
 
@@ -569,22 +660,43 @@ function M.restore_all()
   local count = #min_sessions
   local last_winid
 
-  for i, ms in ipairs(min_sessions) do
+  -- Build running list of all visible sessions for progressive split targeting
+  -- (minimized sessions have winid=nil so they won't appear in list())
+  local all_listed = sessions_mod.list()
+  local visible = {}
+  for _, s in ipairs(all_listed) do
+    if not minimized[s.id] then
+      table.insert(visible, s)
+    end
+  end
+  local restored = {}
+
+  for _, ms in ipairs(min_sessions) do
     local min_session = minimized[ms.id]
     if not min_session then goto continue end
 
     local new_winid
+    local current_total = #visible + #restored
 
-    if i == 1 and splash.is_showing() then
-      -- First restore: reuse splash window if visible
+    if current_total == 0 and splash.is_showing() then
+      -- No visible sessions, splash showing: reuse splash window
       local splash_win = splash.get_win()
       splash.hide(splash_win, min_session.bufnr)
       new_winid = splash_win
-      -- Focus splash window so subsequent vsplits happen in content area
       vim.api.nvim_set_current_win(new_winid)
+    elseif current_total == 0 then
+      -- No visible sessions, no splash: reuse current window
+      new_winid = vim.api.nvim_get_current_win()
+      if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
+        vim.api.nvim_win_set_buf(new_winid, min_session.bufnr)
+      end
     else
-      -- Create vsplit for each restored session
-      vim.cmd("vsplit")
+      -- Progressive split: combine visible + already-restored for targeting
+      local all_visible = {}
+      for _, v in ipairs(visible) do table.insert(all_visible, v) end
+      for _, r in ipairs(restored) do table.insert(all_visible, r) end
+
+      restore_split_window(current_total, all_visible)
       new_winid = vim.api.nvim_get_current_win()
 
       if min_session.bufnr and vim.api.nvim_buf_is_valid(min_session.bufnr) then
@@ -607,6 +719,8 @@ function M.restore_all()
     -- Update winbar
     M.update(ms.id)
 
+    -- Track this restored session for progressive split targeting
+    table.insert(restored, { id = ms.id, winid = new_winid })
     last_winid = new_winid
 
     ::continue::
@@ -994,6 +1108,7 @@ function M._export_state()
   return {
     session_colors = deep_copy(session_colors),
     minimized = deep_copy(minimized),
+    minimized_counter = minimized_counter,
   }
 end
 
@@ -1002,6 +1117,7 @@ function M._import_state(data)
   data = data or {}
   session_colors = data.session_colors or {}
   minimized = data.minimized or {}
+  minimized_counter = data.minimized_counter or 0
 end
 
 -- Initialize

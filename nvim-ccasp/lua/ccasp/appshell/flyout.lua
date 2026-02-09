@@ -41,6 +41,37 @@ local function word_wrap(text, max_width, max_lines)
   return result
 end
 
+-- Panel header metadata per section key
+local panel_headers = {
+  commands      = { icon = icons.commands,  name = "Slash Commands" },
+  terminal      = { icon = icons.terminal,  name = "Sessions" },
+  repos         = { icon = icons.repo,      name = "Repositories" },
+  panels        = { icon = icons.dashboard, name = "Panels" },
+  agents        = { icon = icons.agents,    name = "Agents" },
+  browse        = { icon = icons.search,    name = "Browse" },
+  orchestration = { icon = icons.reload,    name = "Orchestration" },
+  system        = { icon = icons.settings,  name = "System" },
+  features      = { icon = icons.features,  name = "Features" },
+  project       = { icon = icons.config,    name = "Project" },
+}
+
+-- Render a prominent panel header box at the top of each flyout section
+local function render_panel_header(lines, section_key)
+  local info = panel_headers[section_key]
+  if not info then return end
+
+  local w = 30
+  local text = "  " .. info.icon .. "  " .. info.name
+  local text_w = vim.fn.strdisplaywidth(text)
+  local pad = math.max(0, w - text_w)
+
+  table.insert(lines, "")
+  table.insert(lines, " ┏" .. string.rep("━", w) .. "┓")
+  table.insert(lines, " ┃" .. text .. string.rep(" ", pad) .. "┃")
+  table.insert(lines, " ┗" .. string.rep("━", w) .. "┛")
+  table.insert(lines, "")
+end
+
 -- Section content renderers
 local section_renderers = {
   commands = function(lines, item_lines)
@@ -53,11 +84,6 @@ local section_renderers = {
     commands_mod.load_all()
     local sections = commands_mod.get_sections()
     local all_cmds = commands_mod.get_all()
-
-    -- Header
-    table.insert(lines, "  " .. icons.commands .. " Slash Commands")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
 
     -- Active search indicator
     local query = state.commands_search_query:lower()
@@ -136,7 +162,7 @@ local section_renderers = {
       local all_layers = layers.list()
       for _, layer in ipairs(all_layers) do
         local marker = layer.is_active and icons.arrow_right or " "
-        local line = string.format("  %s %d %s (%d)", marker, layer.num, layer.name, layer.session_count)
+        local line = string.format("  %s %s (%d)", marker, layer.name, layer.session_count)
         table.insert(lines, line)
         item_lines[#lines] = { action = "switch_layer", layer_num = layer.num }
       end
@@ -241,9 +267,12 @@ local section_renderers = {
     table.insert(lines, "  " .. icons.repo .. " New Claude Repository Session")
     item_lines[#lines] = { action = "open_path_dialog" }
 
+    -- New Happy session (opens repo picker, launches Happy instead of Claude)
+    table.insert(lines, "  " .. icons.terminal .. " New Happy Repository Session")
+    item_lines[#lines] = { action = "new_happy_session" }
+
     local remaining_actions = {
       { icon = icons.edit,     label = "Rename Current Session", action = "session_rename" },
-      { icon = icons.settings, label = "Change Session Color", action = "session_color" },
       { icon = icons.minimize, label = "Minimize Current", action = "session_minimize" },
       { icon = icons.reload,   label = "Restore Minimized", action = "session_restore" },
       { icon = icons.close,    label = "Close All Sessions", action = "session_close_all" },
@@ -265,11 +294,6 @@ local section_renderers = {
     local pin_icon = nf_ok and nf.pin or "*"
     local repo_icon = nf_ok and nf.repo or ">"
     local clock_icon = nf_ok and nf.clock or "@"
-
-    -- Header
-    table.insert(lines, "  " .. repo_icon .. " Repository Launcher")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
 
     -- Pinned repos
     local pinned = storage.get_pinned()
@@ -310,10 +334,6 @@ local section_renderers = {
   end,
 
   panels = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.dashboard .. " Panels")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     local panels = {
       { icon = icons.dashboard, label = "Dashboard", action = "dashboard" },
       { icon = icons.settings,  label = "Control Panel", action = "control" },
@@ -357,10 +377,6 @@ local section_renderers = {
   end,
 
   agents = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.agents .. " Agents")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     local actions = {
       { icon = icons.agents,  label = "Open Agent Grid", action = "grid" },
       { icon = icons.reload,  label = "Restart All Agents", action = "restart_all" },
@@ -373,10 +389,6 @@ local section_renderers = {
   end,
 
   browse = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.search .. " Browse")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     local actions = {
       { icon = icons.commands, label = "Commands (Telescope)", action = "commands" },
       { icon = icons.assets,   label = "Skills (Telescope)", action = "skills" },
@@ -388,10 +400,6 @@ local section_renderers = {
   end,
 
   orchestration = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.agents .. " Orchestration")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     -- Read current settings from tech-stack.json
     local config_ok, config = pcall(require, "ccasp.config")
     local orch = {}
@@ -426,10 +434,6 @@ local section_renderers = {
   end,
 
   system = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.settings .. " System")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     local actions = {
       { icon = icons.save,    label = "Save Settings", action = "save_settings" },
       { icon = icons.reload,  label = "Detect Tech Stack", action = "detect_stack" },
@@ -442,10 +446,6 @@ local section_renderers = {
   end,
 
   features = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.features .. " Feature Toggles")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     -- Load current tech stack for toggle states
     local config_ok, config = pcall(require, "ccasp.config")
     local tech_stack = {}
@@ -501,10 +501,6 @@ local section_renderers = {
   end,
 
   project = function(lines, item_lines)
-    table.insert(lines, "  " .. icons.config .. " Project Configuration")
-    table.insert(lines, "  " .. string.rep("─", 30))
-    table.insert(lines, "")
-
     local storage_ok, proj_storage = pcall(require, "ccasp.project_config.storage")
     if storage_ok then
       local cfg = proj_storage.load()
@@ -546,6 +542,9 @@ local function render()
   local lines = {}
   state.item_lines = {}
 
+  -- Prominent panel header
+  render_panel_header(lines, state.current_section)
+
   local renderer = section_renderers[state.current_section]
   if renderer then
     renderer(lines, state.item_lines)
@@ -562,7 +561,13 @@ local function render()
   -- Highlights
   vim.api.nvim_buf_clear_namespace(state.buf, ns, 0, -1)
   for i, line in ipairs(lines) do
-    if line:match("^  [─]+$") then
+    if line:match("^ ┏") or line:match("^ ┗") then
+      -- Panel header border (heavy box)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutPanelBorder", i - 1, 0, -1)
+    elseif line:match("^ ┃") then
+      -- Panel header name (heavy box)
+      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutPanelName", i - 1, 0, -1)
+    elseif line:match("^  [─]+$") then
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspSeparator", i - 1, 0, -1)
     elseif line:match("^  ╭") or line:match("^  ╰") then
       -- Box-drawing borders (commands section)
@@ -591,8 +596,6 @@ local function render()
     elseif line:match("^  %[") then
       -- Keybinding hint footer
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "Comment", i - 1, 0, -1)
-    elseif i == 1 then
-      pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutTitle", i - 1, 0, -1)
     elseif state.item_lines[i] then
       pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspFlyoutItem", i - 1, 0, -1)
     end
@@ -706,6 +709,38 @@ function M.execute_action(item)
         require("ccasp.repo_launcher").open_repo(item.path)
       end)
     end,
+    new_repo_session = function()
+      -- Close flyout, exit terminal mode, prompt for path inline, then spawn.
+      -- Avoids the complex float-within-float flow that causes focus/race issues.
+      M.close()
+      vim.schedule(function()
+        local mode = vim.api.nvim_get_mode().mode
+        if mode == "t" or mode == "i" then
+          vim.cmd("stopinsert")
+        end
+        vim.ui.input({ prompt = "Repository path: " }, function(input)
+          if not input or input == "" then return end
+          local path = vim.fn.expand(input)
+          if vim.fn.isdirectory(path) == 0 then
+            vim.notify("Not a valid directory: " .. path, vim.log.levels.ERROR)
+            return
+          end
+          vim.schedule(function()
+            local m = vim.api.nvim_get_mode().mode
+            if m == "t" or m == "i" then
+              vim.cmd("stopinsert")
+            end
+            require("ccasp.repo_launcher").open_repo(path)
+          end)
+        end)
+      end)
+    end,
+    new_happy_session = function()
+      -- Close flyout, open the Happy repo picker
+      close_and_run_modal(function()
+        require("ccasp.repo_launcher").open_happy_picker()
+      end)
+    end,
     focus_session = function()
       M.close()
       vim.schedule(function() sessions.focus(item.id) end)
@@ -715,13 +750,6 @@ function M.execute_action(item)
       if not primary then return end
       close_and_run_modal(function()
         sessions.rename(primary.id)
-      end)
-    end,
-    session_color = function()
-      local primary = sessions.get_primary()
-      if not primary then return end
-      close_and_run_modal(function()
-        sessions.change_color(primary.id)
       end)
     end,
     session_minimize = function()
@@ -943,11 +971,12 @@ function M.execute_action(item)
         or item.action == "new_session"
         or item.action == "focus_session"
         or item.action == "session_rename"
-        or item.action == "session_color"
         or item.action == "session_minimize"
         or item.action == "session_restore"
         or item.action == "session_close_all"
         or item.action == "new_session_at_repo"
+        or item.action == "new_repo_session"
+        or item.action == "new_happy_session"
         or item.action == "open_repo"
         or item.action == "open_path_dialog"
         or item.action == "open_browser"

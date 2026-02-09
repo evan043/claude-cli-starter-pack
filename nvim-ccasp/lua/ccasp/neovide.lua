@@ -241,7 +241,7 @@ function M.setup(opts)
   opts = opts or {}
 
   -- Font
-  local font = opts.font or "JetBrainsMono NF:h12"
+  local font = opts.font or "JetBrainsMono Nerd Font Mono:h12"
   vim.o.guifont = font
 
   -- Window padding

@@ -38,7 +38,7 @@ local function render()
 
   -- Section icons with number labels (always visible even without Nerd Font)
   for i, section in ipairs(M.sections) do
-    table.insert(lines, string.format(" %d %s", i, section.icon))
+    table.insert(lines, string.format(" %s %d", section.icon, i))
   end
 
   -- Fill remaining space with empty lines, place logo at bottom

@@ -1,0 +1,3 @@
+# Font binaries are bundled via npm package, not git
+# Run nvim-ccasp/fonts/download-font.ps1 to re-download after clone
+*.ttf

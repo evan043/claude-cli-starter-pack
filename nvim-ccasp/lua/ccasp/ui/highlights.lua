@@ -106,6 +106,10 @@ M.groups = {
   CcaspLayerTab       = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive layer tab
   CcaspLayerTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active layer tab
 
+  -- ─── Session Activity States ───────────────────────────────
+  CcaspHeaderTabWorking = { fg = "#d19a66", bg = "#0d1117", bold = true },  -- Orange (Claude streaming)
+  CcaspHeaderTabDone    = { fg = "#50fa7b", bg = "#0d1117", bold = true },  -- Green (output finished)
+
   -- ─── Appshell: Footer ─────────────────────────────────────
   CcaspFooterBg       = { bg = "#0d1117" },                     -- Footer background
   CcaspFooterLabel    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Labels
@@ -119,6 +123,8 @@ M.groups = {
   CcaspFlyoutTitle    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Section title
   CcaspFlyoutItem     = { fg = "#abb2bf", bg = "#0d1117" },     -- List item
   CcaspFlyoutItemActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Selected item
+  CcaspFlyoutPanelBorder = { fg = "#3a7fcf", bg = "#0d1117", bold = true }, -- Panel header box border
+  CcaspFlyoutPanelName   = { fg = "#ffffff", bg = "#0f1a2e", bold = true }, -- Panel header name
 
   -- ─── Appshell: Right Panel ────────────────────────────────
   CcaspRightPanelBg   = { bg = "#0d1117", fg = "#c9d1d9" },     -- Right panel background
