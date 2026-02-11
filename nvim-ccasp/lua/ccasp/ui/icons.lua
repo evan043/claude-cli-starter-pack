@@ -5,50 +5,50 @@
 local M = {}
 
 -- Navigation / Tabs
-M.search      = ""    -- nf-fa-search
-M.commands    = ""    -- nf-oct-terminal
-M.settings    = ""    -- nf-fa-cog
+M.search      = "󰍉"    -- nf-md-magnify
+M.commands    = "󰆍"    -- nf-md-console
+M.settings    = "󰒓"    -- nf-md-cog
 M.shield      = "󰒃"    -- nf-md-shield_check
-M.status      = ""    -- nf-fa-heartbeat
-M.keyboard    = ""    -- nf-fa-keyboard_o
-M.assets      = ""    -- nf-fa-cubes
+M.status      = "󰗶"    -- nf-md-heart_pulse
+M.keyboard    = "󰌌"    -- nf-md-keyboard
+M.assets      = "󰆧"    -- nf-md-cube_outline
 M.shortcuts   = "󰌌"    -- nf-md-keyboard
-M.dashboard   = ""    -- nf-fa-th_large
+M.dashboard   = "󰃨"    -- nf-md-apps
 M.hooks       = "󰛢"    -- nf-md-hook
-M.features    = ""    -- nf-fa-puzzle_piece
+M.features    = "󰐱"    -- nf-md-puzzle
 
 -- Modes / Permissions
 M.auto        = "󰁪"    -- nf-md-robot
 M.plan        = "󰏫"    -- nf-md-note_text
-M.ask         = ""    -- nf-fa-question_circle
+M.ask         = "󰋖"    -- nf-md-help_circle
 
 -- Status indicators
-M.sync_ok     = ""    -- nf-fa-check_circle
-M.sync_warn   = ""    -- nf-fa-warning
+M.sync_ok     = "󰗠"    -- nf-md-check_circle
+M.sync_warn   = "󰀦"    -- nf-md-alert
 M.update_auto = "󰑐"    -- nf-md-refresh
-M.update_man  = ""    -- nf-fa-hand_paper_o
-M.update_prompt = ""  -- nf-fa-comment_o
+M.update_man  = "󰩿"    -- nf-md-hand_back_right
+M.update_prompt = "󰆈"    -- nf-md-comment_outline
 
 -- Feature toggles
-M.enabled     = ""    -- nf-fa-toggle_on
-M.disabled    = ""    -- nf-fa-toggle_off
-M.running     = ""    -- nf-fa-play
-M.stopped     = ""    -- nf-fa-stop
-M.failed      = ""    -- nf-fa-times_circle
+M.enabled     = "󰔡"    -- nf-md-toggle_switch
+M.disabled    = "󰔢"    -- nf-md-toggle_switch_off
+M.running     = "󰐊"    -- nf-md-play
+M.stopped     = "󰓛"    -- nf-md-stop
+M.failed      = "󰅙"    -- nf-md-close_circle
 M.model       = "󰘦"    -- nf-md-brain
-M.agents      = ""    -- nf-fa-users
-M.tokens      = ""    -- nf-fa-bar_chart
+M.agents      = "󰡉"    -- nf-md-account_group
+M.tokens      = "󰄨"    -- nf-md-chart_bar
 M.hook        = "󰛢"    -- nf-md-hook
 
 -- Session / Terminal
-M.claude_on   = ""    -- nf-fa-circle (filled)
-M.claude_off  = ""    -- nf-fa-circle_o (outline)
-M.primary     = ""    -- nf-fa-star
-M.terminal    = ""    -- nf-oct-terminal
-M.session     = ""    -- nf-fa-window_maximize
-M.minimize    = ""    -- nf-fa-minus
-M.maximize    = ""    -- nf-fa-plus
-M.close       = ""    -- nf-fa-times
+M.claude_on   = "󰝥"    -- nf-md-circle
+M.claude_off  = "󰝦"    -- nf-md-circle_outline
+M.primary     = "󰓎"    -- nf-md-star
+M.terminal    = "󰆍"    -- nf-md-console
+M.session     = "󰕓"    -- nf-md-window_maximize
+M.minimize    = "󰍴"    -- nf-md-minus
+M.maximize    = "󰐕"    -- nf-md-plus
+M.close       = "󰅖"    -- nf-md-close
 
 -- Window management buttons (Material Design - better cross-platform rendering)
 M.win_cycle    = "󰑐"    -- nf-md-refresh (cycle sessions)
@@ -57,70 +57,75 @@ M.win_minimize = "󰖰"    -- nf-md-window_minimize
 M.win_maximize = "󰖯"    -- nf-md-window_maximize
 M.win_restore  = "󰖳"    -- nf-md-window_restore
 M.win_close    = "󰖭"    -- nf-md-window_close
+M.win_save_note = "󰠘"   -- nf-md-content_save (save session note)
+M.win_screenshot = "󰄀"    -- nf-md-camera (paste recent screenshot)
+M.win_screenshot_browse = "󰋩"  -- nf-md-image_multiple (browse screenshots)
+M.win_todo     = "󰄵"    -- nf-md-checkbox_marked_outline (todo list)
 M.resize_grip  = "◢"    -- resize grip indicator (bottom-right corner)
 
 -- Expand / Collapse
-M.expanded    = ""    -- nf-fa-chevron_down
-M.collapsed   = ""    -- nf-fa-chevron_right
-M.section     = ""    -- nf-fa-folder
-M.section_open = ""   -- nf-fa-folder_open
+M.expanded    = "󰅀"    -- nf-md-chevron_down
+M.collapsed   = "󰅂"    -- nf-md-chevron_right
+M.section     = "󰉋"    -- nf-md-folder
+M.section_open = "󰉋"    -- nf-md-folder
 
 -- Actions
-M.run         = ""    -- nf-fa-play_circle
+M.run         = "󰐋"    -- nf-md-play_circle
 M.palette     = "󰏘"    -- nf-md-palette
-M.edit        = ""    -- nf-fa-pencil
-M.delete      = ""    -- nf-fa-trash
+M.edit        = "󰏫"    -- nf-md-pencil
+M.delete      = "󰩹"    -- nf-md-trash_can
 M.reload      = "󰑐"    -- nf-md-refresh
-M.save        = ""    -- nf-fa-floppy_o
-M.yank        = ""    -- nf-fa-clipboard
-M.open_file   = ""    -- nf-fa-external_link
-M.help        = ""    -- nf-fa-info_circle
+M.save        = "󰠘"    -- nf-md-content_save
+M.yank        = "󰅇"    -- nf-md-clipboard_text
+M.open_file   = "󰏌"    -- nf-md-open_in_new
+M.help        = "󰋼"    -- nf-md-information
 
 -- Special
 M.ccasp       = "󰚩"    -- nf-md-robot_outline
 M.claude      = "󰚩"    -- nf-md-robot_outline
-M.pin         = ""    -- nf-oct-pin
-M.git_branch  = ""    -- nf-oct-git_branch
-M.worktree    = ""    -- nf-fa-code_fork
+M.pin         = "󰐃"    -- nf-md-pin
+M.git_branch  = "󰘬"    -- nf-md-source_branch
+M.worktree    = "󰘬"    -- nf-md-source_branch
 
 -- Repository launcher
-M.repo         = ""    -- nf-oct-repo
-M.clock        = ""    -- nf-fa-clock_o
+M.repo         = "󰬣"    -- nf-md-source_repository
+M.clock        = "󰅐"    -- nf-md-clock_outline
 M.path_input   = "󰉋"    -- nf-md-folder_open
 
 -- Layout
 M.layout      = "󰕰"    -- nf-md-view_dashboard_variant
+M.reorder     = "󰒺"    -- nf-md-sort
 
 -- Browser / Web
-M.globe       = ""    -- nf-fa-globe
+M.globe       = "󰖟"    -- nf-md-earth
 
 -- Categories (for command sections)
 M.deploy      = "󰣆"    -- nf-md-rocket_launch
-M.test        = ""    -- nf-fa-flask
-M.dev         = ""    -- nf-fa-code
-M.docs        = ""    -- nf-fa-book
+M.test        = "󰈷"    -- nf-md-flask
+M.dev         = "󰅴"    -- nf-md-code_tags
+M.docs        = "󰂽"    -- nf-md-book_open_variant
 M.workflow    = "󰃻"    -- nf-md-sitemap
 M.ai          = "󰧑"    -- nf-md-creation
-M.config      = ""    -- nf-fa-wrench
+M.config      = "󰻇"    -- nf-md-wrench
 M.todo        = "☑"    -- nf-fa-check_square_o
 
 -- Onboarding / Getting Started
 M.welcome     = "󰋗"    -- nf-md-help_circle
-M.book        = ""    -- nf-fa-book
-M.lightbulb   = ""    -- nf-fa-lightbulb_o
-M.check       = ""    -- nf-fa-check
-M.star_filled = ""    -- nf-fa-star (filled)
+M.book        = "󰂽"    -- nf-md-book_open_variant
+M.lightbulb   = "󰌶"    -- nf-md-lightbulb_outline
+M.check       = "󰄬"    -- nf-md-check
+M.star_filled = "󰓎"    -- nf-md-star
 M.wiki        = "󰖬"    -- nf-md-wikipedia
-M.search_help = ""    -- nf-fa-search
-M.topic       = ""    -- nf-fa-file_text_o
-M.breadcrumb  = ""    -- nf-fa-chevron_right
+M.search_help = "󰍉"    -- nf-md-magnify
+M.topic       = "󰈚"    -- nf-md-file_document
+M.breadcrumb  = "󰅂"    -- nf-md-chevron_right
 
 -- Decorative separators
 M.separator   = "─"
 M.dot         = "·"
 M.pipe        = "│"
-M.arrow_right = ""    -- nf-fa-arrow_right
-M.arrow_left  = ""    -- nf-fa-arrow_left
+M.arrow_right = "󰁔"    -- nf-md-arrow_right
+M.arrow_left  = "󰁍"    -- nf-md-arrow_left
 
 -- Convenience: get permission mode icon
 function M.perm_mode(mode)

@@ -23,7 +23,19 @@ local state = {
   resizing = false, -- true during split/rearrange to suppress auto-scroll
   activity = {}, -- { session_id = "idle"|"working"|"done" }
   activity_timers = {}, -- { session_id = timer_handle } for 3s silence detection
+  activity_burst = {}, -- { session_id = count } event counter for burst detection
+  activity_burst_timers = {}, -- { session_id = timer_handle } burst window reset
+  activity_suppress = {}, -- { session_id = true } suppress during startup
 }
+
+-- Global activity registry: persists across layer switches so footer can show
+-- live status colors for ALL sessions regardless of which layer is active.
+-- Separate from state.activity which gets swapped on _import_state().
+local global_activity = {}               -- { session_id = "idle"|"working"|"done" }
+local global_activity_timers = {}         -- { session_id = timer_handle }
+local global_activity_burst = {}          -- { session_id = count }
+local global_activity_burst_timers = {}   -- { session_id = timer_handle }
+local global_activity_suppress = {}       -- { session_id = true }
 
 -- Refresh footer + titlebar for a session after activity state change
 local function refresh_activity_chrome(id)
@@ -37,49 +49,101 @@ end
 -- Also tracks activity state (working/done) for unfocused sessions.
 -- Guarded by state.resizing to avoid SIGWINCH-triggered scroll displacement
 -- when splits resize all terminal TUIs simultaneously.
+--
+-- Activity is tracked in TWO registries:
+--   state.activity[id]  → per-layer (swapped on layer switch)
+--   global_activity[id] → cross-layer (persists, used by footer for all layers)
+-- The callback does NOT detach when the session moves to an inactive layer
+-- (window invalid but buffer alive). It only detaches when the buffer is gone.
 local function attach_auto_scroll(id, bufnr)
   vim.api.nvim_buf_attach(bufnr, false, {
     on_lines = function(_, buf)
-      -- Detach if session or buffer gone
-      local session = state.sessions[id]
-      if not session or not vim.api.nvim_buf_is_valid(buf) then
+      -- Detach only if buffer is gone
+      if not vim.api.nvim_buf_is_valid(buf) then
+        global_activity[id] = nil
         return true -- detach
       end
-      local winid = session.winid
-      if not winid or not vim.api.nvim_win_is_valid(winid) then
-        return true -- detach
-      end
+
       -- Skip during split/rearrange (SIGWINCH triggers bulk on_lines)
       if state.resizing then return end
-      -- Skip if this is the focused window (terminal mode auto-follows)
-      local is_focused = vim.api.nvim_get_current_win() == winid
-      if not is_focused then
-        -- Scroll unfocused window to bottom on next tick
+
+      -- Check if session is in current layer (has valid window)
+      local session = state.sessions[id]
+      local winid = session and session.winid
+      local has_window = winid and vim.api.nvim_win_is_valid(winid)
+      local is_focused = has_window and (vim.api.nvim_get_current_win() == winid)
+
+      -- Auto-scroll: only for unfocused sessions with valid windows
+      if has_window and not is_focused then
         vim.schedule(function()
           if not vim.api.nvim_win_is_valid(winid) then return end
           if not vim.api.nvim_buf_is_valid(buf) then return end
-          if state.resizing then return end -- re-check after schedule
+          if state.resizing then return end
           local line_count = vim.api.nvim_buf_line_count(buf)
           pcall(vim.api.nvim_win_set_cursor, winid, { line_count, 0 })
         end)
+      end
 
-        -- Activity tracking: unfocused session receiving output → working
-        if state.activity[id] ~= "working" then
-          state.activity[id] = "working"
-          vim.schedule(function() refresh_activity_chrome(id) end)
-        end
-
-        -- Reset/start 3-second silence timer → done
-        if state.activity_timers[id] then
-          vim.fn.timer_stop(state.activity_timers[id])
-        end
-        state.activity_timers[id] = vim.fn.timer_start(3000, function()
-          state.activity_timers[id] = nil
-          if state.activity[id] == "working" then
-            state.activity[id] = "done"
-            vim.schedule(function() refresh_activity_chrome(id) end)
+      -- Activity tracking: for ALL unfocused sessions (including inactive layers)
+      if not is_focused and not global_activity_suppress[id] then
+        if global_activity[id] == "working" then
+          -- Already working: reset the 3s silence timer
+          if global_activity_timers[id] then
+            vim.fn.timer_stop(global_activity_timers[id])
           end
-        end)
+          global_activity_timers[id] = vim.fn.timer_start(3000, function()
+            global_activity_timers[id] = nil
+            if global_activity[id] == "working" then
+              global_activity[id] = "done"
+              -- Also update layer-local if session is in current layer
+              if state.sessions[id] then
+                state.activity[id] = "done"
+              end
+              vim.schedule(function() refresh_activity_chrome(id) end)
+            end
+          end)
+          -- Sync layer-local
+          if state.sessions[id] then
+            state.activity[id] = "working"
+          end
+        else
+          -- Not yet working: burst detection (5+ events in 1s = real streaming)
+          global_activity_burst[id] = (global_activity_burst[id] or 0) + 1
+          if global_activity_burst[id] >= 5 then
+            -- Enough events: transition to working
+            global_activity[id] = "working"
+            global_activity_burst[id] = 0
+            if global_activity_burst_timers[id] then
+              vim.fn.timer_stop(global_activity_burst_timers[id])
+              global_activity_burst_timers[id] = nil
+            end
+            -- Start 3s silence timer
+            global_activity_timers[id] = vim.fn.timer_start(3000, function()
+              global_activity_timers[id] = nil
+              if global_activity[id] == "working" then
+                global_activity[id] = "done"
+                if state.sessions[id] then
+                  state.activity[id] = "done"
+                end
+                vim.schedule(function() refresh_activity_chrome(id) end)
+              end
+            end)
+            -- Sync layer-local
+            if state.sessions[id] then
+              state.activity[id] = "working"
+            end
+            vim.schedule(function() refresh_activity_chrome(id) end)
+          else
+            -- Not enough events yet: reset burst window after 1s of quiet
+            if global_activity_burst_timers[id] then
+              vim.fn.timer_stop(global_activity_burst_timers[id])
+            end
+            global_activity_burst_timers[id] = vim.fn.timer_start(1000, function()
+              global_activity_burst[id] = 0
+              global_activity_burst_timers[id] = nil
+            end)
+          end
+        end
       end
     end,
   })
@@ -349,6 +413,56 @@ local function create_split_window(count, sessions)
   end
 end
 
+--- Fully rebuild the session window grid from scratch.
+--- Closes all session windows (terminal buffers survive via bufhidden=hide),
+--- recreates a proper cols×rows grid, and places sessions in row-major order.
+--- Safe to call at any time — corrects any window tree corruption caused by
+--- delete/add cycles leaving the window tree in an inconsistent state.
+--- Acts as a "video-game unstuck" for the quadrant layout.
+function M.rebuild()
+  state.resizing = true
+  cleanup_invalid()
+  local sessions = M.list()
+  if #sessions == 0 then
+    state.resizing = false
+    return
+  end
+
+  if #sessions == 1 then
+    -- Single session: just ensure titlebar + equalize (no grid to rebuild)
+    get_titlebar().update_all()
+    vim.cmd("wincmd =")
+  else
+    -- Multiple sessions: full grid rebuild
+    rebuild_to_grid(sessions, false)
+    -- Rebuild titlebars for all sessions (windows are new after rebuild)
+    for _, s in ipairs(sessions) do
+      get_titlebar().create(s.id)
+    end
+    get_titlebar().update_all()
+    vim.cmd("wincmd =")
+  end
+
+  -- Update terminal module with the rebuilt primary's new winid
+  local primary = state.primary_session and state.sessions[state.primary_session]
+  if primary and primary.winid and vim.api.nvim_win_is_valid(primary.winid) then
+    require("ccasp.terminal")._set_state(primary.bufnr, primary.winid)
+  end
+
+  -- Focus the active session (or fallback)
+  local active = M.get_active()
+  if active and active.winid and vim.api.nvim_win_is_valid(active.winid) then
+    vim.api.nvim_set_current_win(active.winid)
+  end
+
+  -- Refresh footer to reflect current session list
+  local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
+  if ft_ok then footer.refresh() end
+
+  -- Clear resizing flag after TUI has settled
+  vim.defer_fn(function() state.resizing = false end, 300)
+end
+
 -- Launch CLI in terminal buffer (defaults to "claude", pass command to override).
 -- Reads session.command at fire time so template apply can override before the defer fires.
 local function launch_claude_cli(id, bufnr, name, command)
@@ -408,7 +522,10 @@ function M.spawn(target_win)
     create_split_window(count, M.list())
   end
 
-  vim.cmd("lcd " .. vim.fn.fnameescape(vim.fn.getcwd()))
+  -- In demo mode, launch in a clean temp directory so Claude CLI doesn't show real paths
+  local ccasp = require("ccasp")
+  local spawn_dir = ccasp.is_demo_mode() and ccasp.get_demo_dir() or vim.fn.getcwd()
+  vim.cmd("lcd " .. vim.fn.fnameescape(spawn_dir))
   vim.cmd("terminal")
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
@@ -420,11 +537,18 @@ function M.spawn(target_win)
   -- Apply terminal window options (winhighlight set later by titlebar.update)
   apply_terminal_win_opts(winid)
 
-  local spawn_path = vim.fn.getcwd()
+  local spawn_path = spawn_dir
   state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = spawn_path, command = "claude" }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
   state.activity[id] = "idle"
+  -- Suppress activity detection during startup (CLI banner output is not real work)
+  state.activity_suppress[id] = true
+  global_activity_suppress[id] = true
+  vim.defer_fn(function()
+    state.activity_suppress[id] = nil
+    global_activity_suppress[id] = nil
+  end, 5000)
 
   if count == 0 then
     state.primary_session = id
@@ -464,6 +588,7 @@ end
 function M.spawn_at_path(path, opts)
   opts = opts or {}
   local cli_command = opts.command or "claude"
+  local ccasp = require("ccasp")
 
   -- Ensure we're in normal mode before creating splits
   local mode = vim.api.nvim_get_mode().mode
@@ -473,7 +598,7 @@ function M.spawn_at_path(path, opts)
 
   -- Validate path is a directory
   if vim.fn.isdirectory(path) == 0 then
-    vim.notify("Directory not found: " .. path, vim.log.levels.ERROR)
+    vim.notify("Directory not found: " .. ccasp.mask_path(path), vim.log.levels.ERROR)
     return nil
   end
 
@@ -486,15 +611,17 @@ function M.spawn_at_path(path, opts)
   end
 
   local id = generate_id()
-  local name = opts.name or vim.fn.fnamemodify(path, ":t")
+  local raw_name = opts.name or vim.fn.fnamemodify(path, ":t")
+  local name = ccasp.is_demo_mode() and ("Session " .. (count + 1)) or raw_name
 
   -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
   state.resizing = true
 
   create_split_window(count, M.list())
 
-  -- Set the local directory to the provided repo path
-  vim.cmd("lcd " .. vim.fn.fnameescape(path))
+  -- Set the local directory (demo mode → use clean temp dir so Claude CLI hides real paths)
+  local lcd_path = ccasp.is_demo_mode() and ccasp.get_demo_dir() or path
+  vim.cmd("lcd " .. vim.fn.fnameescape(lcd_path))
   vim.cmd("terminal")
 
   local bufnr, winid = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
@@ -505,10 +632,17 @@ function M.spawn_at_path(path, opts)
   -- Apply terminal window options (winhighlight set later by titlebar.update)
   apply_terminal_win_opts(winid)
 
-  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = path, command = cli_command }
+  state.sessions[id] = { id = id, name = name, bufnr = bufnr, winid = winid, claude_running = false, path = lcd_path, command = cli_command }
   table.insert(state.session_order, id)
   state.active_session = id -- newly created session is always active
   state.activity[id] = "idle"
+  -- Suppress activity detection during startup (CLI banner output is not real work)
+  state.activity_suppress[id] = true
+  global_activity_suppress[id] = true
+  vim.defer_fn(function()
+    state.activity_suppress[id] = nil
+    global_activity_suppress[id] = nil
+  end, 5000)
 
   if count == 0 then
     state.primary_session = id
@@ -598,18 +732,36 @@ function M.close(id)
     vim.api.nvim_win_close(session.winid, true)
   end
 
-  -- Clean up activity tracking
+  -- Clean up activity tracking (layer-local)
   if state.activity_timers[id] then
     vim.fn.timer_stop(state.activity_timers[id])
     state.activity_timers[id] = nil
   end
+  if state.activity_burst_timers[id] then
+    vim.fn.timer_stop(state.activity_burst_timers[id])
+    state.activity_burst_timers[id] = nil
+  end
   state.activity[id] = nil
+  state.activity_burst[id] = nil
+  state.activity_suppress[id] = nil
+  -- Clean up global activity tracking
+  if global_activity_timers[id] then
+    vim.fn.timer_stop(global_activity_timers[id])
+    global_activity_timers[id] = nil
+  end
+  if global_activity_burst_timers[id] then
+    vim.fn.timer_stop(global_activity_burst_timers[id])
+    global_activity_burst_timers[id] = nil
+  end
+  global_activity[id] = nil
+  global_activity_burst[id] = nil
+  global_activity_suppress[id] = nil
 
   state.sessions[id] = nil
   remove_from_order(id)
   reassign_primary_if_needed(id)
 
-  vim.defer_fn(M.rearrange, 100) -- rearrange sets/clears resizing
+  vim.defer_fn(M.rebuild, 100) -- full grid rebuild to maintain proper layout
 end
 
 -- Close all sessions
@@ -625,12 +777,30 @@ function M.close_all()
   state.primary_session = nil
   state.active_session = nil
 
-  -- Clean up all activity timers
-  for id, timer in pairs(state.activity_timers) do
+  -- Clean up all activity timers (layer-local)
+  for _, timer in pairs(state.activity_timers) do
+    vim.fn.timer_stop(timer)
+  end
+  for _, timer in pairs(state.activity_burst_timers) do
     vim.fn.timer_stop(timer)
   end
   state.activity = {}
   state.activity_timers = {}
+  state.activity_burst = {}
+  state.activity_burst_timers = {}
+  state.activity_suppress = {}
+  -- Clean up all global activity timers
+  for _, timer in pairs(global_activity_timers) do
+    vim.fn.timer_stop(timer)
+  end
+  for _, timer in pairs(global_activity_burst_timers) do
+    vim.fn.timer_stop(timer)
+  end
+  global_activity = {}
+  global_activity_timers = {}
+  global_activity_burst = {}
+  global_activity_burst_timers = {}
+  global_activity_suppress = {}
 
   local terminal = require("ccasp.terminal")
   terminal._set_state(nil, nil)
@@ -770,6 +940,12 @@ function M.get_activity(id)
   return state.activity[id] or "idle"
 end
 
+-- Get global activity state (persists across layer switches)
+-- Used by footer to show live status colors for ALL layers
+function M.get_global_activity(id)
+  return global_activity[id] or "idle"
+end
+
 -- Track active session from WinEnter (called by session_titlebar autocmd)
 function M.set_active_by_window(winid)
   local prev_active = state.active_session
@@ -778,13 +954,30 @@ function M.set_active_by_window(winid)
       state.active_session = id
 
       -- Clear activity indicator when user focuses a done/working session
-      if state.activity[id] == "done" or state.activity[id] == "working" then
-        -- Stop any pending silence timer
+      if state.activity[id] == "done" or state.activity[id] == "working"
+        or global_activity[id] == "done" or global_activity[id] == "working" then
+        -- Stop any pending timers (layer-local)
         if state.activity_timers[id] then
           vim.fn.timer_stop(state.activity_timers[id])
           state.activity_timers[id] = nil
         end
+        if state.activity_burst_timers[id] then
+          vim.fn.timer_stop(state.activity_burst_timers[id])
+          state.activity_burst_timers[id] = nil
+        end
+        state.activity_burst[id] = 0
         state.activity[id] = "idle"
+        -- Also clear global activity
+        if global_activity_timers[id] then
+          vim.fn.timer_stop(global_activity_timers[id])
+          global_activity_timers[id] = nil
+        end
+        if global_activity_burst_timers[id] then
+          vim.fn.timer_stop(global_activity_burst_timers[id])
+          global_activity_burst_timers[id] = nil
+        end
+        global_activity_burst[id] = 0
+        global_activity[id] = "idle"
         vim.schedule(function() refresh_activity_chrome(id) end)
       end
 
@@ -814,6 +1007,13 @@ function M.register_primary(bufnr, winid)
   state.primary_session = id
   state.active_session = id
   state.activity[id] = "idle"
+  -- Suppress activity detection during startup (CLI banner output is not real work)
+  state.activity_suppress[id] = true
+  global_activity_suppress[id] = true
+  vim.defer_fn(function()
+    state.activity_suppress[id] = nil
+    global_activity_suppress[id] = nil
+  end, 5000)
 
   -- Auto-scroll: keep unfocused terminal windows pinned to bottom
   attach_auto_scroll(id, bufnr)
@@ -843,6 +1043,242 @@ function M.set_claude_running(id, running)
     state.sessions[id].claude_running = running
     get_titlebar().update(id)
   end
+end
+
+-- Reorder sessions by providing a new ordered list of session IDs.
+-- Rebuilds the grid so sessions physically move to their new positions.
+-- Also updates the footer taskbar order.
+function M.reorder(new_order)
+  -- Validate all IDs exist in current sessions
+  for _, id in ipairs(new_order) do
+    if not state.sessions[id] then return false end
+  end
+  state.session_order = new_order
+  -- Full grid rebuild to physically rearrange windows
+  M.rebuild()
+  return true
+end
+
+-- Get human-readable grid position label for a session index.
+-- Maps 1-based index to grid location (e.g. "top-left", "bottom-right").
+local function get_grid_position_label(index, total)
+  local cols, rows = grid_dimensions(total)
+  local r = math.ceil(index / cols)
+  local c = ((index - 1) % cols) + 1
+
+  if total == 1 then return "fullscreen" end
+
+  if rows == 1 then
+    if cols == 2 then
+      return c == 1 and "left" or "right"
+    end
+    return "col " .. c
+  end
+
+  local row_label = r == 1 and "top" or "bottom"
+  if cols == 1 then return row_label end
+  if cols == 2 then
+    local col_label = c == 1 and "left" or "right"
+    return row_label .. "-" .. col_label
+  end
+  if cols == 3 then
+    local col_labels = { "left", "center", "right" }
+    return row_label .. "-" .. (col_labels[c] or ("col" .. c))
+  end
+  if cols == 4 then
+    local col_labels = { "far-left", "left", "right", "far-right" }
+    return row_label .. "-" .. (col_labels[c] or ("col" .. c))
+  end
+  return "pos " .. index
+end
+
+-- Show floating reorder modal for the active layer's sessions.
+-- Users navigate with j/k and move items with K/J (Shift+k/j).
+-- Enter applies the new order, Esc cancels.
+function M.show_reorder_modal()
+  local helpers = require("ccasp.panels.helpers")
+  local icons = require("ccasp.ui.icons")
+
+  cleanup_invalid()
+  local sessions = M.list()
+
+  if #sessions < 2 then
+    vim.notify("Need 2+ sessions to reorder", vim.log.levels.INFO)
+    return
+  end
+
+  -- Working copy of the order (will be mutated by move operations)
+  local working_order = {}
+  for _, s in ipairs(sessions) do
+    table.insert(working_order, { id = s.id, name = s.name })
+  end
+
+  local width = 44
+  local total = #working_order
+
+  local buf = helpers.create_buffer("ccasp://reorder-sessions")
+
+  local item_lines = {}
+  local cursor_item = 1
+
+  local function render_modal(win)
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+
+    local lines = {}
+    item_lines = {}
+
+    table.insert(lines, "")
+    table.insert(lines, "  Pos  Session              Grid")
+    table.insert(lines, "  " .. string.rep("─", width - 4))
+
+    for i, entry in ipairs(working_order) do
+      local pos_label = get_grid_position_label(i, total)
+      local name_pad = math.max(1, 21 - vim.fn.strdisplaywidth(entry.name))
+      local line = string.format("   %d.  %s%s%s", i, entry.name, string.rep(" ", name_pad), pos_label)
+      table.insert(lines, line)
+      item_lines[#lines] = i
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "  " .. string.rep("─", width - 4))
+    table.insert(lines, "  K: Move up  J: Move down")
+    table.insert(lines, "  Enter: Apply  Esc: Cancel")
+    table.insert(lines, "")
+
+    local ns = vim.api.nvim_create_namespace("ccasp_reorder")
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+
+    vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+    for i, line_text in ipairs(lines) do
+      if line_text:match("^  Pos") then
+        pcall(vim.api.nvim_buf_add_highlight, buf, ns, "Title", i - 1, 0, -1)
+      elseif line_text:match("^  ─") then
+        pcall(vim.api.nvim_buf_add_highlight, buf, ns, "Comment", i - 1, 0, -1)
+      elseif line_text:match("^  K:") or line_text:match("^  Enter:") then
+        pcall(vim.api.nvim_buf_add_highlight, buf, ns, "Comment", i - 1, 0, -1)
+      elseif item_lines[i] then
+        local idx = item_lines[i]
+        -- Highlight position number
+        pcall(vim.api.nvim_buf_add_highlight, buf, ns, "Number", i - 1, 3, 5)
+        -- Highlight grid label in grey (find it after the name gap)
+        local grid_start = line_text:find("%s%s+%S", 10)
+        if grid_start then
+          local label_start = line_text:find("%S", grid_start + 1)
+          if label_start then
+            pcall(vim.api.nvim_buf_add_highlight, buf, ns, "Comment", i - 1, label_start - 1, -1)
+          end
+        end
+        -- Highlight active item with accent
+        if idx == cursor_item then
+          pcall(vim.api.nvim_buf_add_highlight, buf, ns, "CursorLine", i - 1, 0, -1)
+        end
+      end
+    end
+
+    if win and vim.api.nvim_win_is_valid(win) then
+      for line_nr, idx in pairs(item_lines) do
+        if idx == cursor_item then
+          pcall(vim.api.nvim_win_set_cursor, win, { line_nr, 0 })
+          break
+        end
+      end
+    end
+  end
+
+  local height = total + 8
+  local pos = helpers.calculate_position({ width = width, height = height })
+  local win = helpers.create_window(buf, {
+    width = pos.width,
+    height = pos.height,
+    row = pos.row,
+    col = pos.col,
+    border = "rounded",
+    title = " " .. icons.reorder .. "  Reorder Sessions ",
+    title_pos = "center",
+    footer = " K: Up  J: Down  Enter: Apply  Esc: Cancel ",
+    footer_pos = "center",
+  })
+
+  vim.wo[win].cursorline = true
+  helpers.sandbox_buffer(buf)
+  render_modal(win)
+
+  local panel = { bufnr = buf, winid = win }
+  local function close_modal()
+    helpers.close_panel(panel)
+  end
+
+  local function apply_order()
+    local new_order = {}
+    for _, entry in ipairs(working_order) do
+      table.insert(new_order, entry.id)
+    end
+    close_modal()
+    vim.schedule(function()
+      M.reorder(new_order)
+      vim.notify("Sessions reordered", vim.log.levels.INFO)
+    end)
+  end
+
+  local function nav_down()
+    if cursor_item < total then
+      cursor_item = cursor_item + 1
+      render_modal(win)
+    end
+  end
+
+  local function nav_up()
+    if cursor_item > 1 then
+      cursor_item = cursor_item - 1
+      render_modal(win)
+    end
+  end
+
+  local function move_down()
+    if cursor_item < total then
+      working_order[cursor_item], working_order[cursor_item + 1] =
+        working_order[cursor_item + 1], working_order[cursor_item]
+      cursor_item = cursor_item + 1
+      render_modal(win)
+    end
+  end
+
+  local function move_up()
+    if cursor_item > 1 then
+      working_order[cursor_item], working_order[cursor_item - 1] =
+        working_order[cursor_item - 1], working_order[cursor_item]
+      cursor_item = cursor_item - 1
+      render_modal(win)
+    end
+  end
+
+  local opts = { buffer = buf, noremap = true, silent = true }
+  vim.keymap.set("n", "<CR>", apply_order, opts)
+  vim.keymap.set("n", "<Esc>", close_modal, opts)
+  vim.keymap.set("n", "q", close_modal, opts)
+
+  vim.keymap.set("n", "j", nav_down, opts)
+  vim.keymap.set("n", "k", nav_up, opts)
+  vim.keymap.set("n", "<Down>", nav_down, opts)
+  vim.keymap.set("n", "<Up>", nav_up, opts)
+
+  vim.keymap.set("n", "J", move_down, opts)
+  vim.keymap.set("n", "K", move_up, opts)
+  vim.keymap.set("n", "<S-Down>", move_down, opts)
+  vim.keymap.set("n", "<S-Up>", move_up, opts)
+
+  vim.keymap.set("n", "<LeftMouse>", function()
+    local mouse = vim.fn.getmousepos()
+    local line = mouse.line
+    if line < 1 then return end
+    local idx = item_lines[line]
+    if idx then
+      cursor_item = idx
+      render_modal(win)
+    end
+  end, opts)
 end
 
 -- Show session picker
@@ -947,6 +1383,12 @@ end
 
 -- Export current session state for layer snapshot
 function M._export_state()
+  -- Sync current layer's activity into global before snapshot
+  for id, act in pairs(state.activity) do
+    if act ~= "idle" then
+      global_activity[id] = act
+    end
+  end
   return {
     sessions = deep_copy(state.sessions),
     session_order = deep_copy(state.session_order),
@@ -963,12 +1405,18 @@ function M._import_state(data)
   for _, timer in pairs(state.activity_timers) do
     vim.fn.timer_stop(timer)
   end
+  for _, timer in pairs(state.activity_burst_timers) do
+    vim.fn.timer_stop(timer)
+  end
   state.sessions = data.sessions or {}
   state.session_order = data.session_order or {}
   state.primary_session = data.primary_session
   state.active_session = data.active_session
   state.activity = data.activity or {}
   state.activity_timers = {} -- timers don't survive layer switch
+  state.activity_burst = {}
+  state.activity_burst_timers = {}
+  state.activity_suppress = {}
 
   -- Update terminal module with new primary
   local primary = state.primary_session and state.sessions[state.primary_session]

@@ -279,6 +279,7 @@ local section_renderers = {
 
     local remaining_actions = {
       { icon = icons.edit,     label = "Rename Current Session", action = "session_rename" },
+      { icon = icons.reorder,  label = "Reorder Sessions", action = "session_reorder" },
       { icon = icons.minimize, label = "Minimize Current", action = "session_minimize" },
       { icon = icons.reload,   label = "Restore Minimized", action = "session_restore" },
       { icon = icons.layout,   label = "Resize All Panels", action = "session_rebuild_layout" },
@@ -805,6 +806,11 @@ function M.execute_action(item)
       M.close()
       vim.schedule(function() sessions.restore_all() end)
     end,
+    session_reorder = function()
+      close_and_run_modal(function()
+        sessions.show_reorder_modal()
+      end)
+    end,
     session_rebuild_layout = function()
       M.close()
       vim.schedule(function() sessions.rebuild() end)
@@ -1063,6 +1069,7 @@ function M.execute_action(item)
         or item.action == "new_session"
         or item.action == "focus_session"
         or item.action == "session_rename"
+        or item.action == "session_reorder"
         or item.action == "session_minimize"
         or item.action == "session_restore"
         or item.action == "session_rebuild_layout"
