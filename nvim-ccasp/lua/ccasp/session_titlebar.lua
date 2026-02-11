@@ -1120,6 +1120,12 @@ function M.setup_keymaps(bufnr, session_id)
     -- Same window, buffer content: pass click through to terminal app (Claude CLI input)
     return vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
   end, { buffer = bufnr, noremap = true, silent = true, expr = true, desc = "Click to switch sessions" })
+
+  -- Terminal mode: suppress double-click so the <2-LeftMouse> escape sequence
+  -- doesn't leak into the terminal app as a stray 'ý' (0xFD) character.
+  vim.keymap.set("t", "<2-LeftMouse>", function()
+    return ""
+  end, { buffer = bufnr, noremap = true, silent = true, expr = true, desc = "Suppress double-click in terminal" })
 end
 
 -- Show context menu

@@ -6,9 +6,24 @@
  * violations, and performance metrics.
  */
 
-import { chromium } from 'playwright';
 import { runAccessibilityAudit, isAxeAvailable } from '../discovery/accessibility.js';
 import { runLighthouseAudit, isLighthouseAvailable } from '../discovery/lighthouse.js';
+
+/**
+ * Lazy-load playwright to avoid crashing the CLI when it's not installed.
+ * Only site-intel commands need playwright — other commands (wizard, init, etc.) should not be affected.
+ */
+async function getChromium() {
+  try {
+    const pw = await import('playwright');
+    return pw.chromium;
+  } catch {
+    throw new Error(
+      'playwright is not installed. Install it with: npm install -g playwright\n' +
+      'This dependency is only required for site-intel dev-scan features.'
+    );
+  }
+}
 
 /**
  * Login to the application using configured selectors
@@ -255,6 +270,7 @@ export async function scanRoutes(routePaths, config, options = {}) {
   let browser;
   try {
     // Launch browser
+    const chromium = await getChromium();
     browser = await chromium.launch({
       headless: true,
       args: ['--disable-dev-shm-usage', '--no-sandbox'],

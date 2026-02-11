@@ -5,7 +5,6 @@
  * captures screenshots, and extracts DOM structure.
  */
 
-import { chromium } from 'playwright';
 import { URL } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -215,6 +214,7 @@ export async function crawlSite(startUrl, options = {}) {
 
   let browser;
   try {
+    const { chromium } = await import('playwright');
     browser = await chromium.launch({ headless: true });
 
     // Get CDP port for Lighthouse (if audit enabled)
