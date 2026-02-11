@@ -9,7 +9,7 @@
 ║   ║  ║  ╠═╣║ ║ ║║║╣   ╠═╣ ║║╚╗╔╝╠═╣║║║║  ║╣  ║║  ╚═╗ ║ ╠═╣╠╦╝ ║ ║╣ ╠╦╝       ║
 ║   ╚═╝╩═╝╩ ╩╚═╝═╩╝╚═╝  ╩ ╩═╩╝ ╚╝ ╩ ╩╝╚╝╚═╝╚═╝═╩╝  ╚═╝ ╩ ╩ ╩╩╚═ ╩ ╚═╝╩╚═       ║
 ║                                                                               ║
-║                           v2.11.1  •  Production Ready                        ║
+║                           v2.11.4  •  Production Ready                        ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -40,60 +40,53 @@ npx claude-cli-advanced-starter-pack init
 
 <div align="center">
 
-## v2.11.1 Feature Update — Competitor Research & MVP Build Mode
+## v2.11.4 Feature Update — Neovim Deploy Panel & Session Management
 
 </div>
 
-> **Feb 2026** — New optional competitive intelligence workflow during project setup. Run 6-phase competitor research, validate compliance, and choose between **B2C MVP** (6-week, freemium) or **Enterprise B2B** (10-week, full compliance) build tiers. Auto-configures feature toggles to maximize day-1 profitability.
+> **Feb 2026** — Enhanced Neovim plugin with deploy configuration panel, session reorder controls, and always-on symlink sync for project templates. Plus per-session slash commands and restored minimized session support.
 
-### What's New in v2.11.1
+### What's New in v2.11.4
 
 <table>
 <tr>
 <td width="50%">
 
-#### Competitor Research Workflow
-**6-phase competitive intelligence in `/project-implementation`:**
-- **Competitor Discovery** — WebSearch for alternatives
-- **Feature Extraction** — Product page analysis
-- **Pricing Analysis** — Tiers, free plans, enterprise pricing
-- **Tech Stack Discovery** — Technologies used by competitors
-- **Market Sentiment** — G2, Capterra, Product Hunt reviews
-- **Feature Gap Analysis** — What competitors miss
+#### Deploy Configuration Panel
+**New flyout panel in nvim-ccasp:**
+- **Deploy Config** — Configure deployment settings from Neovim sidebar
+- **Service Management** — Railway/Cloudflare settings at a glance
+- **Quick Deploy** — Trigger deployments without leaving the editor
 
 </td>
 <td width="50%">
 
-#### B2C MVP vs Enterprise B2B Build Tiers
-**Auto-configure feature toggles by market:**
-- **B2C MVP** — 6 weeks, freemium, viral growth, mobile-first
-- **Enterprise B2B** — 10 weeks, multi-tenancy, RBAC, compliance
-- Auto-stubs enterprise features for B2C (enable later)
-- Tier-specific roadmap phase ordering
-- Compliance check on discovered competitors
-- DESIGN_ORIGIN.md for IP protection
+#### Session Reorder & Management
+**Footer taskbar enhancements:**
+- **Session Reorder Button** — Drag-and-drop session ordering in footer
+- **Per-Session Slash Commands** — Each session gets its own command scope
+- **Active Session Targeting** — Commands route to the focused session
+- **Restored Minimized Sessions** — Splash screen recovery for minimized sessions
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-#### Neovim Panel Integration
-**New "MARKET RESEARCH" section in Project Config:**
-- `competitor_research` toggle (14th feature)
-- Defaults to OFF (opt-in, research takes ~38 min)
-- Auto-configures all dependent toggles on tier selection
-- Tests: 17/17 config + 29/29 bridge passing
+#### Always-On Symlink Sync
+**Template synchronization improvements:**
+- **Symlink Sync** — Project templates stay in sync automatically
+- **No Manual Refresh** — Changes propagate without `ccasp init`
+- **Dev Mode Compatible** — Works seamlessly with worktree workflows
 
 </td>
 <td width="50%">
 
-#### Build Tier Awareness
-**Orchestration templates updated:**
-- `/phase-dev-plan` reads `buildTier` from tech-stack.json
-- `/create-roadmap` uses tier-specific phase structure
-- B2C: Foundation → Auth → Core → Payments → Growth → Polish
-- Enterprise: Billing → Registration → Admin → Core → API → Compliance
+#### Previous: Competitor Research & MVP Build Mode (v2.11.1)
+- **6-Phase Competitive Intelligence** in `/project-implementation`
+- **B2C MVP vs Enterprise B2B** build tier selection
+- **Auto-Configure Feature Toggles** by market type
+- **Build Tier Awareness** in `/phase-dev-plan` and `/create-roadmap`
 
 </td>
 </tr>
@@ -102,7 +95,7 @@ npx claude-cli-advanced-starter-pack init
 ### Upgrade Now
 
 ```bash
-# Update to v2.11.1
+# Update to v2.11.4
 npm update -g claude-cli-advanced-starter-pack
 
 # Sync new commands to your project
@@ -110,6 +103,19 @@ ccasp init
 ```
 
 ---
+
+<details>
+<summary><strong>v2.11.1 — Competitor Research & MVP Build Mode</strong> (click to expand)</summary>
+
+> **Feb 2026** — New optional competitive intelligence workflow during project setup. Run 6-phase competitor research, validate compliance, and choose between **B2C MVP** (6-week, freemium) or **Enterprise B2B** (10-week, full compliance) build tiers.
+
+- **Competitor Research Workflow** — 6-phase competitive intelligence in `/project-implementation`
+- **Build Tier Selection** — B2C MVP (6 weeks, freemium) vs Enterprise B2B (10 weeks, full compliance)
+- **Auto-Configure Feature Toggles** — Tier selection auto-stubs/enables multi-tenancy, RBAC, billing
+- **Neovim Panel** — New "MARKET RESEARCH" section with `competitor_research` toggle
+- **Build Tier Awareness** — `/phase-dev-plan` and `/create-roadmap` read `buildTier` from tech-stack.json
+
+</details>
 
 <details>
 <summary><strong>v2.8.1 — Getting Started Onboarding + Help System (nvim-ccasp)</strong> (click to expand)</summary>
@@ -667,6 +673,18 @@ npx claude-cli-advanced-starter-pack init
 ---
 
 ## Version History
+
+### v2.11.4
+**Neovim Deploy Panel & Session Management** — Feb 2026
+- **Deploy Configuration Panel**: New flyout panel for deployment settings in nvim-ccasp sidebar
+- **Session Reorder Button**: Drag-and-drop session ordering in footer taskbar
+- **Always-On Symlink Sync**: Project templates stay in sync automatically without manual `ccasp init`
+
+### v2.11.2
+**Per-Session Commands & Minimized Session Recovery** — Feb 2026
+- **Per-Session Slash Commands**: Each Claude CLI session gets its own command scope and active targeting
+- **Minimized Session Recovery**: Restore minimized sessions from splash screen
+- **Slideshow GIF**: Added animated demo GIF to README hero section
 
 ### v2.11.1
 **Competitor Research & MVP Build Mode** — Feb 2026
