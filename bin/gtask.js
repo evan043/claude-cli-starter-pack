@@ -42,6 +42,7 @@ import { runGlobalUninstall } from '../src/commands/global-uninstall.js';
 import { runGlobalReinstall } from '../src/commands/global-reinstall.js';
 import { runDevDeploy } from '../src/commands/dev-deploy.js';
 import devModeSync from '../src/commands/dev-mode-sync.js';
+import { runTemplateSync } from '../src/commands/template-sync.js';
 import { runModelMode } from '../src/commands/model-mode.js';
 import { runVision } from '../src/commands/vision.js';
 import { runConstitutionInit } from '../src/commands/constitution-init.js';
@@ -439,6 +440,22 @@ program
     await devModeSync(options);
   });
 
+// Template sync - always-on symlink sync for project templates
+program
+  .command('template-sync')
+  .description('Sync CCASP templates to project via compiled cache + symlinks')
+  .option('--enable', 'Enable auto-sync for current project')
+  .option('--disable', 'Disable auto-sync, replace symlinks with copies')
+  .option('--status', 'Show sync status')
+  .option('--recompile', 'Force recompile of compiled cache')
+  .option('--repair', 'Fix broken symlinks')
+  .option('--all', 'Sync all registered projects')
+  .option('--force', 'Force sync even if cache is fresh')
+  .option('--dry-run', 'Preview changes without applying')
+  .action(async (options) => {
+    await runTemplateSync(options);
+  });
+
 // Model mode - configure agent model defaults
 program
   .command('model-mode')
@@ -531,13 +548,26 @@ program
 // Site Intelligence - website analysis system
 registerSiteIntelCommands(program);
 
-// Apply log level from flags
-program.hook('preAction', (thisCommand) => {
+// Apply log level from flags + startup sync check
+program.hook('preAction', async (thisCommand) => {
   const opts = thisCommand.opts();
   if (opts.silent) {
     setLogLevel(LOG_LEVELS.SILENT);
   } else if (opts.debug || opts.verbose) {
     setLogLevel(LOG_LEVELS.DEBUG);
+  }
+
+  // Startup sync check: recompile templates if CCASP version changed
+  // Skip for template-sync command itself (it handles its own sync)
+  // Skip for init (it hasn't created tech-stack.json yet)
+  const cmdName = thisCommand.name();
+  if (!['template-sync', 'init', 'wizard', 'help'].includes(cmdName)) {
+    try {
+      const { checkStartupSync } = await import('../src/utils/startup-sync.js');
+      await checkStartupSync({ silent: opts.silent });
+    } catch {
+      // Non-critical — don't block CLI if startup sync fails
+    }
   }
 });
 

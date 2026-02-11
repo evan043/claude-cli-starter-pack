@@ -99,6 +99,13 @@ export function generateTechStack(claudeDir, projectName, selectedFeatures, feat
       provider: 'github',
       projectBoard: { type: 'none' },
     },
+    // Template sync configuration (always-on symlink sync)
+    sync: {
+      method: 'symlink',
+      enabled: true,
+      lastSyncAt: null,
+      ccaspVersionAtSync: null,
+    },
     // Track which features need post-install configuration
     _pendingConfiguration: featuresRequiringConfig.map((f) => f.name),
     // Track what was deployed for verification

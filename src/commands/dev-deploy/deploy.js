@@ -8,6 +8,7 @@ import {
 } from '../../utils/dev-mode-state.js';
 import { backupProject } from '../../utils/project-backup.js';
 import { executeSyncActions } from '../../utils/smart-sync.js';
+import { syncProject } from '../../utils/symlink-sync.js';
 import { exec, execSilent } from './worktree.js';
 
 /**
@@ -128,34 +129,69 @@ export async function updateRegisteredProjects(worktreePath, options = {}) {
         process.chdir(originalCwd);
         updated++;
       } else {
-        // Smart sync mode: Preserve user customizations
-        const syncResult = await executeSyncActions(
-          project.path,
-          worktreePath,
-          {
-            dryRun: false,
-            force: force,
-            preserveCustomizations: !force
+        // Check if project has symlink sync enabled
+        let useSymlinkSync = false;
+        try {
+          const tsPath = join(project.path, '.claude', 'config', 'tech-stack.json');
+          if (existsSync(tsPath)) {
+            const ts = JSON.parse(readFileSync(tsPath, 'utf8'));
+            useSymlinkSync = ts.sync?.enabled !== false;
           }
-        );
+        } catch { /* fallback to smart-sync */ }
 
-        const syncedCount = syncResult.executed.length;
-        const preservedCount = syncResult.skipped.filter(
-          f => f.category === 'customized'
-        ).length;
+        if (useSymlinkSync) {
+          // Symlink sync: compile from worktree + create symlinks
+          const symlinkResult = syncProject(project.path, {
+            ccaspRoot: worktreePath,
+            force: force
+          });
 
-        if (syncedCount > 0) {
-          console.log(chalk.green(`       ✓ Synced ${project.name}: ${syncedCount} file(s)`));
-          updated++;
-        }
+          const fileCount = symlinkResult.symlink?.created?.length || 0;
+          if (fileCount > 0) {
+            console.log(chalk.green(`       ✓ Symlink-synced ${project.name}: ${fileCount} file(s)`));
+            updated++;
+          } else if (symlinkResult.success) {
+            console.log(chalk.dim(`       ${project.name}: Already synced`));
+            updated++;
+          }
 
-        if (preservedCount > 0) {
-          console.log(chalk.yellow(`         Preserved ${preservedCount} customization(s)`));
-          preserved += preservedCount;
-        }
+          const customCount = symlinkResult.symlink?.skipped?.filter(
+            f => f.reason === 'User-created file' || f.reason === 'Customized (hash differs)'
+          ).length || 0;
+          if (customCount > 0) {
+            console.log(chalk.yellow(`         Preserved ${customCount} custom file(s)`));
+            preserved += customCount;
+          }
+        } else {
+          // Smart sync mode: Preserve user customizations
+          const syncResult = await executeSyncActions(
+            project.path,
+            worktreePath,
+            {
+              dryRun: false,
+              force: force,
+              preserveCustomizations: !force
+            }
+          );
 
-        if (syncResult.errors.length > 0) {
-          console.log(chalk.red(`         ${syncResult.errors.length} error(s)`));
+          const syncedCount = syncResult.executed.length;
+          const preservedCount = syncResult.skipped.filter(
+            f => f.category === 'customized'
+          ).length;
+
+          if (syncedCount > 0) {
+            console.log(chalk.green(`       ✓ Synced ${project.name}: ${syncedCount} file(s)`));
+            updated++;
+          }
+
+          if (preservedCount > 0) {
+            console.log(chalk.yellow(`         Preserved ${preservedCount} customization(s)`));
+            preserved += preservedCount;
+          }
+
+          if (syncResult.errors.length > 0) {
+            console.log(chalk.red(`         ${syncResult.errors.length} error(s)`));
+          }
         }
       }
     } catch (err) {

@@ -253,11 +253,12 @@ local section_renderers = {
     -- Recent repos (indented under New Session for quick-launch)
     local repo_ok, repo_storage = pcall(require, "ccasp.repo_launcher.storage")
     if repo_ok then
+      local ccasp_main = require("ccasp")
       local recent = repo_storage.get_recent(5)
       if #recent > 0 then
         table.insert(lines, "    Recent repos:")
         for _, repo in ipairs(recent) do
-          table.insert(lines, "      " .. icons.repo .. " " .. repo.name)
+          table.insert(lines, "      " .. icons.repo .. " " .. ccasp_main.mask_name(repo.name))
           item_lines[#lines] = { action = "new_session_at_repo", path = repo.path, name = repo.name }
         end
       end
@@ -271,10 +272,16 @@ local section_renderers = {
     table.insert(lines, "  " .. icons.terminal .. " New Happy Repository Session")
     item_lines[#lines] = { action = "new_happy_session" }
 
+    -- Saved Notes
+    table.insert(lines, "")
+    table.insert(lines, "  " .. icons.save .. " Saved Notes")
+    item_lines[#lines] = { action = "open_saved_notes" }
+
     local remaining_actions = {
       { icon = icons.edit,     label = "Rename Current Session", action = "session_rename" },
       { icon = icons.minimize, label = "Minimize Current", action = "session_minimize" },
       { icon = icons.reload,   label = "Restore Minimized", action = "session_restore" },
+      { icon = icons.layout,   label = "Resize All Panels", action = "session_rebuild_layout" },
       { icon = icons.close,    label = "Close All Sessions", action = "session_close_all" },
     }
     for _, a in ipairs(remaining_actions) do
@@ -294,13 +301,14 @@ local section_renderers = {
     local pin_icon = nf_ok and nf.pin or "*"
     local repo_icon = nf_ok and nf.repo or ">"
     local clock_icon = nf_ok and nf.clock or "@"
+    local ccasp_main = require("ccasp")
 
     -- Pinned repos
     local pinned = storage.get_pinned()
     if #pinned > 0 then
       table.insert(lines, "  " .. pin_icon .. " Pinned")
       for _, repo in ipairs(pinned) do
-        table.insert(lines, "    " .. repo.name)
+        table.insert(lines, "    " .. ccasp_main.mask_name(repo.name))
         item_lines[#lines] = { action = "open_repo", path = repo.path, name = repo.name }
       end
       table.insert(lines, "")
@@ -312,7 +320,7 @@ local section_renderers = {
     table.insert(lines, "  " .. clock_icon .. " Recent")
     for _, repo in ipairs(recent) do
       if not repo.pinned and shown < 5 then
-        table.insert(lines, "    " .. repo.name)
+        table.insert(lines, "    " .. ccasp_main.mask_name(repo.name))
         item_lines[#lines] = { action = "open_repo", path = repo.path, name = repo.name }
         shown = shown + 1
       end
@@ -337,8 +345,10 @@ local section_renderers = {
     local panels = {
       { icon = icons.dashboard, label = "Dashboard", action = "dashboard" },
       { icon = icons.settings,  label = "Control Panel", action = "control" },
+      { icon = icons.todo,      label = "Todo List", action = "todos" },
       { icon = icons.hooks,     label = "Hook Manager", action = "hooks" },
       { icon = icons.minimize,  label = "Taskbar", action = "taskbar" },
+      { icon = icons.search,    label = "Site Intelligence", action = "site_intel" },
     }
     for _, p in ipairs(panels) do
       table.insert(lines, "  " .. p.icon .. " " .. p.label)
@@ -392,6 +402,7 @@ local section_renderers = {
     local actions = {
       { icon = icons.commands, label = "Commands (Telescope)", action = "commands" },
       { icon = icons.assets,   label = "Skills (Telescope)", action = "skills" },
+      { icon = icons.todo,     label = "Todos (Telescope)", action = "todos_telescope" },
     }
     for _, a in ipairs(actions) do
       table.insert(lines, "  " .. a.icon .. " " .. a.label)
@@ -475,6 +486,7 @@ local section_renderers = {
       {
         name = "Integrations",
         items = {
+          { label = "Template Sync", path = "sync.enabled" },
           { label = "GitHub Sync", path = "versionControl.autoSync" },
           { label = "Deployment", path = "deployment.enabled" },
         },
@@ -490,6 +502,27 @@ local section_renderers = {
         table.insert(lines, "  " .. toggle_icon .. " " .. feat.label .. "  " .. status)
         item_lines[#lines] = { action = "toggle_feature", path = feat.path, name = feat.label }
       end
+      table.insert(lines, "")
+    end
+
+    -- Template Sync status indicator
+    local sync_cfg = config_ok and config.get_nested(tech_stack, "sync") or {}
+    if sync_cfg and type(sync_cfg) == "table" then
+      table.insert(lines, "  Template Sync Status")
+      local sync_version = sync_cfg.ccaspVersionAtSync or "unknown"
+      local sync_method = sync_cfg.method or "symlink"
+      local last_sync = sync_cfg.lastSyncAt
+      local sync_time = "never"
+      if last_sync and type(last_sync) == "string" then
+        -- Extract time portion from ISO string
+        local t = last_sync:match("T(%d+:%d+)")
+        if t then sync_time = t end
+      end
+      local status_icon = sync_cfg.enabled and icons.sync_ok or icons.sync_warn
+      table.insert(lines, "  " .. (status_icon or "~") .. " v" .. sync_version .. " at " .. sync_time .. " (" .. sync_method .. ")")
+      table.insert(lines, "")
+      table.insert(lines, "  " .. (icons.reload or "R") .. " Recompile Templates")
+      item_lines[#lines] = { action = "recompile_templates" }
       table.insert(lines, "")
     end
 
@@ -617,14 +650,24 @@ end
 -- Used for actions that open modals (rename, color picker, etc.) from the flyout.
 -- The WinEnter handler auto-enters terminal mode when the flyout closes and focus
 -- lands on a terminal window, so we must exit terminal mode before opening a modal.
+-- NOTE: stopinsert only exits INSERT mode, NOT terminal mode ("t"). For terminal
+-- mode we must use <C-\><C-n> via feedkeys. Since feedkeys is async, we schedule
+-- fn() on the NEXT tick so the mode change takes effect first.
 local function close_and_run_modal(fn)
   M.close()
   vim.schedule(function()
     local mode = vim.api.nvim_get_mode().mode
-    if mode == "t" or mode == "i" then
+    if mode == "t" then
+      -- Exit terminal mode with <C-\><C-n>, then schedule fn on next tick
+      local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+      vim.api.nvim_feedkeys(esc, "n", false)
+      vim.schedule(fn)
+    elseif mode == "i" then
       vim.cmd("stopinsert")
+      fn()
+    else
+      fn()
     end
-    fn()
   end)
 end
 
@@ -722,7 +765,7 @@ function M.execute_action(item)
           if not input or input == "" then return end
           local path = vim.fn.expand(input)
           if vim.fn.isdirectory(path) == 0 then
-            vim.notify("Not a valid directory: " .. path, vim.log.levels.ERROR)
+            vim.notify("Not a valid directory: " .. require("ccasp").mask_path(path), vim.log.levels.ERROR)
             return
           end
           vim.schedule(function()
@@ -761,6 +804,10 @@ function M.execute_action(item)
     session_restore = function()
       M.close()
       vim.schedule(function() sessions.restore_all() end)
+    end,
+    session_rebuild_layout = function()
+      M.close()
+      vim.schedule(function() sessions.rebuild() end)
     end,
     session_close_all = function()
       M.close()
@@ -842,6 +889,13 @@ function M.execute_action(item)
       end)
     end,
 
+    -- Saved Notes
+    open_saved_notes = function()
+      close_and_run_modal(function()
+        require("ccasp.saved_notes").open_browser()
+      end)
+    end,
+
     -- Panels
     dashboard = function()
       if ccasp.panels and ccasp.panels.dashboard then ccasp.panels.dashboard.open() end
@@ -854,6 +908,19 @@ function M.execute_action(item)
     end,
     taskbar = function()
       if ccasp.taskbar then ccasp.taskbar.show_picker() end
+    end,
+    site_intel = function()
+      if ccasp.panels and ccasp.panels.site_intel then ccasp.panels.site_intel.toggle() end
+    end,
+    todos = function()
+      close_and_run_modal(function()
+        local ok, todos_panel = pcall(require, "ccasp.panels.todos")
+        if ok and todos_panel then
+          todos_panel.open()
+        else
+          vim.notify("CCASP: failed to load todo panel: " .. tostring(todos_panel), vim.log.levels.ERROR)
+        end
+      end)
     end,
 
     -- Prompt Injector
@@ -904,6 +971,12 @@ function M.execute_action(item)
       M.close()
       if ccasp.telescope then ccasp.telescope.skills() end
     end,
+    todos_telescope = function()
+      M.close()
+      vim.schedule(function()
+        require("ccasp.todos_telescope").pick()
+      end)
+    end,
 
     -- Orchestration
     orchestration_settings = function()
@@ -924,6 +997,25 @@ function M.execute_action(item)
     refresh = function()
       render()
       vim.notify("Refreshed", vim.log.levels.INFO)
+    end,
+
+    -- Template sync recompile
+    recompile_templates = function()
+      vim.notify("CCASP: Recompiling templates...", vim.log.levels.INFO)
+      vim.fn.jobstart("ccasp template-sync --recompile", {
+        on_exit = function(_, code)
+          if code == 0 then
+            vim.schedule(function()
+              vim.notify("CCASP: Templates recompiled", vim.log.levels.INFO)
+              render()
+            end)
+          else
+            vim.schedule(function()
+              vim.notify("CCASP: Recompile failed (exit " .. code .. ")", vim.log.levels.ERROR)
+            end)
+          end
+        end,
+      })
     end,
 
     -- Feature toggles
@@ -973,6 +1065,7 @@ function M.execute_action(item)
         or item.action == "session_rename"
         or item.action == "session_minimize"
         or item.action == "session_restore"
+        or item.action == "session_rebuild_layout"
         or item.action == "session_close_all"
         or item.action == "new_session_at_repo"
         or item.action == "new_repo_session"

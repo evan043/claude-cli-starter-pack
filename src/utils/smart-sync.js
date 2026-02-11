@@ -11,7 +11,7 @@
  * - NEW: Template not in project → Add to project
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, lstatSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { createHash } from 'crypto';
 import { glob } from 'glob';
@@ -33,7 +33,8 @@ export const FileCategory = {
   UNCHANGED: 'unchanged',
   CUSTOMIZED: 'customized',
   USER_CREATED: 'user_created',
-  NEW: 'new'
+  NEW: 'new',
+  SYMLINKED: 'symlinked'  // File is a symlink (managed by symlink-sync)
 };
 
 /**
@@ -188,35 +189,56 @@ export async function analyzeSyncActions(projectPath, worktreePath) {
         });
         results.summary.add++;
       } else {
-        // File exists in both - compare hashes
-        const projectHash = hashFile(projectFilePath);
-        const templateHash = hashFile(templatePath);
+        // Check if file is a symlink (managed by symlink-sync)
+        let isSymlink = false;
+        try {
+          isSymlink = lstatSync(projectFilePath).isSymbolicLink();
+        } catch {
+          // ignore
+        }
 
-        if (projectHash === templateHash) {
-          // UNCHANGED: Hashes match, safe to update
+        if (isSymlink) {
+          // SYMLINKED: Skip — managed by symlink-sync engine
           results.files.push({
             relativePath,
             projectPath: projectFilePath,
             templatePath,
-            category: FileCategory.UNCHANGED,
-            action: SyncAction.UPDATE,
-            description: 'Unchanged from template'
+            category: FileCategory.SYMLINKED,
+            action: SyncAction.SKIP,
+            description: 'Managed by symlink-sync (auto-updates)'
           });
-          results.summary.update++;
+          results.summary.skip++;
         } else {
-          // CUSTOMIZED: Hashes differ, preserve user changes
-          const diff = getLineDiff(projectFilePath, templatePath);
-          results.files.push({
-            relativePath,
-            projectPath: projectFilePath,
-            templatePath,
-            category: FileCategory.CUSTOMIZED,
-            action: SyncAction.PRESERVE,
-            linesAdded: diff.added,
-            linesRemoved: diff.removed,
-            description: 'User customizations detected'
-          });
-          results.summary.preserve++;
+          // File exists in both - compare hashes
+          const projectHash = hashFile(projectFilePath);
+          const templateHash = hashFile(templatePath);
+
+          if (projectHash === templateHash) {
+            // UNCHANGED: Hashes match, safe to update
+            results.files.push({
+              relativePath,
+              projectPath: projectFilePath,
+              templatePath,
+              category: FileCategory.UNCHANGED,
+              action: SyncAction.UPDATE,
+              description: 'Unchanged from template'
+            });
+            results.summary.update++;
+          } else {
+            // CUSTOMIZED: Hashes differ, preserve user changes
+            const diff = getLineDiff(projectFilePath, templatePath);
+            results.files.push({
+              relativePath,
+              projectPath: projectFilePath,
+              templatePath,
+              category: FileCategory.CUSTOMIZED,
+              action: SyncAction.PRESERVE,
+              linesAdded: diff.added,
+              linesRemoved: diff.removed,
+              description: 'User customizations detected'
+            });
+            results.summary.preserve++;
+          }
         }
       }
     }
@@ -421,6 +443,11 @@ export function formatSyncResults(results) {
 
     if (userCreated.length > 0) {
       lines.push(`├── Kept: ${userCreated.length} user-created files`);
+    }
+
+    const symlinked = results.skipped.filter(f => f.category === FileCategory.SYMLINKED);
+    if (symlinked.length > 0) {
+      lines.push(`├── Symlinked: ${symlinked.length} files (auto-synced)`);
     }
   }
 
