@@ -56,7 +56,8 @@ When invoked (typically auto-injected after wizard completes):
        "phased_dev": boolean,
        "hooks": boolean,
        "mobile_packaging": boolean,
-       "competitor_research": boolean
+       "competitor_research": boolean,
+       "landing_page_generator": boolean
      }
    }
    ```
@@ -82,6 +83,7 @@ When invoked (typically auto-injected after wizard completes):
    | `features.hooks = false` | Step 2e | Skip delegation hook setup |
    | `features.mobile_packaging = false` | Step 1.7 | Skip mobile packaging configuration |
    | `features.competitor_research = false` | Step 1.8 | Skip competitor research & build mode |
+   | `features.landing_page_generator = false` | Step 1.9 | Skip landing page generator configuration |
 
 4. **Stub behavior for disabled features in commercial modes:**
    - When `app_mode` is `"commercial_saas"` or `"commercial_single"` AND a feature is disabled:
@@ -870,6 +872,59 @@ Save to `buildTier.roadmap_phases` in `tech-stack.json`.
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
+
+---
+
+### Step 1.9: Landing Page Generator Configuration (If Enabled)
+
+**Panel config gate:** If `panel_config.features.landing_page_generator === false`, skip this entire step. Display: "Landing page generator skipped (disabled in panel config)."
+
+This step configures the screenshot pipeline and landing page asset generation system.
+
+1. **Check if landing page generator feature is enabled** (from feature selection or panel config)
+
+2. **Ask user via AskUserQuestion** (skip if panel config provides answers):
+   - "Which routes should be included in screenshots?"
+   - Options: Auto-detect from router, Manual entry, Skip for now
+
+3. **Create initial pipeline config** at the project's config path:
+   ```json
+   {
+     "enabled": false,
+     "routes": [],
+     "viewports": [
+       { "name": "desktop", "width": 1440, "height": 900 },
+       { "name": "mobile", "width": 390, "height": 844 }
+     ],
+     "devices": [
+       { "name": "macbook-pro-16", "type": "laptop" },
+       { "name": "iphone-15-pro", "type": "phone" }
+     ],
+     "gif": { "frameDelay": 2000, "quality": 10, "maxSize": 5242880 },
+     "outputDir": "public/landing-assets",
+     "baseUrl": "http://localhost:{{deployment.frontend.port}}"
+   }
+   ```
+
+4. **Save to tech-stack.json:**
+   ```json
+   {
+     "landingPage": {
+       "configPath": "src/config/landingPage.json",
+       "outputDir": "public/landing-assets",
+       "enabled": false
+     }
+   }
+   ```
+
+5. **Display summary:**
+   ```
+   Landing Page Generator configured:
+   - Config: src/config/landingPage.json
+   - Output: public/landing-assets/
+   - Status: Disabled (use /landing-page-toggle enable to activate)
+   - Run /landing-page-generator to generate marketing assets
+   ```
 
 ---
 

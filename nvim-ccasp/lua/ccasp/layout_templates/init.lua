@@ -129,23 +129,23 @@ function M.apply(name)
   local sessions = get_sessions()
   local titlebar = get_titlebar()
 
-  -- Apply layer by layer.
-  -- Layer 1 already exists (from init). We reuse it for the first template layer
-  -- and create additional layers for the rest.
-  for layer_idx, layer_def in ipairs(template.layers) do
-    if layer_idx > 9 then break end
+  -- Apply template as NEW layers (never mutate existing layers).
+  local first_new_layer = nil
 
-    if layer_idx == 1 then
-      -- Reuse existing Layer 1 — rename it
-      layers.rename(1, layer_def.name)
-      -- We're already on layer 1 so sessions are live
-    else
-      -- Create and switch to new layer
-      local num = layers.create(layer_def.name)
-      if not num then break end -- max layers reached
-      layers.switch_to(num)
-      -- After switch, a fresh default session exists in this layer
+  for layer_idx, layer_def in ipairs(template.layers) do
+    -- Create a new layer for every template layer
+    local num = layers.create(layer_def.name)
+    if not num then
+      vim.notify(
+        string.format("Max layers reached — only %d of %d template layers applied", layer_idx - 1, #template.layers),
+        vim.log.levels.WARN
+      )
+      break
     end
+    if not first_new_layer then
+      first_new_layer = num
+    end
+    layers.switch_to(num)
 
     -- Now we're on the target layer with one default session.
     -- Spawn additional sessions at specified paths.
@@ -155,8 +155,9 @@ function M.apply(name)
 
       local path = sess_def.path
       if vim.fn.isdirectory(path) == 0 then
+        local ccasp = require("ccasp")
         vim.notify(
-          string.format("Skipping session '%s': directory not found: %s", sess_def.name, path),
+          string.format("Skipping session '%s': directory not found: %s", ccasp.mask_name(sess_def.name), ccasp.mask_path(path)),
           vim.log.levels.WARN
         )
       else
@@ -197,9 +198,9 @@ function M.apply(name)
     vim.wait(200, function() return false end)
   end
 
-  -- Switch back to layer 1
-  if layers.get_active() ~= 1 then
-    layers.switch_to(1)
+  -- Switch to the first template layer
+  if first_new_layer and layers.get_active() ~= first_new_layer then
+    layers.switch_to(first_new_layer)
   end
 
   -- Refresh all chrome

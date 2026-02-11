@@ -186,6 +186,72 @@ function M.toggle_nested(tbl, path)
   return current
 end
 
+-- Load deploy-config.json
+function M.load_deploy_config()
+  local path = M.get_path("deploy_config")
+  if not path then
+    return M.get_deploy_defaults()
+  end
+  local data, err = M.read_json(path)
+  if err then
+    vim.notify("CCASP: " .. err, vim.log.levels.WARN)
+    return M.get_deploy_defaults()
+  end
+  return data or M.get_deploy_defaults()
+end
+
+-- Save deploy-config.json
+function M.save_deploy_config(data)
+  local path = M.get_path("deploy_config")
+  if not path then
+    return false
+  end
+  local ok, err = M.write_json(path, data)
+  if not ok then
+    vim.notify("CCASP: " .. err, vim.log.levels.ERROR)
+    return false
+  end
+  return true
+end
+
+-- Get deploy config defaults
+function M.get_deploy_defaults()
+  return {
+    version = "1.0.0",
+    frontend = {
+      cleanDist = true,
+      fullRebuild = false,
+      cacheBusting = true,
+      verbose = false,
+      buildCommand = "npm run build",
+      outputDir = "dist",
+      project = "eroland-me",
+    },
+    backend = {
+      preDeployGitCheck = true,
+      healthCheckUrl = "https://bo360-backend-production.up.railway.app/health",
+      healthCheckTimeout = 30,
+    },
+    verification = {
+      shaVerification = true,
+      productionUrl = "https://eroland.me",
+      hashAlgorithm = "sha256",
+      compareFiles = { "index.html" },
+      propagationDelay = 15,
+    },
+    notifications = {
+      enabled = true,
+      onSuccess = true,
+      onFailure = true,
+      method = "terminal",
+    },
+    rollback = {
+      autoRollbackOnShaFailure = false,
+      keepDeploymentCount = 3,
+    },
+  }
+end
+
 -- Get list of installed hooks
 function M.get_hooks()
   local hooks_dir = get_root() .. "/.claude/hooks/tools"

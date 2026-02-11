@@ -17,6 +17,54 @@ function M.is_appshell()
   return M.config.layout == "appshell"
 end
 
+-- Demo mode helpers: mask paths and names for marketing screenshots
+function M.is_demo_mode()
+  return M.config.demo_mode == true
+end
+
+local demo_name_counter = 0
+local demo_name_cache = {} -- original_name → masked_name
+
+function M.mask_path(path)
+  if not M.is_demo_mode() then return path end
+  return "~/projects/my-project"
+end
+
+function M.mask_name(name)
+  if not M.is_demo_mode() then return name end
+  if not name or name == "" then return "Project" end
+  if demo_name_cache[name] then return demo_name_cache[name] end
+  demo_name_counter = demo_name_counter + 1
+  local masked = "Project " .. demo_name_counter
+  demo_name_cache[name] = masked
+  return masked
+end
+
+-- Demo mode: get a clean working directory so Claude CLI doesn't show real paths.
+-- Creates a temp directory with a generic name and a minimal .claude/ folder.
+local demo_dir_cache = nil
+function M.get_demo_dir()
+  if demo_dir_cache then return demo_dir_cache end
+  local base = vim.fn.has("win32") == 1
+    and (os.getenv("TEMP") or "C:\\Temp")
+    or "/tmp"
+  local dir = base:gsub("\\", "/") .. "/ccasp-demo/my-project"
+  -- Create directory tree if missing
+  vim.fn.mkdir(dir .. "/.claude", "p")
+  -- Write a minimal settings.json so Claude CLI recognizes the project
+  local settings_path = dir .. "/.claude/settings.json"
+  if vim.fn.filereadable(settings_path) == 0 then
+    vim.fn.writefile({ '{"permissions":{"allow":[]},"enabledTools":[]}' }, settings_path)
+  end
+  -- Write a minimal CLAUDE.md so Claude CLI shows a generic project name
+  local claude_md_path = dir .. "/CLAUDE.md"
+  if vim.fn.filereadable(claude_md_path) == 0 then
+    vim.fn.writefile({ "# My Project", "", "Demo project workspace." }, claude_md_path)
+  end
+  demo_dir_cache = dir
+  return dir
+end
+
 -- Helper: Conditionally setup module with config
 local function setup_module(name, module_ref, config)
   if module_ref then
@@ -124,6 +172,7 @@ M.config = {
     commands_dir = ".claude/commands",
     skills_dir = ".claude/skills",
     cache_dir = ".claude/hooks/cache",
+    deploy_config = ".claude/config/deploy-config.json",
   },
   -- Default Claude CLI options
   claude = {
@@ -138,6 +187,9 @@ M.config = {
     auto_open = true,       -- Open welcome on first launch
     show_on_update = false, -- Show welcome on version update
   },
+
+  -- Demo mode: hides all file/folder paths from UI (for marketing screenshots)
+  demo_mode = false,
 
   -- Neovide GUI settings (applied only when running inside Neovide)
   neovide = {
@@ -269,6 +321,7 @@ function M.setup(opts)
     dashboard = safe_require("ccasp.panels.dashboard"),
     commands = safe_require("ccasp.panels.commands"),
     prompt_editor = safe_require("ccasp.panels.prompt_editor"),
+    site_intel = safe_require("ccasp.panels.site_intel"),
   }
   M.agents = safe_require("ccasp.agents")
 

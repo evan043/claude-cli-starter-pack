@@ -138,6 +138,71 @@ local function setup_click_handlers()
       if session then M.close_session(session.id) end
     end)
   end
+
+  _G.CcaspTitlebar_save_note = function(_, _, button, _)
+    if button ~= "l" then return end
+    exit_terminal_and_run(function()
+      local session = get_current_session()
+      if session then
+        require("ccasp.saved_notes").save_note(session.id)
+      end
+    end)
+  end
+
+  _G.CcaspTitlebar_screenshot_browse = function(_, _, button, _)
+    if button ~= "l" then return end
+    exit_terminal_and_run(function()
+      local session = get_current_session()
+      if session then
+        require("ccasp.panels.screenshot_browser").open(session.id)
+      end
+    end)
+  end
+
+  _G.CcaspTitlebar_todo = function(_, _, button, _)
+    if button ~= "l" then return end
+    exit_terminal_and_run(function()
+      require("ccasp.panels.todos").toggle()
+    end)
+  end
+
+  _G.CcaspTitlebar_screenshot = function(_, _, button, _)
+    if button ~= "l" then return end
+    vim.schedule(function()
+      local session = get_current_session()
+      if not session then return end
+
+      -- Find the most recent file in Snipping Tool directory
+      local snip_dir = vim.fn.expand("~/OneDrive/Pictures/Snipping Tool")
+      local files = vim.fn.glob(snip_dir .. "/*", false, true)
+      if #files == 0 then
+        vim.notify("No screenshots found in Snipping Tool folder", vim.log.levels.WARN)
+        return
+      end
+
+      -- Sort by modification time (newest first)
+      table.sort(files, function(a, b)
+        return vim.fn.getftime(a) > vim.fn.getftime(b)
+      end)
+
+      local newest = files[1]
+
+      -- Send the file path to the terminal buffer
+      if session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
+        -- Focus the session window first
+        local sessions = require("ccasp.sessions")
+        sessions.focus(session.id)
+        vim.schedule(function()
+          -- Ensure we're in terminal mode, then send the path
+          local chan = vim.bo[session.bufnr].channel
+          if chan and chan > 0 then
+            vim.fn.chansend(chan, newest)
+            vim.notify("Pasted: " .. vim.fn.fnamemodify(newest, ":t"), vim.log.levels.INFO)
+          end
+        end)
+      end
+    end)
+  end
 end
 
 -- Build winbar string for a session
@@ -162,15 +227,19 @@ local function build_winbar(session_id, name, is_primary, claude_running, is_act
   -- Color matches title text (hl) instead of separate btn_hl
   local winbar = string.format(
     "%%#%s# %s %s%s%s %%=%%#%s#"
-    .. " %%@v:lua.CcaspTitlebar_cycle@  %s  %%X"
+    .. " %%@v:lua.CcaspTitlebar_screenshot@  %s  %%X"
+    .. "│%%@v:lua.CcaspTitlebar_screenshot_browse@  %s  %%X"
+    .. "│%%@v:lua.CcaspTitlebar_cycle@  %s  %%X"
     .. "│%%@v:lua.CcaspTitlebar_rename@  %s  %%X"
     .. "│%%@v:lua.CcaspTitlebar_color@  %s  %%X"
+    .. "│%%@v:lua.CcaspTitlebar_save_note@  %s  %%X"
+    .. "│%%@v:lua.CcaspTitlebar_todo@  %s  %%X"
     .. "│%%@v:lua.CcaspTitlebar_minimize@  %s  %%X"
     .. "│%%@v:lua.CcaspTitlebar_close@  %s  %%X"
     .. " %%#%s# ",
     hl, status, name, primary_marker, active_marker,
     hl,
-    nf.win_cycle, nf.win_rename, nf.palette, nf.win_minimize, nf.win_close,
+    nf.win_screenshot, nf.win_screenshot_browse, nf.win_cycle, nf.win_rename, nf.palette, nf.win_save_note, nf.win_todo, nf.win_minimize, nf.win_close,
     hl
   )
 
@@ -726,24 +795,28 @@ function M.restore_all()
     ::continue::
   end
 
-  -- Equalize windows after all restores
-  vim.cmd("wincmd =")
+  -- Full grid rebuild to ensure proper layout after restoring multiple sessions.
+  -- Incremental splits can produce asymmetric trees; rebuild corrects them.
+  sessions_mod.rebuild()
 
   -- Focus the last restored session
-  if last_winid and vim.api.nvim_win_is_valid(last_winid) then
-    vim.api.nvim_set_current_win(last_winid)
-    local mode = vim.api.nvim_get_mode().mode
-    if mode ~= "t" and mode ~= "nt" then
-      pcall(vim.cmd, "normal! G")
-      vim.cmd("startinsert")
+  if last_winid then
+    -- rebuild() may have moved the session to a different window; look up fresh winid
+    local last_session = sessions_mod.get(min_sessions[#min_sessions].id)
+    local focus_win = (last_session and last_session.winid) or last_winid
+    if focus_win and vim.api.nvim_win_is_valid(focus_win) then
+      vim.api.nvim_set_current_win(focus_win)
+      local mode = vim.api.nvim_get_mode().mode
+      if mode ~= "t" and mode ~= "nt" then
+        pcall(vim.cmd, "normal! G")
+        vim.cmd("startinsert")
+      end
     end
   end
 
-  -- Refresh header and footer once
+  -- Refresh header once (footer + equalization already handled by rebuild)
   local header_ok, header = pcall(require, "ccasp.appshell.header")
   if header_ok then header.refresh() end
-  local footer_ok, footer = pcall(require, "ccasp.appshell.footer")
-  if footer_ok then footer.refresh() end
 
   vim.notify(count .. " session(s) restored", vim.log.levels.INFO)
 end

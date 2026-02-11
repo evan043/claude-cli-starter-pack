@@ -22,6 +22,7 @@
 local M = {}
 local helpers = require("ccasp.panels.helpers")
 local nf = require("ccasp.ui.icons")
+local function get_ccasp() return require("ccasp") end
 
 -- Dialog state (path input)
 local dialog_state = {
@@ -161,7 +162,7 @@ local function render_browser()
       for _, repo in ipairs(repos) do
         local pin_icon = repo.pinned and (nf.pin .. " ") or "  "
         local time_str = relative_time(repo.last_opened)
-        local display = string.format("  %s%s %s  %s", pin_icon, nf.repo, repo.name, time_str)
+        local display = string.format("  %s%s %s  %s", pin_icon, nf.repo, get_ccasp().mask_name(repo.name), time_str)
         table.insert(lines, display)
         browser_state.item_lines[#lines] = repo
       end
@@ -180,7 +181,7 @@ local function render_browser()
     else
       for _, repo in ipairs(pinned) do
         local time_str = relative_time(repo.last_opened)
-        local display = string.format("  %s %s  %s", nf.pin, repo.name, time_str)
+        local display = string.format("  %s %s  %s", nf.pin, get_ccasp().mask_name(repo.name), time_str)
         table.insert(lines, display)
         browser_state.item_lines[#lines] = repo
       end
@@ -204,7 +205,7 @@ local function render_browser()
     else
       for _, repo in ipairs(unpinned_recent) do
         local time_str = relative_time(repo.last_opened)
-        local display = string.format("  %s %s  %s", nf.repo, repo.name, time_str)
+        local display = string.format("  %s %s  %s", nf.repo, get_ccasp().mask_name(repo.name), time_str)
         table.insert(lines, display)
         browser_state.item_lines[#lines] = repo
       end
@@ -297,7 +298,7 @@ function M.open_path_dialog()
     local path = vim.fn.expand(input) -- expand ~ and env vars
 
     if vim.fn.isdirectory(path) == 0 then
-      vim.notify("Not a valid directory: " .. path, vim.log.levels.ERROR)
+      vim.notify("Not a valid directory: " .. get_ccasp().mask_path(path), vim.log.levels.ERROR)
       helpers.restore_terminal_focus()
       return
     end
@@ -349,7 +350,7 @@ function M.open_path_dialog()
     local path = vim.fn.expand(input)
 
     if vim.fn.isdirectory(path) == 0 then
-      vim.notify("Not a valid directory: " .. path, vim.log.levels.ERROR)
+      vim.notify("Not a valid directory: " .. get_ccasp().mask_path(path), vim.log.levels.ERROR)
       helpers.restore_terminal_focus()
       return
     end
@@ -602,7 +603,7 @@ local function render_happy_browser()
   else
     for _, repo in ipairs(pinned) do
       local time_str = relative_time(repo.last_opened)
-      local display = string.format("  %s %s  %s", nf.pin, repo.name, time_str)
+      local display = string.format("  %s %s  %s", nf.pin, get_ccasp().mask_name(repo.name), time_str)
       table.insert(lines, display)
       happy_browser_state.item_lines[#lines] = repo
     end
@@ -626,7 +627,7 @@ local function render_happy_browser()
   else
     for _, repo in ipairs(unpinned_recent) do
       local time_str = relative_time(repo.last_opened)
-      local display = string.format("  %s %s  %s", nf.repo, repo.name, time_str)
+      local display = string.format("  %s %s  %s", nf.repo, get_ccasp().mask_name(repo.name), time_str)
       table.insert(lines, display)
       happy_browser_state.item_lines[#lines] = repo
     end

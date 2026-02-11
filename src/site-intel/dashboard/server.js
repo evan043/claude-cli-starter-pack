@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getRecommendations, getStatus, listSites, runQuickCheck } from '../orchestrator.js';
-import { loadLatestScan } from '../memory/index.js';
+import { loadLatestScan, getDataDir } from '../memory/index.js';
 import { toMermaid } from '../graph/index.js';
 import { loadState, getRouteHistory } from '../dev-scan/state-manager.js';
 import { formatDiffForDashboard } from '../dev-scan/diff-reporter.js';
@@ -553,6 +553,67 @@ export class SiteIntelDashboardServer {
         return;
       }
 
+      // ============================================================
+      // Liveness Audit API Endpoints
+      // ============================================================
+
+      // GET /api/liveness/summary - liveness audit summary
+      if (pathname === '/api/liveness/summary') {
+        const livenessData = this._loadLivenessData();
+        if (!livenessData) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No liveness audit data. Run a liveness scan first.' }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(livenessData.summary));
+        return;
+      }
+
+      // GET /api/liveness/routes - all routes with liveness scores
+      if (pathname === '/api/liveness/routes') {
+        const livenessData = this._loadLivenessData();
+        if (!livenessData) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No liveness audit data' }));
+          return;
+        }
+        const routes = (livenessData.routes || []).map(r => ({
+          route: r.route,
+          url: r.url,
+          livenessScore: r.livenessScore,
+          totalInteractive: r.totalInteractive,
+          alive: r.alive,
+          dead: r.dead,
+          suspicious: r.suspicious,
+          error: r.error,
+        }));
+        res.writeHead(200);
+        res.end(JSON.stringify({ routes, total: routes.length }));
+        return;
+      }
+
+      // GET /api/liveness/routes/:path - single route detail with dead elements
+      const livenessRouteMatch = pathname.match(/^\/api\/liveness\/routes\/(.+)$/);
+      if (livenessRouteMatch) {
+        const livenessData = this._loadLivenessData();
+        if (!livenessData) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'No liveness audit data' }));
+          return;
+        }
+        const routePath = '/' + decodeURIComponent(livenessRouteMatch[1]);
+        const routeData = (livenessData.routes || []).find(r => r.route === routePath);
+        if (!routeData) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: `Route not found: ${routePath}` }));
+          return;
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify(routeData));
+        return;
+      }
+
       // Not found
       res.writeHead(404);
       res.end(JSON.stringify({ error: 'Not found' }));
@@ -561,6 +622,43 @@ export class SiteIntelDashboardServer {
       res.writeHead(500);
       res.end(JSON.stringify({ error: error.message }));
     }
+  }
+
+  /**
+   * Load liveness audit data from disk
+   */
+  _loadLivenessData() {
+    // Check multiple possible locations for liveness data
+    const locations = [
+      // Primary: alongside other site-intel data
+      ...this._listLivenessDomains().map(domain => {
+        const dataDir = getDataDir(this.projectRoot, domain);
+        return path.join(dataDir, 'liveness-audit.json');
+      }),
+    ];
+
+    for (const loc of locations) {
+      try {
+        if (fs.existsSync(loc)) {
+          return JSON.parse(fs.readFileSync(loc, 'utf-8'));
+        }
+      } catch { /* skip */ }
+    }
+    return null;
+  }
+
+  /**
+   * List domains that have site-intel data
+   */
+  _listLivenessDomains() {
+    try {
+      const siteIntelDir = path.join(this.projectRoot, '.claude', 'site-intel');
+      if (!fs.existsSync(siteIntelDir)) return [];
+      return fs.readdirSync(siteIntelDir).filter(f => {
+        const stat = fs.statSync(path.join(siteIntelDir, f));
+        return stat.isDirectory();
+      });
+    } catch { return []; }
   }
 
   /**

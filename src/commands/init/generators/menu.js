@@ -75,6 +75,7 @@ description: Interactive project menu - Quick access to all commands, agents, sk
 ║  Testing:     /e2e-test  /ralph  /create-smoke-test           ║
 ║  Refactor:    /refactor-workflow  /refactor-analyze           ║
 ║  Deploy:      /deploy-full                                    ║
+║  Marketing:   /landing-page-generator  /landing-page-toggle   ║
 ║  Claude:      /create-agent  /create-hook  /create-skill      ║
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝

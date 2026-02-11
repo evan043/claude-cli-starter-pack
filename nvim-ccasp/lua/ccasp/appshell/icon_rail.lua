@@ -23,6 +23,7 @@ M.sections = {
   { icon = icons.reload,    name = "Orchestration",     key = "orchestration" },
   { icon = icons.settings,  name = "System",            key = "system" },
   { icon = icons.features,  name = "Features",          key = "features" },
+  { icon = icons.deploy,    name = "Deploy",             key = "deploy" },
   { icon = icons.config,    name = "Project",            key = "project" },
 }
 

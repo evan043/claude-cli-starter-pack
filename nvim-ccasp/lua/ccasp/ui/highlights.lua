@@ -94,8 +94,8 @@ M.groups = {
   -- ─── Appshell: Header ─────────────────────────────────────
   CcaspHeaderBg       = { bg = "#0d1117" },                     -- Header background
   CcaspHeaderTitle    = { fg = "#61afef", bg = "#0d1117", bold = true }, -- Project name (blue)
-  CcaspHeaderTab      = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive session tab
-  CcaspHeaderTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active tab
+  CcaspHeaderTab      = { fg = "#6272a4" },                     -- Inactive session tab (no bg)
+  CcaspHeaderTabActive = { fg = "#ffffff", bold = true },       -- Active tab (no bg)
   CcaspHeaderGrad1    = { fg = "#101820", bg = "#0d1117" },     -- Gradient: barely visible
   CcaspHeaderGrad2    = { fg = "#1a2a3f", bg = "#0d1117" },     -- Gradient: very dim navy
   CcaspHeaderGrad3    = { fg = "#2a4a6a", bg = "#0d1117" },     -- Gradient: dim steel
@@ -103,12 +103,17 @@ M.groups = {
   CcaspHeaderSub      = { fg = "#2a4a6a", bg = "#0d1117" },     -- Subtitle: dim blue
 
   -- ─── Appshell: Layer Tabs ─────────────────────────────────
-  CcaspLayerTab       = { fg = "#6272a4", bg = "#0d1117" },     -- Inactive layer tab
-  CcaspLayerTabActive = { fg = "#ffffff", bg = "#1a3a5f", bold = true }, -- Active layer tab
+  CcaspLayerTab       = { fg = "#6272a4" },                     -- Inactive layer tab (no bg)
+  CcaspLayerTabActive = { fg = "#ffffff", bold = true },        -- Active layer tab (no bg)
 
   -- ─── Session Activity States ───────────────────────────────
-  CcaspHeaderTabWorking = { fg = "#d19a66", bg = "#0d1117", bold = true },  -- Orange (Claude streaming)
-  CcaspHeaderTabDone    = { fg = "#50fa7b", bg = "#0d1117", bold = true },  -- Green (output finished)
+  CcaspHeaderTabWorking = { fg = "#d19a66", bold = true },  -- Orange (Claude streaming, no bg)
+  CcaspHeaderTabDone    = { fg = "#50fa7b", bold = true },  -- Green (output finished, no bg)
+
+  -- ─── Active Session Tab (underline indicator preserves status color) ──
+  CcaspHeaderTabActiveIdle    = { fg = "#c8ccd4", underline = true },              -- Neutral active (bright grey + underline)
+  CcaspHeaderTabActiveWorking = { fg = "#d19a66", bold = true, underline = true }, -- Orange active (streaming + underline)
+  CcaspHeaderTabActiveDone    = { fg = "#50fa7b", bold = true, underline = true }, -- Green active (finished + underline)
 
   -- ─── Appshell: Footer ─────────────────────────────────────
   CcaspFooterBg       = { bg = "#0d1117" },                     -- Footer background
@@ -153,6 +158,15 @@ M.groups = {
   CcaspCloseBtn    = { fg = "#e06c75", bg = "#0d1117", bold = true }, -- Red close button
   CcaspMaxBtn      = { fg = "#98c379", bg = "#0d1117", bold = true }, -- Green maximize button
   CcaspMinBtn      = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Yellow minimize button
+
+  -- ─── Todo Panel ─────────────────────────────────────────
+  CcaspTodoTagBadge      = { fg = "#56b6c2", bold = true },               -- Tag badge (teal)
+  CcaspTodoTagActive     = { fg = "#0d1117", bg = "#56b6c2", bold = true }, -- Active tag filter (inverted)
+  CcaspTodoPriorityCrit  = { fg = "#ff5555", bold = true },                -- Critical priority (red)
+  CcaspTodoPriorityHigh  = { fg = "#d19a66", bold = true },                -- High priority (amber)
+  CcaspTodoSortActive    = { fg = "#5fafff", bold = true },                -- Active sort mode (steel blue)
+  CcaspTodoFormLabel     = { fg = "#61afef", bold = true },                -- Form field label (blue)
+  CcaspTodoFormBorder    = { fg = "#1e3a5f" },                              -- Form field border
 }
 
 -- Apply all highlight groups

@@ -17,8 +17,9 @@ local mode_renderers = {
     table.insert(lines, "  " .. icons.dashboard .. " Context")
     table.insert(lines, "  " .. string.rep("─", 34))
     table.insert(lines, "")
-    table.insert(lines, "  Project: " .. vim.fn.fnamemodify(vim.fn.getcwd(), ":t"))
-    table.insert(lines, "  CWD: " .. vim.fn.getcwd())
+    local ccasp = require("ccasp")
+    table.insert(lines, "  Project: " .. ccasp.mask_name(vim.fn.fnamemodify(vim.fn.getcwd(), ":t")))
+    table.insert(lines, "  CWD: " .. ccasp.mask_path(vim.fn.getcwd()))
     table.insert(lines, "")
 
     -- Git info

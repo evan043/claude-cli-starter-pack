@@ -1,0 +1,43 @@
+{
+  "name": "screenshot-pipeline",
+  "version": "1.0.0",
+  "description": "Playwright screenshot capture, device frame compositing, and animated GIF generation pipeline for marketing assets",
+  "category": "marketing",
+  "portability": 90,
+  "tags": ["screenshots", "device-frames", "gif-generation", "playwright", "marketing", "landing-page"],
+  "features": [
+    "Automated screenshot capture with Playwright",
+    "Device frame compositing (laptop, phone, tablet)",
+    "Animated GIF generation from framed screenshots",
+    "Configurable viewports and routes",
+    "Multiple device catalog support"
+  ],
+  "entryPoint": "skill.md",
+  "references": [
+    "device-frames.md",
+    "viewport-presets.md",
+    "pipeline-config.md"
+  ],
+  "requiredTools": ["Bash", "Read", "Write", "Glob", "ToolSearch"],
+  "suggestedModel": "sonnet",
+  "npmDependencies": {
+    "required": [
+      { "name": "sharp", "purpose": "Image compositing and resizing" },
+      { "name": "gifencoder", "purpose": "Animated GIF creation" },
+      { "name": "canvas", "purpose": "Node canvas for gifencoder frame drawing" }
+    ],
+    "optional": [
+      { "name": "playwright", "purpose": "Browser automation for screenshot capture (usually already installed)" }
+    ]
+  },
+  "mcpServers": {
+    "required": [
+      { "name": "playwright-ext", "purpose": "Browser automation for screenshot capture" }
+    ]
+  },
+  "associatedCommands": [
+    "landing-page-generator",
+    "landing-page-generator-executor",
+    "landing-page-toggle"
+  ]
+}

@@ -103,6 +103,8 @@ All code uses ES6 `import`/`export` syntax. Package has `"type": "module"`.
 | `/create-task-list` | AI-powered task list generation |
 | `/phase-dev-plan` | Create phased development plans |
 | `/ai-constitution-framework` | Code style enforcement documentation |
+| `/landing-page-generator` | Screenshot pipeline, device framing, GIF generation, landing page components |
+| `/landing-page-toggle` | Enable/disable landing page in production |
 
 ## AI Constitution Framework
 

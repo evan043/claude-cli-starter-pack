@@ -1,0 +1,127 @@
+{
+  "totalPages": 59,
+  "successfulPages": 59,
+  "failedPages": 0,
+  "pagesByH1": {
+    "Dashboard": [
+      "/",
+      "/login",
+      "/landing",
+      "/landing/demo",
+      "/landing/features",
+      "/landing/articles",
+      "/app",
+      "/app/dashboard",
+      "/app/epg/events",
+      "/app/epg/presets",
+      "/app/epg/upload",
+      "/app/epg/search",
+      "/app/execution-table",
+      "/app/field-management",
+      "/app/pug",
+      "/app/pug/records",
+      "/app/pug/companies",
+      "/app/pug/contacts",
+      "/app/pug/deals",
+      "/app/pug/sync",
+      "/app/notes/all",
+      "/app/notes/stickies",
+      "/app/notes/starred",
+      "/app/notes/flashcards",
+      "/app/notes/archive",
+      "/app/reports/weekly",
+      "/app/reports/canvasser",
+      "/app/reports/field",
+      "/app/admin/users",
+      "/app/admin/settings",
+      "/app/admin/field-config",
+      "/app/admin/templates",
+      "/app/admin/integrations",
+      "/app/todoist-widget",
+      "/app/weekly-planning",
+      "/app/settings",
+      "/app/settings/profile",
+      "/app/settings/notifications",
+      "/app/settings/theme"
+    ],
+    "Transparent pricing for\nmodern outreach teams": [
+      "/pricing"
+    ],
+    "USI Benefits Events": [
+      "/early-rsvp"
+    ],
+    "Notifications": [
+      "/notifications"
+    ],
+    "Geocoding Info": [
+      "/notifications/geocoding-info"
+    ],
+    "Vibe Remote": [
+      "/vibe-remote"
+    ],
+    "(no H1)": [
+      "/vibe-remote/cli",
+      "/app/reports",
+      "/app/admin",
+      "/app/timelines"
+    ],
+    "Terminal Connection": [
+      "/terminal/connect"
+    ],
+    "CLI Dashboard": [
+      "/cli-dashboard"
+    ],
+    "Home": [
+      "/app/home"
+    ],
+    "Campaign Management": [
+      "/app/campaigns"
+    ],
+    "Organization Management": [
+      "/app/organizations"
+    ],
+    "Address Verification": [
+      "/app/addresses"
+    ],
+    "Route Planning": [
+      "/app/routes"
+    ],
+    "Review & Adjust Routes": [
+      "/app/review-routes"
+    ],
+    "Contact Management": [
+      "/app/contacts"
+    ],
+    "Event Planning Grid": [
+      "/app/epg"
+    ],
+    "Notes": [
+      "/app/notes"
+    ]
+  },
+  "uniqueH1s": [
+    "Dashboard",
+    "Transparent pricing for\nmodern outreach teams",
+    "USI Benefits Events",
+    "Notifications",
+    "Geocoding Info",
+    "Vibe Remote",
+    "(no H1)",
+    "Terminal Connection",
+    "CLI Dashboard",
+    "Home",
+    "Campaign Management",
+    "Organization Management",
+    "Address Verification",
+    "Route Planning",
+    "Review & Adjust Routes",
+    "Contact Management",
+    "Event Planning Grid",
+    "Notes"
+  ],
+  "totalElements": 149145,
+  "totalLinks": 31,
+  "totalForms": 2,
+  "totalImages": 0,
+  "totalConsoleErrors": 29688
+}

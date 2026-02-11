@@ -52,6 +52,7 @@ local panel_headers = {
   orchestration = { icon = icons.reload,    name = "Orchestration" },
   system        = { icon = icons.settings,  name = "System" },
   features      = { icon = icons.features,  name = "Features" },
+  deploy        = { icon = icons.deploy,    name = "Deploy Configuration" },
   project       = { icon = icons.config,    name = "Project" },
 }
 
@@ -567,6 +568,75 @@ local section_renderers = {
     table.insert(lines, "  " .. icons.settings .. " Open Configuration Panel")
     item_lines[#lines] = { action = "project_config" }
   end,
+
+  -- Deploy configuration panel
+  deploy = function(lines, item_lines)
+    local config = require("ccasp.config")
+    local data = config.load_deploy_config()
+
+    -- Helper to render a toggle line
+    local function toggle_line(label, path, shortcut, indent)
+      indent = indent or "  "
+      local val = config.get_nested(data, path)
+      local icon = val and icons.enabled or icons.disabled
+      local status = val and "[ON ]" or "[OFF]"
+      local pad = string.rep(" ", math.max(1, 20 - #label))
+      table.insert(lines, indent .. icon .. " " .. label .. pad .. status .. "  (" .. shortcut .. ")")
+      item_lines[#lines] = { action = "deploy_toggle", path = path, label = label }
+    end
+
+    -- Frontend section
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "  " .. icons.deploy .. "  Frontend (Cloudflare)")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+    toggle_line("Clean dist/", "frontend.cleanDist", "d")
+    toggle_line("Full rebuild", "frontend.fullRebuild", "r")
+    toggle_line("Cache busting", "frontend.cacheBusting", "c")
+    toggle_line("Verbose output", "frontend.verbose", "v")
+    table.insert(lines, "")
+
+    -- Backend section
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "  " .. icons.settings .. "  Backend (Railway)")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+    toggle_line("Git status check", "backend.preDeployGitCheck", "g")
+
+    -- Health check URL (non-toggle, display only)
+    local hc_url = config.get_nested(data, "backend.healthCheckUrl") or "not set"
+    table.insert(lines, "  " .. icons.config .. " Health URL: " .. hc_url)
+    table.insert(lines, "")
+
+    -- Verification section
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "  " .. icons.search .. "  Verification")
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+    toggle_line("SHA verify", "verification.shaVerification", "s")
+    toggle_line("Notifications", "notifications.enabled", "n")
+    toggle_line("Auto-rollback", "rollback.autoRollbackOnShaFailure", "a")
+    table.insert(lines, "")
+
+    -- Production URL display
+    local prod_url = config.get_nested(data, "verification.productionUrl") or "not set"
+    table.insert(lines, "  " .. icons.config .. " Prod URL: " .. prod_url)
+    local delay = config.get_nested(data, "verification.propagationDelay") or 15
+    table.insert(lines, "  " .. icons.config .. " CDN delay: " .. delay .. "s")
+    table.insert(lines, "")
+
+    -- Actions
+    table.insert(lines, "  " .. string.rep("─", 30))
+    table.insert(lines, "")
+    table.insert(lines, "  " .. icons.commands .. " [E] Edit config file")
+    item_lines[#lines] = { action = "deploy_edit" }
+    table.insert(lines, "  " .. icons.deploy .. " [D] Deploy now")
+    item_lines[#lines] = { action = "deploy_now" }
+    table.insert(lines, "  " .. icons.search .. " [P] Preview command")
+    item_lines[#lines] = { action = "deploy_preview" }
+    table.insert(lines, "  " .. icons.reload .. " [R] Reset defaults")
+    item_lines[#lines] = { action = "deploy_reset" }
+  end,
 }
 
 -- Render flyout content for current section
@@ -1055,6 +1125,111 @@ function M.execute_action(item)
         require("ccasp.project_config").open()
       end)
     end,
+
+    -- Deploy: toggle a boolean config option
+    deploy_toggle = function()
+      local config = require("ccasp.config")
+      local data = config.load_deploy_config()
+      config.toggle_nested(data, item.path)
+      config.save_deploy_config(data)
+      render()
+    end,
+
+    -- Deploy: open config file in editor
+    deploy_edit = function()
+      local config = require("ccasp.config")
+      local path = config.get_path("deploy_config")
+      if path then
+        M.close()
+        vim.schedule(function()
+          vim.cmd("edit " .. vim.fn.fnameescape(path))
+        end)
+      end
+    end,
+
+    -- Deploy: inject /deploy-full into active session
+    deploy_now = function()
+      M.close()
+      vim.schedule(function()
+        local sess = require("ccasp.sessions")
+        local active = sess.get_active()
+        if active and active.bufnr and vim.api.nvim_buf_is_valid(active.bufnr) then
+          local chan = vim.api.nvim_buf_get_var(active.bufnr, "terminal_job_id")
+          if chan then
+            vim.api.nvim_chan_send(chan, "/deploy-full\n")
+          end
+        end
+      end)
+    end,
+
+    -- Deploy: show what the deploy command would do
+    deploy_preview = function()
+      local config = require("ccasp.config")
+      local data = config.load_deploy_config()
+      local preview = { "", "  Deploy Preview:", "  " .. string.rep("─", 28), "" }
+
+      local function step(enabled, label)
+        local icon_str = enabled and icons.enabled or icons.disabled
+        table.insert(preview, "  " .. icon_str .. " " .. label)
+      end
+
+      step(config.get_nested(data, "frontend.cleanDist"), "rm -rf dist/")
+      step(config.get_nested(data, "frontend.fullRebuild"), "rm -rf node_modules/ && npm install")
+      step(true, config.get_nested(data, "frontend.buildCommand") or "npm run build")
+      step(config.get_nested(data, "frontend.cacheBusting"), "Cache-busting headers")
+      step(config.get_nested(data, "frontend.verbose"), "Verbose output")
+      step(config.get_nested(data, "backend.preDeployGitCheck"), "Pre-deploy git check")
+      step(config.get_nested(data, "verification.shaVerification"), "SHA verification")
+      step(config.get_nested(data, "notifications.enabled"), "Notifications")
+      step(config.get_nested(data, "rollback.autoRollbackOnShaFailure"), "Auto-rollback on SHA fail")
+
+      table.insert(preview, "")
+      table.insert(preview, "  Project: " .. (config.get_nested(data, "frontend.project") or "eroland-me"))
+      table.insert(preview, "  Output:  " .. (config.get_nested(data, "frontend.outputDir") or "dist"))
+      table.insert(preview, "")
+
+      -- Show in a temporary float
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, preview)
+      vim.bo[buf].modifiable = false
+      vim.bo[buf].bufhidden = "wipe"
+
+      local width = 40
+      local height = #preview
+      local row = math.floor((vim.o.lines - height) / 2)
+      local col = math.floor((vim.o.columns - width) / 2)
+
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative = "editor",
+        row = row,
+        col = col,
+        width = width,
+        height = height,
+        style = "minimal",
+        border = "rounded",
+        title = " Deploy Preview ",
+        title_pos = "center",
+      })
+
+      vim.keymap.set("n", "q", function()
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_close(win, true)
+        end
+      end, { buffer = buf, nowait = true })
+      vim.keymap.set("n", "<Esc>", function()
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_close(win, true)
+        end
+      end, { buffer = buf, nowait = true })
+    end,
+
+    -- Deploy: reset config to defaults
+    deploy_reset = function()
+      local config = require("ccasp.config")
+      local defaults = config.get_deploy_defaults()
+      config.save_deploy_config(defaults)
+      render()
+    end,
   }
 
   local handler = action_handlers[item.action]
@@ -1090,6 +1265,11 @@ function M.execute_action(item)
         or item.action == "set_default_template"
         or item.action == "delete_template"
         or item.action == "project_config"
+        or item.action == "deploy_toggle"
+        or item.action == "deploy_edit"
+        or item.action == "deploy_now"
+        or item.action == "deploy_preview"
+        or item.action == "deploy_reset"
     if not skip_rerender then
       vim.defer_fn(function() render() end, 500)
     end
@@ -1255,6 +1435,49 @@ local function setup_keymaps()
         end
       end
     end)
+  end, opts)
+
+  -- Deploy-section-specific keymaps (guarded by section check)
+  local deploy_toggles = {
+    d = "frontend.cleanDist",
+    r = "frontend.fullRebuild",
+    c = "frontend.cacheBusting",
+    v = "frontend.verbose",
+    g = "backend.preDeployGitCheck",
+    s = "verification.shaVerification",
+    n = "notifications.enabled",
+    a = "rollback.autoRollbackOnShaFailure",
+  }
+
+  for key, path in pairs(deploy_toggles) do
+    vim.keymap.set("n", key, function()
+      if state.current_section ~= "deploy" then return end
+      M.execute_action({ action = "deploy_toggle", path = path })
+    end, opts)
+  end
+
+  -- E: edit config (deploy section)
+  vim.keymap.set("n", "E", function()
+    if state.current_section ~= "deploy" then return end
+    M.execute_action({ action = "deploy_edit" })
+  end, opts)
+
+  -- D: deploy now (deploy section)
+  vim.keymap.set("n", "D", function()
+    if state.current_section ~= "deploy" then return end
+    M.execute_action({ action = "deploy_now" })
+  end, opts)
+
+  -- P: preview command (deploy section)
+  vim.keymap.set("n", "P", function()
+    if state.current_section ~= "deploy" then return end
+    M.execute_action({ action = "deploy_preview" })
+  end, opts)
+
+  -- R: reset defaults (deploy section)
+  vim.keymap.set("n", "R", function()
+    if state.current_section ~= "deploy" then return end
+    M.execute_action({ action = "deploy_reset" })
   end, opts)
 end
 

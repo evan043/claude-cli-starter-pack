@@ -12,6 +12,9 @@ Generate Playwright E2E tests automatically by analyzing your application's rout
 /create-smoke-test
 /create-smoke-test --page login
 /create-smoke-test --flow checkout
+/create-smoke-test --category deploy-regression
+/create-smoke-test --category auth-flow
+/create-smoke-test --category route-loading
 ```
 
 ## What It Does
@@ -40,6 +43,33 @@ Generate Playwright E2E tests automatically by analyzing your application's rout
 - Core feature usage
 - Payment flow (if applicable)
 - Data submission forms
+
+### Deploy Regression
+- API endpoint existence verification
+- Response shape validation (required fields present)
+- Status code contracts (expected codes match)
+- CORS header checks on preflight
+- Pagination parameter handling
+- Template: `templates/testing/deploy-regression.spec.template.ts`
+
+### Auth Flow
+- Login sets cookie/token correctly
+- Session persists across page reload
+- Invalid credentials show error message
+- Protected routes redirect to login when unauthenticated
+- Logout clears all auth state
+- Expired token triggers refresh (no infinite loop)
+- Template: `templates/testing/auth-flow.spec.template.ts`
+
+### Route Loading
+- All routes render visible content (not blank)
+- No JS console errors during route load
+- No stuck loading spinners after network idle
+- Client-side route transitions work
+- Chunk loading failures show error boundary
+- Unknown routes show 404 page
+- Route load time under configurable threshold
+- Template: `templates/testing/route-loading.spec.template.ts`
 
 ## Implementation
 
@@ -97,15 +127,35 @@ export async function loginAs(page, user) {
 ```
 tests/
 ├── smoke/
-│   ├── auth.spec.ts          # Authentication flows
-│   ├── navigation.spec.ts    # Page accessibility
-│   └── critical-paths.spec.ts # Core user journeys
+│   ├── auth.spec.ts               # Authentication flows
+│   ├── navigation.spec.ts         # Page accessibility
+│   ├── critical-paths.spec.ts     # Core user journeys
+│   ├── deploy-regression.spec.ts  # API contract validation (post-deploy)
+│   ├── auth-flow.spec.ts          # Full auth lifecycle (cookie/token)
+│   └── route-loading.spec.ts      # Lazy load & chunk error tests
 ├── helpers/
 │   ├── auth.ts              # Auth utilities
 │   ├── fixtures.ts          # Test data
 │   └── selectors.ts         # Shared selectors
 └── playwright.config.ts     # Test configuration
 ```
+
+## Template Placeholders
+
+When generating tests from templates, fill these placeholders from your project:
+
+| Template | Placeholder | Source |
+|----------|------------|--------|
+| deploy-regression | `{{API_BASE}}` | Backend URL from env config |
+| deploy-regression | `{{ENDPOINTS}}` | API route handlers (FastAPI/Express routers) |
+| deploy-regression | `{{AUTH_HEADER}}` | Auth token format from auth service |
+| auth-flow | `{{LOGIN_URL}}` | Router config (typically `/login`) |
+| auth-flow | `{{PROTECTED_ROUTES}}` | Routes with auth guards |
+| auth-flow | `{{CREDENTIALS}}` | Test user from fixtures/seed data |
+| auth-flow | `{{COOKIE_NAME}}` | Cookie name from auth middleware |
+| route-loading | `{{ROUTES}}` | All routes from `routes.tsx` / router config |
+| route-loading | `{{BASE_URL}}` | Dev server URL (e.g. `http://localhost:5174`) |
+| route-loading | `{{LOAD_TIMEOUT}}` | Performance budget in ms (e.g. `10000`) |
 
 ## Generated Test Example
 
@@ -184,3 +234,5 @@ export default {
 
 - `/e2e-test` - Run E2E tests
 - `/refactor-check` - Pre-commit validation
+- `/deploy-full` - Full-stack deploy (run deploy-regression tests after)
+- `/feature-audit` - Discover routes missing test coverage

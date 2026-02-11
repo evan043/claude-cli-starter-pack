@@ -170,6 +170,16 @@ export const CORE_FEATURES = [
     npmDevInstallPrompt: 'Install site-intel enhancement deps? (lighthouse, @axe-core/playwright, ts-morph)',
   },
   {
+    name: 'landingPageGenerator',
+    label: 'Landing Page Generator',
+    description: 'Automated marketing asset generation: Playwright screenshots, device frame compositing, animated GIF creation, and landing page components. Includes screenshot pipeline skill and production toggle.',
+    commands: ['landing-page-generator', 'landing-page-generator-executor', 'landing-page-toggle'],
+    hooks: [],
+    skills: ['screenshot-pipeline'],
+    default: false,
+    requiresPostConfig: false,
+  },
+  {
     name: 'aiConstitution',
     label: 'AI Constitution Framework',
     description: 'Code style and architecture preferences enforcement system with YAML schema, hook-based validation (1-in-20 sampling), and configurable presets (senior, minimal, strict, custom). Ensures Claude follows project coding standards.',

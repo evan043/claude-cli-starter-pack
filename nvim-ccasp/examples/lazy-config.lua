@@ -8,6 +8,8 @@ return {
     dependencies = {
       "nvim-lua/plenary.nvim",
       "nvim-telescope/telescope.nvim",
+      "MunifTanjim/nui.nvim",
+      "grapp-dev/nui-components.nvim",
       "folke/which-key.nvim", -- optional
     },
     keys = {

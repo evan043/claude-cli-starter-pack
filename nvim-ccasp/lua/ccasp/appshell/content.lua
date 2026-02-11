@@ -145,7 +145,7 @@ function M.open(bounds)
 
     -- Create terminal - use detected project root so sessions start in the right directory
     local ccasp = require("ccasp")
-    local project_root = ccasp.config.project_root or vim.fn.getcwd()
+    local project_root = ccasp.is_demo_mode() and ccasp.get_demo_dir() or (ccasp.config.project_root or vim.fn.getcwd())
     vim.cmd("silent lcd " .. vim.fn.fnameescape(project_root))
     vim.cmd("silent terminal")
 

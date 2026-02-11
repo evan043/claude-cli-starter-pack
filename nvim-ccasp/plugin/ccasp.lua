@@ -118,6 +118,11 @@ vim.api.nvim_create_user_command("CcaspToggleRightPanel", function()
   end
 end, { desc = "Toggle CCASP right panel" })
 
+-- Site Intelligence panel
+vim.api.nvim_create_user_command("CcaspSiteIntel", function()
+  require("ccasp.panels.site_intel").toggle()
+end, { desc = "Toggle Site Intelligence panel" })
+
 -- Onboarding commands (Getting Started)
 vim.api.nvim_create_user_command("CcaspWelcome", function()
   require("ccasp.onboarding").open_welcome()

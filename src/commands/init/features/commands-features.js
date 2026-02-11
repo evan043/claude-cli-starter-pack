@@ -131,4 +131,25 @@ export const FEATURE_COMMANDS = [
     selected: false,
     feature: 'aiConstitution',
   },
+  {
+    name: 'landing-page-generator',
+    description: 'Landing Page Generator - screenshots, device frames, GIFs, and components',
+    category: 'Marketing',
+    selected: false,
+    feature: 'landingPageGenerator',
+  },
+  {
+    name: 'landing-page-generator-executor',
+    description: 'Landing Page Generator phase executor for automated pipeline execution',
+    category: 'Marketing',
+    selected: false,
+    feature: 'landingPageGenerator',
+  },
+  {
+    name: 'landing-page-toggle',
+    description: 'Toggle landing page on/off in production deployment',
+    category: 'Marketing',
+    selected: false,
+    feature: 'landingPageGenerator',
+  },
 ];

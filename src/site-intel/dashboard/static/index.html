@@ -536,6 +536,11 @@
     }
 
     .sparkline-svg { vertical-align: middle; }
+
+    /* Liveness tab */
+    #lv-routes-table tbody tr:hover {
+      background: #1a2840;
+    }
   </style>
 </head>
 <body>
@@ -573,6 +578,7 @@
           <button class="tab" data-tab="recommendations">Recommendations</button>
           <button class="tab" data-tab="pages">Pages</button>
           <button class="tab" data-tab="feature-truth">Feature Truth</button>
+          <button class="tab" data-tab="liveness">Liveness</button>
         </div>
 
         <div class="tab-content active" id="overview">
@@ -817,6 +823,55 @@
           <div class="card" id="ft-gaps-card" style="display:none;">
             <h3 style="color:#f44336;">Gap Analysis</h3>
             <div id="ft-gaps-content"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="liveness-tab">
+          <div class="card">
+            <h3>Liveness Audit Summary</h3>
+            <div class="metrics-grid" id="lv-metrics">
+              <div class="metric-card">
+                <span class="metric-value" id="lv-overall">-</span>
+                <span class="metric-label">Overall Liveness</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="lv-routes-scanned">-</span>
+                <span class="metric-label">Routes Scanned</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="lv-dead-routes">-</span>
+                <span class="metric-label">Routes with Dead UI</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="lv-total-dead">-</span>
+                <span class="metric-label">Dead Elements</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Route Liveness Scores</h3>
+            <table class="recommendations-table" id="lv-routes-table">
+              <thead>
+                <tr>
+                  <th>Route</th>
+                  <th>Liveness</th>
+                  <th>Interactive</th>
+                  <th>Alive</th>
+                  <th>Dead</th>
+                  <th>Suspicious</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="lv-routes-body">
+                <tr><td colspan="7" class="loading">Loading liveness data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card" id="lv-dead-detail-card" style="display:none;">
+            <h3 style="color:#f44336;">Dead Elements by Section</h3>
+            <div id="lv-dead-detail"></div>
           </div>
         </div>
       </div>
@@ -1087,7 +1142,8 @@
         'performance': 'performance-tab',
         'recommendations': 'recommendations-tab',
         'pages': 'pages-tab',
-        'feature-truth': 'feature-truth-tab'
+        'feature-truth': 'feature-truth-tab',
+        'liveness': 'liveness-tab'
       };
       document.getElementById(tabIdMap[tabName] || tabName).classList.add('active');
 
@@ -1102,6 +1158,9 @@
       }
       if (tabName === 'feature-truth') {
         loadFeatureTruth();
+      }
+      if (tabName === 'liveness') {
+        loadLiveness();
       }
     }
 
@@ -1686,8 +1745,159 @@
       `).join('');
     }
 
-    // Make loadSite available globally
+    // ============================================================
+    // Liveness Audit Tab
+    // ============================================================
+
+    let livenessRouteData = [];
+
+    async function loadLiveness() {
+      try {
+        const [summaryRes, routesRes] = await Promise.all([
+          fetch('/api/liveness/summary'),
+          fetch('/api/liveness/routes'),
+        ]);
+
+        // Summary metrics
+        if (summaryRes.ok) {
+          const summary = await summaryRes.json();
+          document.getElementById('lv-overall').textContent =
+            summary.overallLiveness != null ? `${summary.overallLiveness}%` : '-';
+          document.getElementById('lv-routes-scanned').textContent = summary.routesScanned || 0;
+          document.getElementById('lv-dead-routes').textContent = summary.routesWithDeadUI || 0;
+          document.getElementById('lv-total-dead').textContent = summary.totalDead || 0;
+
+          // Color the overall score
+          const score = summary.overallLiveness || 0;
+          const el = document.getElementById('lv-overall');
+          el.style.color = score >= 80 ? '#4caf50' : score >= 50 ? '#ffc107' : '#f44336';
+        } else {
+          document.getElementById('lv-overall').textContent = '-';
+          document.getElementById('lv-routes-scanned').textContent = '-';
+          document.getElementById('lv-dead-routes').textContent = '-';
+          document.getElementById('lv-total-dead').textContent = '-';
+        }
+
+        // Route table
+        if (routesRes.ok) {
+          const data = await routesRes.json();
+          livenessRouteData = data.routes || [];
+          renderLivenessRoutes();
+        } else {
+          document.getElementById('lv-routes-body').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:#a0a0a0;">No liveness data. Run a liveness audit first.</td></tr>';
+        }
+      } catch (error) {
+        console.error('Error loading liveness:', error);
+        document.getElementById('lv-routes-body').innerHTML =
+          '<tr><td colspan="7" class="error">Error loading liveness data</td></tr>';
+      }
+    }
+
+    function renderLivenessRoutes() {
+      const tbody = document.getElementById('lv-routes-body');
+      if (livenessRouteData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#a0a0a0;">No routes scanned</td></tr>';
+        return;
+      }
+
+      // Sort by liveness score ascending (worst first)
+      const sorted = [...livenessRouteData].sort((a, b) => (a.livenessScore || 0) - (b.livenessScore || 0));
+
+      tbody.innerHTML = sorted.map(r => {
+        const score = r.livenessScore || 0;
+        const scoreColor = score >= 80 ? '#4caf50' : score >= 50 ? '#ffc107' : '#f44336';
+        const icon = score >= 80 ? '&#10003;' : score >= 50 ? '&#9888;' : '&#10007;';
+        const statusClass = score >= 80 ? 'grade-a' : score >= 50 ? 'grade-c' : 'grade-f';
+
+        return `<tr style="cursor:pointer;" onclick="loadLivenessDetail('${encodeURIComponent(r.route)}')">
+          <td style="font-size:0.85rem;">${r.route}</td>
+          <td style="text-align:center;">
+            <span class="grade-badge ${statusClass}">${score}%</span>
+          </td>
+          <td style="text-align:center;">${r.totalInteractive}</td>
+          <td style="text-align:center;color:#4caf50;">${r.alive}</td>
+          <td style="text-align:center;color:#f44336;">${r.dead}</td>
+          <td style="text-align:center;color:#ffc107;">${r.suspicious}</td>
+          <td style="text-align:center;"><span style="color:${scoreColor};">${icon}</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function loadLivenessDetail(encodedRoute) {
+      try {
+        const response = await fetch(`/api/liveness/routes/${encodedRoute}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const card = document.getElementById('lv-dead-detail-card');
+        const container = document.getElementById('lv-dead-detail');
+
+        if ((!data.deadBySection || Object.keys(data.deadBySection).length === 0) &&
+            (!data.suspiciousBySection || Object.keys(data.suspiciousBySection).length === 0)) {
+          card.style.display = 'block';
+          container.innerHTML = `<p style="color:#4caf50;text-align:center;">Route ${data.route} has no dead elements!</p>`;
+          return;
+        }
+
+        card.style.display = 'block';
+        let html = `<p style="margin-bottom:1rem;color:#a0a0a0;">Route: <strong style="color:#e94560;">${data.route}</strong> — Liveness: ${data.livenessScore}%</p>`;
+
+        // Dead elements
+        if (data.deadBySection && Object.keys(data.deadBySection).length > 0) {
+          html += '<h4 style="color:#f44336;margin-bottom:0.5rem;">Dead Elements</h4>';
+          for (const [section, elements] of Object.entries(data.deadBySection)) {
+            html += `<div style="margin-bottom:1rem;">
+              <div style="font-weight:600;color:#e94560;font-size:0.9rem;margin-bottom:0.25rem;">Section: ${section}</div>`;
+            for (const el of elements) {
+              const signals = el.signals || {};
+              html += `<div style="padding:0.5rem 0.75rem;margin-bottom:0.25rem;background:#0f3460;border-radius:4px;border-left:3px solid #f44336;">
+                <div style="font-size:0.85rem;">
+                  <span style="color:#f44336;">&#10007;</span>
+                  <code style="color:#e0e0e0;">${el.selector}</code>
+                  <span style="color:#a0a0a0;font-size:0.8rem;">(${el.type})</span>
+                  ${el.text ? `<span style="color:#a0a0a0;font-size:0.8rem;"> "${el.text.substring(0, 40)}"</span>` : ''}
+                </div>
+                <div style="font-size:0.75rem;color:#666;margin-top:0.15rem;">
+                  listeners=${signals.hasEventListeners ?? '?'} | dom=${signals.domMutated ?? '?'} | network=${signals.networkFired ?? '?'} | focus=${signals.focusReceived ?? '?'}
+                </div>
+              </div>`;
+            }
+            html += '</div>';
+          }
+        }
+
+        // Suspicious elements
+        if (data.suspiciousBySection && Object.keys(data.suspiciousBySection).length > 0) {
+          html += '<h4 style="color:#ffc107;margin:1rem 0 0.5rem;">Suspicious Elements</h4>';
+          for (const [section, elements] of Object.entries(data.suspiciousBySection)) {
+            html += `<div style="margin-bottom:1rem;">
+              <div style="font-weight:600;color:#e94560;font-size:0.9rem;margin-bottom:0.25rem;">Section: ${section}</div>`;
+            for (const el of elements) {
+              html += `<div style="padding:0.5rem 0.75rem;margin-bottom:0.25rem;background:#0f3460;border-radius:4px;border-left:3px solid #ffc107;">
+                <div style="font-size:0.85rem;">
+                  <span style="color:#ffc107;">&#9888;</span>
+                  <code style="color:#e0e0e0;">${el.selector}</code>
+                  <span style="color:#a0a0a0;font-size:0.8rem;">(${el.type})</span>
+                  ${el.text ? `<span style="color:#a0a0a0;font-size:0.8rem;"> "${el.text.substring(0, 40)}"</span>` : ''}
+                </div>
+              </div>`;
+            }
+            html += '</div>';
+          }
+        }
+
+        container.innerHTML = html;
+        // Scroll to detail
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (error) {
+        console.error('Error loading liveness detail:', error);
+      }
+    }
+
+    // Make functions available globally
     window.loadSite = loadSite;
+    window.loadLivenessDetail = loadLivenessDetail;
   </script>
 </body>
 </html>
