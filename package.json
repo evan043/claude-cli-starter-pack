@@ -72,7 +72,7 @@
   },
   "devDependencies": {
     "c8": "^10.0.0",
-    "eslint": "^9.0.0",
+    "eslint": "^10.0.0",
     "globals": "^17.2.0"
   },
   "files": [
