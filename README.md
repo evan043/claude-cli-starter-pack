@@ -14,6 +14,8 @@
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
 
+<img src="./assets/slideshow.gif" alt="CCASP Demo" width="720">
+
 [![npm version](https://badge.fury.io/js/claude-cli-advanced-starter-pack.svg)](https://www.npmjs.com/package/claude-cli-advanced-starter-pack)
 [![Node.js 18+](https://img.shields.io/badge/node-18%2B-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -298,6 +300,36 @@ ccasp constitution-init --preset strict    # 15% sampling, maximum coverage
 | `dependencies` | Versions, security |
 
 See `/ai-constitution-framework` in Claude Code for full documentation.
+
+---
+
+## Landing Page Generator
+
+Automated marketing asset pipeline: capture screenshots, apply device frames, generate GIFs, and build landing page components.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `/landing-page-generator` | Interactive menu: configure, capture, frame, GIF, preview, build, deploy |
+| `/landing-page-generator-executor` | Automated phase executor for pipeline tasks |
+| `/landing-page-toggle` | Enable/disable landing page in production |
+
+### Pipeline
+
+1. **Capture** - Playwright screenshots of app routes at configurable viewports
+2. **Frame** - Composite into device bezels (MacBook Pro, iPhone 15, iPad, etc.)
+3. **Generate GIFs** - Stitch framed screenshots into animated marketing GIFs
+4. **Build** - Generate React components with the produced assets
+
+### Skill: Screenshot Pipeline
+
+The `screenshot-pipeline` skill package includes reference documentation for:
+- **Device frames** - 12+ device templates (laptop, phone, tablet)
+- **Viewport presets** - Standard configurations for phone/tablet/desktop
+- **Pipeline config** - Full configuration schema with examples
+
+Requires: `sharp`, `gifencoder`, `canvas` NPM packages + `playwright-ext` MCP server.
 
 ---
 
