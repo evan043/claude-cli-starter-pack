@@ -195,25 +195,56 @@ const TEMPLATE_DIRS = {
 };
 ```
 
-### Step 3: Detect Customizations via Hash Comparison
+### Step 3: Detect Customizations via Compiled Cache Comparison
 
-For each file that exists BOTH locally and in templates:
+**IMPORTANT:** Compare local files against the **compiled cache** (not raw templates).
+The compiled cache at `~/.ccasp/compiled/{slug}/` has all `{{placeholder}}` values already resolved by the template engine, so hash comparison is accurate.
+
+First, ensure the compiled cache is fresh:
+
+```bash
+# Refresh compiled cache for this project
+ccasp template-sync
+```
+
+Then determine the compiled cache location:
+
+```bash
+# The compiled cache path is stored in .ccasp-meta.json
+# Find the project slug from registered projects
+COMPILED_DIR=$(node -e "
+  const fs = require('fs');
+  const path = require('path');
+  const home = require('os').homedir();
+  const reg = JSON.parse(fs.readFileSync(path.join(home, '.ccasp', 'projects.json'), 'utf8'));
+  const cwd = process.cwd().replace(/\\\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  const project = reg.projects?.find(p => p.path.replace(/\\\\/g, '/').replace(/\/+$/, '').toLowerCase() === cwd);
+  if (project?.slug) { console.log(path.join(home, '.ccasp', 'compiled', project.slug)); }
+  else {
+    // Derive slug from path
+    const name = path.basename(cwd).replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const hash = require('crypto').createHash('md5').update(cwd).digest('hex').slice(0, 6);
+    console.log(path.join(home, '.ccasp', 'compiled', name + '-' + hash));
+  }
+")
+```
+
+For each file that exists BOTH locally and in the compiled cache:
 
 ```bash
 # Get MD5 hash of local file
-LOCAL_HASH=$(md5sum .claude/commands/menu.md | cut -d' ' -f1)
+LOCAL_HASH=$(md5sum .claude/commands/deploy-full.md | cut -d' ' -f1)
 
-# Get MD5 hash of template (after transform)
-# Process template to remove .template extension comparison
-TEMPLATE_HASH=$(md5sum $CCASP_PATH/templates/commands/menu.template.md | cut -d' ' -f1)
+# Get MD5 hash from compiled cache (placeholders already resolved)
+COMPILED_HASH=$(md5sum "$COMPILED_DIR/commands/deploy-full.md" | cut -d' ' -f1)
 
 # If hashes differ, file is customized
-if [ "$LOCAL_HASH" != "$TEMPLATE_HASH" ]; then
-  echo "CUSTOMIZED: menu.md"
+if [ "$LOCAL_HASH" != "$COMPILED_HASH" ]; then
+  echo "CUSTOMIZED: deploy-full.md"
 fi
 ```
 
-**Note:** Some templates have placeholders like `{{projectName}}`. For these, compare structure not exact content. Mark as customized if user added significant content beyond placeholder replacement.
+This eliminates false positives from placeholder differences — the compiled cache matches exactly what `ccasp init` deployed.
 
 ### Step 4: Build Sync Plan
 
@@ -410,21 +441,6 @@ function isCustomized(localPath, templatePath) {
   return localHash !== templateHash;
 }
 ```
-
-### Template Placeholder Handling
-
-Some templates contain placeholders that get replaced during init:
-- `{{projectName}}` → actual project name
-- `{{techStack}}` → detected tech stack
-- `${CWD}` → current working directory
-
-For these files, use **structural comparison**:
-1. Strip all placeholder values
-2. Compare remaining structure
-3. If structure matches, consider UNCHANGED
-4. If user added new sections, consider CUSTOMIZED
-
----
 
 ## File-Specific Notes
 

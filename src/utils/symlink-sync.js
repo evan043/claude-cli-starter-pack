@@ -31,9 +31,16 @@ import { replacePlaceholders } from './template-engine/processor.js';
  */
 export const SYNC_CATEGORIES = [
   { category: 'commands', templateDir: 'templates/commands', projectDir: '.claude/commands', glob: '*.md', templateSuffix: '.template.md', projectSuffix: '.md' },
-  { category: 'hooks', templateDir: 'templates/hooks', projectDir: '.claude/hooks', glob: '*.cjs', templateSuffix: '.template.cjs', projectSuffix: '.cjs' },
+  { category: 'hooks', templateDir: 'templates/hooks', projectDir: '.claude/hooks', glob: '*.js', templateSuffix: '.template.js', projectSuffix: '.js' },
   { category: 'agents', templateDir: 'templates/agents', projectDir: '.claude/agents', glob: '*.md', templateSuffix: '.template.md', projectSuffix: '.md' },
-  { category: 'skills', templateDir: 'templates/skills', projectDir: '.claude/skills', glob: '*.md', templateSuffix: '.template.md', projectSuffix: '.md' }
+  { category: 'skills', templateDir: 'templates/skills', projectDir: '.claude/skills', glob: '*.md', templateSuffix: '.template.md', projectSuffix: '.md' },
+  { category: 'commands-dev', templateDir: 'templates/commands-dev', projectDir: '.claude/commands', glob: '*.md', templateSuffix: '.template.md', projectSuffix: '.md' },
+  { category: 'docs', templateDir: 'templates/docs', projectDir: '.claude/docs', glob: '*', templateSuffix: '.template.md', projectSuffix: '.md' },
+  { category: 'patterns', templateDir: 'templates/patterns', projectDir: '.claude/docs/patterns', glob: '*.md', templateSuffix: '.md', projectSuffix: '.md' },
+  { category: 'scripts', templateDir: 'templates/scripts', projectDir: '.claude/scripts', glob: '*', templateSuffix: '.js', projectSuffix: '.js' },
+  { category: 'github-templates', templateDir: 'templates/github/ISSUE_TEMPLATE', projectDir: '.github/ISSUE_TEMPLATE', glob: '*.yml', templateSuffix: '.yml', projectSuffix: '.yml' },
+  { category: 'workflows', templateDir: 'templates/workflows', projectDir: '.github/workflows', glob: '*.yml', templateSuffix: '.yml', projectSuffix: '.yml' },
+  { category: 'mcp', templateDir: 'templates/mcp', projectDir: '.claude/mcp', glob: '*.js', templateSuffix: '.js', projectSuffix: '.js' }
 ];
 
 /**
@@ -210,7 +217,7 @@ export function compileTemplates(projectPath, options = {}) {
 
         // Clean up .template references in content
         content = content.replace(/\.template\.md/g, '.md');
-        content = content.replace(/\.template\.cjs/g, '.cjs');
+        content = content.replace(/\.template\.js/g, '.js');
 
         const outputPath = join(outputDir, projectName);
         writeFileSync(outputPath, content, 'utf8');

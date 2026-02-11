@@ -42,9 +42,16 @@ export const FileCategory = {
  */
 const SYNC_DIRS = [
   { projectDir: '.claude/commands', templateDir: 'templates/commands', glob: '**/*.md' },
-  { projectDir: '.claude/hooks', templateDir: 'templates/hooks', glob: '**/*.cjs' },
+  { projectDir: '.claude/hooks', templateDir: 'templates/hooks', glob: '**/*.js' },
   { projectDir: '.claude/agents', templateDir: 'templates/agents', glob: '**/*.md' },
-  { projectDir: '.claude/skills', templateDir: 'templates/skills', glob: '**/*.md' }
+  { projectDir: '.claude/skills', templateDir: 'templates/skills', glob: '**/*.md' },
+  { projectDir: '.claude/commands', templateDir: 'templates/commands-dev', glob: '**/*.md' },
+  { projectDir: '.claude/docs', templateDir: 'templates/docs', glob: '**/*' },
+  { projectDir: '.claude/docs/patterns', templateDir: 'templates/patterns', glob: '**/*.md' },
+  { projectDir: '.claude/scripts', templateDir: 'templates/scripts', glob: '**/*' },
+  { projectDir: '.github/ISSUE_TEMPLATE', templateDir: 'templates/github/ISSUE_TEMPLATE', glob: '**/*.yml' },
+  { projectDir: '.github/workflows', templateDir: 'templates/workflows', glob: '**/*.yml' },
+  { projectDir: '.claude/mcp', templateDir: 'templates/mcp', glob: '**/*.js' }
 ];
 
 /**
@@ -92,8 +99,8 @@ function getLineDiff(file1, file2) {
  * @returns {string} Project filename
  */
 function templateToProjectName(templateName) {
-  // Convert template.md to just .md
-  return templateName.replace('.template.md', '.md').replace('.template.cjs', '.cjs');
+  // Convert template.md to just .md, template.js to just .js
+  return templateName.replace('.template.md', '.md').replace('.template.js', '.js');
 }
 
 /**
@@ -105,8 +112,8 @@ function projectToTemplateName(projectName) {
   if (projectName.endsWith('.md')) {
     return projectName.replace('.md', '.template.md');
   }
-  if (projectName.endsWith('.cjs')) {
-    return projectName.replace('.cjs', '.template.cjs');
+  if (projectName.endsWith('.js')) {
+    return projectName.replace('.js', '.template.js');
   }
   return projectName;
 }
@@ -335,7 +342,7 @@ export async function executeSyncActions(projectPath, worktreePath, options = {}
 
         // Remove .template from any self-references in the content
         content = content.replace(/\.template\.md/g, '.md');
-        content = content.replace(/\.template\.cjs/g, '.cjs');
+        content = content.replace(/\.template\.js/g, '.js');
 
         writeFileSync(file.projectPath, content, 'utf8');
       }
