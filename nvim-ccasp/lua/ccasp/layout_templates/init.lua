@@ -129,6 +129,13 @@ function M.apply(name)
   local sessions = get_sessions()
   local titlebar = get_titlebar()
 
+  -- Suppress auto CLI launches during template apply.  We collect all
+  -- {bufnr, command, cd_path} entries and batch-send them after every layer
+  -- has been created.  This prevents the race where deferred launches fire
+  -- after a layer switch has moved the session out of active state.
+  sessions.suppress_cli_launch(true)
+  local pending_launches = {}
+
   -- Apply template as NEW layers (never mutate existing layers).
   local first_new_layer = nil
 
@@ -178,6 +185,15 @@ function M.apply(name)
               -- Update path record
               if first_session then first_session.path = path end
             end
+            -- Collect for deferred batch launch (includes cd since terminal
+            -- was created at the wrong cwd by the default layer spawn).
+            if first_session and first_session.bufnr then
+              table.insert(pending_launches, {
+                bufnr = first_session.bufnr,
+                command = sess_def.command or "claude",
+                cd_path = path,
+              })
+            end
             table.insert(spawned_ids, first_id)
           end
         else
@@ -188,6 +204,15 @@ function M.apply(name)
             color_idx = sess_def.color_idx or 1,
           })
           if id then
+            -- Collect for deferred batch launch (spawn_at_path sets correct
+            -- cwd so no cd_path needed, but auto-launch was suppressed).
+            local sess = sessions.get(id)
+            if sess and sess.bufnr then
+              table.insert(pending_launches, {
+                bufnr = sess.bufnr,
+                command = sess_def.command or "claude",
+              })
+            end
             table.insert(spawned_ids, id)
           end
         end
@@ -198,6 +223,9 @@ function M.apply(name)
     vim.wait(200, function() return false end)
   end
 
+  -- Re-enable auto CLI launches
+  sessions.suppress_cli_launch(false)
+
   -- Switch to the first template layer
   if first_new_layer and layers.get_active() ~= first_new_layer then
     layers.switch_to(first_new_layer)
@@ -207,6 +235,24 @@ function M.apply(name)
   local ft_ok, footer = pcall(require, "ccasp.appshell.footer")
   if ft_ok then footer.refresh() end
   titlebar.update_all()
+
+  -- Batch-launch all CLI commands.  The 500ms delay gives each terminal's
+  -- shell time to initialise before we send the command ("claude", "happy", etc).
+  vim.defer_fn(function()
+    for _, launch in ipairs(pending_launches) do
+      if vim.api.nvim_buf_is_valid(launch.bufnr) then
+        local job_id = vim.b[launch.bufnr].terminal_job_id
+        if job_id and job_id > 0 then
+          -- First session in each layer needs cd to correct directory
+          -- (terminal was created at the default cwd, not the saved path).
+          if launch.cd_path then
+            vim.fn.chansend(job_id, 'cd /d "' .. launch.cd_path .. '"\r')
+          end
+          vim.fn.chansend(job_id, launch.command .. "\r")
+        end
+      end
+    end
+  end, 500)
 
   return true
 end
