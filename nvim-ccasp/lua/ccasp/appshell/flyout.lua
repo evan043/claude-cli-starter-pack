@@ -273,10 +273,6 @@ local section_renderers = {
     table.insert(lines, "  " .. icons.terminal .. " New Happy Repository Session")
     item_lines[#lines] = { action = "new_happy_session" }
 
-    -- New Clawdbot session (launches openclawd tui in H:\Clawdbot)
-    table.insert(lines, "  " .. icons.terminal .. " New Clawdbot Repository")
-    item_lines[#lines] = { action = "new_clawdbot_session" }
-
     -- Saved Notes
     table.insert(lines, "")
     table.insert(lines, "  " .. icons.save .. " Saved Notes")
@@ -859,13 +855,6 @@ function M.execute_action(item)
         require("ccasp.repo_launcher").open_happy_picker()
       end)
     end,
-    new_clawdbot_session = function()
-      -- Close flyout, launch Clawdbot directly (fixed path, no picker needed)
-      M.close()
-      vim.schedule(function()
-        require("ccasp.repo_launcher").open_repo_clawdbot()
-      end)
-    end,
     focus_session = function()
       M.close()
       vim.schedule(function() sessions.focus(item.id) end)
@@ -1263,7 +1252,6 @@ function M.execute_action(item)
         or item.action == "new_session_at_repo"
         or item.action == "new_repo_session"
         or item.action == "new_happy_session"
-        or item.action == "new_clawdbot_session"
         or item.action == "open_repo"
         or item.action == "open_path_dialog"
         or item.action == "open_browser"

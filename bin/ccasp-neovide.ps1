@@ -53,14 +53,7 @@ $luaOpen = "lua require('ccasp').open()"
 # Start in the CCASP project root so detect_project_root() finds .claude/
 $projectDir = (Resolve-Path (Join-Path $scriptDir "..")).Path
 
-# Calculate ~85% of primary screen for initial window size
-# (Lua FFI will refine this after startup, but --size prevents the tiny-window bug)
-Add-Type -AssemblyName System.Windows.Forms 2>$null
-$screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-$initW = [math]::Floor($screen.Width * 0.85)
-$initH = [math]::Floor($screen.Height * 0.85)
-
-Write-Host "Launching CCASP via Neovide ($initW x $initH)..." -ForegroundColor Cyan
+Write-Host "Launching CCASP via Neovide..." -ForegroundColor Cyan
 Push-Location $projectDir
-& $neovide --frame none --size="${initW}x${initH}" -- --clean -c $luaRtp -c $luaSetup -c $luaOpen
+& $neovide --frame none -- --clean -c $luaRtp -c $luaSetup -c $luaOpen
 Pop-Location
