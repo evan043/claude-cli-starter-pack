@@ -45,4 +45,5 @@ if not exist "%FONT_DEST%\JetBrainsMonoNerdFontMono-Regular.ttf" (
 
 REM Start in the CCASP project root so detect_project_root() finds .claude/
 REM "start /b" detaches the process so the cmd window closes immediately
-start "" /b /d "%PROJECT_DIR%" "%NEOVIDE%" --frame none -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"
+REM --size prevents tiny-window bug; Lua FFI refines size+position after startup
+start "" /b /d "%PROJECT_DIR%" "%NEOVIDE%" --frame none --size=1600x1000 -- --clean -c "lua vim.opt.runtimepath:prepend('%PLUGIN_DIR:\=/%')" -c "lua require('ccasp').setup({layout='appshell'})" -c "lua require('ccasp').open()"

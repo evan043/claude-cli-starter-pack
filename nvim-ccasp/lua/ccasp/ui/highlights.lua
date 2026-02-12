@@ -158,6 +158,7 @@ M.groups = {
   CcaspCloseBtn    = { fg = "#e06c75", bg = "#0d1117", bold = true }, -- Red close button
   CcaspMaxBtn      = { fg = "#98c379", bg = "#0d1117", bold = true }, -- Green maximize button
   CcaspMinBtn      = { fg = "#e5c07b", bg = "#0d1117", bold = true }, -- Yellow minimize button
+  CcaspResizeGrip  = { fg = "#6272a4", bg = "#0d1117" },              -- Resize grip indicator
 
   -- ─── Todo Panel ─────────────────────────────────────────
   CcaspTodoTagBadge      = { fg = "#56b6c2", bold = true },               -- Tag badge (teal)

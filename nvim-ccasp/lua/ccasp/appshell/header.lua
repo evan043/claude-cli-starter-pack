@@ -232,14 +232,27 @@ local function setup_click_handler()
 
   vim.keymap.set({"n", "v", "i"}, "<LeftMouse>", function()
     local mouse = vim.fn.getmousepos()
-    if mouse.screenrow >= 1 and mouse.screenrow <= 2 and not is_on_header_button(mouse.screencol) then
-      log_click(string.format("n-LeftMouse DRAG: row=%d col=%d", mouse.screenrow, mouse.screencol))
-      local nv_ok, nv = pcall(require, "ccasp.neovide")
-      if nv_ok and nv.ffi_available() then
-        nv.win_drag_start()
+    local nv_ok, nv = pcall(require, "ccasp.neovide")
+
+    -- Priority 1: Edge/corner resize (any border of the Neovide window)
+    if nv_ok and nv.ffi_available() then
+      local edge = nv.get_resize_edge(mouse)
+      if edge then
+        log_click(string.format("n-LeftMouse RESIZE edge=%s: row=%d col=%d", edge, mouse.screenrow, mouse.screencol))
+        vim.schedule(function() nv.win_resize_start(edge) end)
         return
       end
     end
+
+    -- Priority 2: Titlebar drag (header rows 1-2, not on a button)
+    if mouse.screenrow >= 1 and mouse.screenrow <= 2 and not is_on_header_button(mouse.screencol) then
+      log_click(string.format("n-LeftMouse DRAG: row=%d col=%d", mouse.screenrow, mouse.screencol))
+      if nv_ok and nv.ffi_available() then
+        vim.schedule(function() nv.win_drag_start() end)
+        return
+      end
+    end
+
     -- Passthrough: replay default LeftMouse behavior (focus window, set cursor, etc.)
     local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
     vim.api.nvim_feedkeys(key, "n", false)
@@ -247,19 +260,33 @@ local function setup_click_handler()
 
   vim.keymap.set("t", "<LeftMouse>", function()
     local mouse = vim.fn.getmousepos()
+    local nv_ok, nv = pcall(require, "ccasp.neovide")
+
+    -- Priority 1: Edge/corner resize
+    if nv_ok and nv.ffi_available() then
+      local edge = nv.get_resize_edge(mouse)
+      if edge then
+        log_click(string.format("t-LeftMouse RESIZE edge=%s: row=%d col=%d", edge, mouse.screenrow, mouse.screencol))
+        local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
+        vim.api.nvim_feedkeys(esc, "n", false)
+        vim.schedule(function() nv.win_resize_start(edge) end)
+        return
+      end
+    end
+
+    -- Priority 2: Titlebar drag
     if mouse.screenrow >= 1 and mouse.screenrow <= 2 and not is_on_header_button(mouse.screencol) then
       log_click(string.format("t-LeftMouse DRAG: row=%d col=%d", mouse.screenrow, mouse.screencol))
-      -- Exit terminal mode first
       local esc = vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true)
       vim.api.nvim_feedkeys(esc, "n", false)
       vim.schedule(function()
-        local nv_ok, nv = pcall(require, "ccasp.neovide")
         if nv_ok and nv.ffi_available() then
           nv.win_drag_start()
         end
       end)
       return
     end
+
     -- Passthrough: replay default LeftMouse for terminal
     local key = vim.api.nvim_replace_termcodes("<LeftMouse>", true, false, true)
     vim.api.nvim_feedkeys(key, "n", false)

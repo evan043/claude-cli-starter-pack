@@ -409,7 +409,7 @@ local function render()
 
   -- Resize grip highlight (slightly brighter so it's discoverable)
   if state.grip_byte_start and state.grip_byte_end then
-    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspHeaderSub", status_line_idx, state.grip_byte_start, state.grip_byte_end)
+    pcall(vim.api.nvim_buf_add_highlight, state.buf, ns, "CcaspResizeGrip", status_line_idx, state.grip_byte_start, state.grip_byte_end)
   end
 end
 
@@ -453,6 +453,18 @@ function M.handle_click(saved_mouse)
   local mouse = saved_mouse or vim.fn.getmousepos()
   if not mouse then return end
 
+  -- Edge/corner resize (Neovide only) - uses screen coordinates for border detection
+  if is_neovide() then
+    local nv_ok, nv = pcall(require, "ccasp.neovide")
+    if nv_ok and nv.ffi_available() then
+      local edge = nv.get_resize_edge(mouse)
+      if edge then
+        vim.schedule(function() nv.win_resize_start(edge) end)
+        return
+      end
+    end
+  end
+
   -- wincol is 1-indexed display column; click_regions use 0-indexed display columns
   local col = mouse.wincol - 1
   local line = mouse.line
@@ -462,7 +474,7 @@ function M.handle_click(saved_mouse)
     if col >= state.grip_col_start and col < state.grip_col_end then
       local nv_ok, nv = pcall(require, "ccasp.neovide")
       if nv_ok and nv.ffi_available() then
-        nv.win_resize_start("bottomright")
+        vim.schedule(function() nv.win_resize_start("bottomright") end)
       end
       return
     end
