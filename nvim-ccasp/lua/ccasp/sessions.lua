@@ -36,6 +36,7 @@ local global_activity_timers = {}         -- { session_id = timer_handle }
 local global_activity_burst = {}          -- { session_id = count }
 local global_activity_burst_timers = {}   -- { session_id = timer_handle }
 local global_activity_suppress = {}       -- { session_id = true }
+local _suppress_cli_launch = false        -- true during template apply to prevent auto-launches
 
 -- Refresh footer + titlebar for a session after activity state change
 local function refresh_activity_chrome(id)
@@ -467,6 +468,8 @@ end
 -- Reads session.command at fire time so template apply can override before the defer fires.
 local function launch_claude_cli(id, bufnr, name, command)
   command = command or "claude"
+  -- Template apply manages its own CLI launches; skip when suppressed.
+  if _suppress_cli_launch then return end
   vim.defer_fn(function()
     if not vim.api.nvim_buf_is_valid(bufnr) then return end
     -- Session may have been removed by a layer switch (e.g. template apply)
@@ -515,8 +518,17 @@ function M.spawn(target_win)
   -- Suppress auto-scroll during split (SIGWINCH fires on_lines for all terminals)
   state.resizing = true
 
+  -- If splash is showing, reuse its window instead of creating a new split.
+  -- This prevents an orphaned splash window sitting next to the new session.
+  local splash = require("ccasp.splash")
+  if not target_win and count == 0 and splash.is_showing() then
+    local splash_win = splash.get_win()
+    splash.hide(splash_win)
+    target_win = splash_win
+  end
+
   if target_win and vim.api.nvim_win_is_valid(target_win) then
-    -- Layer switch: place terminal directly in the given window (no split)
+    -- Layer switch or splash reuse: place terminal directly in the given window (no split)
     vim.api.nvim_set_current_win(target_win)
   else
     create_split_window(count, M.list())
@@ -714,7 +726,7 @@ function M.close(id)
 
   get_titlebar().destroy(id)
 
-  -- Check if this is the last visible session with minimized sessions remaining
+  -- Check if this is the last visible session
   local visible = M.list()
   local other_visible = 0
   for _, s in ipairs(visible) do
@@ -722,10 +734,11 @@ function M.close(id)
       other_visible = other_visible + 1
     end
   end
-  local minimized_sessions = M.get_minimized()
 
-  if other_visible == 0 and #minimized_sessions > 0 and session.winid and vim.api.nvim_win_is_valid(session.winid) then
-    -- Last visible session with minimized sessions: show splash instead of closing
+  if other_visible == 0 and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    -- Last visible session: show splash instead of closing window.
+    -- Keeps content area alive so user can Tab → flyout → New Session.
+    -- Works whether there are minimized sessions or not.
     local splash = require("ccasp.splash")
     splash.show(session.winid)
   elseif session.winid and vim.api.nvim_win_is_valid(session.winid) then
@@ -766,12 +779,25 @@ end
 
 -- Close all sessions
 function M.close_all()
+  -- Keep one window alive so the content area isn't destroyed.
+  -- Without it the cursor lands in a spacer with no keybindings and the user
+  -- cannot open the flyout, spawn a new session, or switch layers.
+  local splash_win = nil
   for id, session in pairs(state.sessions) do
     get_titlebar().destroy(id)
-    if session.winid and vim.api.nvim_win_is_valid(session.winid) then
+    if not splash_win and session.winid and vim.api.nvim_win_is_valid(session.winid) then
+      splash_win = session.winid
+    elseif session.winid and vim.api.nvim_win_is_valid(session.winid) then
       vim.api.nvim_win_close(session.winid, true)
     end
   end
+
+  -- Show splash in the surviving window (Tab → flyout → New Session)
+  if splash_win and vim.api.nvim_win_is_valid(splash_win) then
+    local splash = require("ccasp.splash")
+    splash.show(splash_win)
+  end
+
   state.sessions = {}
   state.session_order = {}
   state.primary_session = nil
@@ -908,6 +934,12 @@ function M.set_command(id, command)
   if state.sessions[id] then
     state.sessions[id].command = command
   end
+end
+
+-- Suppress/allow CLI auto-launch (used during template apply to prevent
+-- race conditions with layer-switch state snapshots).
+function M.suppress_cli_launch(val)
+  _suppress_cli_launch = val
 end
 
 -- Get primary session
